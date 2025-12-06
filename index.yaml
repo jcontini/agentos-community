@@ -12,6 +12,7 @@ skills:
     icon: https://cdn.simpleicons.org/todoist
     color: "#e44332"
     file: skills/todoist/skill.md
+    help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
     
   - id: linear
     name: Linear
@@ -20,6 +21,7 @@ skills:
     icon: https://cdn.simpleicons.org/linear
     color: "#5E6AD2"
     file: skills/linear/skill.md
+    help_url: https://linear.app/settings/api
     
   - id: exa
     name: Exa
@@ -28,6 +30,7 @@ skills:
     icon: https://www.google.com/s2/favicons?domain=exa.ai&sz=64
     color: "#5046E5"
     file: skills/exa/skill.md
+    help_url: https://dashboard.exa.ai/api-keys
     
   - id: raindrop
     name: Raindrop
@@ -36,3 +39,4 @@ skills:
     icon: https://raindrop.io/favicon.ico
     color: "#0082FF"
     file: skills/raindrop/skill.md
+    help_url: https://app.raindrop.io/settings/integrations
