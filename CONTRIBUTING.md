@@ -21,15 +21,6 @@ category: productivity  # productivity, communication, search, code, finance
 icon: https://cdn.simpleicons.org/servicename
 color: "#hexcolor"
 
-abilities:
-  - id: read_data
-    label: "Read your data"
-  - id: write_data
-    label: "Create and modify data"
-  - id: delete_data
-    label: "Delete data"
-    destructive: true
-
 auth:
   type: api_key          # api_key, oauth, local, cli
   header: Authorization  # Header name for API key
@@ -37,6 +28,7 @@ auth:
   help_url: https://...  # Where to get API key
 
 api:
+  type: rest             # rest, graphql, sqlite, local
   base_url: https://api.service.com
 ---
 
@@ -92,20 +84,22 @@ auth:
 local: true
 ```
 
-## Abilities
+## API Types
 
-Define what the AI can do with this service. Users can toggle each ability.
+Permissions are enforced automatically based on API type:
 
 ```yaml
-abilities:
-  - id: read_tasks
-    label: "Read your tasks"
-  - id: write_tasks  
-    label: "Create and modify tasks"
-  - id: delete_tasks
-    label: "Delete tasks"
-    destructive: true  # disabled by default
+api:
+  type: rest     # GET = See, POST/PUT/DELETE = Do
+  # or
+  type: graphql  # query = See, mutation = Do
+  # or  
+  type: sqlite   # SELECT = See, INSERT/UPDATE/DELETE = Do
+  # or
+  type: local    # Local execution (may require full access)
 ```
+
+Users control "See" (read) and "Do" (write) permissions per account.
 
 ## Categories
 
