@@ -10,11 +10,25 @@ color: "#0082FF"
 abilities:
   - id: read_bookmarks
     label: "Read bookmarks and collections"
+    endpoints:
+      - "GET /rest/v1/collections"
+      - "GET /rest/v1/collections/*"
+      - "GET /rest/v1/raindrops/*"
+      - "GET /rest/v1/raindrop/*"
+      - "GET /rest/v1/tags"
   - id: save_bookmarks
     label: "Save new bookmarks"
+    endpoints:
+      - "POST /rest/v1/raindrop"
+      - "POST /rest/v1/raindrops"
+      - "PUT /rest/v1/raindrop/*"
+      - "PUT /rest/v1/raindrops/*"
   - id: delete_bookmarks
     label: "Delete bookmarks"
     destructive: true
+    endpoints:
+      - "DELETE /rest/v1/raindrop/*"
+      - "DELETE /rest/v1/raindrops/*"
 
 auth:
   type: api_key

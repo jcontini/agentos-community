@@ -10,13 +10,31 @@ color: "#e44332"
 abilities:
   - id: read_tasks
     label: "Read your tasks"
+    endpoints:
+      - "GET /rest/v2/tasks"
+      - "GET /rest/v2/tasks/*"
+      - "GET /rest/v2/projects"
+      - "GET /rest/v2/projects/*"
+      - "GET /rest/v2/labels"
+      - "GET /rest/v2/labels/*"
   - id: write_tasks
     label: "Create and modify tasks"
+    endpoints:
+      - "POST /rest/v2/tasks"
+      - "POST /rest/v2/tasks/*"
+      - "POST /rest/v2/tasks/*/close"
+      - "POST /rest/v2/tasks/*/reopen"
   - id: delete_tasks
     label: "Delete tasks"
     destructive: true
+    endpoints:
+      - "DELETE /rest/v2/tasks/*"
   - id: manage_projects
     label: "Manage projects"
+    endpoints:
+      - "POST /rest/v2/projects"
+      - "POST /rest/v2/projects/*"
+      - "DELETE /rest/v2/projects/*"
 
 auth:
   type: api_key

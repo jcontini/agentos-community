@@ -10,8 +10,13 @@ color: "#5046E5"
 abilities:
   - id: search
     label: "Search the web"
+    endpoints:
+      - "POST /search"
+      - "POST /findSimilar"
   - id: extract
     label: "Extract content from URLs"
+    endpoints:
+      - "POST /contents"
 
 auth:
   type: api_key
