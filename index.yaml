@@ -10,22 +10,16 @@ version: 1
 skills:
   - id: todoist
     name: Todoist
-    description: Personal task management
+    description: Personal task management - create, list, complete, update, delete tasks
     category: productivity
     icon: https://cdn.simpleicons.org/todoist
-    color: "#e44332"
+    color: "#E44332"
     docs: skills/todoist/skill.md
     
     credential:
       type: api_key
       label: API Token
-      help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
-    
-    api:
-      type: rest
-      base_url: https://api.todoist.com/rest/v2
-      auth_header: Authorization
-      auth_prefix: "Bearer "
+      help_url: https://app.todoist.com/app/settings/integrations/developer
     
   - id: linear
     name: Linear

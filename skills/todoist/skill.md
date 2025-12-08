@@ -1,189 +1,316 @@
+---
+id: todoist
+name: Todoist
+description: Personal task management - create, list, complete, update, delete tasks
+category: productivity
+icon: https://cdn.simpleicons.org/todoist
+color: "#E44332"
+protocol: shell
+
+auth:
+  type: api_key
+  header: Authorization
+  prefix: "Bearer "
+
+requires:
+  - curl
+  - jq
+
+actions:
+  list_tasks:
+    description: List tasks, optionally filtered by today/overdue/project
+    params:
+      filter:
+        type: string
+        description: Filter like "today", "overdue", "7 days", "no date"
+      project_id:
+        type: string
+        description: Filter by project ID
+    run: |
+      URL="https://api.todoist.com/rest/v2/tasks"
+      QUERY=""
+      if [ -n "$PARAM_FILTER" ]; then
+        QUERY="?filter=$(echo "$PARAM_FILTER" | jq -sRr @uri)"
+      elif [ -n "$PARAM_PROJECT_ID" ]; then
+        QUERY="?project_id=$PARAM_PROJECT_ID"
+      fi
+      curl -s "$URL$QUERY" \
+        -H "Authorization: Bearer $AUTH_TOKEN" | \
+      jq -r '.[] | "[\(.id)] \(.content) | Due: \(.due.date // "none") | Priority: \(.priority)"'
+
+  get_task:
+    description: Get a single task by ID, including its subtasks
+    params:
+      id:
+        type: string
+        required: true
+        description: Task ID
+    run: |
+      echo "=== Task ==="
+      curl -s "https://api.todoist.com/rest/v2/tasks/$PARAM_ID" \
+        -H "Authorization: Bearer $AUTH_TOKEN" | jq .
+      echo ""
+      echo "=== Subtasks ==="
+      curl -s "https://api.todoist.com/rest/v2/tasks?parent_id=$PARAM_ID" \
+        -H "Authorization: Bearer $AUTH_TOKEN" | \
+      jq -r '.[] | "  - [\(.id)] \(.content) | Due: \(.due.date // "none")"'
+
+  create_task:
+    description: Create a new task
+    params:
+      content:
+        type: string
+        required: true
+        description: Task title/content
+      due_string:
+        type: string
+        default: "today"
+        description: Due date (today, tomorrow, next monday, 2025-01-15)
+      priority:
+        type: number
+        description: Priority 1-4 (4 is urgent)
+      project_id:
+        type: string
+        description: Project ID (cannot be changed after creation!)
+      description:
+        type: string
+        description: Optional notes/description
+      parent_id:
+        type: string
+        description: Parent task ID to create as subtask
+    run: |
+      # Build JSON payload
+      PAYLOAD=$(jq -n \
+        --arg content "$PARAM_CONTENT" \
+        --arg due "${PARAM_DUE_STRING:-today}" \
+        --arg priority "$PARAM_PRIORITY" \
+        --arg project "$PARAM_PROJECT_ID" \
+        --arg desc "$PARAM_DESCRIPTION" \
+        --arg parent "$PARAM_PARENT_ID" \
+        '{
+          content: $content,
+          due_string: $due,
+          labels: ["AI"]
+        }
+        + (if $priority != "" then {priority: ($priority | tonumber)} else {} end)
+        + (if $project != "" then {project_id: $project} else {} end)
+        + (if $desc != "" then {description: $desc} else {} end)
+        + (if $parent != "" then {parent_id: $parent} else {} end)')
+      
+      curl -s -X POST "https://api.todoist.com/rest/v2/tasks" \
+        -H "Authorization: Bearer $AUTH_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" | jq .
+
+  update_task:
+    description: Update a task (use POST not PUT!)
+    params:
+      id:
+        type: string
+        required: true
+        description: Task ID to update
+      content:
+        type: string
+        description: New task title
+      due_string:
+        type: string
+        description: New due date (WARNING - see docs about recurring tasks!)
+      priority:
+        type: number
+        description: New priority 1-4
+      description:
+        type: string
+        description: New description/notes
+    run: |
+      # Build JSON payload with only provided fields
+      PAYLOAD=$(jq -n \
+        --arg content "$PARAM_CONTENT" \
+        --arg due "$PARAM_DUE_STRING" \
+        --arg priority "$PARAM_PRIORITY" \
+        --arg desc "$PARAM_DESCRIPTION" \
+        '{}
+        + (if $content != "" then {content: $content} else {} end)
+        + (if $due != "" then {due_string: $due} else {} end)
+        + (if $priority != "" then {priority: ($priority | tonumber)} else {} end)
+        + (if $desc != "" then {description: $desc} else {} end)')
+      
+      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID" \
+        -H "Authorization: Bearer $AUTH_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" | jq .
+
+  complete_task:
+    description: Mark a task as complete
+    params:
+      id:
+        type: string
+        required: true
+        description: Task ID to complete
+    run: |
+      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID/close" \
+        -H "Authorization: Bearer $AUTH_TOKEN"
+      echo "Task $PARAM_ID completed"
+
+  reopen_task:
+    description: Reopen a completed task
+    params:
+      id:
+        type: string
+        required: true
+        description: Task ID to reopen
+    run: |
+      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID/reopen" \
+        -H "Authorization: Bearer $AUTH_TOKEN"
+      echo "Task $PARAM_ID reopened"
+
+  delete_task:
+    description: Permanently delete a task
+    params:
+      id:
+        type: string
+        required: true
+        description: Task ID to delete
+    run: |
+      curl -s -X DELETE "https://api.todoist.com/rest/v2/tasks/$PARAM_ID" \
+        -H "Authorization: Bearer $AUTH_TOKEN"
+      echo "Task $PARAM_ID deleted"
+
+  list_projects:
+    description: List all projects
+    run: |
+      curl -s "https://api.todoist.com/rest/v2/projects" \
+        -H "Authorization: Bearer $AUTH_TOKEN" | \
+      jq -r '.[] | "[\(.id)] \(.name)"'
+
+  list_labels:
+    description: List all labels
+    run: |
+      curl -s "https://api.todoist.com/rest/v2/labels" \
+        -H "Authorization: Bearer $AUTH_TOKEN" | \
+      jq -r '.[] | "[\(.id)] \(.name)"'
+---
+
 # Todoist
 
 Personal task management - create, list, complete, update, delete tasks.
 
-## Critical: Todoist API Quirks
+## Requirements
 
-> **Updates use POST, not PUT!** Todoist returns 405 if you use PUT.
->
-> **Cannot change project_id!** To move a task to a different project, you must delete it and recreate it with the new project_id.
->
-> **⚠️ CRITICAL: Recurring Tasks** - When updating a recurring task's due date, you MUST preserve the recurring pattern or you will convert it to a one-time task! See "Recurring Tasks" section below.
+This skill requires `curl` and `jq` (usually pre-installed on macOS).
 
-## Endpoints
+## Actions
 
-| Operation | Method | Path |
-|-----------|--------|------|
-| List tasks | GET | `tasks` |
-| Get task | GET | `tasks/{id}` |
-| Create task | POST | `tasks` |
-| **Update task** | **POST** | `tasks/{id}` |
-| Complete task | POST | `tasks/{id}/close` |
-| Reopen task | POST | `tasks/{id}/reopen` |
-| Delete task | DELETE | `tasks/{id}` |
-| List projects | GET | `projects` |
-| Get project | GET | `projects/{id}` |
-| List labels | GET | `labels` |
+### list_tasks
+List tasks with optional filtering.
 
-## Filters (query params)
+**Parameters:**
+- `filter` (optional): Filter like "today", "overdue", "7 days"
+- `project_id` (optional): Filter by project ID
 
-| Filter | Example |
-|--------|---------|
-| Due today | `tasks?filter=today` |
-| Due this week | `tasks?filter=7%20days` |
-| Overdue | `tasks?filter=overdue` |
-| No due date | `tasks?filter=no%20date` |
-| By project | `tasks?project_id={id}` |
-| Subtasks | `tasks?parent_id={id}` |
-
-## Create Task
-
-```json
-{
-  "content": "Task name",
-  "due_string": "today",
-  "labels": ["AI"],
-  "priority": 4,
-  "project_id": "123",
-  "description": "Optional notes"
-}
+**Examples:**
+```
+use-skill(skill: "todoist", action: "list_tasks")
+use-skill(skill: "todoist", action: "list_tasks", params: {filter: "today"})
+use-skill(skill: "todoist", action: "list_tasks", params: {filter: "overdue"})
 ```
 
-**Fields:**
+### get_task
+Get a task by ID, including any subtasks.
+
+**Parameters:**
+- `id` (required): Task ID
+
+**Example:**
+```
+use-skill(skill: "todoist", action: "get_task", params: {id: "123456"})
+```
+
+### create_task
+Create a new task. AI-created tasks are automatically labeled with "AI".
+
+**Parameters:**
 - `content` (required): Task title
-- `due_string`: Natural language (`today`, `tomorrow`, `next monday`, `2025-01-15`)
-- `labels`: Array of label names - **always include `["AI"]` for AI-created tasks**
-- `priority`: 1 (normal) to 4 (urgent)
-- `project_id`: Target project - **set at creation, cannot be changed later!**
-- `parent_id`: Create as subtask
+- `due_string` (optional): Due date, default "today"
+- `priority` (optional): 1-4 (4 is urgent)
+- `project_id` (optional): Project ID (cannot change later!)
+- `description` (optional): Notes
+- `parent_id` (optional): Create as subtask
 
-## Update Task (POST, not PUT!)
-
-```json
-POST tasks/{id}
-{
-  "content": "Updated title",
-  "due_string": "tomorrow",
-  "priority": 2
-}
+**Examples:**
+```
+use-skill(skill: "todoist", action: "create_task", params: {content: "Buy groceries"})
+use-skill(skill: "todoist", action: "create_task", params: {content: "Urgent meeting", priority: 4, due_string: "tomorrow"})
 ```
 
-**Updateable fields:** `content`, `description`, `due_string`, `due_date`, `priority`, `labels`
+### update_task
+Update an existing task. Uses POST method (not PUT - Todoist quirk).
 
-**NOT updateable:** `project_id` - must delete and recreate to move task
+**Parameters:**
+- `id` (required): Task ID
+- `content` (optional): New title
+- `due_string` (optional): New due date
+- `priority` (optional): New priority
+- `description` (optional): New notes
 
-## ⚠️ Recurring Tasks - CRITICAL WARNING
-
-**Recurring tasks can be accidentally converted to one-time tasks if not handled carefully!**
-
-### How Recurring Tasks Work
-
-When you GET a task, recurring tasks have:
-- `"is_recurring": true`
-- `"due"` object with a `"recurring"` property (e.g., `{"recurring": true, "string": "every saturday"}`)
-
-### The Problem
-
-If you update a recurring task with just `"due_string": "today"`, Todoist will:
-- ✅ Update the due date to today
-- ❌ **Convert it to a one-time task** (`is_recurring` becomes `false`)
-- ❌ **Lose the recurring pattern forever**
-
-### The Solution
-
-**Before updating ANY task's due date:**
-
-1. **Always GET the task first** to check if `is_recurring: true`
-2. **If recurring:** Preserve the recurring pattern in your update
-3. **If not recurring:** Update normally
-
-### Examples
-
-**❌ WRONG - This breaks recurring tasks:**
-```json
-POST tasks/123
-{
-  "due_string": "today"  // Converts recurring task to one-time!
-}
+**Example:**
+```
+use-skill(skill: "todoist", action: "update_task", params: {id: "123456", due_string: "tomorrow"})
 ```
 
-**✅ CORRECT - Preserve recurring pattern:**
-```json
-// First, GET the task to see its recurring pattern
-GET tasks/123
-// Response: {"is_recurring": true, "due": {"recurring": true, "string": "every saturday"}}
+### complete_task / reopen_task
+Mark task complete or reopen it.
 
-// Then update preserving the pattern
-POST tasks/123
-{
-  "due_string": "every saturday"  // Preserves recurrence
-}
+**Examples:**
+```
+use-skill(skill: "todoist", action: "complete_task", params: {id: "123456"})
+use-skill(skill: "todoist", action: "reopen_task", params: {id: "123456"})
 ```
 
-**✅ CORRECT - For overdue recurring tasks:**
+### delete_task
+Permanently delete a task.
 
-If a recurring task is overdue (e.g., "every saturday" but today is Sunday):
-- **Option 1:** Leave it as-is (it will recur on the next Saturday)
-- **Option 2:** Complete it (`POST tasks/{id}/close`) - Todoist will create the next occurrence
-- **Option 3:** Ask the user how they want to handle it
-- **Option 4:** Only update if you preserve the pattern: `"due_string": "every saturday"`
-
-**✅ CORRECT - Converting recurring to one-time (if user wants):**
-```json
-// User explicitly wants to convert recurring task to one-time
-POST tasks/123
-{
-  "due_string": "today"  // OK if user explicitly requested this
-}
+**Example:**
+```
+use-skill(skill: "todoist", action: "delete_task", params: {id: "123456"})
 ```
 
-### Best Practice
+### list_projects / list_labels
+List all projects or labels.
 
-**When updating task due dates:**
-1. GET the task first
-2. Check `is_recurring`
-3. If `true`, either:
-   - Preserve the pattern in `due_string` (e.g., "every saturday")
-   - Ask the user if they want to convert it to one-time
-   - Leave it unchanged if it's just overdue
-4. If `false`, update normally
-
-## Move Task to Different Project (Workaround)
-
-Since `project_id` cannot be updated, to move a task:
-
-1. GET the task to preserve its data
-2. DELETE the old task
-3. POST a new task with the new `project_id` and all preserved fields
-
-## Complete/Reopen Task
-
-```json
-POST tasks/{id}/close   // Complete
-POST tasks/{id}/reopen  // Reopen
+**Examples:**
+```
+use-skill(skill: "todoist", action: "list_projects")
+use-skill(skill: "todoist", action: "list_labels")
 ```
 
-No body required.
+## ⚠️ Critical: Recurring Tasks
 
-## AI Defaults
+When updating a recurring task's due date, you MUST preserve the recurring pattern or it converts to a one-time task!
 
-When creating tasks:
-1. Always add `"labels": ["AI"]` so user knows it was AI-created
-2. Use `"due_string": "today"` if no date specified
-3. Set `project_id` at creation if user specifies a project (can't change later!)
+**Before updating due dates:**
+1. First `get_task` to check if `is_recurring: true`
+2. If recurring, preserve the pattern (e.g., "every saturday") or ask user
 
-When updating tasks:
-1. **ALWAYS GET the task first** to check if it's recurring (`is_recurring: true`)
-2. **If recurring:** Preserve the recurring pattern in `due_string` or ask user before converting to one-time
-3. **Never update `due_string` on recurring tasks** without preserving the pattern unless user explicitly requests it
+**Wrong (breaks recurring):**
+```
+update_task(id: "123", due_string: "today")  // Loses recurrence!
+```
 
-## Important Notes
+**Correct (preserves recurring):**
+```
+update_task(id: "123", due_string: "every saturday")  // Keeps recurrence
+```
 
-- **Subtasks:** Query with `?parent_id={task_id}` to get a task's subtasks
-- **Priority:** 1=normal, 4=urgent (counterintuitive!)
-- **Rate limits:** ~450 requests per 15 minutes
-- **Updates:** Always use POST method, never PUT
+## ⚠️ Moving Tasks Between Projects
 
-## Full API Docs
+`project_id` cannot be updated after creation. To move a task:
+1. Get task details
+2. Delete old task
+3. Create new task with new `project_id`
 
-https://developer.todoist.com/rest/v2/
+## Tips
+
+- Priority: 1 = normal, 4 = urgent (counterintuitive!)
+- AI-created tasks get `["AI"]` label automatically
+- Use filters: "today", "overdue", "7 days", "no date"
+- Always check for subtasks when getting a task
