@@ -122,3 +122,4 @@ Before delivering:
 - [ ] **Pyramid?** — Conclusion/recommendation stated first
 - [ ] **Visual?** — Used table or diagram where possible
 
+

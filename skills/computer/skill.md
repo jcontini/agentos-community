@@ -161,3 +161,4 @@ params: {path: "~/Downloads"}
 - **Maps preference**: Ask the user "Apple Maps or Google Maps?" and use the appropriate URL
 - **App names with spaces**: Quote them in params, e.g., `"Google Chrome"`
 - **System defaults**: URLs automatically open in the user's default browser (set in System Settings)
+
