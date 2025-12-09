@@ -1,7 +1,7 @@
 ---
 id: vibe-coach
 name: Vibe Coach
-description: Domain-driven thinking - discover entities, build glossaries, visualize with diagrams
+description: Structured thinking - comparisons, domain modeling, decisions, and technology research
 category: productivity
 icon: https://cdn.simpleicons.org/target
 color: "#8B5CF6"
@@ -153,6 +153,33 @@ flowchart TD
 | **Skill** | A capability you connect to (Todoist, YouTube) |
 | **Agent** | An AI assistant that uses skills (Claude, Cursor) |
 | **Activity** | Record of an agent using a skill |
+
+---
+
+## 5. Technology Decisions
+
+**When:** User is building something and needs to choose libraries, frameworks, or tools.
+
+**Problem:** AI training data has a cutoff. Libraries change. New options emerge. Old recommendations may be outdated.
+
+**Pattern:**
+1. **Clarify requirements** - What problem are they solving? What constraints?
+2. **Search for current info** - Use a web search skill to find recent comparisons, benchmarks, or recommendations
+3. **Compare options** - Use a comparison table (see section 1)
+4. **Surface dates** - Note when articles/docs were published
+
+**Example prompts to search:**
+- "best React state management 2024"
+- "Prisma vs Drizzle comparison"
+- "Node.js ORM benchmarks latest"
+
+**If you have access to a web search skill** (like Exa or Firecrawl), use it when:
+- User is choosing between technologies
+- Recommendations might be outdated
+- User is stuck on a technical decision
+- You're unsure about current best practices
+
+**Always tell the user** what you searched and when the sources were published.
 
 ---
 
