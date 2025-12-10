@@ -20,51 +20,68 @@ Skills use one of two protocols: **shell** (local commands) or **rest/graphql** 
 
 ```markdown
 ---
-id: youtube
-name: YouTube
-description: Get video transcripts and download videos
-category: media
-icon: https://cdn.simpleicons.org/youtube
-color: "#FF0000"
+id: exa
+name: Exa
+description: Semantic web search and content extraction
+category: search
+icon: https://cdn.simpleicons.org/exa
+color: "#5436DA"
 protocol: shell
 
-requires:
-  - yt-dlp
+provides:
+  - web-search
+  - url-extract
 
 auth:
-  type: local  # or api_key if API key needed
+  type: api_key
+  header: x-api-key
+  help_url: https://dashboard.exa.ai/api-keys
+
+requires:
+  - curl
+  - jq
+
+settings:
+  num_results:
+    label: Number of Results
+    description: Default number of search results (1-100)
+    type: integer
+    default: "5"
+    min: 1
+    max: 100
+  search_type:
+    label: Search Type
+    description: Default search type
+    type: enum
+    default: "auto"
+    options:
+      - auto
+      - neural
+      - keyword
 
 actions:
-  transcribe:
-    description: Get transcript text from a YouTube video
+  search:
+    description: Search the web
     params:
-      url:
+      query:
         type: string
         required: true
-        description: YouTube video URL
-      lang:
-        type: string
-        default: en
-        description: Subtitle language code
+        description: Search query
+      num_results:
+        type: integer
+        description: Number of results (overrides setting)
     run: |
-      yt-dlp --skip-download --write-auto-sub \
-        --sub-lang "$PARAM_LANG" "$PARAM_URL"
-
-  download:
-    description: Download video file
-    params:
-      url:
-        type: string
-        required: true
-        description: YouTube video URL
-    run: |
-      OUTPUT_DIR="${AGENTOS_DOWNLOADS:-$HOME/Downloads}"
-      yt-dlp -o "$OUTPUT_DIR/%(title)s.%(ext)s" "$PARAM_URL"
+      NUM="${PARAM_NUM_RESULTS:-$SETTING_NUM_RESULTS}"
+      TYPE="${PARAM_SEARCH_TYPE:-$SETTING_SEARCH_TYPE}"
+      curl -s -X POST "https://api.exa.ai/search" \
+        -H "x-api-key: $AUTH_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"query\": \"$PARAM_QUERY\", \"numResults\": $NUM, \"type\": \"$TYPE\"}"
 ---
 
-# YouTube
+# Exa
 
-Instructions for using YouTube...
+Semantic web search and content extraction...
 ```
 
 ### REST Protocol Example
@@ -247,6 +264,13 @@ Skills are discovered by scanning `skills/{id}/skill.md` files. The frontmatter 
 - `icon` — Icon URL (e.g., `"https://cdn.simpleicons.org/todoist"`)
 - `color` — Brand color hex (e.g., `"#E44332"`)
 
+### Optional Capability Fields
+
+- `provides` — List of capabilities this skill provides (e.g., `["web-search", "url-extract"]`)
+  - Available capabilities: `web-search`, `url-extract`
+  - Used by agentOS to route capability requests to appropriate skills
+- `settings` — User-configurable settings that appear in the UI (see Settings Schema below)
+
 ### Protocol-Specific Fields
 
 **For `shell` protocol:**
@@ -278,8 +302,61 @@ params:
 **Environment variables available in `run` scripts:**
 - `$AUTH_TOKEN` — Credential from agentOS (if auth configured)
 - `$PARAM_*` — Parameters (uppercased, e.g., `$PARAM_URL`, `$PARAM_LANG`)
+- `$SETTING_*` — User settings (uppercased, e.g., `$SETTING_NUM_RESULTS`)
 - `$AGENTOS_DOWNLOADS` — Downloads folder path
 - `$AGENTOS_CACHE` — Cache folder path
+
+### Settings Schema
+
+Skills can expose user-configurable settings that appear in the agentOS preferences UI. Settings are passed to action scripts as `$SETTING_*` environment variables.
+
+**Example:**
+```yaml
+settings:
+  num_results:
+    label: Number of Results
+    description: Default number of search results to return (1-100)
+    type: integer
+    default: "5"
+    min: 1
+    max: 100
+  search_type:
+    label: Search Type
+    description: Default search type
+    type: enum
+    default: "auto"
+    options:
+      - auto
+      - neural
+      - keyword
+  include_text:
+    label: Include Text Content
+    description: Include page text content by default
+    type: boolean
+    default: "false"
+```
+
+**Setting types:**
+- `integer` — Number input with optional `min`/`max` validation
+- `enum` — Dropdown with predefined `options` array
+- `boolean` — Toggle switch (values: `"true"` or `"false"` as strings)
+- `string` — Text input
+
+**Required fields:**
+- `label` — Display name in UI
+- `description` — Help text
+- `type` — One of: `integer`, `enum`, `boolean`, `string`
+- `default` — Default value (always as string, even for numbers/booleans)
+
+**Optional fields:**
+- `min`, `max` — For `integer` type
+- `options` — For `enum` type (array of strings)
+
+**Usage in actions:**
+Settings are available as `$SETTING_*` environment variables (uppercased):
+```bash
+NUM="${PARAM_NUM_RESULTS:-$SETTING_NUM_RESULTS}"  # Use param or fall back to setting
+```
 
 ## Tips
 

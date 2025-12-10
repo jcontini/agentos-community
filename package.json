@@ -1,0 +1,13 @@
+{
+  "name": "agentos-skills",
+  "version": "1.0.0",
+  "description": "Skills repository for agentOS",
+  "scripts": {
+    "validate": "node scripts/validate-skills.js",
+    "validate-skills": "node scripts/validate-skills.js"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "private": true
+}

@@ -30,7 +30,7 @@ actions:
         description: URL to scrape
       only_main_content:
         type: boolean
-        default: true
+        default: "true"
         description: Skip headers, footers, and navigation
     run: |
       curl -s -X POST "https://api.firecrawl.dev/v1/scrape" \
@@ -72,7 +72,7 @@ actions:
         description: Search query
       limit:
         type: integer
-        default: 5
+        default: "5"
         description: Number of results (1-10)
     run: |
       curl -s -X POST "https://api.firecrawl.dev/v1/search" \
@@ -92,7 +92,7 @@ actions:
         description: Starting URL to crawl from
       limit:
         type: integer
-        default: 10
+        default: "10"
         description: Maximum pages to crawl
     run: |
       curl -s -X POST "https://api.firecrawl.dev/v1/crawl" \
@@ -190,4 +190,3 @@ Common errors:
 - `402 Payment Required` - Credits exhausted, add more
 - `429 Too Many Requests` - Rate limited, wait and retry
 - Timeout errors - Very large or slow pages
-

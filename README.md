@@ -114,6 +114,17 @@ Skills are fetched by the agentOS app when you browse and install them.
 
 Want to add a skill for a new service? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Validating Skills
+
+Before submitting a PR, validate your skills:
+
+```bash
+npm install
+npm run validate
+```
+
+This checks all skills against the schema and reports any errors or warnings.
+
 ## License
 
 MIT
