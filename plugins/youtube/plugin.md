@@ -8,7 +8,11 @@ color: "#FF0000"
 protocol: shell
 
 requires:
-  - yt-dlp
+  - name: yt-dlp
+    install:
+      macos: brew install yt-dlp
+      linux: sudo apt install -y yt-dlp
+      windows: choco install yt-dlp -y
 
 actions:
   transcribe:
@@ -35,8 +39,7 @@ actions:
           sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
           uniq
       else
-        echo "No subtitles available for this video"
-        exit 1
+        error "No subtitles available for this video"
       fi
 
   metadata:
@@ -60,7 +63,7 @@ actions:
         default: "1080"
         description: Maximum video height (e.g., 720, 1080, 1440, 2160)
     run: |
-      OUTPUT_DIR="${AGENTOS_DOWNLOADS:-$HOME/Downloads}"
+      OUTPUT_DIR="$(downloads)"
       yt-dlp -f "best[height<=$PARAM_QUALITY]/best" \
         -o "$OUTPUT_DIR/%(title)s.%(ext)s" "$PARAM_URL"
       echo "Downloaded to: $OUTPUT_DIR/"
@@ -73,7 +76,7 @@ actions:
         required: true
         description: YouTube video URL
     run: |
-      OUTPUT_DIR="${AGENTOS_DOWNLOADS:-$HOME/Downloads}"
+      OUTPUT_DIR="$(downloads)"
       yt-dlp -x --audio-format mp3 \
         -o "$OUTPUT_DIR/%(title)s.%(ext)s" "$PARAM_URL"
       echo "Downloaded to: $OUTPUT_DIR/"

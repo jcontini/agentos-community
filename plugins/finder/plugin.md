@@ -8,7 +8,16 @@ color: "#1C8BF4"
 protocol: shell
 platform: macos
 requires:
-  - tree
+  - name: tree
+    install:
+      macos: brew install tree
+      linux: sudo apt install -y tree
+      windows: choco install tree -y
+
+helpers: |
+  # Finder-specific helpers
+  is_url() { [[ "$1" == http* ]] || [[ "$1" == maps://* ]]; }
+  is_app() { [ -d "/Applications/$1.app" ] || [[ "$1" == *.app ]]; }
 
 actions:
   open:
@@ -24,14 +33,12 @@ actions:
     run: |
       if [ -n "$PARAM_WITH" ]; then
         open -a "$PARAM_WITH" "$PARAM_TARGET"
-      elif [[ "$PARAM_TARGET" == http* ]] || [[ "$PARAM_TARGET" == maps://* ]]; then
+      elif is_url "$PARAM_TARGET"; then
         open "$PARAM_TARGET"
-      elif [ -d "/Applications/$PARAM_TARGET.app" ]; then
-        open -a "$PARAM_TARGET"
-      elif [[ "$PARAM_TARGET" == *.app ]]; then
+      elif is_app "$PARAM_TARGET"; then
         open -a "$PARAM_TARGET"
       else
-        [ ! -e "$PARAM_TARGET" ] && echo "Error: Not found: $PARAM_TARGET" >&2 && exit 1
+        require_path "$PARAM_TARGET"
         open "$PARAM_TARGET"
       fi
 
@@ -50,7 +57,7 @@ actions:
         type: number
         description: Tree depth limit (only with tree=true)
     run: |
-      [ ! -d "$PARAM_PATH" ] && echo "Error: Directory not found: $PARAM_PATH" >&2 && exit 1
+      require_dir "$PARAM_PATH"
       if [ "$PARAM_TREE" = "true" ]; then
         [ -n "$PARAM_DEPTH" ] && tree -L "$PARAM_DEPTH" "$PARAM_PATH" || tree "$PARAM_PATH"
       else
@@ -69,7 +76,7 @@ actions:
         default: "false"
         description: Only show metadata, skip file contents
     run: |
-      [ ! -e "$PARAM_PATH" ] && echo "Error: Not found: $PARAM_PATH" >&2 && exit 1
+      require_path "$PARAM_PATH"
       
       # Determine type
       if [ -d "$PARAM_PATH" ]; then
@@ -148,13 +155,13 @@ actions:
         description: Open file after writing (for write)
     run: |
       # For write with relative path, default to Downloads
-      DOWNLOADS="${AGENTOS_DOWNLOADS:-$HOME/Downloads}"
+      DOWNLOADS="$(downloads)"
       
       case "$PARAM_OP" in
         create)
           if [ -e "$PARAM_PATH" ]; then
             [ -d "$PARAM_PATH" ] && echo "Already exists: $PARAM_PATH" && exit 0
-            echo "Error: Path exists but is not a directory: $PARAM_PATH" >&2 && exit 1
+            error "Path exists but is not a directory: $PARAM_PATH"
           fi
           mkdir -p "$PARAM_PATH"
           echo "Created: $PARAM_PATH"
@@ -177,29 +184,29 @@ actions:
           ;;
         
         move)
-          [ ! -e "$PARAM_PATH" ] && echo "Error: Not found: $PARAM_PATH" >&2 && exit 1
+          require_path "$PARAM_PATH"
           # If destination is a directory, move into it
           if [ -d "$PARAM_TO" ]; then
             DEST="$PARAM_TO/$(basename "$PARAM_PATH")"
           else
             DEST="$PARAM_TO"
           fi
-          [ -e "$DEST" ] && [ "$PARAM_PATH" != "$DEST" ] && echo "Error: Destination exists: $DEST" >&2 && exit 1
+          [ -e "$DEST" ] && [ "$PARAM_PATH" != "$DEST" ] && error "Destination exists: $DEST"
           mv "$PARAM_PATH" "$DEST"
           echo "Moved to: $DEST"
           ;;
         
         copy)
-          [ ! -e "$PARAM_PATH" ] && echo "Error: Not found: $PARAM_PATH" >&2 && exit 1
+          require_path "$PARAM_PATH"
           # If destination is a directory, copy into it
           if [ -d "$PARAM_TO" ]; then
             DEST="$PARAM_TO/$(basename "$PARAM_PATH")"
           else
             DEST="$PARAM_TO"
           fi
-          [ -e "$DEST" ] && echo "Error: Destination exists: $DEST" >&2 && exit 1
+          [ -e "$DEST" ] && error "Destination exists: $DEST"
           if [ -d "$PARAM_PATH" ]; then
-            [ "$PARAM_RECURSIVE" != "true" ] && echo "Error: Use recursive=true for directories" >&2 && exit 1
+            [ "$PARAM_RECURSIVE" != "true" ] && error "Use recursive=true for directories"
             cp -r "$PARAM_PATH" "$DEST"
           else
             cp "$PARAM_PATH" "$DEST"
@@ -208,18 +215,18 @@ actions:
           ;;
         
         rename)
-          [ ! -e "$PARAM_PATH" ] && echo "Error: Not found: $PARAM_PATH" >&2 && exit 1
+          require_path "$PARAM_PATH"
           DIR=$(dirname "$PARAM_PATH")
           NEW_PATH="$DIR/$PARAM_TO"
-          [ -e "$NEW_PATH" ] && echo "Error: Destination exists: $NEW_PATH" >&2 && exit 1
+          [ -e "$NEW_PATH" ] && error "Destination exists: $NEW_PATH"
           mv "$PARAM_PATH" "$NEW_PATH"
           echo "Renamed to: $NEW_PATH"
           ;;
         
         delete)
-          [ ! -e "$PARAM_PATH" ] && echo "Error: Not found: $PARAM_PATH" >&2 && exit 1
+          require_path "$PARAM_PATH"
           if [ -d "$PARAM_PATH" ]; then
-            [ "$PARAM_RECURSIVE" != "true" ] && echo "Error: Use recursive=true for directories" >&2 && exit 1
+            [ "$PARAM_RECURSIVE" != "true" ] && error "Use recursive=true for directories"
             rm -rf "$PARAM_PATH"
           else
             rm "$PARAM_PATH"
@@ -228,8 +235,7 @@ actions:
           ;;
         
         *)
-          echo "Error: Unknown op '$PARAM_OP'. Use: create, move, copy, rename, delete" >&2
-          exit 1
+          error "Unknown op '$PARAM_OP'. Use: create, move, copy, rename, delete"
           ;;
       esac
 
@@ -265,20 +271,20 @@ actions:
         default: "true"
         description: Replace all occurrences (for find-replace)
     run: |
-      [ ! -f "$PARAM_PATH" ] && echo "Error: File not found: $PARAM_PATH" >&2 && exit 1
-      [ ! -w "$PARAM_PATH" ] && echo "Error: File not writable: $PARAM_PATH" >&2 && exit 1
+      require_file "$PARAM_PATH"
+      [ ! -w "$PARAM_PATH" ] && error "File not writable: $PARAM_PATH"
       
       TOTAL_LINES=$(wc -l < "$PARAM_PATH" | tr -d ' ')
       
       case "$PARAM_OP" in
         replace)
           # Replace lines start-end with content
-          [ -z "$PARAM_START" ] && echo "Error: 'start' required for replace" >&2 && exit 1
-          [ -z "$PARAM_END" ] && echo "Error: 'end' required for replace" >&2 && exit 1
+          [ -z "$PARAM_START" ] && error "'start' required for replace"
+          [ -z "$PARAM_END" ] && error "'end' required for replace"
           [ "$PARAM_START" -lt 1 ] || [ "$PARAM_START" -gt "$TOTAL_LINES" ] && \
-            echo "Error: start=$PARAM_START out of range (1-$TOTAL_LINES)" >&2 && exit 1
+            error "start=$PARAM_START out of range (1-$TOTAL_LINES)"
           [ "$PARAM_END" -lt "$PARAM_START" ] || [ "$PARAM_END" -gt "$TOTAL_LINES" ] && \
-            echo "Error: end=$PARAM_END out of range" >&2 && exit 1
+            error "end=$PARAM_END out of range"
           
           TEMP=$(mktemp)
           [ "$PARAM_START" -gt 1 ] && sed -n "1,$((PARAM_START - 1))p" "$PARAM_PATH" > "$TEMP"
@@ -290,9 +296,9 @@ actions:
         
         insert)
           # Insert content at line (shifts existing lines down)
-          [ -z "$PARAM_LINE" ] && echo "Error: 'line' required for insert" >&2 && exit 1
+          [ -z "$PARAM_LINE" ] && error "'line' required for insert"
           [ "$PARAM_LINE" -lt 1 ] || [ "$PARAM_LINE" -gt $((TOTAL_LINES + 1)) ] && \
-            echo "Error: line=$PARAM_LINE out of range (1-$((TOTAL_LINES + 1)))" >&2 && exit 1
+            error "line=$PARAM_LINE out of range (1-$((TOTAL_LINES + 1)))"
           
           TEMP=$(mktemp)
           [ "$PARAM_LINE" -gt 1 ] && sed -n "1,$((PARAM_LINE - 1))p" "$PARAM_PATH" > "$TEMP"
@@ -304,7 +310,7 @@ actions:
         
         find-replace)
           # Find and replace text
-          [ -z "$PARAM_FIND" ] && echo "Error: 'find' required for find-replace" >&2 && exit 1
+          [ -z "$PARAM_FIND" ] && error "'find' required for find-replace"
           
           # Escape special characters
           SEARCH=$(printf '%s\n' "$PARAM_FIND" | sed 's/[[\.*^$()+?{|]/\\&/g')
@@ -325,8 +331,7 @@ actions:
           ;;
         
         *)
-          echo "Error: Unknown op '$PARAM_OP'. Use: replace, insert, find-replace, append" >&2
-          exit 1
+          error "Unknown op '$PARAM_OP'. Use: replace, insert, find-replace, append"
           ;;
       esac
 

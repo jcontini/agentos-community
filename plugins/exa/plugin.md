@@ -17,8 +17,8 @@ auth:
   help_url: https://dashboard.exa.ai/api-keys
 
 requires:
-  - curl
-  - jq
+  - curl  # Usually pre-installed
+  - jq    # Usually pre-installed on macOS
 
 settings:
   num_results:

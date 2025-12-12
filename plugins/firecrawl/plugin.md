@@ -5,7 +5,7 @@ description: Web scraping and content extraction for JS-heavy sites
 category: search
 icon: https://www.google.com/s2/favicons?domain=firecrawl.dev&sz=64
 color: "#FF6B35"
-protocol: shell
+protocol: rest
 
 provides:
   - url-extract
@@ -15,10 +15,6 @@ auth:
   header: Authorization
   prefix: "Bearer "
   help_url: https://www.firecrawl.dev/app/api-keys
-
-requires:
-  - curl
-  - jq
 
 actions:
   scrape:
@@ -32,15 +28,15 @@ actions:
         type: boolean
         default: "true"
         description: Skip headers, footers, and navigation
-    run: |
-      curl -s -X POST "https://api.firecrawl.dev/v1/scrape" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"url\": \"$PARAM_URL\",
-          \"formats\": [\"markdown\"],
-          \"onlyMainContent\": $PARAM_ONLY_MAIN_CONTENT
-        }" | jq -r '.data.markdown // .error // "Failed to scrape"'
+    api:
+      method: POST
+      url: https://api.firecrawl.dev/v1/scrape
+      body:
+        url: "$PARAM_URL"
+        formats: ["markdown"]
+        onlyMainContent: "$PARAM_ONLY_MAIN_CONTENT"
+      response:
+        extract: ".data.markdown"
 
   scrape_full:
     description: Scrape a webpage with full response (includes metadata, HTML)
@@ -52,16 +48,13 @@ actions:
       formats:
         type: string
         default: "markdown"
-        description: "Comma-separated formats: markdown, html, links, screenshot"
-    run: |
-      FORMATS=$(echo "$PARAM_FORMATS" | sed 's/,/","/g')
-      curl -s -X POST "https://api.firecrawl.dev/v1/scrape" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"url\": \"$PARAM_URL\",
-          \"formats\": [\"$FORMATS\"]
-        }" | jq .
+        description: "Formats: markdown, html, links, screenshot"
+    api:
+      method: POST
+      url: https://api.firecrawl.dev/v1/scrape
+      body:
+        url: "$PARAM_URL"
+        formats: ["$PARAM_FORMATS"]
 
   search:
     description: Search the web and return results with content
@@ -74,14 +67,12 @@ actions:
         type: integer
         default: "5"
         description: Number of results (1-10)
-    run: |
-      curl -s -X POST "https://api.firecrawl.dev/v1/search" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"query\": \"$PARAM_QUERY\",
-          \"limit\": $PARAM_LIMIT
-        }" | jq .
+    api:
+      method: POST
+      url: https://api.firecrawl.dev/v1/search
+      body:
+        query: "$PARAM_QUERY"
+        limit: "$PARAM_LIMIT"
 
   crawl:
     description: Crawl multiple pages from a starting URL
@@ -94,15 +85,13 @@ actions:
         type: integer
         default: "10"
         description: Maximum pages to crawl
-    run: |
-      curl -s -X POST "https://api.firecrawl.dev/v1/crawl" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"url\": \"$PARAM_URL\",
-          \"limit\": $PARAM_LIMIT,
-          \"formats\": [\"markdown\"]
-        }" | jq .
+    api:
+      method: POST
+      url: https://api.firecrawl.dev/v1/crawl
+      body:
+        url: "$PARAM_URL"
+        limit: "$PARAM_LIMIT"
+        formats: ["markdown"]
 ---
 
 # Firecrawl

@@ -13,8 +13,8 @@ auth:
   prefix: "Bearer "
 
 requires:
-  - curl
-  - jq
+  - curl  # Usually pre-installed
+  - jq    # Usually pre-installed on macOS
 
 actions:
   list_tasks:
@@ -146,10 +146,9 @@ actions:
         type: string
         required: true
         description: Task ID to complete
-    run: |
-      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID/close" \
-        -H "Authorization: Bearer $AUTH_TOKEN"
-      echo "Task $PARAM_ID completed"
+    api:
+      method: POST
+      url: https://api.todoist.com/rest/v2/tasks/$PARAM_ID/close
 
   reopen_task:
     description: Reopen a completed task
@@ -158,10 +157,9 @@ actions:
         type: string
         required: true
         description: Task ID to reopen
-    run: |
-      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID/reopen" \
-        -H "Authorization: Bearer $AUTH_TOKEN"
-      echo "Task $PARAM_ID reopened"
+    api:
+      method: POST
+      url: https://api.todoist.com/rest/v2/tasks/$PARAM_ID/reopen
 
   delete_task:
     description: Permanently delete a task
@@ -170,24 +168,21 @@ actions:
         type: string
         required: true
         description: Task ID to delete
-    run: |
-      curl -s -X DELETE "https://api.todoist.com/rest/v2/tasks/$PARAM_ID" \
-        -H "Authorization: Bearer $AUTH_TOKEN"
-      echo "Task $PARAM_ID deleted"
+    api:
+      method: DELETE
+      url: https://api.todoist.com/rest/v2/tasks/$PARAM_ID
 
   list_projects:
     description: List all projects
-    run: |
-      curl -s "https://api.todoist.com/rest/v2/projects" \
-        -H "Authorization: Bearer $AUTH_TOKEN" | \
-      jq -r '.[] | "[\(.id)] \(.name)"'
+    api:
+      method: GET
+      url: https://api.todoist.com/rest/v2/projects
 
   list_labels:
     description: List all labels
-    run: |
-      curl -s "https://api.todoist.com/rest/v2/labels" \
-        -H "Authorization: Bearer $AUTH_TOKEN" | \
-      jq -r '.[] | "[\(.id)] \(.name)"'
+    api:
+      method: GET
+      url: https://api.todoist.com/rest/v2/labels
 ---
 
 # Todoist
