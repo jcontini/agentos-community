@@ -1,7 +1,13 @@
 # agentOS Agents Registry
 # Agents = AI clients that use agentOS's MCP server
 # 
-# Skills are discovered by scanning skills/*/skill.md (no registry needed)
+# Each agent can specify:
+# - id: canonical identifier (matches clientInfo.name)
+# - name: display name
+# - description, icon, color: UI metadata
+# - category: chat | code
+# - platforms: per-platform app_path and config_path
+# - install: installation method (config or deeplink)
 
 version: 1
 
@@ -63,7 +69,10 @@ agents:
     platforms:
       macos:
         app_path: /Applications/Raycast.app
-        # Config path TBD - needs research
+    install:
+      method: deeplink
+      # Template uses {{config_json}} placeholder for URL-encoded MCP config
+      deeplink_url: "raycast://mcp/install?{{config_json}}"
 
   # Code Agents
   - id: cursor
@@ -140,6 +149,3 @@ agents:
     icon: https://www.google.com/s2/favicons?domain=github.com&sz=64
     color: "#666666"
     # VS Code extension, config TBD
-
-
-
