@@ -64,6 +64,7 @@ settings:
 
 actions:
   search:
+    readonly: true
     description: Search the web with optional content extraction. Use include_text=true only when you need page content.
     params:
       query:
@@ -118,6 +119,7 @@ actions:
         -d "$PAYLOAD" | jq .
 
   search_urls:
+    readonly: true
     description: Quick search returning just URLs and titles (fastest, cheapest)
     params:
       query:
@@ -143,6 +145,7 @@ actions:
         }" | jq -r '.results[] | "\(.title)\n  \(.url)\n"'
 
   extract:
+    readonly: true
     description: Extract content from specific URLs (use after search_urls to get full content)
     params:
       urls:
@@ -167,6 +170,7 @@ actions:
         }" | jq .
 
   find_similar:
+    readonly: true
     description: Find pages similar to a given URL
     params:
       url:

@@ -25,24 +25,28 @@ actions:
   # =============================================================================
   
   whoami:
+    readonly: true
     description: Get current authenticated user info
     graphql:
       query: "{ viewer { id name email } }"
       extract: .data.viewer
 
   list_teams:
+    readonly: true
     description: List all teams (use to get team IDs for other operations)
     graphql:
       query: "{ teams { nodes { id key name } } }"
       extract: .data.teams.nodes
 
   list_projects:
+    readonly: true
     description: List all projects
     graphql:
       query: "{ projects { nodes { id name state priority lead { name } } } }"
       extract: .data.projects.nodes
 
   list_workflow_states:
+    readonly: true
     description: List workflow states for a team (use to get state IDs)
     params:
       team_id:
@@ -61,6 +65,7 @@ actions:
       extract: .data.workflowStates.nodes
 
   list_cycles:
+    readonly: true
     description: List cycles for a team
     params:
       team_id:
@@ -83,6 +88,7 @@ actions:
   # =============================================================================
 
   list_issues:
+    readonly: true
     description: List issues, optionally filtered by team/state/assignee
     params:
       team_id:
@@ -126,6 +132,7 @@ actions:
       extract: .data.issues.nodes
 
   get_issue:
+    readonly: true
     description: Get full issue details including relations
     params:
       id:

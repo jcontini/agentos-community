@@ -39,6 +39,7 @@ helpers: |
 
 actions:
   list:
+    readonly: true
     description: List recent conversations from AI agents with date, workspace, name, and file types modified
     params:
       agent:
@@ -60,6 +61,7 @@ actions:
         --format "${PARAM_FORMAT:-table}"
 
   search:
+    readonly: true
     description: Search conversations by keyword across name, workspace, and files modified
     params:
       query:
@@ -86,6 +88,7 @@ actions:
         --format "${PARAM_FORMAT:-table}"
 
   agents:
+    readonly: true
     description: List available agents and their status (installed, paths found)
     run: |
       history agents

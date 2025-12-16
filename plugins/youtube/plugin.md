@@ -18,6 +18,7 @@ requires:
 
 actions:
   transcribe:
+    readonly: true
     description: Get transcript text from a YouTube video
     params:
       url:
@@ -48,6 +49,7 @@ actions:
       fi
 
   metadata:
+    readonly: true
     description: Get video metadata as JSON (title, duration, channel, etc)
     params:
       url:

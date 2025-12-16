@@ -14,6 +14,7 @@ requires:
 
 actions:
   audit:
+    readonly: true
     description: Audit a plugin for common issues and best practices
     params:
       path:

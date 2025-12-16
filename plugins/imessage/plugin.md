@@ -18,6 +18,7 @@ permissions:
 
 actions:
   list_conversations:
+    readonly: true
     description: List recent iMessage/SMS conversations
     params:
       limit:
@@ -56,6 +57,7 @@ actions:
       SQL
 
   list_messages:
+    readonly: true
     description: Get messages from a conversation or all recent messages
     params:
       contact:
@@ -99,6 +101,7 @@ actions:
       SQL
 
   get_unread:
+    readonly: true
     description: Get all unread messages
     run: |
       DB="$HOME/Library/Messages/chat.db"
@@ -124,6 +127,7 @@ actions:
       SQL
 
   search:
+    readonly: true
     description: Search messages by text content
     params:
       query:
@@ -157,6 +161,7 @@ actions:
       SQL
 
   get_today:
+    readonly: true
     description: Get all messages from today
     run: |
       DB="$HOME/Library/Messages/chat.db"

@@ -19,6 +19,7 @@ permissions:
 
 actions:
   query:
+    readonly: true
     description: Run read-only SQLite query against Contacts database
     params:
       sql:
@@ -40,6 +41,7 @@ actions:
       done
 
   get:
+    readonly: true
     description: Get full contact details by ID (all phones, emails, URLs, notes)
     params:
       id:

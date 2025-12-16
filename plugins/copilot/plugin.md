@@ -20,6 +20,7 @@ actions:
   # ============================================
   
   list_transactions:
+    readonly: true
     description: List recent transactions
     params:
       limit:
@@ -57,6 +58,7 @@ actions:
       "
 
   get_transaction:
+    readonly: true
     description: Get full details of a specific transaction
     params:
       id:
@@ -95,6 +97,7 @@ actions:
       '
 
   search:
+    readonly: true
     description: Search transactions by merchant name
     params:
       query:
@@ -125,6 +128,7 @@ actions:
       "
 
   unreviewed:
+    readonly: true
     description: List transactions needing review (not yet categorized by user)
     params:
       limit:
@@ -163,6 +167,7 @@ actions:
       '
 
   list_categories:
+    readonly: true
     description: List all available categories with IDs (for recategorization)
     run: |
       CATEGORIES="$HOME/Library/Group Containers/group.com.copilot.production/widget-data/widgets-category-categories.json"
@@ -171,6 +176,7 @@ actions:
       cat "$CATEGORIES" | jq '[.[] | {id: .id, name: .name, excluded: .excluded}]'
 
   spending_by_month:
+    readonly: true
     description: Get monthly spending totals (excludes payments/transfers)
     params:
       months:
@@ -196,6 +202,7 @@ actions:
       "
 
   spending_by_merchant:
+    readonly: true
     description: Get spending grouped by merchant (excludes payments/transfers)
     params:
       months:
@@ -228,6 +235,7 @@ actions:
       "
 
   spending_by_category:
+    readonly: true
     description: Get spending grouped by category
     params:
       months:
@@ -259,6 +267,7 @@ actions:
       '
 
   balances:
+    readonly: true
     description: Get latest account balances
     run: |
       DB="$HOME/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
@@ -290,6 +299,7 @@ actions:
       '
 
   net_worth:
+    readonly: true
     description: Calculate net worth with account breakdown
     run: |
       DB="$HOME/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
@@ -339,6 +349,7 @@ actions:
       '
 
   recurring:
+    readonly: true
     description: List recurring transactions
     run: |
       DB="$HOME/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
@@ -360,6 +371,7 @@ actions:
       "
 
   hidden:
+    readonly: true
     description: List hidden/deleted transactions
     params:
       limit:

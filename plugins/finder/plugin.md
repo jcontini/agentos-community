@@ -45,6 +45,7 @@ actions:
       fi
 
   browse:
+    readonly: true
     description: List directory contents or show tree structure
     params:
       path:
@@ -67,6 +68,7 @@ actions:
       fi
 
   read:
+    readonly: true
     description: Read file info and/or contents
     params:
       path:

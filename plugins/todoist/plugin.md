@@ -20,6 +20,7 @@ requires:
 
 actions:
   list_tasks:
+    readonly: true
     description: List tasks, optionally filtered by today/overdue/project
     params:
       filter:
@@ -41,6 +42,7 @@ actions:
       jq -r '.[] | "[\(.id)] \(.content) | Due: \(.due.date // "none") | Priority: \(.priority)"'
 
   get_task:
+    readonly: true
     description: Get a single task by ID, including its subtasks
     params:
       id:
@@ -175,6 +177,7 @@ actions:
       url: https://api.todoist.com/rest/v2/tasks/$PARAM_ID
 
   list_projects:
+    readonly: true
     description: List all projects
     api:
       method: GET

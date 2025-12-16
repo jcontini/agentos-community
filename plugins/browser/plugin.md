@@ -69,6 +69,7 @@ helpers: |
 
 actions:
   inspect:
+    readonly: true
     description: Get a diagnostic overview of a page - headings, buttons, inputs, console logs, network activity. Efficient alternative to screenshots.
     params:
       url:

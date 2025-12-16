@@ -19,6 +19,7 @@ permissions:
 
 actions:
   list_calendars:
+    readonly: true
     description: List all available calendars with colors
     run: |
       osascript << 'EOF'
@@ -57,6 +58,7 @@ actions:
       EOF
 
   list:
+    readonly: true
     description: List calendar events (upcoming or past)
     params:
       days:
@@ -216,6 +218,7 @@ actions:
       swift /tmp/agentos_cal_list.swift "${PARAM_DAYS:-7}" "${PARAM_PAST:-false}" "${PARAM_CALENDAR:-}" "${PARAM_QUERY:-}" "${PARAM_LIMIT:-}" "${PARAM_EXCLUDE_ALL_DAY:-false}"
 
   get:
+    readonly: true
     description: Get full details of a specific event by UID
     params:
       uid:
@@ -589,6 +592,7 @@ actions:
       swift /tmp/agentos_cal_delete.swift "$PARAM_UID"
 
   today:
+    readonly: true
     description: Get today's events (shortcut for list with days=1)
     params:
       exclude_all_day:
