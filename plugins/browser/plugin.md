@@ -331,108 +331,230 @@ actions:
 
 # Browser
 
-**⚡ Always start with `inspect`** — it's fast, cheap, and gives you everything: page structure, buttons, inputs, console logs, network requests.
+Browser automation with two modes: **one-shot** actions for quick tasks, and **sessions** for interactive workflows with recording/playback.
 
-## Quick Start
+## Quick Reference
 
+| Action | Use For |
+|--------|---------|
+| `inspect` | **Start here** — page structure, buttons, inputs, console, network |
+| `start_session` | Open persistent browser for interactive work |
+| `record_flow` | Record user interactions as replayable flow |
+| `play_flow` | Replay a recorded flow |
+| `click` / `type` | Interact with elements |
+| `screenshot` | Visual capture (expensive — use sparingly) |
+
+---
+
+## Sessions (Interactive Workflows)
+
+Sessions keep a browser open so you can interact back-and-forth. Essential for recording and multi-step flows.
+
+### Start a Session
+
+```yaml
+action: start_session
+params:
+  url: "https://example.com"     # Optional starting URL
+  recording: true                # Optional: start recording immediately
 ```
-tool: inspect
-params: {url: "https://example.com"}
+
+Returns `session_id` — use it in all subsequent actions.
+
+### Use Session with Other Actions
+
+```yaml
+action: inspect
+params:
+  session_id: "session_abc123"
 ```
 
-This returns structured data in seconds. Only use other tools after inspecting.
+```yaml
+action: click
+params:
+  session_id: "session_abc123"
+  selector: "text=Login"
+```
 
-## Tool Priority
+### End Session
 
-| Priority | Tool | Use when |
-|----------|------|----------|
-| 1️⃣ | `inspect` | **Always start here** — page overview, console, network |
-| 2️⃣ | `console` | Focus on JavaScript errors |
-| 2️⃣ | `network` | Focus on failed API calls |
-| 3️⃣ | `click` / `type` | Interact with elements |
-| 3️⃣ | `get_text` | Extract specific content |
-| 4️⃣ | `evaluate` | Run custom JavaScript |
-| ⚠️ | `get_html` | Full HTML (can timeout on heavy pages) |
-| ⚠️ | `screenshot` | Visual capture (expensive tokens) |
+```yaml
+action: end_session
+params:
+  session_id: "session_abc123"
+```
 
-## Tools
+---
+
+## Recording & Playback
+
+Record user interactions in the browser and replay them. Uses Chrome DevTools Recorder JSON format.
+
+### Record a Flow
+
+**Option 1: Start session with recording**
+```yaml
+action: start_session
+params:
+  url: "https://example.com"
+  recording: true
+```
+
+**Option 2: Start recording on existing session**
+```yaml
+action: record_flow
+params:
+  session_id: "session_abc123"
+```
+
+The user can now interact with the browser. All clicks, typing, and navigation are captured.
+
+### Stop Recording
+
+```yaml
+action: stop_recording
+params:
+  session_id: "session_abc123"
+```
+
+Returns the recorded flow as Chrome DevTools Recorder JSON.
+
+### Get a Past Recording
+
+Recordings are auto-saved to `~/.agentos/browser-recordings/` as `YYYY-MM-DD_HH-MM-SS_domain.json`.
+
+```yaml
+action: get_recording
+params:
+  session_id: "session_abc123"
+```
+
+### Play Back a Flow
+
+```yaml
+action: play_flow
+params:
+  session_id: "session_abc123"    # Optional: use existing session
+  playback_mode: "browser"        # Optional: "browser" (fast) or "native" (OS-level)
+  recording:
+    title: "Login Flow"
+    steps:
+      - type: navigate
+        url: "https://example.com"
+      - type: click
+        selectors: [["role=button[name=\"Login\"]"]]
+      - type: change
+        selectors: [["input[name='email']"]]
+        value: "user@example.com"
+      - type: keyDown
+        key: "Enter"
+```
+
+### Playback Modes
+
+| Mode | Description | Use When |
+|------|-------------|----------|
+| `browser` | Fast Playwright automation | Testing, automation |
+| `native` | OS-level mouse/keyboard (enigo) | Screen recordings, demos |
+
+### Supported Step Types
+
+| Type | Description | Key Params |
+|------|-------------|------------|
+| `navigate` | Go to URL | `url` |
+| `click` | Click element | `selectors`, `offsetX`, `offsetY` |
+| `doubleClick` | Double-click | `selectors` |
+| `change` | Type into input | `selectors`, `value` |
+| `keyDown` / `keyUp` | Press/release key | `key` |
+| `scroll` | Scroll element or page | `x`, `y`, `selectors` |
+| `hover` | Mouse hover | `selectors` |
+| `waitForElement` | Wait for element | `selectors` |
+
+### Selector Priority
+
+The recorder generates multiple selectors per element for reliability:
+
+1. `role=button[name="..."]` — Playwright's native ARIA (most reliable)
+2. `[data-testid="..."]` — Test IDs (if present)
+3. `text=...` — Text content
+4. `#id` — Element ID (if not auto-generated)
+5. CSS path with context
+6. XPath (fallback)
+
+---
+
+## One-Shot Actions
+
+For quick tasks without needing a persistent session.
 
 ### inspect ⚡ (start here)
+
 Page structure, buttons, inputs, console logs, network activity.
 
-```
-tool: inspect
-params: {url: "https://example.com"}
-```
-
-### console
-JavaScript console logs and errors.
-
-```
-tool: console
-params: {url: "https://example.com"}
-```
-
-### network
-Network requests and failed API calls.
-
-```
-tool: network
-params: {url: "https://example.com"}
+```yaml
+action: inspect
+params:
+  url: "https://example.com"
+  screenshot: false    # Set true only if you need visual
 ```
 
 ### click
-Click an element. Returns any console/network errors.
 
-```
-tool: click
-params: {url: "https://example.com", selector: "text=Submit"}
+```yaml
+action: click
+params:
+  url: "https://example.com"
+  selector: "text=Submit"
 ```
 
 ### type
-Type into an input field.
 
-```
-tool: type
-params: {url: "https://example.com", selector: "input[name='email']", text: "hello@example.com"}
+```yaml
+action: type
+params:
+  url: "https://example.com"
+  selector: "input[name='email']"
+  text: "hello@example.com"
 ```
 
 ### get_text
-Extract text from elements.
 
-```
-tool: get_text
-params: {url: "https://example.com", selector: "h1"}
+```yaml
+action: get_text
+params:
+  url: "https://example.com"
+  selector: "h1"
 ```
 
 ### evaluate
-Run JavaScript in the page context.
 
-```
-tool: evaluate
-params: {url: "https://example.com", script: "document.title"}
-```
-
-### get_html ⚠️
-Full HTML (can timeout on heavy pages — prefer inspect).
-
-```
-tool: get_html
-params: {url: "https://example.com", selector: "main"}
+```yaml
+action: evaluate
+params:
+  url: "https://example.com"
+  script: "document.title"
 ```
 
-### screenshot ⚠️
-Capture screenshot (expensive in tokens — use sparingly).
+### console / network
 
+```yaml
+action: console
+params:
+  url: "https://example.com"
 ```
-tool: screenshot
-params: {url: "https://example.com"}
-```
 
-## CSS Selectors
+---
 
-- `text=Click me` — Element containing text
-- `#id` — By ID
-- `.class` — By class
-- `button` — By tag
-- `[data-testid="submit"]` — By attribute
+## Selectors
+
+Playwright supports multiple selector types:
+
+| Selector | Example | Use For |
+|----------|---------|---------|
+| Role | `role=button[name="Submit"]` | Buttons, links (most reliable) |
+| Text | `text=Click me` | Elements by visible text |
+| Test ID | `[data-testid="submit"]` | Test attributes |
+| CSS | `#id`, `.class`, `button` | Standard CSS |
+| XPath | `xpath=//button[@type="submit"]` | Complex DOM paths |
+
+**Tip:** Role selectors (`role=button[name="..."]`) are most reliable for dynamic SPAs (React, Next.js).
