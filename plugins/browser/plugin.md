@@ -9,6 +9,22 @@ color: "#4285F4"
 topics: [browser automation, webpage inspection, web debugging]
 
 settings:
+  recording_format:
+    label: Recording Format
+    description: "simple = clean action-based format for manual flows, chrome_devtools = detailed format from auto-recording"
+    type: enum
+    default: "simple"
+    options:
+      - simple
+      - chrome_devtools
+  default_playback_mode:
+    label: Default Playback Mode
+    description: "browser = fast Playwright automation, native = OS-level input (visible to screen recorders)"
+    type: enum
+    default: "browser"
+    options:
+      - browser
+      - native
   headless:
     label: Headless Mode
     description: Run browser invisibly (off = you can watch the browser)
@@ -51,14 +67,6 @@ settings:
     options:
       - light
       - dark
-  playback_mode:
-    label: Playback Mode
-    description: "browser = fast Playwright automation, native = OS-level input (visible to screen recorders)"
-    type: enum
-    default: "native"
-    options:
-      - browser
-      - native
 
 requires:
   - name: node
@@ -273,9 +281,19 @@ actions:
 
   play_flow:
     description: |
-      Play back a recorded browser flow. Accepts Chrome DevTools Recorder JSON format.
+      Play back a browser flow. Auto-detects format.
       
-      You can record flows using Chrome DevTools Recorder and export as JSON, or use record_flow action.
+      Simple format (recommended for manual flows):
+        [
+          {"action": "goto", "url": "https://example.com"},
+          {"action": "wait_for", "selector": "text=Login"},
+          {"action": "click", "selector": "text=Login"},
+          {"action": "type", "selector": "input[name='email']", "text": "user@example.com"},
+          {"action": "click", "selector": "text=Submit"}
+        ]
+      
+      Chrome DevTools format (from record_flow or Chrome DevTools Recorder):
+        {"title": "...", "steps": [{"type": "navigate", ...}, ...]}
     params:
       session_id:
         type: string
@@ -284,18 +302,16 @@ actions:
         type: object
         required: true
         description: |
-          Chrome DevTools Recorder JSON with title and steps array. Example:
-          {
-            "title": "My Flow",
-            "steps": [
-              {"type": "navigate", "url": "https://example.com"},
-              {"type": "click", "selectors": [["text=Login"]], "offsetX": 50, "offsetY": 12},
-              {"type": "change", "selectors": [["input[name='email']"]], "value": "user@example.com"},
-              {"type": "keyDown", "key": "Enter"}
-            ]
-          }
+          Simple format actions: goto, wait_for, click, type, press, hover, scroll
           
-          Supported step types: navigate, click, doubleClick, change, keyDown, keyUp, scroll, hover, waitForElement
+          Example (simple):
+          [
+            {"action": "goto", "url": "https://example.com"},
+            {"action": "wait_for", "selector": "role=button[name=\"Login\"]"},
+            {"action": "click", "selector": "role=button[name=\"Login\"]"},
+            {"action": "type", "selector": "input[name='email']", "text": "user@example.com"},
+            {"action": "press", "key": "Enter"}
+          ]
       playback_mode:
         type: enum
         description: "Override playback mode: browser = fast Playwright automation, native = OS-level input for screen recordings"
@@ -439,11 +455,32 @@ params:
 
 ### Play Back a Flow
 
+**Simple format (recommended for building flows manually):**
+
 ```yaml
 action: play_flow
 params:
-  session_id: "session_abc123"    # Optional: use existing session
-  playback_mode: "browser"        # Optional: "browser" (fast) or "native" (OS-level)
+  session_id: "session_abc123"
+  playback_mode: "browser"
+  recording:
+    - action: goto
+      url: "https://example.com"
+    - action: wait_for
+      selector: "role=button[name=\"Login\"]"
+    - action: click
+      selector: "role=button[name=\"Login\"]"
+    - action: type
+      selector: "input[name='email']"
+      text: "user@example.com"
+    - action: press
+      key: "Enter"
+```
+
+**Chrome DevTools format (from record_flow or Chrome export):**
+
+```yaml
+action: play_flow
+params:
   recording:
     title: "Login Flow"
     steps:
@@ -451,11 +488,6 @@ params:
         url: "https://example.com"
       - type: click
         selectors: [["role=button[name=\"Login\"]"]]
-      - type: change
-        selectors: [["input[name='email']"]]
-        value: "user@example.com"
-      - type: keyDown
-        key: "Enter"
 ```
 
 ### Playback Modes
@@ -465,17 +497,26 @@ params:
 | `browser` | Fast Playwright automation | Testing, automation |
 | `native` | OS-level mouse/keyboard (enigo) | Screen recordings, demos |
 
-### Supported Step Types
+### Simple Format Actions (Recommended)
+
+| Action | Description | Params |
+|--------|-------------|--------|
+| `goto` | Navigate to URL | `url` |
+| `wait_for` | Wait for element to appear | `selector` |
+| `click` | Click element | `selector` |
+| `type` | Type text into input | `selector`, `text` |
+| `press` | Press a key | `key` |
+| `hover` | Mouse hover | `selector` |
+| `scroll` | Scroll page | `x`, `y` |
+
+### Chrome DevTools Step Types
 
 | Type | Description | Key Params |
 |------|-------------|------------|
 | `navigate` | Go to URL | `url` |
 | `click` | Click element | `selectors`, `offsetX`, `offsetY` |
-| `doubleClick` | Double-click | `selectors` |
 | `change` | Type into input | `selectors`, `value` |
 | `keyDown` / `keyUp` | Press/release key | `key` |
-| `scroll` | Scroll element or page | `x`, `y`, `selectors` |
-| `hover` | Mouse hover | `selectors` |
 | `waitForElement` | Wait for element | `selectors` |
 
 ### Selector Priority

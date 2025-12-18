@@ -41,8 +41,10 @@ const timeout = parseInt(process.env.SETTING_TIMEOUT || '30', 10) * 1000;
 const locale = process.env.SETTING_LOCALE || 'en-US';
 const userAgentSetting = process.env.SETTING_USER_AGENT || 'chrome';
 const colorScheme = process.env.SETTING_COLOR_SCHEME || 'light';
+// Recording format: simple (action-based) or chrome_devtools
+const recordingFormat = process.env.SETTING_RECORDING_FORMAT || 'simple';
 // Playback mode: param overrides setting
-const playbackMode = process.env.PARAM_PLAYBACK_MODE || process.env.SETTING_PLAYBACK_MODE || 'native';
+const playbackMode = process.env.PARAM_PLAYBACK_MODE || process.env.SETTING_DEFAULT_PLAYBACK_MODE || 'browser';
 
 // Recordings storage
 const recordingsDir = join(homedir(), '.agentos', 'recordings');
@@ -527,15 +529,15 @@ async function playStepBrowserMode(page, step) {
       break;
       
     case 'hover': {
-      const locator = page.locator(getSelector(step));
+      const locator = page.locator(getSelector(step)).first();
       await locator.hover();
       break;
     }
     
     case 'waitForElement': {
-      const locator = page.locator(getSelector(step));
+      const locator = page.locator(getSelector(step)).first();
       await locator.waitFor({ 
-        state: step.visible ? 'visible' : 'attached',
+        state: step.visible !== false ? 'visible' : 'attached',
         timeout: step.timeout || 10000
       });
       break;
@@ -658,9 +660,9 @@ async function playStepNativeMode(page, step) {
     }
     
     case 'waitForElement': {
-      const locator = page.locator(getSelector(step));
+      const locator = page.locator(getSelector(step)).first();
       await locator.waitFor({ 
-        state: step.visible ? 'visible' : 'attached',
+        state: step.visible !== false ? 'visible' : 'attached',
         timeout: step.timeout || 10000
       });
       break;
@@ -680,15 +682,132 @@ async function playStepNativeMode(page, step) {
 }
 
 /**
- * Process a Chrome DevTools Recorder flow.
+ * Convert a Chrome DevTools step to simple format.
+ */
+function toSimpleStep(step) {
+  // Get the best selector from selectors array
+  const getSelector = (s) => {
+    if (s.selectors && s.selectors[0] && s.selectors[0][0]) {
+      return s.selectors[0][0];
+    }
+    return s.selector;
+  };
+  
+  switch (step.type) {
+    case 'navigate':
+      return { action: 'goto', url: step.url };
+    case 'click':
+      return { action: 'click', selector: getSelector(step) };
+    case 'change':
+      return { action: 'type', selector: getSelector(step), text: step.value };
+    case 'keyDown':
+      return { action: 'press', key: step.key };
+    case 'waitForElement':
+      return { action: 'wait_for', selector: getSelector(step) };
+    case 'scroll':
+      return { action: 'scroll', x: step.x || 0, y: step.y || 0 };
+    case 'hover':
+      return { action: 'hover', selector: getSelector(step) };
+    case 'setViewport':
+      return null; // Skip viewport steps in simple format
+    default:
+      return null; // Skip unknown steps
+  }
+}
+
+/**
+ * Convert a Chrome DevTools recording to simple format.
+ */
+function toSimpleFormat(recording) {
+  const steps = recording.steps || [];
+  return steps
+    .map(toSimpleStep)
+    .filter(s => s !== null);
+}
+
+/**
+ * Normalize a step from either format to internal format.
+ * 
+ * Simple format (action-based):
+ *   { action: "goto", url: "..." }
+ *   { action: "wait_for", selector: "..." }
+ *   { action: "click", selector: "..." }
+ *   { action: "type", selector: "...", text: "..." }
+ * 
+ * Chrome DevTools format (type-based):
+ *   { type: "navigate", url: "..." }
+ *   { type: "click", selectors: [[...]] }
+ *   { type: "change", selectors: [[...]], value: "..." }
+ */
+function normalizeStep(step) {
+  // Already in Chrome DevTools format
+  if (step.type) {
+    return step;
+  }
+  
+  // Convert simple format to internal format
+  switch (step.action) {
+    case 'goto':
+      return { type: 'navigate', url: step.url };
+      
+    case 'wait_for':
+      return { 
+        type: 'waitForElement', 
+        selectors: [[step.selector]],
+        timeout: step.timeout || 10000
+      };
+      
+    case 'click':
+      return { 
+        type: 'click', 
+        selectors: [[step.selector]]
+      };
+      
+    case 'type':
+      return { 
+        type: 'change', 
+        selectors: [[step.selector]], 
+        value: step.text 
+      };
+      
+    case 'press':
+      return { type: 'keyDown', key: step.key };
+      
+    case 'scroll':
+      return { type: 'scroll', x: step.x || 0, y: step.y || 0 };
+      
+    case 'hover':
+      return { type: 'hover', selectors: [[step.selector]] };
+      
+    default:
+      console.error(`Unknown action: ${step.action}`);
+      return step;
+  }
+}
+
+/**
+ * Process a flow recording.
+ * Auto-detects format:
+ *   - Simple array: [{ action: "goto", ... }, ...]
+ *   - Chrome DevTools: { title: "...", steps: [...] }
+ * 
  * Supports both browser mode (Playwright native) and native mode (OS-level input).
  */
 async function playFlow(page, recording) {
-  const steps = recording.steps || [];
+  // Auto-detect format: array = simple format, object with steps = Chrome DevTools
+  let steps;
+  if (Array.isArray(recording)) {
+    steps = recording;
+  } else {
+    steps = recording.steps || [];
+  }
+  
   let stepsProcessed = 0;
   
   for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
+    const rawStep = steps[i];
+    const step = normalizeStep(rawStep);
+    const stepDesc = rawStep.action || step.type;
     
     try {
       if (playbackMode === 'browser') {
@@ -700,13 +819,13 @@ async function playFlow(page, recording) {
     } catch (error) {
       streamAction({ 
         type: 'error', 
-        message: `Step ${i} (${step.type}) failed: ${error.message}`,
+        message: `Step ${i} (${stepDesc}) failed: ${error.message}`,
         steps_processed: stepsProcessed
       });
       streamAction({ type: 'done', success: false });
       return {
         success: false,
-        error: `Step ${i} (${step.type}) failed: ${error.message}`,
+        error: `Step ${i} (${stepDesc}) failed: ${error.message}`,
         steps_processed: stepsProcessed
       };
     }
@@ -911,11 +1030,12 @@ async function run() {
           throw new Error(`Invalid recording JSON: ${e.message}`);
         }
         
-        if (!recording.steps || !Array.isArray(recording.steps)) {
-          throw new Error('recording must have a steps array (Chrome DevTools Recorder format)');
+        // Validate: must be array (simple format) or object with steps (Chrome DevTools)
+        if (!Array.isArray(recording) && (!recording.steps || !Array.isArray(recording.steps))) {
+          throw new Error('recording must be an array (simple format) or have a steps array (Chrome DevTools format)');
         }
         
-        // Play the Chrome DevTools recording
+        // Play the recording (playFlow auto-detects format)
         result = await playFlow(page, recording);
         if (isSession && sessionId) {
           result.session_id = sessionId;
@@ -958,7 +1078,7 @@ async function run() {
         }
         
         // Get recording from daemon (stored in sessions file or recordings dir)
-        const recording = loadRecording(sessionId);
+        let recording = loadRecording(sessionId);
         
         // Clear recording state
         session.recording = false;
@@ -966,10 +1086,19 @@ async function run() {
         saveSessions(sessions);
         
         if (recording) {
-          result.recording = recording;
-          result.message = `Recording stopped. Captured ${recording.steps?.length || 0} steps.`;
+          const stepCount = recording.steps?.length || 0;
+          // Convert to simple format if setting is 'simple'
+          if (recordingFormat === 'simple') {
+            result.recording = toSimpleFormat(recording);
+            result.format = 'simple';
+          } else {
+            result.recording = recording;
+            result.format = 'chrome_devtools';
+          }
+          result.message = `Recording stopped. Captured ${stepCount} steps.`;
         } else {
-          result.recording = { title: `Recording ${sessionId}`, steps: [] };
+          result.recording = recordingFormat === 'simple' ? [] : { title: `Recording ${sessionId}`, steps: [] };
+          result.format = recordingFormat;
           result.message = 'Recording stopped (no events captured).';
         }
         result.session_id = sessionId;
@@ -982,10 +1111,18 @@ async function run() {
           throw new Error('session_id is required for get_recording');
         }
         
-        const recording = loadRecording(sessionId);
+        let recording = loadRecording(sessionId);
         if (recording) {
-          result.recording = recording;
-          result.message = `Found recording with ${recording.steps?.length || 0} steps.`;
+          const stepCount = recording.steps?.length || 0;
+          // Convert to simple format if setting is 'simple'
+          if (recordingFormat === 'simple') {
+            result.recording = toSimpleFormat(recording);
+            result.format = 'simple';
+          } else {
+            result.recording = recording;
+            result.format = 'chrome_devtools';
+          }
+          result.message = `Found recording with ${stepCount} steps.`;
         } else {
           result.success = false;
           result.error = `No recording found for session ${sessionId}`;
