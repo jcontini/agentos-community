@@ -87,6 +87,8 @@ A plugin is a markdown file (`plugins/{id}/plugin.md`) with:
 - **YAML frontmatter** — metadata, auth config, action definitions
 - **Markdown body** — instructions the AI reads to use the plugin
 
+Most plugins are just this single file. Complex plugins (like `browser/`) can include a `scripts/` folder for additional logic.
+
 ```yaml
 ---
 id: todoist
