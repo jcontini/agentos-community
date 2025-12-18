@@ -43,6 +43,36 @@ Instructions for AI go here...
 
 ## Core Concepts
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'ui-monospace, monospace', 'lineColor': '#6b7280', 'primaryTextColor': '#f3f4f6', 'edgeLabelBackground': '#1a1a2e' }}}%%
+flowchart LR
+    subgraph Container[" "]
+        direction LR
+        Sources(["📦 Sources"]) -->|provide| Plugins(["⚡ Plugins"])
+        Agents(["🤖 Agents"]) -->|use| Actions(["⚙️ Actions"])
+        Plugins -->|define| Actions
+        Actions -->|produce| Activities(["📋 Activities"])
+        Plugins -->|have| Accounts(["👤 Accounts"])
+        Accounts -->|store| Credentials(["🔑 Credentials"])
+    end
+    
+    style Container fill:#1a1a2e,stroke:#4a4a6a,stroke-width:2px,rx:10,ry:10
+    style Sources fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
+    style Plugins fill:#4c1d95,stroke:#a78bfa,stroke-width:2px,color:#f3f4f6
+    style Agents fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#fef3c7
+    style Actions fill:#7c2d12,stroke:#f97316,stroke-width:2px,color:#ffedd5
+    style Activities fill:#374151,stroke:#9ca3af,stroke-width:2px,color:#f3f4f6
+    style Accounts fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px,color:#dbeafe
+    style Credentials fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
+    
+    linkStyle 0 stroke:#14b8a6,stroke-width:2px
+    linkStyle 1 stroke:#f59e0b,stroke-width:2px
+    linkStyle 2 stroke:#a78bfa,stroke-width:2px
+    linkStyle 3 stroke:#f97316,stroke-width:2px
+    linkStyle 4 stroke:#3b82f6,stroke-width:2px
+    linkStyle 5 stroke:#10b981,stroke-width:2px
+```
+
 ### Plugin Lifecycle
 
 ```mermaid
