@@ -27,17 +27,12 @@ actions:
       project_id:
         type: string
         description: Filter by project ID
-    run: |
-      URL="https://api.todoist.com/rest/v2/tasks"
-      QUERY=""
-      if [ -n "$PARAM_FILTER" ]; then
-        QUERY="?filter=$(echo "$PARAM_FILTER" | jq -sRr @uri)"
-      elif [ -n "$PARAM_PROJECT_ID" ]; then
-        QUERY="?project_id=$PARAM_PROJECT_ID"
-      fi
-      curl -s "$URL$QUERY" \
-        -H "Authorization: Bearer $AUTH_TOKEN" | \
-      jq -r '.[] | "[\(.id)] \(.content) | Due: \(.due.date // "none") | Priority: \(.priority)"'
+    rest:
+      method: GET
+      url: https://api.todoist.com/rest/v2/tasks
+      query:
+        filter: $PARAM_FILTER
+        project_id: $PARAM_PROJECT_ID
 
   get_task:
     readonly: true
@@ -58,7 +53,7 @@ actions:
       jq -r '.[] | "  - [\(.id)] \(.content) | Due: \(.due.date // "none")"'
 
   create_task:
-    description: Create a new task
+    description: Create a new task (AI-created tasks get "AI" label)
     params:
       content:
         type: string
@@ -80,29 +75,17 @@ actions:
       parent_id:
         type: string
         description: Parent task ID to create as subtask
-    run: |
-      # Build JSON payload
-      PAYLOAD=$(jq -n \
-        --arg content "$PARAM_CONTENT" \
-        --arg due "${PARAM_DUE_STRING:-today}" \
-        --arg priority "$PARAM_PRIORITY" \
-        --arg project "$PARAM_PROJECT_ID" \
-        --arg desc "$PARAM_DESCRIPTION" \
-        --arg parent "$PARAM_PARENT_ID" \
-        '{
-          content: $content,
-          due_string: $due,
-          labels: ["AI"]
-        }
-        + (if $priority != "" then {priority: ($priority | tonumber)} else {} end)
-        + (if $project != "" then {project_id: $project} else {} end)
-        + (if $desc != "" then {description: $desc} else {} end)
-        + (if $parent != "" then {parent_id: $parent} else {} end)')
-      
-      curl -s -X POST "https://api.todoist.com/rest/v2/tasks" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "$PAYLOAD" | jq .
+    rest:
+      method: POST
+      url: https://api.todoist.com/rest/v2/tasks
+      body:
+        content: $PARAM_CONTENT
+        due_string: $PARAM_DUE_STRING
+        priority: $PARAM_PRIORITY
+        project_id: $PARAM_PROJECT_ID
+        description: $PARAM_DESCRIPTION
+        parent_id: $PARAM_PARENT_ID
+        labels: ["AI"]
 
   update_task:
     description: Update a task (use POST not PUT!)
@@ -123,23 +106,14 @@ actions:
       description:
         type: string
         description: New description/notes
-    run: |
-      # Build JSON payload with only provided fields
-      PAYLOAD=$(jq -n \
-        --arg content "$PARAM_CONTENT" \
-        --arg due "$PARAM_DUE_STRING" \
-        --arg priority "$PARAM_PRIORITY" \
-        --arg desc "$PARAM_DESCRIPTION" \
-        '{}
-        + (if $content != "" then {content: $content} else {} end)
-        + (if $due != "" then {due_string: $due} else {} end)
-        + (if $priority != "" then {priority: ($priority | tonumber)} else {} end)
-        + (if $desc != "" then {description: $desc} else {} end)')
-      
-      curl -s -X POST "https://api.todoist.com/rest/v2/tasks/$PARAM_ID" \
-        -H "Authorization: Bearer $AUTH_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "$PAYLOAD" | jq .
+    rest:
+      method: POST
+      url: https://api.todoist.com/rest/v2/tasks/$PARAM_ID
+      body:
+        content: $PARAM_CONTENT
+        due_string: $PARAM_DUE_STRING
+        priority: $PARAM_PRIORITY
+        description: $PARAM_DESCRIPTION
 
   complete_task:
     description: Mark a task as complete
