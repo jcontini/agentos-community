@@ -5,6 +5,10 @@ description: Get video transcripts and download videos using yt-dlp
 icon: https://cdn.simpleicons.org/youtube
 color: "#FF0000"
 
+website: https://youtube.com
+privacy_url: https://policies.google.com/privacy
+terms_url: https://www.youtube.com/t/terms
+
 tags: [video transcripts, YouTube, video downloads]
 
 requires:

@@ -5,6 +5,10 @@ description: Project management with blocking relationships, cycles, and full AP
 icon: https://cdn.simpleicons.org/linear
 color: "#5E6AD2"
 
+website: https://linear.app
+privacy_url: https://linear.app/privacy
+terms_url: https://linear.app/terms
+
 tags: [issues, tickets, project management]
 
 auth:

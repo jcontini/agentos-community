@@ -419,7 +419,7 @@ actions:
 
 ---
 
-# Finder
+# macOS
 
 Control your Mac - open anything, browse directories, read files, and full filesystem operations.
 

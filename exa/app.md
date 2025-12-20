@@ -5,6 +5,10 @@ description: Semantic web search and content extraction for research
 icon: https://www.finsmes.com/wp-content/uploads/2024/07/exa.jpeg
 color: "#5436DA"
 
+website: https://exa.ai
+privacy_url: https://exa.ai/privacy
+terms_url: https://exa.ai/terms
+
 tags: [web search, URL extraction, research]
 
 provides:

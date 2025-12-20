@@ -5,6 +5,10 @@ description: Personal task management - create, list, complete, update, delete t
 icon: https://cdn.simpleicons.org/todoist
 color: "#E44332"
 
+website: https://todoist.com
+privacy_url: https://doist.com/privacy
+terms_url: https://doist.com/terms-of-service
+
 tags: [tasks, to-dos, reminders]
 
 auth:

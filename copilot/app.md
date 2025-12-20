@@ -5,6 +5,10 @@ description: Manage finances in Copilot Money - transactions, categories, and or
 icon: https://cdn.jim-nielsen.com/ios/512/copilot-track-budget-money-2025-10-31.png
 color: "#00C853"
 
+website: https://copilot.money
+privacy_url: https://copilot.money/privacy
+terms_url: https://copilot.money/terms
+
 tags: [finances, transactions, budget]
 platform: macos
 
