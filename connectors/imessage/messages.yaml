@@ -18,7 +18,11 @@ actions:
           c.ROWID as id,
           COALESCE(c.display_name, c.chat_identifier) as name,
           c.service_name as platform,
-          (SELECT COUNT(*) FROM chat_handle_join chj WHERE chj.chat_id = c.ROWID) as participant_count,
+          CASE 
+            WHEN (SELECT COUNT(*) FROM chat_handle_join chj WHERE chj.chat_id = c.ROWID) > 1 
+            THEN 'group' 
+            ELSE 'direct' 
+          END as type,
           datetime(
             (SELECT MAX(m.date) FROM message m 
              JOIN chat_message_join cmj ON m.ROWID = cmj.message_id 
@@ -37,11 +41,11 @@ actions:
           WHERE cmj.chat_id = c.ROWID
         )
         ORDER BY updated_at DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
-          type: "[].participant_count > 1 ? 'group' : 'direct'"
+          type: "[].type"
           name: "[].name"
           platform: "[].platform"
           updated_at: "[].updated_at"
@@ -63,7 +67,11 @@ actions:
            FROM handle h
            JOIN chat_handle_join chj ON h.ROWID = chj.handle_id
            WHERE chj.chat_id = c.ROWID) as participant_handles,
-          (SELECT COUNT(*) FROM chat_handle_join chj WHERE chj.chat_id = c.ROWID) as participant_count,
+          CASE 
+            WHEN (SELECT COUNT(*) FROM chat_handle_join chj WHERE chj.chat_id = c.ROWID) > 1 
+            THEN 'group' 
+            ELSE 'direct' 
+          END as type,
           datetime(
             (SELECT MAX(m.date) FROM message m 
              JOIN chat_message_join cmj ON m.ROWID = cmj.message_id 
@@ -78,7 +86,7 @@ actions:
       response:
         mapping:
           id: ".id"
-          type: ".participant_count > 1 ? 'group' : 'direct'"
+          type: ".type"
           name: ".name"
           platform: ".platform"
           is_archived: ".is_archived"
@@ -116,7 +124,7 @@ actions:
         WHERE cmj.chat_id = {{params.conversation_id}}
           AND m.text IS NOT NULL AND m.text != ''
         ORDER BY m.date DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 100}}
       response:
         mapping:
           id: "[].id"
@@ -210,7 +218,7 @@ actions:
         LEFT JOIN chat c ON cmj.chat_id = c.ROWID
         WHERE m.text LIKE '%{{params.query}}%'
         ORDER BY m.date DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
@@ -247,7 +255,7 @@ actions:
           AND m.is_from_me = 0
           AND m.text IS NOT NULL AND m.text != ''
         ORDER BY m.date DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"

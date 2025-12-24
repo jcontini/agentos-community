@@ -27,7 +27,7 @@ actions:
         WHERE key LIKE 'composerData:%'
           AND json_extract(value, '$.composerId') IS NOT NULL
         ORDER BY json_extract(value, '$.lastUpdatedAt') DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
@@ -104,7 +104,7 @@ actions:
         JOIN cursorDiskKV as bubble 
           ON bubble.key = 'bubbleId:{{params.conversation_id}}:' || headers.bubble_id
         ORDER BY headers.sort_order
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 100}}
       response:
         mapping:
           id: "[].id"
@@ -190,7 +190,7 @@ actions:
         WHERE bubble.key LIKE 'bubbleId:%'
           AND json_extract(bubble.value, '$.text') LIKE '%{{params.query}}%'
         ORDER BY json_extract(bubble.value, '$.createdAt') DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"

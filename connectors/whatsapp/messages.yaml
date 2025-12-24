@@ -17,7 +17,10 @@ actions:
         SELECT 
           cs.Z_PK as id,
           cs.ZPARTNERNAME as name,
-          cs.ZSESSIONTYPE as session_type,
+          CASE cs.ZSESSIONTYPE 
+            WHEN 1 THEN 'group' 
+            ELSE 'direct' 
+          END as type,
           cs.ZUNREADCOUNT as unread_count,
           datetime(cs.ZLASTMESSAGEDATE + 978307200, 'unixepoch') as updated_at,
           cs.ZCONTACTJID as contact_jid
@@ -25,11 +28,11 @@ actions:
         WHERE cs.ZREMOVED = 0
           AND cs.ZSESSIONTYPE IN (0, 1)  -- DM or group, exclude broadcasts
         ORDER BY cs.ZLASTMESSAGEDATE DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
-          type: "[].session_type == 1 ? 'group' : 'direct'"
+          type: "[].type"
           name: "[].name"
           unread_count: "[].unread_count"
           updated_at: "[].updated_at"
@@ -46,7 +49,10 @@ actions:
         SELECT 
           cs.Z_PK as id,
           cs.ZPARTNERNAME as name,
-          cs.ZSESSIONTYPE as session_type,
+          CASE cs.ZSESSIONTYPE 
+            WHEN 1 THEN 'group' 
+            ELSE 'direct' 
+          END as type,
           cs.ZUNREADCOUNT as unread_count,
           cs.ZARCHIVED as is_archived,
           datetime(cs.ZLASTMESSAGEDATE + 978307200, 'unixepoch') as updated_at,
@@ -57,7 +63,7 @@ actions:
       response:
         mapping:
           id: ".id"
-          type: ".session_type == 1 ? 'group' : 'direct'"
+          type: ".type"
           name: ".name"
           unread_count: ".unread_count"
           is_archived: ".is_archived"
@@ -113,7 +119,7 @@ actions:
         WHERE m.ZCHATSESSION = {{params.conversation_id}}
           AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 100}}
       response:
         mapping:
           id: "[].id"
@@ -193,7 +199,7 @@ actions:
         LEFT JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
         WHERE m.ZTEXT LIKE '%{{params.query}}%'
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
@@ -228,7 +234,7 @@ actions:
           AND m.ZISFROMME = 0
           AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit}}
+        LIMIT {{params.limit | default: 50}}
       response:
         mapping:
           id: "[].id"
