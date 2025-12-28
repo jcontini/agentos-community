@@ -5,7 +5,8 @@ actions:
   query:
     label: "Execute SQL query"
     sql:
-      query: "{{params.sql}}"
+      # Use |raw modifier to skip SQL escaping - the AI provides complete SQL queries
+      query: "{{params.sql | raw}}"
       format: json
     response:
       mapping:
