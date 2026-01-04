@@ -1,7 +1,7 @@
 ---
 id: books
 name: Books
-description: Track your reading library - import from Goodreads, sync to Hardcover
+description: Track your reading library - pull from Goodreads, push to Hardcover
 icon: icon.svg
 color: "#8B4513"
 
@@ -174,83 +174,52 @@ actions:
         required: true
     returns: void
 
-  import:
-    description: Import books from a file (CSV, JSON)
+  pull:
+    description: Pull books from an external service into local library
     params:
-      path:
-        type: string
-        required: true
-        description: Path to import file
       connector:
         type: string
         required: true
-        description: Source format (goodreads, storygraph)
+        description: Service to pull from (goodreads, hardcover)
+      path:
+        type: string
+        description: Path to file (for connectors like goodreads that use CSV)
+      on_conflict:
+        type: string
+        default: merge
+        description: How to handle conflicts (merge, replace, skip)
       dry_run:
         type: boolean
         default: false
-        description: Preview without importing
+        description: Preview without pulling
     returns:
       type: object
       properties:
-        imported: { type: number }
+        pulled: { type: number }
         skipped: { type: number }
         errors: { type: array }
 
-  export:
-    description: Export library to file
-    readonly: true
-    params:
-      path:
-        type: string
-        required: true
-        description: Output file path
-      format:
-        type: string
-        default: json
-        description: Export format (json, csv)
-      status:
-        type: string
-        description: Only export books with this status
-    returns:
-      type: object
-      properties:
-        exported: { type: number }
-        path: { type: string }
-
-  sync:
-    description: Sync books to/from an external service
+  push:
+    description: Push books from local library to an external service
     params:
       connector:
         type: string
         required: true
-        description: Service to sync with (hardcover)
-      direction:
+        description: Service to push to (hardcover)
+      on_conflict:
         type: string
-        default: push
-        description: push (to service), pull (from service), or both
+        default: skip
+        description: How to handle conflicts (merge, replace, skip)
       dry_run:
         type: boolean
         default: false
+        description: Preview without pushing
     returns:
       type: object
       properties:
         pushed: { type: number }
-        pulled: { type: number }
-        conflicts: { type: number }
-
-  diff:
-    description: Preview what would change in a sync
-    readonly: true
-    params:
-      connector:
-        type: string
-        required: true
-    returns:
-      type: object
-      properties:
-        to_push: { type: number }
-        to_pull: { type: number }
-        conflicts: { type: array }
+        skipped: { type: number }
+        errors: { type: array }
 
   shelves:
     description: List all shelves
@@ -286,33 +255,33 @@ actions:
     returns: void
 
 instructions: |
-  The Books app manages your reading library with import/export capabilities.
+  The Books app manages your reading library with pull/push capabilities.
   
   **Getting started:**
-  1. Import your Goodreads library: `Books(action: "import", connector: "goodreads", path: "~/Downloads/goodreads_library_export.csv")`
+  1. Pull your Goodreads library: `Books(action: "pull", connector: "goodreads", path: "~/Downloads/goodreads_library_export.csv")`
   2. View your library: `Books(action: "list")`
   3. Update a book: `Books(action: "update", id: "...", rating: 5, status: "read")`
   
   **Connectors:**
-  - `goodreads` - Import only (CSV export, no API)
-  - `hardcover` - Full sync (API)
+  - `goodreads` - Pull only (CSV, no API)
+  - `hardcover` - Pull and push (API)
   - `google_books` - Search/metadata only
   - `openlibrary` - Search/metadata only
 ---
 
 # Books
 
-Track your reading library - import from Goodreads, sync to Hardcover, search Google Books and OpenLibrary.
+Track your reading library - pull from Goodreads, push to Hardcover, search Google Books and OpenLibrary.
 
 ## Quick Start
 
-### Import from Goodreads
+### Pull from Goodreads
 
 1. Export your Goodreads library: goodreads.com → My Books → Import/Export → Export Library
-2. Import the CSV:
+2. Pull the CSV into your library:
 
 ```
-Books(action: "import", connector: "goodreads", path: "~/Downloads/goodreads_library_export.csv")
+Books(action: "pull", connector: "goodreads", path: "~/Downloads/goodreads_library_export.csv")
 ```
 
 ### Browse Your Library
@@ -339,11 +308,11 @@ Books(action: "search", query: "Project Hail Mary")
 Books(action: "search", query: "isbn:9780593135204")
 ```
 
-### Sync to Hardcover
+### Push to Hardcover
 
 ```
-Books(action: "diff", connector: "hardcover")   # Preview changes
-Books(action: "sync", connector: "hardcover")   # Push to Hardcover
+Books(action: "push", connector: "hardcover", dry_run: true)   # Preview
+Books(action: "push", connector: "hardcover")                   # Push
 ```
 
 ## Schema
@@ -364,15 +333,15 @@ Books(action: "sync", connector: "hardcover")   # Push to Hardcover
 
 ## Connectors
 
-| Connector | Import | Export | Sync | Notes |
-|-----------|--------|--------|------|-------|
-| `goodreads` | ✅ CSV | ❌ | ❌ | No API since ~2020 |
-| `hardcover` | ✅ | ✅ | ✅ | Full API support |
-| `google_books` | ❌ | ❌ | ❌ | Metadata search only |
-| `openlibrary` | ❌ | ❌ | ❌ | Metadata search only |
+| Connector | Pull | Push | Notes |
+|-----------|------|------|-------|
+| `goodreads` | ✅ CSV | ❌ | No API since ~2020 |
+| `hardcover` | ✅ | ✅ | Full API support |
+| `google_books` | ❌ | ❌ | Metadata search only |
+| `openlibrary` | ❌ | ❌ | Metadata search only |
 
 ## Data Storage
 
 Books are stored locally in `~/.agentos/data/books.db` (SQLite).
 
-Your reading data stays on your machine - only pushed to external services when you explicitly sync.
+Your reading data stays on your machine - only pushed to external services when you explicitly push.

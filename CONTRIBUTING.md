@@ -50,20 +50,20 @@ User → AgentOS → Linear API → Response
 ```
 
 ### 2. Data Apps (e.g., Books, Movies, Music)
-Data is imported into a local SQLite database for unified access.
+Data is pulled into a local SQLite database for unified access.
 
 ```
 User → AgentOS → Local SQLite → Response
                      ↑
-         Import from Goodreads CSV
-         Sync with Hardcover API
+         Pull from Goodreads CSV
+         Push to Hardcover API
 ```
 
 **Data apps have:**
-- `schema.sql` — defines database tables
+- `schema:` in readme.md — defines database tables (auto-generated from YAML)
 - Per-app database at `~/.agentos/data/{app}.db`
 - Auto-generated CRUD actions (list, get, create, update, delete)
-- Custom import/sync actions via connectors
+- Custom pull/push actions via connectors
 
 ---
 
@@ -79,14 +79,13 @@ apps/tasks/
 ### Data App
 ```
 apps/books/
-  readme.md     # Schema + actions
-  schema.sql    # Database tables ← triggers per-app DB creation
+  readme.md     # Schema + actions (schema: section triggers DB creation)
   icon.svg
 ```
 
-When `schema.sql` exists, AgentOS automatically:
+When `schema:` exists in readme.md, AgentOS automatically:
 1. Creates `~/.agentos/data/{app}.db`
-2. Runs the schema SQL
+2. Generates tables from YAML schema
 3. Exposes CRUD actions (list, get, create, update, delete)
 
 ---
@@ -95,70 +94,54 @@ When `schema.sql` exists, AgentOS automatically:
 
 ### 1. Create the App
 
-**`apps/books/schema.sql`**
-```sql
-CREATE TABLE IF NOT EXISTS books (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  authors JSON,
-  isbn TEXT,
-  status TEXT NOT NULL,  -- want_to_read, reading, read, dnf
-  rating INTEGER,
-  review TEXT,
-  date_added TEXT,
-  date_finished TEXT,
-  source_connector TEXT NOT NULL,
-  source_id TEXT NOT NULL,
-  UNIQUE(source_connector, source_id)
-);
-```
+**`apps/books/readme.md`** — Schema in YAML auto-generates database tables
+```yaml
+schema:
+  book:
+    id: { type: string, required: true }
+    title: { type: string, required: true }
+    authors: { type: array }
+    isbn: { type: string }
+    status: { type: enum, values: [want_to_read, reading, read, dnf] }
+    rating: { type: number, min: 1, max: 5 }
+    review: { type: string }
+    date_added: { type: datetime }
+    date_finished: { type: datetime }
+    tags: { type: array }
+    refs: { type: object }        # IDs in external systems
+    metadata: { type: object }    # Connector-specific extras
 
-**`apps/books/readme.md`**
-```markdown
-# Books
-
-Track your reading library across services.
-
-## Schema
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique identifier |
-| title | string | Book title |
-| authors | array | List of author names |
-| status | enum | want_to_read, reading, read, dnf |
-| rating | integer | 1-5 stars |
-| ... | ... | ... |
-
-## Actions
-- **list** — List books with filters
-- **get** — Get a single book
-- **create** — Add a book
-- **update** — Update a book
-- **delete** — Remove a book
-- **import** — Import from a connector (Goodreads CSV, etc.)
-- **sync** — Sync with a connector (Hardcover API, etc.)
+actions:
+  list:
+    description: List books with filters
+  get:
+    description: Get a single book
+  create:
+    description: Add a book
+  update:
+    description: Update a book
+  delete:
+    description: Remove a book
+  pull:
+    description: Pull from a connector (Goodreads CSV, Hardcover API)
+  push:
+    description: Push to a connector (Hardcover API)
 ```
 
 ### 2. Create Connectors
 
-**`connectors/goodreads/books.yaml`** — Import from CSV
+**`connectors/goodreads/books.yaml`** — Pull from CSV
 ```yaml
 actions:
-  import:
+  pull:
     # Chained executor: csv reads file, app upserts to database
     - csv:
         path: "{{params.path}}"
         response:
           mapping:
-            # Source tracking
-            source_connector: "'goodreads'"
-            source_id: "[].'Book Id'"
-            
             # Core metadata
             title: "[].'Title'"
             authors: "[].'Author' | to_array"
-            isbn: "[].'ISBN' | strip_quotes"
-            isbn13: "[].'ISBN13' | strip_quotes"
             
             # Personal data
             status: |
@@ -167,46 +150,41 @@ actions:
               [].'Exclusive Shelf' == 'read' ? 'read' : 'none'
             rating: "[].'My Rating' | to_int"
             review: "[].'My Review'"
+            tags: "[].'Bookshelves' | split:,"
             
             # Dates (convert / to - for ISO format)
             date_added: "[].'Date Added' | replace:/:-"
             date_finished: "[].'Date Read' | replace:/:-"
+            
+            # Refs (IDs in external systems)
+            refs:
+              goodreads: "[].'Book Id'"
+              isbn: "[].'ISBN' | strip_quotes"
+              isbn13: "[].'ISBN13' | strip_quotes"
       as: records
     
     - app:
         action: upsert
         table: books
-        on_conflict: [source_connector, source_id]
+        on_conflict: refs.goodreads
         data: "{{records}}"
 ```
 
-**`connectors/hardcover/books.yaml`** — Sync with API
+**`connectors/hardcover/books.yaml`** — Push to API
 ```yaml
 actions:
-  sync:
-    # Step 1: Get books from local DB that need syncing
+  push:
+    # Step 1: Get books from local DB that haven't been pushed
     - app:
         action: list
         table: books
         where:
-          hardcover_id: null
+          refs.hardcover: null
       as: local_books
     
-    # Step 2: For each book, search Hardcover and link
+    # Step 2: For each book, search Hardcover and push
     - foreach: "{{local_books}}"
       graphql:
-        query: |
-          query($title: String!) {
-            search(query: $title, query_type: "books", per_page: 1) {
-              results
-            }
-          }
-        variables:
-          title: "{{item.title}}"
-      as: search_result
-    
-    # Step 3: Push to Hardcover
-    - graphql:
         query: |
           mutation($book_id: Int!, $status_id: Int!) {
             insert_user_book(object: {book_id: $book_id, status_id: $status_id}) {
@@ -214,7 +192,7 @@ actions:
             }
           }
         variables:
-          book_id: "{{search_result.results[0].id}}"
+          book_id: "{{item.refs.hardcover}}"
           status_id: |
             {{item.status}} == 'read' ? 3 :
             {{item.status}} == 'reading' ? 2 : 1
@@ -267,7 +245,7 @@ sql:
   query: "SELECT * FROM table WHERE id = {{params.id}}"
 ```
 
-### `csv:` — CSV file import
+### `csv:` — CSV file reading
 ```yaml
 csv:
   path: "{{params.path}}"
@@ -333,10 +311,10 @@ actions:
             stateId: "{{lookup.data.issue.team.states.nodes[0].id}}"
 ```
 
-**Data flow pattern for imports:**
+**Data flow pattern for pull:**
 ```yaml
 actions:
-  import:
+  pull:
     # Step 1: Read and transform CSV
     - csv:
         path: "{{params.path}}"
@@ -344,14 +322,16 @@ actions:
           mapping:
             title: "[].'Title'"
             authors: "[].'Author' | to_array"
-            isbn: "[].'ISBN' | strip_quotes"
+            refs:
+              isbn: "[].'ISBN' | strip_quotes"
+              goodreads: "[].'Book Id'"
       as: records
     
     # Step 2: Upsert to database (references step 1's output)
     - app:
         action: upsert
         table: books
-        on_conflict: [source_connector, source_id]
+        on_conflict: refs.goodreads
         data: "{{records}}"
 ```
 
@@ -418,7 +398,7 @@ mapping:
 | `rest:` | REST APIs |
 | `graphql:` | GraphQL APIs |
 | `sql:` | Database queries |
-| `csv:` | File imports |
+| `csv:` | CSV file reading |
 | `app:` | Local database operations |
 | `command:` | CLI tools (user-approved via firewall) |
 
@@ -439,40 +419,38 @@ This ensures:
 | Field | Type | Purpose |
 |-------|------|---------|
 | `id` | TEXT PRIMARY KEY | AgentOS internal UUID |
-| `source_connector` | TEXT | Which connector imported this |
-| `source_id` | TEXT | ID in the source system |
+| `refs` | JSON | IDs in external systems (goodreads, hardcover, isbn, etc.) |
+| `metadata` | JSON | Connector-specific extras |
 | `created_at` | TEXT | When created in AgentOS |
 | `updated_at` | TEXT | Last modified |
 
-### The Metadata Pattern
+### The Refs + Metadata Pattern
 
 Apps support **multiple connectors** with different fields. Use this pattern:
 
-```sql
-CREATE TABLE items (
-  -- Core fields: universal, queryable, powers the UI
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  status TEXT,
-  rating INTEGER,
-  
-  -- User organization
-  tags JSON,                -- ["tag1", "tag2"] - simple array
-  
-  -- Source tracking
-  source_connector TEXT NOT NULL,
-  source_id TEXT NOT NULL,
-  
-  -- Connector-specific extras
-  metadata JSON,            -- Connector dumps its extras here
-  
-  UNIQUE(source_connector, source_id)
-);
+```yaml
+schema:
+  item:
+    # Core fields: universal, queryable, powers the UI
+    id: { type: string, required: true }
+    title: { type: string, required: true }
+    status: { type: string }
+    rating: { type: number }
+    
+    # User organization
+    tags: { type: array }     # ["tag1", "tag2"] - simple array
+    
+    # External references (for linking/dedup)
+    refs: { type: object }    # { goodreads: "123", isbn: "978..." }
+    
+    # Connector-specific extras
+    metadata: { type: object } # Connector dumps its extras here
 ```
 
 **Core fields** = Universal across all connectors, queryable, shown in UI  
-**tags JSON** = User organization (shelves, categories, labels)  
-**metadata JSON** = Connector-specific data preserved but not in core schema
+**tags** = User organization (shelves, categories, labels)  
+**refs** = IDs in external systems for dedup and linking  
+**metadata** = Connector-specific data preserved but not in core schema
 
 ### Metadata Examples
 
@@ -499,7 +477,7 @@ CREATE TABLE items (
 2. **No data loss** — Connector-specific fields preserved in metadata
 3. **No schema changes** — New connectors add fields to metadata, not schema
 4. **Queryable** — Core fields are indexed and fast
-5. **Portable** — When syncing between connectors, core fields transfer, metadata is connector-specific
+5. **Portable** — When pushing between connectors, core fields transfer, metadata is connector-specific
 
 ### Connectors Map to Core Fields
 
@@ -510,11 +488,15 @@ Transforms happen in connector YAML, not the app schema:
 response:
   mapping:
     title: "[].Title"
-    status: "[].Exclusive Shelf | map_status"  # Transform to core status
-    tags: "[].Bookshelves | split:, "          # Custom shelves → tags
+    status: |
+      [].Exclusive Shelf == 'read' ? 'read' :
+      [].Exclusive Shelf == 'to-read' ? 'want_to_read' : 'none'
+    tags: "[].Bookshelves | split:, "
+    refs:
+      goodreads: "[].Book Id"
+      isbn: "[].ISBN | strip_quotes"
     metadata:                                    # Extras go here
       average_rating: "[].Average Rating"
-      bookshelves: "[].Bookshelves | split:, "
 ```
 
 ---
@@ -573,20 +555,20 @@ AgentOS injects the actual value at runtime.
 
 ### 1. Define the app schema
 
-**`apps/movies/schema.sql`**
-```sql
-CREATE TABLE IF NOT EXISTS movies (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  year INTEGER,
-  directors JSON,
-  status TEXT NOT NULL,  -- watchlist, watching, watched
-  rating INTEGER,
-  review TEXT,
-  source_connector TEXT NOT NULL,
-  source_id TEXT NOT NULL,
-  UNIQUE(source_connector, source_id)
-);
+**`apps/movies/readme.md`** — Schema auto-generates database
+```yaml
+schema:
+  movie:
+    id: { type: string, required: true }
+    title: { type: string, required: true }
+    year: { type: number }
+    directors: { type: array }
+    status: { type: enum, values: [watchlist, watching, watched] }
+    rating: { type: number }
+    review: { type: string }
+    tags: { type: array }
+    refs: { type: object }
+    metadata: { type: object }
 ```
 
 ### 2. Add Letterboxd connector
@@ -594,7 +576,7 @@ CREATE TABLE IF NOT EXISTS movies (
 **`connectors/letterboxd/movies.yaml`**
 ```yaml
 actions:
-  import:
+  pull:
     # Chained: csv reads file, app writes to database
     - csv:
         path: "{{params.path}}"
@@ -604,14 +586,14 @@ actions:
             year: "[].Year | to_int"
             rating: "[].Rating | to_int"
             status: "'watched'"
-            source_connector: "'letterboxd'"
-            source_id: "[].Letterboxd URI"
+            refs:
+              letterboxd: "[].Letterboxd URI"
       as: records
     
     - app:
         action: upsert
         table: movies
-        on_conflict: [source_connector, source_id]
+        on_conflict: refs.letterboxd
         data: "{{records}}"
 ```
 
@@ -619,7 +601,7 @@ actions:
 
 Users can now:
 ```
-Import my Letterboxd data from ~/Downloads/letterboxd.csv
+Pull my Letterboxd data from ~/Downloads/letterboxd.csv
 List all movies I've watched
 ```
 
@@ -652,7 +634,7 @@ Contributors write **YAML configs + tests**. That's it. The MCP client talks to 
 |------|-------|-------|
 | AgentOS Core | `agentos/` repo | Executors, MCP protocol, UI (Playwright) |
 | Apps | `integrations/apps/{app}/` | Schema validation, CRUD operations |
-| Connectors | `integrations/connectors/{connector}/` | Import/sync, field mapping |
+| Connectors | `integrations/connectors/{connector}/` | Pull/push, field mapping |
 
 ### Directory Structure
 
@@ -673,14 +655,14 @@ integrations/
       books.yaml
       readme.md
       tests/                          ← Connector tests
-        import.test.ts
+        pull.test.ts
         fixtures/
           goodreads-export.csv        ← Sample data for tests
           
     hardcover/
       books.yaml
       tests/
-        sync.test.ts
+        push.test.ts
         
   tests/                              ← Shared test infrastructure
     utils/
@@ -761,10 +743,10 @@ describe('Books App', () => {
 
 #### Connector Tests (`connectors/{connector}/tests/`)
 
-Test that the connector correctly imports/syncs data:
+Test that the connector correctly pulls/pushes data:
 
 ```typescript
-// connectors/goodreads/tests/import.test.ts
+// connectors/goodreads/tests/pull.test.ts
 import { describe, it, expect, afterAll } from 'vitest';
 import { aos, cleanupTestData } from '../../../tests/utils/fixtures';
 import { fileURLToPath } from 'url';
@@ -775,18 +757,18 @@ const fixturesDir = join(__dirname, 'fixtures');
 
 describe('Goodreads Connector', () => {
   afterAll(async () => {
-    // Clean up imported test books
+    // Clean up pulled test books
     await cleanupTestData('Books', 
-      (book) => book.source_connector === 'goodreads' && book.title?.startsWith('[TEST]')
+      (book) => book.refs?.goodreads && book.title?.startsWith('[TEST]')
     );
   });
 
-  describe('CSV Import', () => {
-    it('imports books from Goodreads CSV (dry run)', async () => {
+  describe('CSV Pull', () => {
+    it('pulls books from Goodreads CSV (dry run)', async () => {
       const csvPath = join(fixturesDir, 'sample-export.csv');
-      const result = await aos().books.import('goodreads', csvPath, true);
+      const result = await aos().books.pull('goodreads', { path: csvPath, dry_run: true });
 
-      expect(result.imported).toBeGreaterThan(0);
+      expect(result.pulled).toBeGreaterThan(0);
       expect(result.errors).toEqual([]);
     });
   });
@@ -794,28 +776,28 @@ describe('Goodreads Connector', () => {
   describe('Field Mapping', () => {
     it('maps title correctly', async () => {
       const csvPath = join(fixturesDir, 'sample-export.csv');
-      await aos().books.import('goodreads', csvPath, false);
+      await aos().books.pull('goodreads', { path: csvPath });
 
       const books = await aos().books.list();
-      const book = books.find(b => b.source_id === '12345');
+      const book = books.find(b => b.refs?.goodreads === '12345');
 
       expect(book?.title).toBe('[TEST] The Great Gatsby');
     });
 
     it('strips ISBN quotes wrapper', async () => {
       const books = await aos().books.list();
-      const book = books.find(b => b.source_id === '12345');
+      const book = books.find(b => b.refs?.goodreads === '12345');
 
       // Goodreads CSVs have ISBNs like ="0743273567"
-      expect(book?.isbn).toBe('0743273567');
+      expect(book?.refs?.isbn).toBe('0743273567');
     });
 
     it('maps shelf to status', async () => {
       const books = await aos().books.list();
       
-      expect(books.find(b => b.source_id === '12345')?.status).toBe('read');
-      expect(books.find(b => b.source_id === '12346')?.status).toBe('reading');
-      expect(books.find(b => b.source_id === '12347')?.status).toBe('want_to_read');
+      expect(books.find(b => b.refs?.goodreads === '12345')?.status).toBe('read');
+      expect(books.find(b => b.refs?.goodreads === '12346')?.status).toBe('reading');
+      expect(books.find(b => b.refs?.goodreads === '12347')?.status).toBe('want_to_read');
     });
   });
 });
@@ -849,7 +831,7 @@ import { aos, cleanupTestData, testContent, TEST_PREFIX } from '../../../tests/u
 
 // aos() - Get the global AgentOS instance (connected via setup.ts)
 const books = await aos().books.list();
-const result = await aos().books.import('goodreads', path, true);
+const result = await aos().books.pull('goodreads', { path, dry_run: true });
 await aos().call('Books', { action: 'list', params: { status: 'read' } });
 
 // cleanupTestData() - Remove test records after tests

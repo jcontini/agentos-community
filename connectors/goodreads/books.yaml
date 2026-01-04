@@ -2,7 +2,7 @@
 # Import-only via CSV (Goodreads API was discontinued ~2020)
 
 actions:
-  import:
+  pull:
     # Chained executor: csv reads file, app upserts to database
     - csv:
         path: "{{params.path}}"
