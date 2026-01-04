@@ -340,9 +340,17 @@ mapping:
 | `to_int` | Convert to integer |
 | `strip_quotes` | Remove `="..."` wrapper (common in CSV exports) |
 | `trim` | Remove whitespace |
-| `lowercase` | Convert to lowercase |
-| `uppercase` | Convert to uppercase |
+| `split:delimiter` | Split string into array (e.g., `split:,`) |
+| `nullif:value` | Return null if equals value (e.g., `nullif:0`) |
 | `default:value` | Use value if null/empty |
+| `replace:from:to` | Replace text (e.g., `replace:/:- ` for date conversion) |
+
+For arithmetic and conditionals, use mapping expressions directly:
+```yaml
+mapping:
+  priority: "4 - .priority"           # Invert priority
+  status: ".done ? 'done' : 'open'"   # Conditional
+```
 
 ---
 
