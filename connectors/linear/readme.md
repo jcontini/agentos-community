@@ -9,6 +9,9 @@ website: https://linear.app
 privacy_url: https://linear.app/privacy
 terms_url: https://linear.app/terms
 
+api:
+  graphql_endpoint: "https://api.linear.app/graphql"
+
 auth:
   type: api_key
   header: Authorization

@@ -11,6 +11,14 @@ schema:
       type: string
       required: true
       description: Unique identifier
+    goodreads_id:
+      type: string
+      unique: true
+      description: Goodreads Book ID (for deduplication)
+    hardcover_id:
+      type: string
+      unique: true
+      description: Hardcover Book ID (for deduplication)
     isbn:
       type: string
       description: ISBN-10

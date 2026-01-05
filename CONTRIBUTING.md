@@ -39,30 +39,28 @@
 
 ---
 
-## Two Types of Apps
+## Connector-Based Architecture
 
-### 1. Pass-through Apps (e.g., Tasks, Calendar)
-Data lives in external services. AgentOS queries them directly.
-
-```
-User → AgentOS → Linear API → Response
-```
-
-### 2. Data Apps (e.g., Books, Movies, Music)
-Data is pulled into a local SQLite database for unified access.
+**Every action requires a `connector` parameter.** This includes the built-in `local` connector.
 
 ```
-User → AgentOS → Local SQLite → Response
-                     ↑
-         Pull from Goodreads CSV
-         Push to Hardcover API
+Books(action: "list", connector: "local")     → Local SQLite
+Books(action: "pull", connector: "goodreads") → Goodreads CSV
+Books(action: "push", connector: "hardcover") → Hardcover API
+Tasks(action: "list", connector: "linear")    → Linear API
+Tasks(action: "list", connector: "todoist")   → Todoist API
 ```
 
-**Data apps have:**
-- `schema:` in readme.md — defines database tables (auto-generated from YAML)
-- Per-app database at `~/.agentos/data/{app}.db`
-- Auto-generated CRUD actions (list, get, create, update, delete)
-- Custom pull/push actions via connectors
+### The `local` Connector
+
+`local` is a built-in connector available for apps with a `schema:` in their readme.md:
+- Uses per-app SQLite database at `~/.agentos/data/{app}.db`
+- Auto-generated from YAML schema
+- Supports CRUD actions (list, get, create, update, delete)
+
+### External Connectors
+
+External connectors (goodreads, hardcover, linear, todoist) implement pull/push actions to move data between local storage and external services.
 
 ---
 
@@ -229,6 +227,7 @@ rest:
 ### `graphql:` — GraphQL APIs
 ```yaml
 graphql:
+  endpoint: "https://api.hardcover.app/v1/graphql"
   query: "query { items { id name } }"
   variables: { limit: "{{params.limit}}" }
   response:
@@ -237,6 +236,16 @@ graphql:
       id: "[].id"
       title: "[].name"
 ```
+
+**Note:** The `endpoint` can be specified per-action (in the YAML above) or once at the connector level in `readme.md`:
+
+```yaml
+# connectors/linear/readme.md
+api:
+  graphql_endpoint: "https://api.linear.app/graphql"
+```
+
+If neither is specified, the executor will error with instructions.
 
 ### `sql:` — Database queries
 ```yaml

@@ -12,6 +12,9 @@ actions:
             title: "[].'Title'"
             authors: "[].'Author' | to_array"
             
+            # Goodreads ID (for deduplication)
+            goodreads_id: "[].'Book Id'"
+            
             # Personal data
             status: |
               [].'Exclusive Shelf' == 'to-read' ? 'want_to_read' :
@@ -25,7 +28,11 @@ actions:
             date_added: "[].'Date Added' | replace:/:-"
             date_finished: "[].'Date Read' | replace:/:-"
             
-            # Refs (for linking/dedup across services)
+            # ISBNs (stripped of Goodreads ="..." wrapper)
+            isbn: "[].'ISBN' | strip_quotes"
+            isbn13: "[].'ISBN13' | strip_quotes"
+            
+            # Refs (for cross-service linking)
             refs:
               goodreads: "[].'Book Id'"
               isbn: "[].'ISBN' | strip_quotes"
@@ -43,5 +50,6 @@ actions:
     - app:
         action: upsert
         table: books
-        on_conflict: refs.goodreads
+        on_conflict:
+          - goodreads_id
         data: "{{records}}"
