@@ -1,6 +1,6 @@
 ---
-id: apple
-name: Apple
+id: apple-contacts
+name: Apple Contacts
 description: Access macOS Calendar and Contacts via native APIs
 icon: icon.png
 color: "#000000"

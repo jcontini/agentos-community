@@ -18,6 +18,6 @@ The `whois` command is pre-installed on macOS and most Linux distributions.
 
 ## Notes
 
-- Output parsing extracts common fields but may vary by TLD/registrar
+- Output is raw WHOIS text - AI interprets the structured data
 - Some TLDs have rate limits on WHOIS queries
 - Privacy-protected domains will show redacted registrant info

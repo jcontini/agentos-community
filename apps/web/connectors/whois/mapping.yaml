@@ -1,4 +1,4 @@
-# WHOIS → Domains app mapping
+# WHOIS → Web app mapping
 # Uses system whois command (pre-installed on macOS/Linux)
 # Returns raw text output - AI interprets the structured data
 

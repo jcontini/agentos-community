@@ -22,7 +22,6 @@ import { execSync } from 'child_process';
 
 const INTEGRATIONS_ROOT = join(__dirname, '..');
 const APPS_DIR = join(INTEGRATIONS_ROOT, 'apps');
-const CONNECTORS_DIR = join(INTEGRATIONS_ROOT, 'connectors');
 
 // =============================================================================
 // SCHEMA VERSIONS - Add new versions here as conventions evolve
@@ -58,10 +57,32 @@ const getApps = () => readdirSync(APPS_DIR, { withFileTypes: true })
   .filter(d => d.isDirectory())
   .map(d => d.name);
 
-// Get all connector directories
-const getConnectors = () => readdirSync(CONNECTORS_DIR, { withFileTypes: true })
-  .filter(d => d.isDirectory())
-  .map(d => d.name);
+// Get all connectors (nested inside apps: apps/{app}/connectors/{connector}/)
+interface ConnectorInfo {
+  app: string;
+  connector: string;
+  dir: string;
+}
+
+const getConnectors = (): ConnectorInfo[] => {
+  const connectors: ConnectorInfo[] = [];
+  for (const app of getApps()) {
+    const connectorsDir = join(APPS_DIR, app, 'connectors');
+    if (existsSync(connectorsDir)) {
+      const dirs = readdirSync(connectorsDir, { withFileTypes: true })
+        .filter(d => d.isDirectory())
+        .map(d => d.name);
+      for (const connector of dirs) {
+        connectors.push({
+          app,
+          connector,
+          dir: join(connectorsDir, connector)
+        });
+      }
+    }
+  }
+  return connectors;
+};
 
 // Parse YAML-ish content (simple extraction, not full YAML parse)
 const extractYamlSection = (content: string, section: string): string | null => {
@@ -192,33 +213,21 @@ describe('Action Conventions', () => {
 
 describe('Connector Structure', () => {
   const connectors = getConnectors();
-  const validApps = getApps();
 
   it('has at least one connector', () => {
     expect(connectors.length).toBeGreaterThan(0);
   });
 
-  describe.each(connectors)('connectors/%s', (connector) => {
-    const connectorDir = join(CONNECTORS_DIR, connector);
-
+  describe.each(connectors)('apps/$app/connectors/$connector', ({ app, connector, dir }) => {
     it('has readme.md', () => {
-      expect(existsSync(join(connectorDir, 'readme.md'))).toBe(true);
+      expect(existsSync(join(dir, 'readme.md'))).toBe(true);
     });
 
-    it('has at least one app yaml or icon', () => {
-      const files = readdirSync(connectorDir);
-      const hasYaml = files.some(f => f.endsWith('.yaml'));
+    it('has mapping.yaml or icon', () => {
+      const files = readdirSync(dir);
+      const hasMapping = files.includes('mapping.yaml');
       const hasIcon = files.some(f => f.startsWith('icon.'));
-      expect(hasYaml || hasIcon).toBe(true);
-    });
-
-    it('yaml files reference valid apps', () => {
-      const files = readdirSync(connectorDir).filter(f => f.endsWith('.yaml'));
-      
-      for (const file of files) {
-        const appName = file.replace('.yaml', '');
-        expect(validApps).toContain(appName);
-      }
+      expect(hasMapping || hasIcon).toBe(true);
     });
   });
 });
@@ -231,27 +240,24 @@ describe('Connector YAML Conventions', () => {
   const connectors = getConnectors();
   const versionDate = SCHEMA_VERSIONS['refs-metadata'];
 
-  for (const connector of connectors) {
-    const connectorDir = join(CONNECTORS_DIR, connector);
-    const yamlFiles = readdirSync(connectorDir).filter(f => f.endsWith('.yaml'));
+  for (const { app, connector, dir } of connectors) {
+    const mappingPath = join(dir, 'mapping.yaml');
+    if (!existsSync(mappingPath)) continue;
+    
+    const yaml = readFileSync(mappingPath, 'utf-8');
+    const isNewFile = isFileNewerThan(mappingPath, versionDate);
 
-    for (const yamlFile of yamlFiles) {
-      const yamlPath = join(connectorDir, yamlFile);
-      const yaml = readFileSync(yamlPath, 'utf-8');
-      const isNewFile = isFileNewerThan(yamlPath, versionDate);
-
-      describe(`connectors/${connector}/${yamlFile}`, () => {
-        // Basic structure check (always required)
-        it('has actions section', () => {
-          expect(yaml).toMatch(/^actions:/m);
-        });
-
-        // New/updated files: just remind about the new patterns
-        if (!isNewFile) {
-          it.skip(`grandfathered: update to pull/push and refs pattern when ready`, () => {});
-        }
+    describe(`apps/${app}/connectors/${connector}/mapping.yaml`, () => {
+      // Basic structure check (always required)
+      it('has actions section', () => {
+        expect(yaml).toMatch(/^actions:/m);
       });
-    }
+
+      // New/updated files: just remind about the new patterns
+      if (!isNewFile) {
+        it.skip(`grandfathered: update to pull/push and refs pattern when ready`, () => {});
+      }
+    });
   }
 });
 

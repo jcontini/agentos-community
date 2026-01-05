@@ -57,10 +57,33 @@ actions:
         description: URL to extract content from
     returns: result
 
+  whois:
+    description: Get full WHOIS registration data for a domain
+    readonly: true
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name to lookup (e.g. example.com)
+
+  check:
+    description: Quick check if a domain is available for registration
+    readonly: true
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name to check (e.g. example.com)
+
 instructions: |
   When searching the web:
   - Use connector: "exa" for fast semantic search (default)
   - Use connector: "firecrawl" for JS-heavy sites (React, Vue, SPAs, Notion)
+  
+  For domain lookups:
+  - Use connector: "whois" for WHOIS lookups and availability checks
+  - Domain names should not include protocol (no https://)
+  - Include the TLD (e.g. "example.com" not "example")
   
   Workflow:
   1. Search first to find relevant URLs
@@ -100,16 +123,39 @@ For JS-heavy sites (React, Vue, Notion), use firecrawl:
 Web(action: "read", connector: "firecrawl", params: {url: "https://notion.so/page"})
 ```
 
-## Providers
+### whois
 
-| Provider | Best For | Features |
-|----------|----------|----------|
+Get full WHOIS registration data for a domain.
+
+```
+Web(action: "whois", connector: "whois", params: {domain: "example.com"})
+Web(action: "whois", connector: "whois", params: {domain: "google.com"})
+```
+
+Returns registrar, registration dates, nameservers, and status.
+
+### check
+
+Quick availability check for a domain.
+
+```
+Web(action: "check", connector: "whois", params: {domain: "mycoolstartup.com"})
+Web(action: "check", connector: "whois", params: {domain: "example.ai"})
+```
+
+Returns availability info - AI interprets the raw WHOIS output.
+
+## Connectors
+
+| Connector | Best For | Features |
+|-----------|----------|----------|
 | `exa` | Fast semantic search | Neural search, content extraction |
 | `firecrawl` | JS-heavy sites | Browser rendering, SPA support |
+| `whois` | Domain lookups | WHOIS data, availability checks |
 
 ## Tips
 
 - Exa uses neural/semantic search - great for concepts and research
 - Firecrawl renders JavaScript - use for React, Vue, Angular, Notion
-- Both support search and read actions
-- Default to exa for speed, fallback to firecrawl if needed
+- WHOIS data may be redacted for privacy-protected domains
+- Default to exa for web search, use whois for domain lookups
