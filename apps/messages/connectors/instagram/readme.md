@@ -609,6 +609,86 @@ actions:
 
 Full-featured Instagram DM connector with read and write support.
 
+---
+
+## 🚧 Development Status (Jan 2026)
+
+### ✅ What Works Reliably
+
+| Feature | Implementation | Notes |
+|---------|---------------|-------|
+| **Browser-based login** | `scripts/playwright-runner.ts` | Opens mobile-sized Chromium, user logs in, cookies extracted |
+| **Cookie storage** | `~/.agentos/credentials.json` | Stored as `Credential::Cookies` type in JSON store |
+| **Reading conversations** | REST API `list_conversations` | Returns real DM threads with participants, unread counts |
+| **Cookie auth injection** | `inject_provider_auth()` in apps.rs | Auto-adds `Cookie` + `X-CSRFToken` headers |
+| **Custom headers** | `RestExecutor.headers` field | Per-action headers (X-IG-App-ID, X-Requested-With, Referer) |
+| **Session refresh** | Re-run Playwright login | Manual process when session expires |
+
+### 🔧 Known Issues to Fix
+
+| Issue | Solution | Priority |
+|-------|----------|----------|
+| **Cursor MCP credential loading** | Works in standalone mode but fails via Cursor MCP. Likely path or timing issue. | High |
+| **Other read actions need headers** | Copy header pattern from `list_conversations` to `get`, `list`, `search`, etc. | Medium |
+| **Session expiry detection** | Implement `error_detection` config parsing in Rust | Medium |
+| **Full browser window** | Just added mobile size option - needs testing | Low |
+
+### ❓ Research Needed / Unsure
+
+| Topic | Notes |
+|-------|-------|
+| **Sending messages** | Instagram **blocks REST API writes** (invalidates session immediately). Mautrix-meta uses MQTToT websocket protocol. This is a significant undertaking. |
+| **Session lifetime** | Sessions expire quickly with "suspicious" API patterns. Need to understand rate limits. |
+| **Native Tauri webview** | Could replace Playwright with Tauri's built-in webview for truly native auth window. Would be reusable for OAuth flows too. |
+| **Username/password auth** | Could prompt for credentials in UI, automate login via Playwright. Need to handle 2FA. |
+
+### 📋 Next Steps (Prioritized)
+
+1. **Native Auth Window (UI)**
+   - Add `auth_type: cookies` support to AppsView.svelte "Add Account" modal
+   - Create Tauri command `open_auth_window(url, size)` that opens native webview
+   - Monitor for successful login (cookie appears), extract cookies, close window
+   - Much cleaner than spawning Playwright Chromium
+
+2. **Fix Cursor MCP credential loading**
+   - Debug why credentials work in standalone but not via Cursor
+   - May need to ensure credential file path is absolute
+
+3. **Complete read actions**
+   - Add headers to remaining read actions: `get_conversation`, `list`, `get`, `search`, `get_unread`
+   - Test each action works
+
+4. **Write operations (future)**
+   - Research MQTToT protocol (see mautrix-meta `pkg/messagix/socket/`)
+   - May need websocket connection for real-time messaging
+   - Alternative: explore if GraphQL endpoints work for writes
+
+### 🔗 Key References
+
+- **mautrix-meta**: https://github.com/mautrix/meta/tree/main/pkg/messagix
+  - Uses MQTToT websocket for messaging
+  - Has task structures: `SendMessageTask`, `SendReactionTask`, `ThreadMarkReadTask`
+  - Error handling for challenges, consent, checkpoints
+  
+- **API Base URL**: `https://www.instagram.com/api/v1` (web API, not mobile `i.instagram.com`)
+
+- **Required Headers**:
+  ```
+  Cookie: sessionid=...; csrftoken=...; ds_user_id=...; mid=...; ig_did=...
+  X-CSRFToken: <same as csrftoken cookie>
+  X-IG-App-ID: 936619743392459
+  X-Requested-With: XMLHttpRequest
+  Referer: https://www.instagram.com/direct/inbox/
+  ```
+
+- **Key Files in AgentOS**:
+  - `scripts/playwright-runner.ts` - Generic browser automation
+  - `src-tauri/src/credentials/mod.rs` - `Credential::Cookies` type
+  - `src-tauri/src/apps.rs` - `inject_provider_auth()`, `RestExecutor.headers`
+  - `src-tauri/src/commands.rs` - `connect_connector` command
+
+---
+
 ## Features
 
 | Feature | Status | Notes |
