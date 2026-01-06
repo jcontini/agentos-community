@@ -20,6 +20,46 @@ instructions: |
   - Neural search finds content by meaning, not just keywords
   - Fast: typically under 1 second per request
   - Use for research, concepts, "how to" queries
+
+# Action implementations (merged from mapping.yaml)
+actions:
+  search:
+    label: "Search web"
+    rest:
+      method: POST
+      url: https://api.exa.ai/search
+      body:
+        query: "{{params.query}}"
+        numResults: "{{params.limit | default:5}}"
+        type: "auto"
+      response:
+        root: "results"
+        mapping:
+          id: "[].id"
+          url: "[].url"
+          title: "[].title"
+          snippet: "[].text"
+          published_at: "[].publishedDate"
+          score: "[].score"
+          connector: "'exa'"
+
+  read:
+    label: "Read URL"
+    rest:
+      method: POST
+      url: https://api.exa.ai/contents
+      body:
+        urls:
+          - "{{params.url}}"
+        text: true
+      response:
+        root: "results"
+        mapping:
+          id: ".id"
+          url: ".url"
+          title: ".title"
+          content: ".text"
+          connector: "'exa'"
 ---
 
 # Exa

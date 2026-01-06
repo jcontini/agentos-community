@@ -10,6 +10,60 @@ apps:
 
 # No auth needed - CSV file import only
 auth: null
+
+# Action implementations (merged from mapping.yaml)
+actions:
+  pull:
+    # Chained executor: csv reads file, app upserts to database
+    - csv:
+        path: "{{params.path}}"
+        response:
+          mapping:
+            # Core metadata
+            title: "[].'Title'"
+            authors: "[].'Author' | to_array"
+            
+            # Goodreads ID (for deduplication)
+            goodreads_id: "[].'Book Id'"
+            
+            # Personal data
+            status: |
+              [].'Exclusive Shelf' == 'to-read' ? 'want_to_read' :
+              [].'Exclusive Shelf' == 'currently-reading' ? 'reading' :
+              [].'Exclusive Shelf' == 'read' ? 'read' : 'none'
+            rating: "[].'My Rating' | to_int"
+            review: "[].'My Review'"
+            tags: "[].'Bookshelves' | split:,"
+            
+            # Dates
+            date_added: "[].'Date Added' | replace:/:-"
+            date_finished: "[].'Date Read' | replace:/:-"
+            
+            # ISBNs (stripped of Goodreads ="..." wrapper)
+            isbn: "[].'ISBN' | strip_quotes"
+            isbn13: "[].'ISBN13' | strip_quotes"
+            
+            # Refs (for cross-service linking)
+            refs:
+              goodreads: "[].'Book Id'"
+              isbn: "[].'ISBN' | strip_quotes"
+              isbn13: "[].'ISBN13' | strip_quotes"
+            
+            # Connector-specific extras
+            metadata:
+              average_rating: "[].'Average Rating'"
+              num_pages: "[].'Number of Pages'"
+              publisher: "[].'Publisher'"
+              year_published: "[].'Year Published'"
+              original_year: "[].'Original Publication Year'"
+      as: records
+    
+    - app:
+        action: upsert
+        table: books
+        on_conflict:
+          - goodreads_id
+        data: "{{records}}"
 ---
 
 # Goodreads Connector

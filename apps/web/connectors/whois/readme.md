@@ -6,6 +6,24 @@ icon: icon.svg
 
 auth:
   type: none
+
+# Action implementations (merged from mapping.yaml)
+actions:
+  whois:
+    label: "WHOIS lookup"
+    command:
+      binary: whois
+      args:
+        - "{{params.domain}}"
+      timeout: 30
+
+  check:
+    label: "Check availability"
+    command:
+      binary: whois
+      args:
+        - "{{params.domain}}"
+      timeout: 15
 ---
 
 # WHOIS

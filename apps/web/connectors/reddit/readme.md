@@ -15,6 +15,89 @@ instructions: |
   - Rate limited to ~10 requests/minute
   - Works for any public subreddit, post, or user profile
   - Add .json to any Reddit URL to get JSON data
+
+# Action implementations (merged from mapping.yaml)
+actions:
+  search:
+    label: "Search Reddit"
+    description: "Search posts across all of Reddit or within a specific subreddit"
+    command:
+      binary: curl
+      args:
+        - "-s"
+        - "-A"
+        - "AgentOS/1.0 (github.com/joehewett/agentos)"
+        - "https://www.reddit.com/search.json?q={{params.query}}&limit={{params.limit | default:10}}&sort={{params.sort | default:relevance}}"
+      timeout: 30
+    response:
+      root: "data.children"
+      mapping:
+        id: "[].data.id"
+        title: "[].data.title"
+        url: "[].data.url"
+        subreddit: "[].data.subreddit"
+        author: "[].data.author"
+        score: "[].data.score"
+        num_comments: "[].data.num_comments"
+        created_utc: "[].data.created_utc"
+        selftext: "[].data.selftext"
+        permalink: "[].data.permalink"
+        connector: "'reddit'"
+
+  read:
+    label: "Read Reddit URL"
+    description: "Get data from any Reddit URL (subreddit, post, user profile)"
+    command:
+      binary: curl
+      args:
+        - "-s"
+        - "-A"
+        - "AgentOS/1.0 (github.com/joehewett/agentos)"
+        - "{{params.url}}.json"
+      timeout: 30
+    response:
+      mapping:
+        url: "{{params.url}}"
+        connector: "'reddit'"
+
+  subreddit:
+    label: "Get subreddit posts"
+    description: "Get recent posts from a subreddit"
+    command:
+      binary: curl
+      args:
+        - "-s"
+        - "-A"
+        - "AgentOS/1.0 (github.com/joehewett/agentos)"
+        - "https://www.reddit.com/r/{{params.subreddit}}/{{params.sort | default:hot}}.json?limit={{params.limit | default:25}}"
+      timeout: 30
+    response:
+      root: "data.children"
+      mapping:
+        id: "[].data.id"
+        title: "[].data.title"
+        url: "[].data.url"
+        author: "[].data.author"
+        score: "[].data.score"
+        num_comments: "[].data.num_comments"
+        created_utc: "[].data.created_utc"
+        selftext: "[].data.selftext"
+        permalink: "[].data.permalink"
+        is_self: "[].data.is_self"
+        thumbnail: "[].data.thumbnail"
+        connector: "'reddit'"
+
+  post:
+    label: "Get post with comments"
+    description: "Get a Reddit post and its comments by post ID"
+    command:
+      binary: curl
+      args:
+        - "-s"
+        - "-A"
+        - "AgentOS/1.0 (github.com/joehewett/agentos)"
+        - "https://www.reddit.com/comments/{{params.post_id}}.json?limit={{params.comment_limit | default:100}}"
+      timeout: 30
 ---
 
 # Reddit

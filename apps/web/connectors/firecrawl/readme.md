@@ -22,6 +22,44 @@ instructions: |
   - Good for Notion pages, dynamic content
   - Slower than Exa but handles modern web apps
   - Cost: ~$0.009/page for scrape, ~$0.01/search
+
+# Action implementations (merged from mapping.yaml)
+actions:
+  search:
+    label: "Search web"
+    rest:
+      method: POST
+      url: https://api.firecrawl.dev/v1/search
+      body:
+        query: "{{params.query}}"
+        limit: "{{params.limit | default:5}}"
+      response:
+        root: "data"
+        mapping:
+          id: "[].url"
+          url: "[].url"
+          title: "[].title"
+          snippet: "[].description"
+          connector: "'firecrawl'"
+
+  read:
+    label: "Read URL"
+    rest:
+      method: POST
+      url: https://api.firecrawl.dev/v1/scrape
+      body:
+        url: "{{params.url}}"
+        formats:
+          - markdown
+        onlyMainContent: true
+      response:
+        root: "data"
+        mapping:
+          id: ".metadata.sourceURL"
+          url: ".metadata.sourceURL"
+          title: ".metadata.title"
+          content: ".markdown"
+          connector: "'firecrawl'"
 ---
 
 # Firecrawl
