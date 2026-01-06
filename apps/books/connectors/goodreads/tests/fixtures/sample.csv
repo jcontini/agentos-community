@@ -1,0 +1,4 @@
+Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Bookshelves with positions,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count,Owned Copies
+12345,"[TEST] The Great Gatsby",F. Scott Fitzgerald,"Fitzgerald, F. Scott",,"=""0743273567""","=""9780743273565""",5,3.93,Scribner,Paperback,180,2004,1925,2024/01/15,2024/01/01,,,read,,,,1,0
+12346,"[TEST] Currently Reading Book",Test Author,"Author, Test",,"=""1234567890""","=""9781234567890""",0,4.00,Publisher,Hardcover,300,2024,2024,,2024/06/01,,,currently-reading,,,,1,0
+12347,"[TEST] Want to Read Book",Another Author,"Author, Another",,"=""0987654321""","=""9780987654321""",0,4.50,Publisher,Paperback,250,2023,2023,,2024/03/15,,,to-read,,,,0,0
