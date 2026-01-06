@@ -1,2 +1,2 @@
-# Run structure validation on commit
-npm test -- tests/structure.test.ts --run
+# Run tests for changed apps/connectors only
+./scripts/test-changed.sh --staged

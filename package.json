@@ -9,6 +9,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:structure": "vitest run tests/structure.test.ts",
+    "test:changed": "./scripts/test-changed.sh --staged",
+    "test:all": "./scripts/test-changed.sh --all",
     "prepare": "husky"
   },
   "devDependencies": {
