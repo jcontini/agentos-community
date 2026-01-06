@@ -145,6 +145,11 @@ describe('Schema Conventions', () => {
     const readme = existsSync(readmePath) ? readFileSync(readmePath, 'utf-8') : '';
     const hasSchema = /^schema:/m.test(readme);
     const isNewFile = isFileNewerThan(readmePath, versionDate);
+    
+    // Check if app has local storage connector
+    // Schema = AI interface, local storage = just another connector (AGE-269)
+    const localConnectorPath = join(APPS_DIR, app, 'connectors', 'local');
+    const hasLocalStorage = existsSync(localConnectorPath);
 
     // Skip apps without schema
     if (!hasSchema) {
@@ -152,7 +157,13 @@ describe('Schema Conventions', () => {
       return;
     }
 
-    // New/updated files must have the new patterns
+    // Apps without connectors/local/ don't store data, schema is just AI interface
+    if (!hasLocalStorage) {
+      it.skip('no local storage (schema is AI interface only)', () => {});
+      return;
+    }
+
+    // Apps WITH local storage need refs/metadata/timestamps for dedup and tracking
     if (isNewFile) {
       it('has refs for external IDs', () => {
         expect(readme).toMatch(/refs.*type.*object/is);
