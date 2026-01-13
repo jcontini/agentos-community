@@ -219,6 +219,11 @@ graphql:
       title: ".name"
 ```
 
+**Key points:**
+- Always test queries in the API's GraphQL console first (most have one)
+- Check if fields return arrays vs objects — don't assume (e.g., some APIs return `me` as `[{...}]` not `{...}`)
+- For chained queries, see "Chained Executors" section below — intermediate steps need `.data.` in paths
+
 ---
 
 ### `csv:` — CSV File Parsing
@@ -310,7 +315,49 @@ actions:
 '{{photo}}'
 ```
 
+3. **GraphQL intermediate steps keep the full response** — include `.data.` in paths:
+```yaml
+# Step 1: Get user info
+- graphql:
+    query: "{ me { id } }"
+  as: user
+
+# Step 2: Use the ID
+- graphql:
+    variables:
+      # ❌ WRONG - missing .data. wrapper
+      user_id: "{{user.me.id}}"
+      
+      # ✅ CORRECT - include .data. from GraphQL response
+      user_id: "{{user.data.me.id}}"
+```
+
+4. **Some APIs return arrays where you expect objects** — always verify the actual response:
+```yaml
+# Many APIs return "me" as a single object:
+#   { "data": { "me": { "id": 123 } } }
+# Access: {{user.data.me.id}}
+
+# But some (like Hardcover) return an array:
+#   { "data": { "me": [{ "id": 123 }] } }
+# Access: {{user.data.me[0].id}}
+```
+
+5. **Unresolved templates become null and get removed** — if you see errors like `"expecting a value for non-nullable variable"`, the template path is wrong:
+```yaml
+# This error means {{user.data.me.id}} resolved to nothing
+# Debug by checking:
+#   1. Is the first step actually succeeding?
+#   2. Is the path correct? (check API docs for actual response structure)
+#   3. Does the API return an array instead of an object?
+```
+
 **Testing chained executors:** Always test with real data that returns results. Template variables like `{{step}}` will appear literally in output if the step returned empty/null — tests with empty results won't catch this!
+
+**Debugging tips:**
+- Check `~/.agentos/data/agentos.db` activity_log table to see what succeeded/failed
+- Look for GraphQL APIs that have interactive consoles to test queries directly
+- When in doubt, check the reference integrations (Linear for GraphQL, apple-contacts for SQL)
 
 ---
 
