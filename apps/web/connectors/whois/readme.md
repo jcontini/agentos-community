@@ -3,6 +3,7 @@ id: whois
 name: WHOIS
 description: Domain lookups via system whois command
 icon: icon.svg
+tags: [web, domain, dns, lookup]
 
 auth:
   type: none
