@@ -9,11 +9,11 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { aos, testContent, TEST_PREFIX } from '../../../tests/tasks.test';
+import { aos, testContent, TEST_PREFIX } from '../../../../../tests/utils/fixtures';
 
-const connector = 'linear';
+const app = 'linear';
 const account = 'AgentOS';
-const baseParams = { connector, account };
+const baseParams = { app, account };
 
 // Track created items for cleanup
 const createdItems: Array<{ id: string }> = [];
@@ -24,9 +24,9 @@ let teamId: string | undefined;
 describe('Linear Connector', () => {
   beforeAll(async () => {
     // Get the first available team for creating issues
-    const tasks = await aos().call('Tasks', {
-      action: 'list',
+    const tasks = await aos().call('Apps', {
       ...baseParams,
+      action: 'list',
       params: { limit: 1 },
     });
     
@@ -40,9 +40,9 @@ describe('Linear Connector', () => {
   afterAll(async () => {
     for (const item of createdItems) {
       try {
-        await aos().call('Tasks', {
-          action: 'delete',
+        await aos().call('Apps', {
           ...baseParams,
+          action: 'delete',
           params: { id: item.id },
           execute: true,
         });
@@ -54,9 +54,9 @@ describe('Linear Connector', () => {
 
   describe('list', () => {
     it('returns an array of tasks', async () => {
-      const tasks = await aos().call('Tasks', {
-        action: 'list',
+      const tasks = await aos().call('Apps', {
         ...baseParams,
+        action: 'list',
         params: { limit: 5 },
       });
 
@@ -64,16 +64,16 @@ describe('Linear Connector', () => {
     });
 
     it('tasks have required schema fields', async () => {
-      const tasks = await aos().call('Tasks', {
-        action: 'list',
+      const tasks = await aos().call('Apps', {
         ...baseParams,
+        action: 'list',
         params: { limit: 5 },
       });
 
       for (const task of tasks) {
         expect(task.id).toBeDefined();
         expect(task.title).toBeDefined();
-        expect(task.connector).toBe(connector);
+        expect(task.connector).toBe(app);
         
         // Linear-specific: should have source_id (e.g., "AGE-123")
         expect(task.source_id).toBeDefined();
@@ -81,9 +81,9 @@ describe('Linear Connector', () => {
     });
 
     it('respects limit parameter', async () => {
-      const tasks = await aos().call('Tasks', {
-        action: 'list',
+      const tasks = await aos().call('Apps', {
         ...baseParams,
+        action: 'list',
         params: { limit: 3 },
       });
 
@@ -102,9 +102,9 @@ describe('Linear Connector', () => {
 
       const title = testContent('task');
       
-      createdTask = await aos().call('Tasks', {
-        action: 'create',
+      createdTask = await aos().call('Apps', {
         ...baseParams,
+        action: 'create',
         params: {
           title,
           description: 'Created by AgentOS integration test',
@@ -126,9 +126,9 @@ describe('Linear Connector', () => {
         return;
       }
 
-      const task = await aos().call('Tasks', {
-        action: 'get',
+      const task = await aos().call('Apps', {
         ...baseParams,
+        action: 'get',
         params: { id: createdTask.id },
       });
 
@@ -145,9 +145,9 @@ describe('Linear Connector', () => {
 
       const newTitle = testContent('updated task');
       
-      const updated = await aos().call('Tasks', {
-        action: 'update',
+      const updated = await aos().call('Apps', {
         ...baseParams,
+        action: 'update',
         params: {
           id: createdTask.id,
           title: newTitle,
@@ -164,9 +164,9 @@ describe('Linear Connector', () => {
         return;
       }
 
-      const result = await aos().call('Tasks', {
-        action: 'complete',
+      const result = await aos().call('Apps', {
         ...baseParams,
+        action: 'complete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -180,9 +180,9 @@ describe('Linear Connector', () => {
         return;
       }
 
-      const result = await aos().call('Tasks', {
-        action: 'delete',
+      const result = await aos().call('Apps', {
         ...baseParams,
+        action: 'delete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -197,9 +197,9 @@ describe('Linear Connector', () => {
 
   describe('projects', () => {
     it('can list projects', async () => {
-      const projects = await aos().call('Tasks', {
-        action: 'projects',
+      const projects = await aos().call('Apps', {
         ...baseParams,
+        action: 'projects',
       });
 
       expect(Array.isArray(projects)).toBe(true);
