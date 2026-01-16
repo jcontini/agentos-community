@@ -8,15 +8,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { aos } from '../../../../../tests/utils/fixtures';
 
-const CONNECTOR = 'apple-contacts';
+const app = 'apple-contacts';
 
 describe('Apple Contacts Connector', () => {
   let defaultAccountId: string;
 
   beforeAll(async () => {
-    const accounts = await aos().call('Contacts', { 
-      action: 'accounts', 
-      connector: CONNECTOR 
+    const accounts = await aos().call('Apps', {
+      app,
+      action: 'accounts'
     });
     const defaultAccount = accounts.find((a: any) => a.is_default);
     if (!defaultAccount) {
@@ -28,10 +28,10 @@ describe('Apple Contacts Connector', () => {
   describe('List Fields', () => {
     it('returns phones, emails, urls in list response', async () => {
       // List should include these fields (added in Jan 2026)
-      const contacts = await aos().call('Contacts', { 
-        action: 'list', 
-        connector: CONNECTOR, 
-        params: { account: defaultAccountId, limit: 10 } 
+      const contacts = await aos().call('Apps', {
+        app,
+        action: 'list',
+        params: { account: defaultAccountId, limit: 10 }
       });
 
       expect(Array.isArray(contacts)).toBe(true);
@@ -49,10 +49,10 @@ describe('Apple Contacts Connector', () => {
 
     it('returns comma-separated values for multi-value fields', async () => {
       // Find a contact with multiple emails or phones
-      const contacts = await aos().call('Contacts', { 
-        action: 'list', 
-        connector: CONNECTOR, 
-        params: { account: defaultAccountId, limit: 50 } 
+      const contacts = await aos().call('Apps', {
+        app,
+        action: 'list',
+        params: { account: defaultAccountId, limit: 50 }
       });
 
       // Find one with data to verify format
