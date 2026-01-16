@@ -17,7 +17,7 @@ import addFormats from 'ajv-formats';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../..');  // tests/scripts/ -> root
 const APPS_DIR = join(ROOT, 'apps');
-const SCHEMA_PATH = join(ROOT, 'schemas', 'connector.schema.json');
+const SCHEMA_PATH = join(ROOT, 'tests', 'connector.schema.json');
 
 // Load schema
 const schema = JSON.parse(readFileSync(SCHEMA_PATH, 'utf-8'));

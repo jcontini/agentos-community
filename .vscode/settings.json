@@ -1,6 +1,6 @@
 {
   "yaml.schemas": {
-    "./schemas/connector.schema.json": "apps/*/readme.md"
+    "./tests/connector.schema.json": "apps/*/readme.md"
   },
   "yaml.customTags": [
     "!include scalar"

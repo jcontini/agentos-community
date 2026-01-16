@@ -14,7 +14,7 @@ import { parse as parseYaml } from 'yaml';
 
 const INTEGRATIONS_ROOT = join(__dirname, '..');
 const APPS_DIR = join(INTEGRATIONS_ROOT, 'apps');
-const SCHEMA_PATH = join(INTEGRATIONS_ROOT, 'schemas', 'connector.schema.json');
+const SCHEMA_PATH = join(INTEGRATIONS_ROOT, 'tests', 'connector.schema.json');
 
 // Load and compile schema
 const schema = JSON.parse(readFileSync(SCHEMA_PATH, 'utf-8'));
