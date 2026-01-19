@@ -1,0 +1,59 @@
+# Browser App
+# Web search and page reading
+
+id: browser
+name: Browser
+icon: globe
+description: Search the web and read pages
+
+capabilities:
+  - web_search
+  - web_read
+
+views:
+  search:
+    title: Browser
+    layout:
+      - component: text-input
+        props:
+          value: "{{query}}"
+          placeholder: "Search or enter URL"
+          aria-label: "Search query"
+        on_submit:
+          action: search
+          params:
+            query: "{{value}}"
+      
+      - component: list
+        data:
+          capability: web_search
+          params:
+            query: "{{query}}"
+        item_component: search-result
+        item_props:
+          title: "{{title}}"
+          url: "{{url}}"
+          snippet: "{{snippet}}"
+        on_select:
+          view: read
+          params:
+            url: "{{item.url}}"
+            title: "{{item.title}}"
+
+  read:
+    title: "{{params.title}}"
+    layout:
+      - component: text-input
+        props:
+          value: "{{params.url}}"
+          disabled: true
+          aria-label: "Page URL"
+      
+      - component: markdown
+        data:
+          capability: web_read
+          params:
+            url: "{{params.url}}"
+        content: "{{content}}"
+
+default_view: search
