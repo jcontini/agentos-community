@@ -18,6 +18,10 @@ auth:
   label: API Key
   help_url: https://www.firecrawl.dev/app/api-keys
 
+# Terminology: how this service names entities
+terminology:
+  webpage: Page
+
 instructions: |
   Firecrawl-specific notes:
   - Renders JavaScript - use for React, Vue, Angular, SPAs

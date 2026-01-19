@@ -5,6 +5,15 @@ description: Fun demos using free public APIs - no API keys needed!
 icon: icon.svg
 tags: [demo, fun, examples]
 
+# Terminology: how this service names entities
+terminology:
+  webpage: Web Page
+  task: Task
+  contact: Contact
+
+# Relationship support (demo is a mock - no real relationships)
+# relationships: {}  # Omitted = no relationships supported
+
 # Mock entity implementations for testing
 # Uses httpbin.org (reliable) to test entity-based architecture
 entities:

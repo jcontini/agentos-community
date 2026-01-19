@@ -17,184 +17,201 @@ auth:
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 
-# Action implementations (merged from mapping.yaml - AGE-267)
-actions:
-  list:
-    operation: read
-    label: "List tasks"
-    rest:
-      method: GET
-      url: https://api.todoist.com/rest/v2/tasks
-      query:
-        filter: "{{params.filter}}"
-        project_id: "{{params.project_id}}"
-      response:
-        mapping:
-          id: "[].id"
-          title: "[].content"
-          description: "[].description"
-          status: "[].is_completed ? 'done' : 'open'"
-          priority: "5 - [].priority"  # Todoist 4=urgent → our 1
-          due: "[].due.date"
-          project:
-            id: "[].project_id"
-          parent_id: "[].parent_id"
-          labels: "[].labels"
-          url: "[].url"
-          connector: "'todoist'"
+# Terminology: how Todoist names entities
+terminology:
+  task: Task
+  project: Project
+  label: Label
 
-  get:
-    operation: read
-    label: "Get task"
-    rest:
-      method: GET
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
-      response:
-        mapping:
-          id: ".id"
-          title: ".content"
-          description: ".description"
-          status: ".is_completed ? 'done' : 'open'"
-          priority: "5 - .priority"  # Todoist 4=urgent → our 1
-          due: ".due.date"
-          project:
-            id: ".project_id"
-          parent_id: ".parent_id"
-          labels: ".labels"
-          url: ".url"
-          connector: "'todoist'"
-
-  create:
-    operation: create
-    label: "Create task"
-    rest:
-      method: POST
-      url: https://api.todoist.com/rest/v2/tasks
-      body:
-        content: "{{params.title}}"
-        description: "{{params.description}}"
-        due_string: "{{params.due}}"
-        priority: "{{params.priority | invert:5}}"  # Our 1=urgent → Todoist 4
-        project_id: "{{params.project_id}}"
-        parent_id: "{{params.parent_id}}"
-        labels: "{{params.labels}}"  # Array of label names
-      response:
-        mapping:
-          id: ".id"
-          title: ".content"
-          description: ".description"
-          status: "'open'"
-          priority: "5 - .priority"  # Todoist 4=urgent → our 1
-          due: ".due.date"
-          labels: ".labels"
-          project:
-            id: ".project_id"
-          url: ".url"
-          connector: "'todoist'"
-
-  update:
-    operation: update
-    label: "Update task"
-    rest:
-      method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
-      body:
-        content: "{{params.title}}"
-        description: "{{params.description}}"
-        due_string: "{{params.due}}"
-        priority: "{{params.priority | invert:5}}"  # Our 1=urgent → Todoist 4
-        labels: "{{params.labels}}"
-        # Note: project_id not supported in update - use Sync API to move tasks
-      response:
-        mapping:
-          id: ".id"
-          title: ".content"
-          description: ".description"
-          status: ".is_completed ? 'done' : 'open'"
-          priority: "5 - .priority"  # Todoist 4=urgent → our 1
-          due: ".due.date"
-          url: ".url"
-          connector: "'todoist'"
-
-  complete:
-    operation: update
-    label: "Complete task"
-    rest:
-      method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/close"
-      response:
-        static:
-          id: "{{params.id}}"
-          status: "done"
-          connector: "todoist"
-
-  reopen:
-    operation: update
-    label: "Reopen task"
-    rest:
-      method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/reopen"
-      response:
-        static:
-          id: "{{params.id}}"
-          status: "open"
-          connector: "todoist"
-
-  delete:
-    operation: delete
-    label: "Delete task"
-    rest:
-      method: DELETE
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
-      response:
-        static:
-          success: true
-
-  move:
-    operation: update
-    label: "Move task"
-    rest:
-      method: POST
-      url: https://api.todoist.com/sync/v9/sync
-      encoding: form
-      body:
-        commands: '[{"type":"item_move","uuid":"move-{{params.id}}","args":{"id":"{{params.id}}","project_id":"{{params.project_id}}"}}]'
-      response:
-        static:
-          id: "{{params.id}}"
-          connector: "todoist"
-
-  projects:
-    operation: read
-    label: "List projects"
-    rest:
-      method: GET
-      url: https://api.todoist.com/rest/v2/projects
-      response:
-        mapping:
-          id: "[].id"
-          name: "[].name"
-          connector: "'todoist'"
-
-  labels:
-    operation: read
-    label: "List labels"
-    rest:
-      method: GET
-      url: https://api.todoist.com/rest/v2/labels
-      response:
-        mapping:
-          id: "[].id"
-          name: "[].name"
-          color: "[].color"
-          connector: "'todoist'"
+# Relationship support declarations
+relationships:
+  task_project:
+    support: read_only  # Can read, but can't move tasks between projects via REST API
+    field: project_id
+  task_parent:
+    support: full
+    field: parent_id
+  task_labels:
+    support: full
+    field: labels
+  project_parent:
+    support: full
+    field: parent_id
 
 instructions: |
   Todoist-specific notes:
   - Priority is inverted: 1=normal in API, 4=urgent in API
-  - Projects cannot be changed after task creation
+  - Projects cannot be changed after task creation (use Sync API to move)
   - Recurring tasks: preserve recurrence pattern when updating due dates
-  - AI-created tasks automatically get the "AI" label
+
+# Entity implementations
+entities:
+  task:
+    list:
+      label: "List tasks"
+      params:
+        filter: { type: string, description: "Todoist filter (e.g., 'today', 'overdue')" }
+        project_id: { type: string, description: "Filter by project ID" }
+      rest:
+        method: GET
+        url: https://api.todoist.com/rest/v2/tasks
+        query:
+          filter: "{{params.filter}}"
+          project_id: "{{params.project_id}}"
+        response:
+          mapping:
+            id: "[].id"
+            title: "[].content"
+            description: "[].description"
+            completed: "[].is_completed"
+            priority: "5 - [].priority"
+            due_date: "[].due.date"
+            project_id: "[].project_id"
+            parent_id: "[].parent_id"
+            labels: "[].labels"
+            url: "[].url"
+
+    get:
+      label: "Get task"
+      params:
+        id: { type: string, required: true, description: "Task ID" }
+      rest:
+        method: GET
+        url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+        response:
+          mapping:
+            id: ".id"
+            title: ".content"
+            description: ".description"
+            completed: ".is_completed"
+            priority: "5 - .priority"
+            due_date: ".due.date"
+            project_id: ".project_id"
+            parent_id: ".parent_id"
+            labels: ".labels"
+            url: ".url"
+
+    create:
+      label: "Create task"
+      params:
+        title: { type: string, required: true, description: "Task title" }
+        description: { type: string, description: "Task description" }
+        due: { type: string, description: "Due date (natural language)" }
+        priority: { type: integer, description: "Priority 1-4 (1=highest)" }
+        project_id: { type: string, description: "Project ID" }
+        parent_id: { type: string, description: "Parent task ID (for subtasks)" }
+        labels: { type: array, description: "Label names" }
+      rest:
+        method: POST
+        url: https://api.todoist.com/rest/v2/tasks
+        body:
+          content: "{{params.title}}"
+          description: "{{params.description}}"
+          due_string: "{{params.due}}"
+          priority: "{{params.priority | invert:5}}"
+          project_id: "{{params.project_id}}"
+          parent_id: "{{params.parent_id}}"
+          labels: "{{params.labels}}"
+        response:
+          mapping:
+            id: ".id"
+            title: ".content"
+            description: ".description"
+            completed: "false"
+            priority: "5 - .priority"
+            due_date: ".due.date"
+            project_id: ".project_id"
+            labels: ".labels"
+            url: ".url"
+
+    update:
+      label: "Update task"
+      params:
+        id: { type: string, required: true, description: "Task ID" }
+        title: { type: string, description: "New title" }
+        description: { type: string, description: "New description" }
+        due: { type: string, description: "New due date" }
+        priority: { type: integer, description: "New priority" }
+        labels: { type: array, description: "New labels" }
+      rest:
+        method: POST
+        url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+        body:
+          content: "{{params.title}}"
+          description: "{{params.description}}"
+          due_string: "{{params.due}}"
+          priority: "{{params.priority | invert:5}}"
+          labels: "{{params.labels}}"
+        response:
+          mapping:
+            id: ".id"
+            title: ".content"
+            description: ".description"
+            completed: ".is_completed"
+            priority: "5 - .priority"
+            due_date: ".due.date"
+            url: ".url"
+
+    complete:
+      label: "Complete task"
+      params:
+        id: { type: string, required: true, description: "Task ID" }
+      rest:
+        method: POST
+        url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/close"
+        response:
+          static:
+            id: "{{params.id}}"
+            completed: true
+
+    reopen:
+      label: "Reopen task"
+      params:
+        id: { type: string, required: true, description: "Task ID" }
+      rest:
+        method: POST
+        url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/reopen"
+        response:
+          static:
+            id: "{{params.id}}"
+            completed: false
+
+    delete:
+      label: "Delete task"
+      params:
+        id: { type: string, required: true, description: "Task ID" }
+      rest:
+        method: DELETE
+        url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+        response:
+          static:
+            success: true
+
+  project:
+    list:
+      label: "List projects"
+      rest:
+        method: GET
+        url: https://api.todoist.com/rest/v2/projects
+        response:
+          mapping:
+            id: "[].id"
+            name: "[].name"
+            color: "[].color"
+            parent_id: "[].parent_id"
+            is_favorite: "[].is_favorite"
+
+  label:
+    list:
+      label: "List labels"
+      rest:
+        method: GET
+        url: https://api.todoist.com/rest/v2/labels
+        response:
+          mapping:
+            id: "[].id"
+            name: "[].name"
+            color: "[].color"
 ---
 
 # Todoist

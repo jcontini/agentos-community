@@ -182,6 +182,38 @@ describe('Entity Schema Validation', () => {
   });
 });
 
+// Get valid relationship IDs from graph.yaml
+const getValidRelationshipIds = () => {
+  const content = readFileSync(GRAPH_PATH, 'utf-8');
+  const graph = parseYaml(content);
+  return new Set(Object.keys(graph.relationships || {}));
+};
+
+describe('Plugin Relationship Validation', () => {
+  const validRelationshipIds = getValidRelationshipIds();
+  
+  it('all plugin relationships reference valid graph.yaml relationships', () => {
+    const errors: string[] = [];
+    
+    for (const plugin of getPlugins()) {
+      const content = readFileSync(join(PLUGINS_DIR, plugin, 'readme.md'), 'utf-8');
+      const frontmatter = parseFrontmatter(content);
+      if (!frontmatter?.relationships) continue;
+      
+      const relationships = frontmatter.relationships as Record<string, unknown>;
+      for (const relId of Object.keys(relationships)) {
+        if (!validRelationshipIds.has(relId)) {
+          errors.push(`Plugin '${plugin}' references unknown relationship: ${relId}`);
+        }
+      }
+    }
+    
+    if (errors.length > 0) {
+      throw new Error(`Invalid plugin relationships:\n${errors.join('\n')}`);
+    }
+  });
+});
+
 describe('Graph Validation', () => {
   it('graph.yaml is valid YAML', () => {
     const content = readFileSync(GRAPH_PATH, 'utf-8');

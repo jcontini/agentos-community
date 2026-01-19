@@ -64,6 +64,20 @@
         }
       ]
     },
+    "terminology": {
+      "type": "object",
+      "description": "Maps entity IDs to service-specific display names (e.g., task → Issue for Linear)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "description": "Relationship support declarations (keyed by relationship ID from graph.yaml)",
+      "additionalProperties": {
+        "$ref": "#/definitions/relationshipSupport"
+      }
+    },
     "entities": {
       "type": "object",
       "description": "Entity-based operations (e.g., entities.webpage.search)",
@@ -331,6 +345,22 @@
           "type": "object",
           "description": "Field mappings (target: jmespath or nested object)",
           "additionalProperties": true
+        }
+      }
+    },
+    "relationshipSupport": {
+      "type": "object",
+      "description": "How this plugin supports a relationship",
+      "required": ["support"],
+      "properties": {
+        "support": {
+          "type": "string",
+          "enum": ["full", "read_only", "write_only", "none"],
+          "description": "Level of support: full (read+write), read_only, write_only, none"
+        },
+        "field": {
+          "type": "string",
+          "description": "API response field that contains the relationship data (e.g., 'project_id')"
         }
       }
     }

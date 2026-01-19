@@ -17,6 +17,10 @@ auth:
   label: API Key
   help_url: https://dashboard.exa.ai/api-keys
 
+# Terminology: how this service names entities
+terminology:
+  webpage: Result
+
 instructions: |
   Exa-specific notes:
   - Neural search finds content by meaning, not just keywords
