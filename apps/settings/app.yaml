@@ -40,9 +40,10 @@ menus:
 
 views:
   # Main tabbed settings panel
+  # Note: Unlike Browser (activity-driven), Settings renders immediately
+  # Individual components fetch their own data (plugin-list, future toggle-group)
   main:
     title: Settings
-    entity: settings
     layout:
       - component: tabs
         props:
@@ -124,10 +125,7 @@ views:
                     props:
                       content: Installed Plugins
                       variant: title
-                  - component: text
-                    props:
-                      content: "Plugin list will appear here. Use the Plugins menu to reload or manage sources."
-                      variant: body
+                  - component: plugin-list
 
           privacy:
             component: layout/scroll-area

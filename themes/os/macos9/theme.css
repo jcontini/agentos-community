@@ -519,6 +519,48 @@ input[type=radio]:disabled + label {
   color: #777;
 }
 
+/* =============================================================================
+   Toggle Component
+   Checkbox with label and optional description (macOS 9 pattern)
+   ============================================================================= */
+
+.toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.toggle-row input[type=checkbox] {
+  cursor: pointer;
+}
+
+.toggle-label {
+  font-weight: bold;
+}
+
+.toggle-description {
+  font-size: 11px;
+  color: #555;
+  margin-left: 18px; /* Align with label text (checkbox width + gap) */
+  line-height: 1.3;
+}
+
+.toggle[data-disabled] .toggle-label,
+.toggle[data-disabled] .toggle-description {
+  color: #777;
+}
+
+.toggle[data-disabled] .toggle-row {
+  cursor: default;
+}
+
 input[type=radio] {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -949,6 +991,11 @@ progress:not([value])::-webkit-progress-value {
 [role=menu] li[aria-disabled],
 [role=menubar] li[aria-disabled] {
   color: #777;
+}
+
+/* Tab container - padding at top matches macOS 9 pattern */
+.tabs {
+  padding-top: 12px; /* Breathing room before tabs (macOS 9 style) */
 }
 
 .tabs > menu {
@@ -2284,4 +2331,113 @@ progress:not([value])::-webkit-progress-value {
 
 .history-item-source {
   opacity: 0.6;
+}
+
+/* =============================================================================
+   Plugin List Component
+   List of installed plugins with enable/disable toggles
+   ============================================================================= */
+
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-list--loading,
+.plugin-list--error,
+.plugin-list--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 150px;
+}
+
+.plugin-list-loading,
+.plugin-list-error,
+.plugin-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.plugin-list-loading .progress-bar {
+  width: 200px;
+}
+
+.plugin-list-loading-text,
+.plugin-list-empty-text {
+  font-size: 12px;
+  color: #666;
+}
+
+.plugin-list-error {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.plugin-list-error-icon {
+  font-size: 16px;
+}
+
+.plugin-list-error-text {
+  font-size: 12px;
+  color: #c00;
+}
+
+/* Individual plugin item */
+.plugin-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #ccc;
+}
+
+.plugin-item:last-child {
+  border-bottom: none;
+}
+
+.plugin-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugin-item-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.plugin-item-toggle input[type=checkbox] {
+  cursor: pointer;
+}
+
+.plugin-item-name {
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.plugin-item-description {
+  font-size: 11px;
+  color: #555;
+  margin-top: 4px;
+  margin-left: 18px; /* Align with name (checkbox width + gap) */
+  line-height: 1.4;
+}
+
+.plugin-item-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  margin-left: 18px;
+  font-size: 10px;
+  color: #888;
+}
+
+.plugin-item-operations,
+.plugin-item-utilities {
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
