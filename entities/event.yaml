@@ -1,0 +1,136 @@
+# Event Entity
+# A calendar event
+
+id: event
+name: Event
+description: A calendar event
+
+schema:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+  
+  title:
+    type: string
+    required: true
+    description: Event title
+  
+  start:
+    type: datetime
+    required: true
+    description: Start time
+  
+  end:
+    type: datetime
+    description: End time
+  
+  all_day:
+    type: boolean
+    default: false
+    description: Whether this is an all-day event
+  
+  location:
+    type: string
+    description: Event location
+  
+  description:
+    type: string
+    description: Event description
+  
+  calendar_id:
+    type: string
+    description: Which calendar this event belongs to
+  
+  attendees:
+    type: array
+    items: string
+    description: Attendee emails/names
+  
+  recurrence:
+    type: string
+    description: Recurrence rule (RRULE format)
+
+operations:
+  list:
+    description: List events in a date range
+    params:
+      start_date:
+        type: date
+        description: Start of range
+      end_date:
+        type: date
+        description: End of range
+      calendar_id:
+        type: string
+        description: Filter by calendar
+    returns: event[]
+  
+  get:
+    description: Get a single event
+    params:
+      id:
+        type: string
+        required: true
+        description: Event ID
+    returns: event
+  
+  create:
+    description: Create a new event
+    params:
+      title:
+        type: string
+        required: true
+        description: Event title
+      start:
+        type: datetime
+        required: true
+        description: Start time
+      end:
+        type: datetime
+        description: End time
+      all_day:
+        type: boolean
+        description: All-day event
+      location:
+        type: string
+        description: Location
+      description:
+        type: string
+        description: Description
+      calendar_id:
+        type: string
+        description: Calendar ID
+    returns: event
+  
+  update:
+    description: Update an event
+    params:
+      id:
+        type: string
+        required: true
+        description: Event ID
+      title:
+        type: string
+        description: New title
+      start:
+        type: datetime
+        description: New start time
+      end:
+        type: datetime
+        description: New end time
+    returns: event
+  
+  delete:
+    description: Delete an event
+    params:
+      id:
+        type: string
+        required: true
+        description: Event ID
+    returns: void
+
+display:
+  primary: title
+  secondary: start
+  icon: calendar

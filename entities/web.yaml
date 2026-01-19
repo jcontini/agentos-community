@@ -1,0 +1,64 @@
+# Web Entity
+# Web content - search results or page content
+
+id: web
+name: Web Page
+description: Web content - search results or page content
+
+schema:
+  url:
+    type: string
+    format: url
+    required: true
+    description: The URL
+  
+  title:
+    type: string
+    description: Page title
+  
+  content:
+    type: string
+    description: Page content (markdown or text)
+  
+  snippet:
+    type: string
+    description: Short excerpt/description
+  
+  favicon:
+    type: string
+    format: url
+    description: Site favicon URL
+  
+  published_at:
+    type: datetime
+    description: When the content was published
+
+operations:
+  search:
+    description: Search the web
+    params:
+      query:
+        type: string
+        required: true
+        description: Search query
+      limit:
+        type: integer
+        default: 10
+        description: Maximum number of results
+    returns: web[]
+  
+  read:
+    description: Read/extract content from a URL
+    params:
+      url:
+        type: string
+        format: url
+        required: true
+        description: URL to read
+    returns: web
+
+display:
+  primary: title
+  secondary: url
+  description: snippet
+  icon: globe

@@ -1,0 +1,92 @@
+# Message Entity
+# A chat message
+
+id: message
+name: Message
+description: A chat message
+
+schema:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+  
+  content:
+    type: string
+    required: true
+    description: Message content
+  
+  sender:
+    type: string
+    required: true
+    description: Sender name
+  
+  sender_id:
+    type: string
+    description: Sender identifier
+  
+  conversation_id:
+    type: string
+    ref: conversation
+    required: true
+    description: Parent conversation
+  
+  is_outgoing:
+    type: boolean
+    description: Whether message was sent by user
+  
+  timestamp:
+    type: datetime
+    required: true
+    description: When message was sent
+  
+  read:
+    type: boolean
+    description: Whether message has been read
+
+operations:
+  list:
+    description: List messages in a conversation
+    params:
+      conversation_id:
+        type: string
+        required: true
+        description: Conversation ID
+      limit:
+        type: integer
+        default: 50
+        description: Maximum number of messages
+      before:
+        type: datetime
+        description: Get messages before this time (pagination)
+    returns: message[]
+  
+  get:
+    description: Get a single message
+    params:
+      id:
+        type: string
+        required: true
+        description: Message ID
+    returns: message
+  
+  create:
+    description: Send a message
+    params:
+      conversation_id:
+        type: string
+        required: true
+        description: Conversation ID
+      content:
+        type: string
+        required: true
+        description: Message content
+    returns: message
+
+depends_on:
+  - conversation
+
+display:
+  primary: content
+  secondary: sender
+  icon: message-circle

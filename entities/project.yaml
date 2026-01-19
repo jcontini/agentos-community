@@ -1,0 +1,102 @@
+# Project Entity
+# A collection of tasks
+
+id: project
+name: Project
+description: A collection of tasks
+
+schema:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+  
+  name:
+    type: string
+    required: true
+    description: Project name
+  
+  color:
+    type: string
+    description: Display color
+  
+  archived:
+    type: boolean
+    default: false
+    description: Whether project is archived
+  
+  parent_id:
+    type: string
+    ref: project
+    description: Parent project (for nested projects)
+
+operations:
+  list:
+    description: List all projects
+    params:
+      include_archived:
+        type: boolean
+        default: false
+        description: Include archived projects
+    returns: project[]
+  
+  get:
+    description: Get a single project
+    params:
+      id:
+        type: string
+        required: true
+        description: Project ID
+    returns: project
+  
+  create:
+    description: Create a new project
+    params:
+      name:
+        type: string
+        required: true
+        description: Project name
+      color:
+        type: string
+        description: Display color
+      parent_id:
+        type: string
+        description: Parent project ID
+    returns: project
+  
+  update:
+    description: Update a project
+    params:
+      id:
+        type: string
+        required: true
+        description: Project ID
+      name:
+        type: string
+        description: New name
+      color:
+        type: string
+        description: New color
+    returns: project
+  
+  delete:
+    description: Delete a project
+    params:
+      id:
+        type: string
+        required: true
+        description: Project ID
+    returns: void
+  
+  archive:
+    description: Archive a project
+    params:
+      id:
+        type: string
+        required: true
+        description: Project ID
+    returns: project
+
+display:
+  primary: name
+  icon: folder
