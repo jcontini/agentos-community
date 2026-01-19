@@ -10,6 +10,9 @@ website: https://todoist.com
 privacy_url: https://doist.com/privacy
 terms_url: https://doist.com/terms-of-service
 
+# API: Todoist Unified API v1 (https://developer.todoist.com/api/v1/)
+# Note: REST API v2 and Sync API v9 are deprecated as of 2025
+
 auth:
   type: api_key
   header: Authorization
@@ -29,18 +32,17 @@ adapters:
     relationships:
       task_project:
         support: full
-        mutation: move_task  # REST API can't change project — route through Sync API utility
+        mutation: move_task  # Update can't change project — route through move endpoint
       task_parent: full
       task_labels: full
     mapping:
       id: .id
       title: .content
       description: .description
-      completed: .is_completed
-      priority: "5 - .priority"
+      completed: .checked
+      priority: ".priority | invert:5"  # Invert: Todoist 4=urgent → AgentOS 1=highest
       due_date: .due.date
-      created_at: .created_at
-      url: .url
+      created_at: .added_at
       _project_id: .project_id
       _parent_id: .parent_id
       _labels: .labels
@@ -62,6 +64,7 @@ adapters:
       id: .id
       name: .name
       color: .color
+      is_favorite: .is_favorite
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -75,18 +78,33 @@ operations:
     description: List tasks with optional filters
     returns: task[]
     params:
-      filter: { type: string, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
       project_id: { type: string, description: "Filter by project ID" }
       section_id: { type: string, description: "Filter by section ID" }
+      parent_id: { type: string, description: "Filter by parent task ID" }
       label: { type: string, description: "Filter by label name" }
     rest:
       method: GET
-      url: https://api.todoist.com/rest/v2/tasks
+      url: https://api.todoist.com/api/v1/tasks
       query:
-        filter: "{{params.filter}}"
         project_id: "{{params.project_id}}"
         section_id: "{{params.section_id}}"
+        parent_id: "{{params.parent_id}}"
         label: "{{params.label}}"
+      response:
+        root: results
+
+  task.filter:
+    description: Get tasks matching a Todoist filter query
+    returns: task[]
+    params:
+      query: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
+    rest:
+      method: GET
+      url: https://api.todoist.com/api/v1/tasks/filter
+      query:
+        query: "{{params.query}}"
+      response:
+        root: results
 
   task.get:
     description: Get a specific task by ID
@@ -95,7 +113,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: GET
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
 
   task.create:
     description: Create a new task
@@ -104,18 +122,18 @@ operations:
       title: { type: string, required: true, description: "Task title" }
       description: { type: string, description: "Task description" }
       due: { type: string, description: "Due date (natural language like 'tomorrow')" }
-      priority: { type: integer, description: "Priority 1-4 (1=highest)" }
+      priority: { type: integer, description: "Priority 1 (highest) to 4 (lowest)" }
       project_id: { type: string, description: "Project ID" }
       parent_id: { type: string, description: "Parent task ID (for subtasks)" }
       labels: { type: array, description: "Label names" }
     rest:
       method: POST
-      url: https://api.todoist.com/rest/v2/tasks
+      url: https://api.todoist.com/api/v1/tasks
       body:
         content: "{{params.title}}"
         description: "{{params.description}}"
         due_string: "{{params.due}}"
-        priority: "{{5 - params.priority}}"
+        priority: "{{params.priority | invert:5}}"  # Invert: AgentOS 1=highest → Todoist 4=urgent
         project_id: "{{params.project_id}}"
         parent_id: "{{params.parent_id}}"
         labels: "{{params.labels}}"
@@ -128,17 +146,17 @@ operations:
       title: { type: string, description: "New title" }
       description: { type: string, description: "New description" }
       due: { type: string, description: "New due date" }
-      priority: { type: integer, description: "New priority" }
+      priority: { type: integer, description: "New priority 1 (highest) to 4 (lowest)" }
       labels: { type: array, description: "New labels" }
       project_id: { type: string, description: "Move to different project" }
     rest:
       method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
       body:
         content: "{{params.title}}"
         description: "{{params.description}}"
         due_string: "{{params.due}}"
-        priority: "{{5 - params.priority}}"
+        priority: "{{params.priority | invert:5}}"  # Invert: AgentOS 1=highest → Todoist 4=urgent
         labels: "{{params.labels}}"
 
   task.complete:
@@ -148,7 +166,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/close"
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/close"
 
   task.reopen:
     description: Reopen a completed task
@@ -157,7 +175,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}/reopen"
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/reopen"
 
   task.delete:
     description: Delete a task
@@ -166,21 +184,25 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: DELETE
-      url: "https://api.todoist.com/rest/v2/tasks/{{params.id}}"
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
 
   project.list:
     description: List all projects
     returns: project[]
     rest:
       method: GET
-      url: https://api.todoist.com/rest/v2/projects
+      url: https://api.todoist.com/api/v1/projects
+      response:
+        root: results
 
   label.list:
     description: List all labels
     returns: label[]
     rest:
       method: GET
-      url: https://api.todoist.com/rest/v2/labels
+      url: https://api.todoist.com/api/v1/labels
+      response:
+        root: results
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UTILITIES
@@ -191,26 +213,25 @@ operations:
 
 utilities:
   move_task:
-    description: Move task to a different project (REST API can't do this, uses Sync API)
+    description: Move task to a different project, section, or parent
     params:
       id: { type: string, required: true, description: "Task ID to move" }
-      project_id: { type: string, required: true, description: "Target project ID" }
-    returns:
-      success: boolean
+      project_id: { type: string, description: "Target project ID" }
+      section_id: { type: string, description: "Target section ID" }
+      parent_id: { type: string, description: "Target parent task ID" }
+    returns: task
     rest:
       method: POST
-      url: https://api.todoist.com/sync/v9/sync
-      encoding: form
+      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/move"
       body:
-        commands: '[{"type":"item_move","uuid":"{{uuid}}","args":{"id":"{{params.id}}","project_id":"{{params.project_id}}"}}]'
-      response:
-        mapping:
-          success: ".sync_status != null"
+        project_id: "{{params.project_id}}"
+        section_id: "{{params.section_id}}"
+        parent_id: "{{params.parent_id}}"
 ---
 
 # Todoist
 
-Personal task management integration.
+Personal task management integration using [Todoist API v1](https://developer.todoist.com/api/v1/).
 
 ## Setup
 
@@ -222,17 +243,23 @@ Personal task management integration.
 - Full CRUD for tasks
 - Project and label support
 - Subtasks via parent_id
-- Rich filters: `today`, `overdue`, `7 days`, `no date`
-- Move tasks between projects (handled transparently via `task.update`)
+- Rich filters via `task.filter`: `today`, `overdue`, `7 days`, `no date`
+- Move tasks between projects, sections, or parents
 
-## Priority Mapping
+## Priority Scale
 
-Todoist uses inverted priorities (4=urgent, 1=normal). AgentOS normalizes this:
-- Our priority 1 = Todoist priority 4 (urgent/red)
-- Our priority 4 = Todoist priority 1 (normal)
+AgentOS uses a universal priority scale (1=highest, 4=lowest). This plugin maps to Todoist's inverted scale:
+
+| AgentOS | Todoist | Client shows |
+|---------|---------|--------------|
+| 1 (highest) | 4 | P1 red flag |
+| 2 | 3 | P2 orange |
+| 3 | 2 | P3 blue |
+| 4 (lowest) | 1 | P4 no flag |
 
 ## Technical Notes
 
-- Moving tasks uses Todoist's Sync API (REST API doesn't support this)
-- AgentOS handles this transparently — just include `project_id` in `task.update`
-- Recurring task due dates must preserve the recurrence pattern
+- Uses Todoist Unified API v1 (REST v2 and Sync v9 are deprecated)
+- Moving tasks is handled via dedicated `/move` endpoint
+- Include `project_id` in `task.update` to move — routed to move endpoint automatically
+- Recurring task due dates preserve the recurrence pattern
