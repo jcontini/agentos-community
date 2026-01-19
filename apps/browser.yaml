@@ -56,10 +56,11 @@ views:
           source: "{{activity.connector}}"
     
     layout:
-      - component: scroll-area
+      - component: layout/scroll-area
         children:
           - component: markdown
-            content: "{{activity.response.content}}"
+            props:
+              content: "{{activity.response.content}}"
         footer:
           source: "{{activity.connector}}"
           duration: "{{activity.duration_ms}}"
