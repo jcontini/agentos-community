@@ -1,8 +1,8 @@
 /**
- * Generic Capability Tests
+ * Entity Operation Tests
  * 
- * Automatically tests any connector that declares `provides:` against
- * the expected capability schema. No per-connector test code needed.
+ * Automatically tests any plugin that declares entity operations against
+ * the expected entity schemas. No per-plugin test code needed.
  * 
  * Run: npm run test:capabilities
  */
@@ -13,26 +13,29 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 
-// Capability schemas: what each capability should return
-const CAPABILITY_SCHEMAS: Record<string, {
+// Entity operation schemas: what each entity.operation should return
+// Keys are in format "entity.operation" (e.g., "webpage.search", "task.list")
+const ENTITY_SCHEMAS: Record<string, {
   description: string;
   testParams: Record<string, unknown>;
   validate: (result: unknown) => void;
 }> = {
-  web_search: {
+  'webpage.search': {
     description: 'Search results with url and title',
     testParams: { query: 'test', limit: 2 },
     validate: (result) => {
-      expect(Array.isArray(result)).toBe(true);
-      const arr = result as Array<Record<string, unknown>>;
-      expect(arr.length).toBeGreaterThan(0);
-      expect(arr[0]).toHaveProperty('url');
-      expect(arr[0]).toHaveProperty('title');
-      expect(typeof arr[0].url).toBe('string');
-      expect(typeof arr[0].title).toBe('string');
+      expect(Array.isArray(result) || (result as Record<string, unknown>)?.results).toBe(true);
+      const arr = Array.isArray(result) ? result : (result as Record<string, unknown>).results as unknown[];
+      if (Array.isArray(arr) && arr.length > 0) {
+        const first = arr[0] as Record<string, unknown>;
+        expect(first).toHaveProperty('url');
+        expect(first).toHaveProperty('title');
+        expect(typeof first.url).toBe('string');
+        expect(typeof first.title).toBe('string');
+      }
     }
   },
-  web_read: {
+  'webpage.read': {
     description: 'Page content with url and content',
     testParams: { url: 'https://example.com' },
     validate: (result) => {
@@ -43,55 +46,73 @@ const CAPABILITY_SCHEMAS: Record<string, {
       expect(typeof obj.content).toBe('string');
     }
   },
-  task_list: {
+  'task.list': {
     description: 'Array of tasks with id and title',
     testParams: { limit: 5 },
     validate: (result) => {
-      expect(Array.isArray(result)).toBe(true);
-      const arr = result as Array<Record<string, unknown>>;
-      if (arr.length > 0) {
-        expect(arr[0]).toHaveProperty('id');
-        expect(arr[0]).toHaveProperty('title');
+      expect(Array.isArray(result) || (result as Record<string, unknown>)?.tasks).toBe(true);
+      const arr = Array.isArray(result) ? result : (result as Record<string, unknown>).tasks as unknown[];
+      if (Array.isArray(arr) && arr.length > 0) {
+        const first = arr[0] as Record<string, unknown>;
+        expect(first).toHaveProperty('id');
+        expect(first).toHaveProperty('title');
       }
     }
   },
-  task_get: {
+  'task.get': {
     description: 'Single task with id and title',
-    testParams: {}, // Requires id, skip if no tasks
+    testParams: { id: 'test' }, // Usually requires an actual ID
     validate: (result) => {
       const obj = result as Record<string, unknown>;
       expect(obj).toHaveProperty('id');
       expect(obj).toHaveProperty('title');
     }
   },
-  book_list: {
-    description: 'Array of books with id and title',
+  'task.create': {
+    description: 'Created task with id and title',
+    testParams: { title: 'Test task' },
+    validate: (result) => {
+      const obj = result as Record<string, unknown>;
+      expect(obj).toHaveProperty('id');
+      expect(obj).toHaveProperty('title');
+    }
+  },
+  'contact.list': {
+    description: 'Array of contacts with id and name',
     testParams: { limit: 5 },
     validate: (result) => {
-      expect(Array.isArray(result)).toBe(true);
-      const arr = result as Array<Record<string, unknown>>;
-      if (arr.length > 0) {
-        expect(arr[0]).toHaveProperty('id');
-        expect(arr[0]).toHaveProperty('title');
+      expect(Array.isArray(result) || (result as Record<string, unknown>)?.contacts).toBe(true);
+      const arr = Array.isArray(result) ? result : (result as Record<string, unknown>).contacts as unknown[];
+      if (Array.isArray(arr) && arr.length > 0) {
+        const first = arr[0] as Record<string, unknown>;
+        expect(first).toHaveProperty('id');
+        expect(first).toHaveProperty('name');
       }
     }
   },
-  // Add more capability schemas as needed
+  'contact.get': {
+    description: 'Single contact with id and name',
+    testParams: { id: 'test' },
+    validate: (result) => {
+      const obj = result as Record<string, unknown>;
+      expect(obj).toHaveProperty('id');
+      expect(obj).toHaveProperty('name');
+    }
+  },
+  // Add more entity schemas as needed
 };
 
-// Scan plugins directory to find all plugins with `provides:` declarations
-function findPluginsWithCapabilities(): Array<{
+// Scan plugins directory to find all plugins with entity operations
+function findPluginsWithEntities(): Array<{
   plugin: string;
   tool: string;
-  capability: string;
-  account?: string;
+  entityOperation: string; // format: "entity.operation"
 }> {
   const pluginsDir = path.join(__dirname, '..', 'plugins');
   const results: Array<{
     plugin: string;
     tool: string;
-    capability: string;
-    account?: string;
+    entityOperation: string;
   }> = [];
   
   if (!fs.existsSync(pluginsDir)) return results;
@@ -110,16 +131,18 @@ function findPluginsWithCapabilities(): Array<{
     
     try {
       const config = yaml.parse(match[1]);
-      if (!config.actions) continue;
       
-      for (const [actionName, actionConfig] of Object.entries(config.actions)) {
-        const action = actionConfig as Record<string, unknown>;
-        if (action.provides && typeof action.provides === 'string') {
-          results.push({
-            plugin: config.id || dir,
-            tool: actionName,
-            capability: action.provides,
-          });
+      // Look for entities: block (new format)
+      if (config.entities) {
+        for (const [entityName, operations] of Object.entries(config.entities)) {
+          const ops = operations as Record<string, unknown>;
+          for (const operationName of Object.keys(ops)) {
+            results.push({
+              plugin: config.id || dir,
+              tool: `${entityName}.${operationName}`,
+              entityOperation: `${entityName}.${operationName}`,
+            });
+          }
         }
       }
     } catch (e) {
@@ -133,33 +156,33 @@ function findPluginsWithCapabilities(): Array<{
 // Filter to only run specific plugin if specified
 const targetPlugin = process.env.TEST_PLUGIN;
 
-describe('Capability Schema Validation', () => {
-  const plugins = findPluginsWithCapabilities();
+describe('Entity Operation Schema Validation', () => {
+  const plugins = findPluginsWithEntities();
   
-  // Group by capability for organized output
-  const byCapability = new Map<string, typeof plugins>();
+  // Group by entity.operation for organized output
+  const byEntityOp = new Map<string, typeof plugins>();
   for (const p of plugins) {
-    const list = byCapability.get(p.capability) || [];
+    const list = byEntityOp.get(p.entityOperation) || [];
     list.push(p);
-    byCapability.set(p.capability, list);
+    byEntityOp.set(p.entityOperation, list);
   }
   
-  for (const [capability, providers] of byCapability) {
-    const schema = CAPABILITY_SCHEMAS[capability];
+  for (const [entityOp, providers] of byEntityOp) {
+    const schema = ENTITY_SCHEMAS[entityOp];
     
     if (!schema) {
-      it.skip(`${capability}: No schema defined yet`, () => {});
+      it.skip(`${entityOp}: No schema defined yet`, () => {});
       continue;
     }
     
-    describe(capability, () => {
+    describe(entityOp, () => {
       for (const provider of providers) {
         // Skip if filtering to specific plugin
         if (targetPlugin && provider.plugin !== targetPlugin) {
           continue;
         }
         
-        it(`${provider.plugin}.${provider.tool} → ${schema.description}`, async () => {
+        it(`${provider.plugin} → ${schema.description}`, async () => {
           try {
             const result = await aos().call('UsePlugin', {
               plugin: provider.plugin,

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:schema": "vitest run tests/schema.test.ts",
+    "test:schema": "vitest run --config vitest.schema.config.ts",
     "test:capabilities": "vitest run tests/capabilities.test.ts",
     "validate": "node tests/scripts/validate-schema.mjs --all",
     "lint:tests": "npx tsx tests/scripts/lint-tests.ts",

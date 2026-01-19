@@ -2,13 +2,15 @@
 # - Schema validation (catches malformed YAML)
 # - Security checks (catches credential exposure)
 # - Test linting (catches missing patterns)
+# - Graph validation (catches broken entity references)
 # Full integration tests run on pre-push
 
 STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^plugins/[^/]+/readme\.md$' || true)
 STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^plugins/[^/]+/tests/.*\.test\.ts$' || true)
+STAGED_ENTITIES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^entities/.*\.yaml$' || true)
 
 # Nothing to check
-if [ -z "$STAGED_READMES" ] && [ -z "$STAGED_TESTS" ]; then
+if [ -z "$STAGED_READMES" ] && [ -z "$STAGED_TESTS" ] && [ -z "$STAGED_ENTITIES" ]; then
   exit 0
 fi
 
@@ -60,6 +62,13 @@ if [ -n "$STAGED_TESTS" ] || [ -n "$STAGED_READMES" ]; then
   PLUGINS=$(echo "$PLUGINS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
   
   npx tsx tests/scripts/lint-tests.ts $PLUGINS || ERRORS=$((ERRORS + 1))
+  echo ""
+fi
+
+# === Graph Validation (for entity changes) ===
+if [ -n "$STAGED_ENTITIES" ]; then
+  echo "🔗 Graph validation..."
+  node tests/scripts/validate-graph.mjs || ERRORS=$((ERRORS + 1))
   echo ""
 fi
 

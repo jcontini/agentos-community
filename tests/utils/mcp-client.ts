@@ -59,10 +59,10 @@ export class MCPTestClient extends EventEmitter {
   private findAgentOS(): string {
     // Try standard locations
     const locations = [
-      // Development build
-      `${process.env.HOME}/dev/agentos/src-tauri/target/debug/agentos`,
-      // Release build
-      `${process.env.HOME}/dev/agentos/src-tauri/target/release/agentos`,
+      // Development build (post-Tauri removal)
+      `${process.env.HOME}/dev/agentos/target/debug/agentos`,
+      // Release build (post-Tauri removal)
+      `${process.env.HOME}/dev/agentos/target/release/agentos`,
       // Installed location
       '/Applications/AgentOS.app/Contents/MacOS/agentos',
     ];
