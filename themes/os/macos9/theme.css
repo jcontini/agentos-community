@@ -990,6 +990,7 @@ progress:not([value])::-webkit-progress-value {
   padding: 1px 8px;
 }
 
+[role=menu] li[role=menuitem]:hover,
 [role=menu] li:focus-within,
 [role=menubar] li:focus-within {
   background: var(--primary-2);
