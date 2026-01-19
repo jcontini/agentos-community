@@ -1,57 +1,33 @@
-# AgentOS Integrations
+# AgentOS Community
 
-Open-source connectors for [AgentOS](https://github.com/jcontini/agentos).
+Open-source plugins, components, apps, and agent configs for [AgentOS](https://github.com/jcontini/agentos).
 
 ## What's Here
 
 ```
-connectors/
-  linear/           # Each connector is a folder
+plugins/           Service integrations (Linear, Todoist, Exa, etc.)
+components/        Reusable UI building blocks
+apps/              Capability renderers (Browser, Tasks, etc.)
+agents/            Setup instructions for AI clients (Cursor, Claude, etc.)
+```
+
+## Plugins
+
+Connect AgentOS to external services. Each plugin is YAML config + docs.
+
+```
+plugins/
+  linear/
     readme.md       # YAML config + markdown docs
     icon.png        # Square icon
-    tests/          # Optional integration tests
+    tests/          # Integration tests
   todoist/
-  hardcover/
-  demo/             # Example connector for learning
+  exa/
   ...
 ```
 
-## Quick Example
-
-```yaml
-# connectors/myservice/readme.md
----
-id: myservice
-name: My Service
-description: Connect to My Service API
-tags: [tasks]
-
-auth:
-  type: api_key
-  header: Authorization
-
-actions:
-  list:
-    description: List items
-    readonly: true
-    rest:
-      method: GET
-      url: "https://api.myservice.com/items"
-      response:
-        mapping:
-          id: "[].id"
-          name: "[].name"
----
-
-# My Service
-
-Human-readable documentation here.
-```
-
-## Current Connectors
-
-| Category | Connectors |
-|----------|------------|
+| Category | Plugins |
+|----------|---------|
 | Tasks | todoist, linear |
 | Messages | imessage, whatsapp |
 | Databases | postgres, sqlite, mysql |
@@ -60,22 +36,53 @@ Human-readable documentation here.
 | Web | exa, firecrawl, reddit |
 | Books | hardcover, goodreads |
 
+## Components
+
+Reusable UI pieces that compose atoms (text, image, icon, container).
+
+```
+components/
+  url-bar/          # Location bar for browser views
+  search-result/    # Search result card
+  ...
+```
+
+## Apps
+
+Render capabilities with components. Define how data is displayed.
+
+```
+apps/
+  browser/          # Renders web_search, web_read
+  ...
+```
+
+## Agents
+
+Setup instructions for AI clients that use AgentOS via MCP.
+
+```
+agents/
+  cursor/           # Cursor IDE setup
+  claude/           # Claude Desktop setup
+  raycast/          # Raycast setup
+  ...
+```
+
 ## Development
 
 ```bash
-git clone https://github.com/jcontini/agentos-integrations
-cd agentos-integrations
+git clone https://github.com/jcontini/agentos-community
+cd agentos-community
 npm install    # Sets up pre-commit hooks
 ```
 
 ## Contributing
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
-- Connector YAML format
-- Executor blocks (rest, graphql, sql, swift, command)
-- Auth configuration
-- Testing
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for plugin development, testing, and contribution terms.
 
 ## License
 
-MIT
+**MIT** — see [LICENSE](LICENSE)
+
+By contributing, you grant AgentOS the right to use your contributions in official releases, including commercial offerings. Your code stays open forever. See [CONTRIBUTING.md](CONTRIBUTING.md) for full terms.

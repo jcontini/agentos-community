@@ -1,4 +1,17 @@
-# Contributing to AgentOS
+# Contributing to AgentOS Community
+
+This repo contains plugins, components, apps, and agent configs — all declarative YAML.
+
+| Content Type | What It Is |
+|--------------|------------|
+| **Plugins** | Service integrations (APIs, databases, local apps) |
+| **Components** | Reusable UI building blocks |
+| **Apps** | Capability renderers that compose components |
+| **Agents** | Setup instructions for AI clients |
+
+---
+
+## Plugins
 
 Plugins connect AgentOS to external services. Each plugin is a YAML config that describes how to talk to an API — AgentOS handles auth, execution, and response mapping automatically.
 
@@ -108,11 +121,125 @@ See existing plugins for examples: `linear` (GraphQL), `exa` (REST), `imessage` 
 
 **Clean up after yourself.** If tests create data, they delete it. The linter enforces this for any plugin with `create` operations.
 
+---
+
+## Components
+
+Components are reusable UI pieces. They compose atoms (text, image, icon, container) or other components.
+
+**Location:** `components/{component-id}/readme.md`
+
+```yaml
+---
+id: search-result
+name: Search Result
+description: A search result card
+
+props:
+  title: string
+  url: string
+  snippet: string?
+
+root:
+  type: container
+  direction: column
+  children:
+    - type: text
+      value: "{{props.title}}"
+      style: bold
+    # ...
+---
+
+# Search Result
+
+Documentation here.
+```
+
+See `components/url-bar/` and `components/search-result/` for examples.
+
+---
+
+## Apps
+
+Apps render capabilities. They define how plugin responses are displayed.
+
+**Location:** `apps/{app-id}/readme.md`
+
+```yaml
+---
+id: browser
+name: Browser
+capabilities: [web_search, web_read]
+
+views:
+  search:
+    when: "capability == 'web_search'"
+    root:
+      type: container
+      children:
+        - component: url-bar
+          value: "{{request.query}}"
+        # ...
+---
+
+# Browser
+
+Documentation here.
+```
+
+See `apps/browser/` for an example.
+
+---
+
+## Agents
+
+Agents are setup instructions for AI clients. Documentation only — not executable.
+
+**Location:** `agents/{agent-id}/readme.md`
+
+```yaml
+---
+id: cursor
+name: Cursor
+description: AI-powered code editor
+---
+
+# Cursor Setup
+
+Setup instructions here.
+```
+
+See `agents/cursor/` for an example.
+
+---
+
 ## Reference
 
 | Resource | Purpose |
 |----------|---------|
-| `tests/plugin.schema.json` | Schema for valid configs |
-| `plugins/linear/` | GraphQL example |
-| `plugins/exa/` | REST example |
-| `plugins/goodreads/` | Local file example |
+| `tests/plugin.schema.json` | Schema for valid plugin configs |
+| `plugins/linear/` | GraphQL plugin example |
+| `plugins/exa/` | REST plugin example |
+| `plugins/goodreads/` | Local file plugin example |
+| `components/url-bar/` | Component example |
+| `apps/browser/` | App example |
+| `agents/cursor/` | Agent example |
+
+---
+
+## License & Contributions
+
+This repository is **MIT licensed** — you can use, modify, and redistribute freely.
+
+**By contributing, you agree that:**
+
+1. Your contribution is MIT licensed and will remain open source
+2. A Third Party, LLC (the company behind AgentOS) may use your contribution in official releases, including commercial offerings
+3. You have the right to make this contribution
+
+**What you get:**
+
+- Your code stays open forever under MIT
+- Credit in commit history
+
+We're exploring ways to share revenue with contributors in the future, but this is not a commitment or guarantee.
