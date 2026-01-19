@@ -26,13 +26,12 @@ actions:
       method: GET
       url: "https://api.myservice.com/items"
       response:
+        root: "data.items"        # Extract array from API response
         mapping:
-          # Must match capability schema (see tests/connector.schema.json)
-          tasks:
-            each: "[]"
-            map:
-              id: ".id"
-              title: ".name"
+          # Map ITEM fields (not wrapper structure)
+          id: ".id"
+          title: ".name"
+          status: ".state"
 ---
 
 # My Service
@@ -81,6 +80,65 @@ actions:
 **Source of truth:** See `tests/connector.schema.json` for the full enum of valid capabilities. The schema validates `provides` values — typos will fail CI.
 
 **Response mapping:** When you declare `provides: web_search`, your response mapping must output the schema that capability expects. See the app specs in the main repo (`.specs/apps/`) for schema definitions.
+
+## Response Mapping
+
+Response mapping transforms API responses into a standard format. **This is critical for capabilities.**
+
+### The Two-Step Pattern
+
+1. **`root:`** — Extract the data array from the API response
+2. **`mapping:`** — Transform each item's fields
+
+```yaml
+# API returns: { "data": { "results": [{ "url": "...", "name": "..." }] } }
+response:
+  root: "data.results"      # Step 1: Extract array → [{url, name}, ...]
+  mapping:                  # Step 2: Map each item's fields
+    url: ".url"
+    title: ".name"          # Rename field
+    snippet: ".description"
+# Output: [{ url, title, snippet }, ...]
+```
+
+### ⚠️ Common Mistake: Wrapper Nesting
+
+**WRONG** — Creates wrapper for EACH item:
+```yaml
+response:
+  root: "results"
+  mapping:
+    results:              # ← Don't create wrapper fields!
+      each: "[]"
+      map:
+        url: ".url"
+# Output: [{ results: [] }, { results: [] }, ...]  ← BROKEN
+```
+
+**CORRECT** — Map item fields directly:
+```yaml
+response:
+  root: "results"
+  mapping:
+    url: ".url"
+    title: ".title"
+# Output: [{ url, title }, { url, title }, ...]  ← CORRECT
+```
+
+### When to Use `each: "[]"`
+
+Only use `each:` when you need to extract a nested array from each item:
+
+```yaml
+# API: [{ "id": 1, "tags": ["a", "b"] }]
+# You want: [{ "id": 1, "tag_names": ["a", "b"] }]
+response:
+  mapping:
+    id: ".id"
+    tag_names:
+      each: ".tags[]"     # ← Extract nested array
+      map: "."            # ← Keep each value as-is
+```
 
 ## Executors
 
@@ -208,7 +266,25 @@ The pre-commit hook blocks:
 
 ## Testing
 
-Tests are E2E — they call the real AgentOS binary with real APIs.
+### Automatic Capability Tests
+
+**Connectors that declare `provides:` are automatically tested against the capability schema.**
+
+If your action has `provides: web_search`, the generic capability test will:
+1. Call your action with test params
+2. Validate the response matches the `web_search` schema
+3. Fail if fields are missing or wrong type
+
+This catches response mapping bugs without writing per-connector tests.
+
+```bash
+npm run test:capabilities    # Test all connectors with provides:
+npm run test:capabilities -- --connector=exa   # Single connector
+```
+
+### Custom Integration Tests
+
+For additional tests (CRUD flows, edge cases), add per-connector tests:
 
 ```typescript
 // connectors/myservice/tests/myservice.test.ts
