@@ -5,105 +5,34 @@ id: note
 name: Note
 description: A text note
 
-schema:
+references:
+  schema_org: https://schema.org/NoteDigitalDocument
+  wikidata: Q11269  # note
+
+properties:
   id:
     type: string
     required: true
     description: Unique identifier
-  
+
   title:
     type: string
     description: Note title
-  
+
   content:
     type: string
     required: true
     description: Note content
-  
-  folder_id:
-    type: string
-    description: Parent folder
-  
-  tags:
-    type: array
-    items: string
-    description: Tags
-  
+
   created_at:
     type: datetime
     description: When note was created
-  
+
   updated_at:
     type: datetime
     description: When note was last updated
 
-operations:
-  list:
-    description: List notes
-    params:
-      folder_id:
-        type: string
-        description: Filter by folder
-      search:
-        type: string
-        description: Search query
-      limit:
-        type: integer
-        default: 100
-        description: Maximum number of notes
-    returns: note[]
-  
-  get:
-    description: Get a single note
-    params:
-      id:
-        type: string
-        required: true
-        description: Note ID
-    returns: note
-  
-  create:
-    description: Create a new note
-    params:
-      title:
-        type: string
-        description: Note title
-      content:
-        type: string
-        required: true
-        description: Note content
-      folder_id:
-        type: string
-        description: Folder ID
-      tags:
-        type: array
-        items: string
-        description: Tags
-    returns: note
-  
-  update:
-    description: Update a note
-    params:
-      id:
-        type: string
-        required: true
-        description: Note ID
-      title:
-        type: string
-        description: New title
-      content:
-        type: string
-        description: New content
-    returns: note
-  
-  delete:
-    description: Delete a note
-    params:
-      id:
-        type: string
-        required: true
-        description: Note ID
-    returns: void
+operations: [list, get, create, update, delete]
 
 display:
   primary: title

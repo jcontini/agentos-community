@@ -1,0 +1,58 @@
+# File Entity
+# A document or media file
+
+id: file
+name: File
+description: A document or media file
+
+references:
+  schema_org: https://schema.org/MediaObject
+  wikidata: Q82753  # computer file
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: File name
+
+  path:
+    type: string
+    description: File path or location
+
+  mime_type:
+    type: string
+    description: MIME type (e.g., application/pdf, image/png)
+
+  size:
+    type: integer
+    description: File size in bytes
+
+  url:
+    type: string
+    format: url
+    description: Download or access URL
+
+  thumbnail_url:
+    type: string
+    format: url
+    description: Thumbnail image URL
+
+  created_at:
+    type: datetime
+    description: When file was created
+
+  updated_at:
+    type: datetime
+    description: When file was last modified
+
+operations: [list, get, create, update, delete, download]
+
+display:
+  primary: name
+  secondary: path
+  icon: file

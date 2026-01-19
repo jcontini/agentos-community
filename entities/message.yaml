@@ -5,86 +5,45 @@ id: message
 name: Message
 description: A chat message
 
-schema:
+references:
+  schema_org: https://schema.org/Message
+  wikidata: Q628523  # message
+
+properties:
   id:
     type: string
     required: true
     description: Unique identifier
-  
+
   content:
     type: string
     required: true
     description: Message content
-  
+
   sender:
     type: string
     required: true
     description: Sender name
-  
-  sender_id:
-    type: string
-    description: Sender identifier
-  
-  conversation_id:
-    type: string
-    ref: conversation
-    required: true
-    description: Parent conversation
-  
+
   is_outgoing:
     type: boolean
     description: Whether message was sent by user
-  
+
   timestamp:
     type: datetime
     required: true
     description: When message was sent
-  
+
   read:
     type: boolean
+    default: false
     description: Whether message has been read
 
-operations:
-  list:
-    description: List messages in a conversation
-    params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation ID
-      limit:
-        type: integer
-        default: 50
-        description: Maximum number of messages
-      before:
-        type: datetime
-        description: Get messages before this time (pagination)
-    returns: message[]
-  
-  get:
-    description: Get a single message
-    params:
-      id:
-        type: string
-        required: true
-        description: Message ID
-    returns: message
-  
-  create:
-    description: Send a message
-    params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation ID
-      content:
-        type: string
-        required: true
-        description: Message content
-    returns: message
+  read_at:
+    type: datetime
+    description: When message was read
 
-depends_on:
-  - conversation
+operations: [list, get, create]
 
 display:
   primary: content

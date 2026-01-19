@@ -5,109 +5,52 @@ id: contact
 name: Contact
 description: A person
 
-schema:
+references:
+  schema_org: https://schema.org/Person
+  wikidata: Q5  # human
+
+properties:
   id:
     type: string
     required: true
     description: Unique identifier
-  
+
   name:
     type: string
     required: true
     description: Full name
-  
+
   email:
     type: string
     format: email
     description: Email address
-  
+
   phone:
     type: string
     description: Phone number
-  
-  company:
-    type: string
-    description: Company/organization
-  
+
   title:
     type: string
     description: Job title
-  
+
   avatar_url:
     type: string
     format: url
     description: Profile photo URL
-  
+
   notes:
     type: string
     description: Notes about the contact
 
-operations:
-  list:
-    description: List contacts
-    params:
-      search:
-        type: string
-        description: Search query
-      limit:
-        type: integer
-        default: 100
-        description: Maximum number of results
-    returns: contact[]
-  
-  get:
-    description: Get a single contact
-    params:
-      id:
-        type: string
-        required: true
-        description: Contact ID
-    returns: contact
-  
-  create:
-    description: Create a new contact
-    params:
-      name:
-        type: string
-        required: true
-        description: Full name
-      email:
-        type: string
-        description: Email address
-      phone:
-        type: string
-        description: Phone number
-      company:
-        type: string
-        description: Company
-    returns: contact
-  
-  update:
-    description: Update a contact
-    params:
-      id:
-        type: string
-        required: true
-        description: Contact ID
-      name:
-        type: string
-        description: New name
-      email:
-        type: string
-        description: New email
-      phone:
-        type: string
-        description: New phone
-    returns: contact
-  
-  delete:
-    description: Delete a contact
-    params:
-      id:
-        type: string
-        required: true
-        description: Contact ID
-    returns: void
+  created_at:
+    type: datetime
+    description: When contact was created
+
+  updated_at:
+    type: datetime
+    description: When contact was last updated
+
+operations: [list, get, create, update, delete]
 
 display:
   primary: name

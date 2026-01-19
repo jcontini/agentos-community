@@ -1,0 +1,55 @@
+# Organization Entity
+# A company, group, or institution
+
+id: organization
+name: Organization
+description: A company, group, or institution
+
+references:
+  schema_org: https://schema.org/Organization
+  wikidata: Q43229  # organization
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Organization name
+
+  domain:
+    type: string
+    format: url
+    description: Primary website domain
+
+  logo_url:
+    type: string
+    format: url
+    description: Logo image URL
+
+  industry:
+    type: string
+    description: Industry or sector
+
+  size:
+    type: string
+    enum: [small, medium, large, enterprise]
+    description: Organization size category
+
+  created_at:
+    type: datetime
+    description: When organization was created
+
+  updated_at:
+    type: datetime
+    description: When organization was last updated
+
+operations: [list, get, create, update, delete]
+
+display:
+  primary: name
+  secondary: domain
+  icon: building

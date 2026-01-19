@@ -1,0 +1,170 @@
+# Entity Graph
+# Single source of truth for all entity relationships
+#
+# Each relationship is defined once here. Both directions are implicit:
+# task_project defines both task.project and project.tasks accessors.
+
+relationships:
+
+  # === TASK RELATIONSHIPS ===
+
+  task_project:
+    from: task
+    to: project
+    description: The project a task belongs to
+    # Accessors: task.project, project.tasks
+
+  task_labels:
+    from: task
+    to: label
+    description: Labels applied to the task
+    # Accessors: task.labels, label.tasks
+
+  task_parent:
+    from: task
+    to: task
+    description: Parent task (for subtasks)
+    accessors:
+      from_side: parent
+      to_side: children
+
+  task_assignee:
+    from: task
+    to: contact
+    description: Person responsible for the task
+    accessors:
+      from_side: assignee
+      to_side: assigned_tasks
+
+  task_creator:
+    from: task
+    to: contact
+    description: Person who created the task
+    accessors:
+      from_side: creator
+      to_side: created_tasks
+
+  task_blockers:
+    from: task
+    to: task
+    description: Tasks that must complete before this one
+    accessors:
+      from_side: blocked_by
+      to_side: blocks
+
+  # === PROJECT RELATIONSHIPS ===
+
+  project_parent:
+    from: project
+    to: project
+    description: Parent project (for nested projects)
+    accessors:
+      from_side: parent
+      to_side: children
+
+  # === EVENT RELATIONSHIPS ===
+
+  event_calendar:
+    from: event
+    to: calendar
+    description: Calendar the event belongs to
+    # Accessors: event.calendar, calendar.events
+
+  event_attendees:
+    from: event
+    to: contact
+    description: People invited to the event
+    properties:
+      response_status:
+        type: string
+        enum: [pending, accepted, declined, tentative]
+        default: pending
+      responded_at:
+        type: datetime
+      is_organizer:
+        type: boolean
+        default: false
+    accessors:
+      from_side: attendees
+      to_side: attending_events
+
+  event_creator:
+    from: event
+    to: contact
+    description: Person who created the event
+    accessors:
+      from_side: creator
+      to_side: created_events
+
+  # === CONTACT RELATIONSHIPS ===
+
+  contact_organization:
+    from: contact
+    to: organization
+    description: Organizations a contact is associated with
+    properties:
+      title:
+        type: string
+        description: Job title at the organization
+      started_at:
+        type: date
+      ended_at:
+        type: date
+    accessors:
+      from_side: organizations
+      to_side: members
+
+  # === MESSAGE RELATIONSHIPS ===
+
+  message_conversation:
+    from: message
+    to: conversation
+    required: true
+    description: The conversation a message belongs to
+    # Accessors: message.conversation, conversation.messages
+
+  message_sender:
+    from: message
+    to: contact
+    description: The person who sent the message
+    accessors:
+      from_side: sender_contact
+      to_side: sent_messages
+
+  # === CONVERSATION RELATIONSHIPS ===
+
+  conversation_participants:
+    from: conversation
+    to: contact
+    description: People in the conversation
+    accessors:
+      from_side: participants
+      to_side: conversations
+
+  # === NOTE RELATIONSHIPS ===
+
+  note_subject:
+    from: note
+    to: [task, project, contact, event]
+    description: What this note is about (polymorphic)
+    accessors:
+      from_side: subject
+      to_side: notes
+
+  # === FILE RELATIONSHIPS ===
+
+  file_folder:
+    from: file
+    to: file
+    description: Parent folder (files can be folders)
+    accessors:
+      from_side: folder
+      to_side: contents
+
+  file_owner:
+    from: file
+    to: contact
+    description: Person who owns/created the file
+    accessors:
+      from_side: owner
+      to_side: files

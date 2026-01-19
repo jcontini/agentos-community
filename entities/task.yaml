@@ -1,165 +1,57 @@
 # Task Entity
-# A task or todo item
+# A unit of work to be done
 
 id: task
 name: Task
-description: A task or todo item
+description: A unit of work to be done
 
-schema:
+references:
+  schema_org: https://schema.org/Action
+  wikidata: Q4026292  # task
+
+properties:
   id:
     type: string
     required: true
     description: Unique identifier
-  
+
   title:
     type: string
     required: true
     description: Task title/summary
-  
+
+  description:
+    type: string
+    description: Detailed description
+
   completed:
     type: boolean
     default: false
     description: Whether task is done
-  
+
+  completed_at:
+    type: datetime
+    description: When task was completed
+
   due_date:
     type: date
     description: When task is due
-  
+
   priority:
     type: integer
     min: 1
     max: 4
     description: Priority level (1=highest)
-  
-  description:
-    type: string
-    description: Detailed description
-  
-  project_id:
-    type: string
-    ref: project
-    description: Parent project
-  
-  labels:
-    type: array
-    items: string
-    description: Tags/labels
-  
+
   created_at:
     type: datetime
     description: When task was created
-  
+
   updated_at:
     type: datetime
     description: When task was last updated
 
-operations:
-  list:
-    description: List all tasks
-    params:
-      filter:
-        type: string
-        description: Filter expression
-      project_id:
-        type: string
-        description: Filter by project
-      sort:
-        type: string
-        enum: [created, due_date, priority]
-        description: Sort order
-      limit:
-        type: integer
-        default: 100
-        description: Maximum number of results
-    returns: task[]
-  
-  get:
-    description: Get a single task
-    params:
-      id:
-        type: string
-        required: true
-        description: Task ID
-    returns: task
-  
-  create:
-    description: Create a new task
-    params:
-      title:
-        type: string
-        required: true
-        description: Task title
-      description:
-        type: string
-        description: Task description
-      due_date:
-        type: date
-        description: Due date
-      priority:
-        type: integer
-        description: Priority (1-4)
-      project_id:
-        type: string
-        description: Project ID
-      labels:
-        type: array
-        items: string
-        description: Labels
-    returns: task
-  
-  update:
-    description: Update a task
-    params:
-      id:
-        type: string
-        required: true
-        description: Task ID
-      title:
-        type: string
-        description: New title
-      description:
-        type: string
-        description: New description
-      completed:
-        type: boolean
-        description: Completion status
-      due_date:
-        type: date
-        description: New due date
-      priority:
-        type: integer
-        description: New priority
-    returns: task
-  
-  delete:
-    description: Delete a task
-    params:
-      id:
-        type: string
-        required: true
-        description: Task ID
-    returns: void
-  
-  complete:
-    description: Mark task as complete
-    params:
-      id:
-        type: string
-        required: true
-        description: Task ID
-    returns: task
-  
-  reopen:
-    description: Reopen a completed task
-    params:
-      id:
-        type: string
-        required: true
-        description: Task ID
-    returns: task
-
-depends_on:
-  - project
+operations: [list, get, create, update, delete, complete, reopen]
 
 display:
   primary: title

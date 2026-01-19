@@ -1,61 +1,47 @@
 # Webpage Entity
-# A web page - can be a search result preview or full page content
+# A web page with URL, title, and content
 
 id: webpage
 name: Web Page
 description: A web page with URL, title, and content
 
-schema:
+references:
+  schema_org: https://schema.org/WebPage
+  wikidata: Q36774  # web page
+
+properties:
   url:
     type: string
     format: url
     required: true
-    description: The URL
-  
+    description: The page URL
+
   title:
     type: string
     description: Page title
-  
+
   content:
     type: string
     description: Page content (markdown or text)
-  
+
   snippet:
     type: string
     description: Short excerpt/description
-  
+
   favicon:
     type: string
     format: url
     description: Site favicon URL
-  
+
   published_at:
     type: datetime
     description: When the content was published
 
-operations:
-  search:
-    description: Search the web
-    params:
-      query:
-        type: string
-        required: true
-        description: Search query
-      limit:
-        type: integer
-        default: 10
-        description: Maximum number of results
-    returns: webpage[]
-  
-  read:
-    description: Read/extract content from a URL
-    params:
-      url:
-        type: string
-        format: url
-        required: true
-        description: URL to read
-    returns: webpage
+  fetched_at:
+    type: datetime
+    description: When we retrieved this content
+
+operations: [search, read]
 
 display:
   primary: title
