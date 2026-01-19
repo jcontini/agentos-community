@@ -51,9 +51,10 @@ views:
       - component: url-bar
         props:
           mode: url
-          url: "{{activity.request.url}}"
+          value: "{{activity.request.url}}"
           loading: "{{activity.pending}}"
           source: "{{activity.connector}}"
+          sourceIcon: "/plugins/{{activity.connector}}/icon.png"
     
     layout:
       - component: layout/scroll-area
