@@ -24,7 +24,6 @@ views:
         props:
           mode: search
           value: "{{activity.request.query}}"
-          loading: "{{activity.pending}}"
           source: "{{activity.connector}}"
           sourceIcon: "/plugins/{{activity.connector}}/icon.png"
     
@@ -52,7 +51,6 @@ views:
         props:
           mode: url
           value: "{{activity.request.url}}"
-          loading: "{{activity.pending}}"
           source: "{{activity.connector}}"
           sourceIcon: "/plugins/{{activity.connector}}/icon.png"
     
@@ -62,7 +60,6 @@ views:
           - component: markdown
             props:
               content: "{{activity.response.content}}"
-              loading: "{{activity.pending}}"
         footer:
           source: "{{activity.connector}}"
           duration: "{{activity.duration_ms}}"
