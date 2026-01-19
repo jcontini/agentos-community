@@ -75,12 +75,16 @@ operations:
     params:
       filter: { type: string, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
       project_id: { type: string, description: "Filter by project ID" }
+      section_id: { type: string, description: "Filter by section ID" }
+      label: { type: string, description: "Filter by label name" }
     rest:
       method: GET
       url: https://api.todoist.com/rest/v2/tasks
       query:
         filter: "{{params.filter}}"
         project_id: "{{params.project_id}}"
+        section_id: "{{params.section_id}}"
+        label: "{{params.label}}"
 
   task.get:
     description: Get a specific task by ID

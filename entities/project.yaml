@@ -45,6 +45,10 @@ properties:
     type: datetime
     description: When project was last updated
 
+  url:
+    type: string
+    description: URL to view this project in the source application
+
 operations: [list, get, create, update, delete, archive]
 
 display:

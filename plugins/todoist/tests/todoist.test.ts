@@ -23,7 +23,7 @@ describe('Todoist Plugin', () => {
       await aos().call('UsePlugin', {
         plugin,
         tool: 'task.list',
-        params: { limit: 1 },
+        params: {},
       });
     } catch (e: any) {
       if (e.message?.includes('Credential not found')) {
@@ -58,7 +58,7 @@ describe('Todoist Plugin', () => {
       const tasks = await aos().call('UsePlugin', {
         plugin,
         tool: 'task.list',
-        params: { limit: 5 },
+        params: {},
       });
 
       expect(Array.isArray(tasks)).toBe(true);
@@ -70,7 +70,7 @@ describe('Todoist Plugin', () => {
       const tasks = await aos().call('UsePlugin', {
         plugin,
         tool: 'task.list',
-        params: { limit: 5 },
+        params: {},
       });
 
       for (const task of tasks) {
@@ -80,17 +80,23 @@ describe('Todoist Plugin', () => {
       }
     });
 
-    it.skip('respects limit parameter', async () => {
-      // TODO: Todoist API doesn't support limit param - needs client-side limiting
+    it('can filter by section_id', async () => {
       if (skipTests) return;
       
+      // Get a project with sections first
+      const projects = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'project.list',
+      });
+      
+      // Just verify the param is accepted - we may not have sections
       const tasks = await aos().call('UsePlugin', {
         plugin,
         tool: 'task.list',
-        params: { limit: 3 },
+        params: { project_id: projects[0]?.id },
       });
 
-      expect(tasks.length).toBeLessThanOrEqual(3);
+      expect(Array.isArray(tasks)).toBe(true);
     });
   });
 

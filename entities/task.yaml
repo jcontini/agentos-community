@@ -51,6 +51,10 @@ properties:
     type: datetime
     description: When task was last updated
 
+  url:
+    type: string
+    description: URL to view this task in the source application
+
 operations: [list, get, create, update, delete, complete, reopen]
 
 display:
