@@ -1,12 +1,14 @@
 /**
  * Wallpaper Picker Component
  * 
- * Displays available wallpapers from the current theme and allows selection.
- * Persists choice to localStorage and notifies the desktop to update.
+ * Displays available wallpapers organized by OS family and allows selection.
+ * Persists choice to settings API and notifies the desktop to update.
  * 
  * @example
  * ```yaml
  * - component: wallpaper-picker
+ *   props:
+ *     family: macos  # Optional: filter to specific OS family
  * ```
  */
 
@@ -16,50 +18,45 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Types
 // =============================================================================
 
-interface ThemeData {
-  id: string;
-  name: string;
-  default_wallpaper?: string;
-  wallpapers: string[];
+interface WallpaperInfo {
+  path: string;      // e.g., "macos/10-5.png"
+  family: string;    // e.g., "macos"
+  filename: string;  // e.g., "10-5.png"
 }
 
 interface WallpaperPickerProps {
-  /** Theme ID to show wallpapers for (defaults to macos9) */
-  themeId?: string;
+  /** OS family to filter by (e.g., 'macos', 'windows'). Shows all if not specified. */
+  family?: string;
   /** Additional CSS class */
   className?: string;
 }
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const WALLPAPER_STORAGE_KEY = 'agentos:wallpaper';
-
-// =============================================================================
 // Component
 // =============================================================================
 
-export function WallpaperPicker({ themeId = 'macos9', className = '' }: WallpaperPickerProps) {
-  const [theme, setTheme] = useState<ThemeData | null>(null);
+export function WallpaperPicker({ family, className = '' }: WallpaperPickerProps) {
+  const [wallpapers, setWallpapers] = useState<WallpaperInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(() => {
-    return localStorage.getItem(WALLPAPER_STORAGE_KEY);
-  });
+  const [selected, setSelected] = useState<string | null>(null);
 
-  // Fetch theme data
+  // Fetch wallpapers and current setting
   useEffect(() => {
     let cancelled = false;
     
-    fetch(`/api/themes/${themeId}`)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load theme')))
-      .then(data => {
+    const wallpapersUrl = family ? `/api/wallpapers?family=${encodeURIComponent(family)}` : '/api/wallpapers';
+    
+    // Fetch both wallpapers list and current setting in parallel
+    Promise.all([
+      fetch(wallpapersUrl).then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load wallpapers'))),
+      fetch('/api/settings/current_wallpaper').then(r => r.ok ? r.json() : null).catch(() => null),
+    ])
+      .then(([wallpapersData, settingData]) => {
         if (!cancelled) {
-          setTheme(data);
-          // If no selection, use theme default
-          if (!selected && data.default_wallpaper) {
-            setSelected(data.default_wallpaper);
+          setWallpapers(wallpapersData.wallpapers || []);
+          if (settingData?.value) {
+            setSelected(settingData.value);
           }
           setLoading(false);
         }
@@ -72,22 +69,31 @@ export function WallpaperPicker({ themeId = 'macos9', className = '' }: Wallpape
       });
     
     return () => { cancelled = true; };
-  }, [themeId, selected]);
+  }, [family]);
 
   // Handle wallpaper selection
-  const handleSelect = useCallback((wallpaper: string) => {
-    setSelected(wallpaper);
-    localStorage.setItem(WALLPAPER_STORAGE_KEY, wallpaper);
+  const handleSelect = useCallback((wallpaperPath: string) => {
+    setSelected(wallpaperPath);
+    
+    // Save to settings API
+    fetch('/api/settings/current_wallpaper', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: wallpaperPath }),
+    }).catch(err => {
+      console.error('Failed to save wallpaper setting:', err);
+    });
     
     // Dispatch custom event so Desktop can update immediately
-    window.dispatchEvent(new CustomEvent('wallpaper-changed', { 
-      detail: { wallpaper } 
+    // Try parent window first (for iframe contexts), then fall back to current window
+    const targetWindow = window.parent !== window ? window.parent : window;
+    targetWindow.dispatchEvent(new CustomEvent('wallpaper-changed', { 
+      detail: { wallpaper: wallpaperPath } 
     }));
   }, []);
 
-  // Extract display name from path (e.g., "wallpapers/quantum-foam.jpg" → "Quantum Foam")
-  const getDisplayName = (path: string): string => {
-    const filename = path.split('/').pop() || path;
+  // Extract display name from filename (e.g., "quantum-foam.jpg" → "Quantum Foam")
+  const getDisplayName = (filename: string): string => {
     const name = filename.replace(/\.[^.]+$/, ''); // Remove extension
     return name
       .split('-')
@@ -108,55 +114,103 @@ export function WallpaperPicker({ themeId = 'macos9', className = '' }: Wallpape
   }
 
   // Error state
-  if (error || !theme) {
+  if (error) {
     return (
       <div className={`wallpaper-picker wallpaper-picker--error ${className}`}>
         <div className="wallpaper-picker-error">
-          <span>⚠</span>
-          <span>{error || 'No theme data'}</span>
+          <span>!</span>
+          <span>{error}</span>
         </div>
       </div>
     );
   }
 
   // No wallpapers
-  if (theme.wallpapers.length === 0) {
+  if (wallpapers.length === 0) {
     return (
       <div className={`wallpaper-picker wallpaper-picker--empty ${className}`}>
         <div className="wallpaper-picker-empty">
-          <span>No wallpapers available for this theme</span>
+          <span>No wallpapers available{family ? ` for ${family}` : ''}</span>
         </div>
       </div>
     );
   }
 
-  // Wallpaper list
+  // Group wallpapers by family for display
+  const groupedByFamily = wallpapers.reduce((acc, wp) => {
+    if (!acc[wp.family]) acc[wp.family] = [];
+    acc[wp.family].push(wp);
+    return acc;
+  }, {} as Record<string, WallpaperInfo[]>);
+
+  const families = Object.keys(groupedByFamily).sort();
+
+  // Wallpaper grid
   return (
     <div className={`wallpaper-picker ${className}`}>
-      {theme.wallpapers.map(wallpaper => {
-        const isSelected = wallpaper === selected;
-        const isDefault = wallpaper === theme.default_wallpaper;
-        
-        return (
-          <button
-            key={wallpaper}
-            className={`wallpaper-item ${isSelected ? 'wallpaper-item--selected' : ''}`}
-            onClick={() => handleSelect(wallpaper)}
-            type="button"
-          >
-            <img 
-              src={`/themes/${themeId}/${wallpaper}`}
-              alt={getDisplayName(wallpaper)}
-              className="wallpaper-item-thumbnail"
-              loading="lazy"
-            />
-            <span className="wallpaper-item-name">
-              {getDisplayName(wallpaper)}
-              {isDefault && <span className="wallpaper-item-default"> (Default)</span>}
-            </span>
-          </button>
-        );
-      })}
+      {families.map(fam => (
+        <div key={fam} className="wallpaper-family-group">
+          {families.length > 1 && (
+            <div className="wallpaper-family-header" style={{
+              fontWeight: 'bold',
+              marginBottom: '8px',
+              textTransform: 'capitalize',
+            }}>{fam}</div>
+          )}
+          <div className="wallpaper-family-items" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+            gap: '8px',
+          }}>
+            {groupedByFamily[fam].map(wp => {
+              const isSelected = wp.path === selected;
+              
+              return (
+                <button
+                  key={wp.path}
+                  className={`wallpaper-item ${isSelected ? 'wallpaper-item--selected' : ''}`}
+                  onClick={() => handleSelect(wp.path)}
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '4px',
+                    border: isSelected ? '3px solid #0066cc' : '1px solid #999',
+                    borderRadius: '4px',
+                    background: isSelected ? '#e6f0ff' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s, background 0.15s',
+                    minWidth: 0,
+                  }}
+                >
+                  <img 
+                    src={`/wallpapers/${wp.path}`}
+                    alt={getDisplayName(wp.filename)}
+                    className="wallpaper-item-thumbnail"
+                    loading="lazy"
+                    style={{
+                      width: '100%',
+                      height: '60px',
+                      objectFit: 'cover',
+                      borderRadius: '2px',
+                    }}
+                  />
+                  <span className="wallpaper-item-name" style={{
+                    marginTop: '4px',
+                    fontSize: '10px',
+                    textAlign: 'center',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.2,
+                  }}>
+                    {getDisplayName(wp.filename)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

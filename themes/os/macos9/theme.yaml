@@ -20,8 +20,8 @@ chrome:
   has_menubar: true
   has_taskbar: false
 
-# Default wallpaper (relative to theme folder)
-default_wallpaper: wallpapers/quantum-foam.jpg
+# Default wallpaper (path relative to wallpapers root)
+default_wallpaper: macos/10-4.png
 
 # Available skins (color variations)
 skins:
