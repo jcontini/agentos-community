@@ -24,10 +24,36 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
 
-// Get all plugin directories (excluding .needs-work)
-const getPlugins = () => readdirSync(PLUGINS_DIR, { withFileTypes: true })
-  .filter(d => d.isDirectory() && d.name !== '.needs-work')
-  .map(d => d.name);
+// Recursively find all plugin directories (excluding .needs-work)
+// Returns relative paths from PLUGINS_DIR (e.g., 'tasks/todoist', 'search/exa')
+const getPlugins = (): string[] => {
+  const plugins: string[] = [];
+  
+  const scan = (dir: string, relativePath: string = '') => {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === '.needs-work') continue;
+      if (entry.name === 'node_modules') continue;
+      if (entry.name === 'tests') continue;
+      
+      const fullPath = join(dir, entry.name);
+      const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+      
+      // Check if this directory is a plugin (has readme.md)
+      if (existsSync(join(fullPath, 'readme.md'))) {
+        plugins.push(entryRelativePath);
+      } else {
+        // It's a category folder, recurse into it
+        scan(fullPath, entryRelativePath);
+      }
+    }
+  };
+  
+  scan(PLUGINS_DIR);
+  return plugins;
+};
 
 // Parse YAML frontmatter from markdown
 function parseFrontmatter(content: string): Record<string, unknown> | null {
@@ -49,8 +75,8 @@ describe('Plugin Schema Validation', () => {
     expect(plugins.length).toBeGreaterThan(0);
   });
 
-  describe.each(plugins)('plugins/%s', (plugin) => {
-    const readmePath = join(PLUGINS_DIR, plugin, 'readme.md');
+  describe.each(plugins)('plugins/%s', (pluginPath) => {
+    const readmePath = join(PLUGINS_DIR, pluginPath, 'readme.md');
 
     it('has readme.md', () => {
       expect(existsSync(readmePath)).toBe(true);
@@ -79,28 +105,28 @@ describe('Plugin Schema Validation', () => {
       expect(valid).toBe(true);
     });
 
-    it('has required icon file', () => {
-      const pluginDir = join(PLUGINS_DIR, plugin);
+    it('has required icon.svg file', () => {
+      const pluginDir = join(PLUGINS_DIR, pluginPath);
       const files = readdirSync(pluginDir);
-      const hasIcon = files.some(f => f.startsWith('icon.'));
-      expect(hasIcon).toBe(true);
+      const hasSvgIcon = files.includes('icon.svg');
+      expect(hasSvgIcon).toBe(true);
     });
   });
 });
 
 describe('Schema Completeness', () => {
   it('all plugins have tags', () => {
-    for (const plugin of getPlugins()) {
-      const content = readFileSync(join(PLUGINS_DIR, plugin, 'readme.md'), 'utf-8');
+    for (const pluginPath of getPlugins()) {
+      const content = readFileSync(join(PLUGINS_DIR, pluginPath, 'readme.md'), 'utf-8');
       const frontmatter = parseFrontmatter(content);
-      expect(frontmatter?.tags, `${plugin} missing tags`).toBeDefined();
-      expect(Array.isArray(frontmatter?.tags), `${plugin} tags should be array`).toBe(true);
+      expect(frontmatter?.tags, `${pluginPath} missing tags`).toBeDefined();
+      expect(Array.isArray(frontmatter?.tags), `${pluginPath} tags should be array`).toBe(true);
     }
   });
 
   it('all plugins have at least one operation, utility, or action', () => {
-    for (const plugin of getPlugins()) {
-      const content = readFileSync(join(PLUGINS_DIR, plugin, 'readme.md'), 'utf-8');
+    for (const pluginPath of getPlugins()) {
+      const content = readFileSync(join(PLUGINS_DIR, pluginPath, 'readme.md'), 'utf-8');
       const frontmatter = parseFrontmatter(content);
       const operations = frontmatter?.operations as Record<string, unknown> | undefined;
       const utilities = frontmatter?.utilities as Record<string, unknown> | undefined;
@@ -113,7 +139,7 @@ describe('Schema Completeness', () => {
       
       expect(
         hasOperations || hasUtilities || hasActions,
-        `${plugin} must have either 'operations', 'utilities', or 'actions' (legacy) with at least one item`
+        `${pluginPath} must have either 'operations', 'utilities', or 'actions' (legacy) with at least one item`
       ).toBe(true);
     }
   });

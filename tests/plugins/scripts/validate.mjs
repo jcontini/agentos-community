@@ -97,6 +97,33 @@ function moveToNeedsWork(pluginName) {
   }
 }
 
+// Recursively find all plugins (directories with readme.md)
+// Returns array of { name: 'pluginName', path: 'category/pluginName' }
+function findPlugins(dir, relativePath = '') {
+  const plugins = [];
+  const entries = readdirSync(dir, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === '.needs-work') continue;
+    if (entry.name === 'node_modules') continue;
+    if (entry.name === 'tests') continue;
+    
+    const fullPath = join(dir, entry.name);
+    const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+    
+    // Check if this directory is a plugin (has readme.md)
+    if (existsSync(join(fullPath, 'readme.md'))) {
+      plugins.push({ name: entry.name, path: entryRelativePath });
+    } else {
+      // It's a category folder, recurse into it
+      plugins.push(...findPlugins(fullPath, entryRelativePath));
+    }
+  }
+  
+  return plugins;
+}
+
 // Get all apps or filter by args
 const args = process.argv.slice(2);
 const filterIndex = args.indexOf('--filter');
@@ -104,70 +131,62 @@ const filterValue = filterIndex !== -1 ? args[filterIndex + 1] : null;
 const validateAll = args.includes('--all') || args.length === 0;
 const autoMove = !args.includes('--no-move');  // Auto-move by default, disable with --no-move
 
-let apps = validateAll 
-  ? readdirSync(APPS_DIR, { withFileTypes: true })
-      .filter(d => d.isDirectory() && d.name !== '.needs-work')
-      .map(d => d.name)
-  : args.filter(a => !a.startsWith('--'));
+let plugins = validateAll 
+  ? findPlugins(APPS_DIR)
+  : args.filter(a => !a.startsWith('--')).map(a => ({ name: a, path: a }));
 
 // Apply filter if specified
 if (filterValue) {
-  apps = apps.filter(app => app.includes(filterValue));
+  plugins = plugins.filter(p => p.name.includes(filterValue) || p.path.includes(filterValue));
 }
 
 let hasErrors = false;
 let hasCoverageWarnings = false;
 let movedCount = 0;
 
-for (const app of apps) {
-  const pluginDir = join(APPS_DIR, app);
+for (const plugin of plugins) {
+  const pluginDir = join(APPS_DIR, plugin.path);
   const readmePath = join(pluginDir, 'readme.md');
   let failed = false;
   let failureReason = '';
   
-  if (!existsSync(readmePath)) {
-    console.error(`❌ plugins/${app}: readme.md not found`);
-    failureReason = 'readme.md not found';
+  const content = readFileSync(readmePath, 'utf-8');
+  const frontmatter = parseFrontmatter(content);
+
+  if (!frontmatter) {
+    console.error(`❌ plugins/${plugin.path}: No YAML frontmatter found`);
+    failureReason = 'No YAML frontmatter found';
     failed = true;
   } else {
-    const content = readFileSync(readmePath, 'utf-8');
-    const frontmatter = parseFrontmatter(content);
-
-    if (!frontmatter) {
-      console.error(`❌ plugins/${app}: No YAML frontmatter found`);
-      failureReason = 'No YAML frontmatter found';
+    const valid = validate(frontmatter);
+    if (!valid) {
+      console.error(`❌ plugins/${plugin.path}: Schema validation failed`);
+      for (const err of validate.errors) {
+        console.error(`   ${err.instancePath || '/'}: ${err.message}`);
+      }
+      failureReason = 'Schema validation failed';
       failed = true;
     } else {
-      const valid = validate(frontmatter);
-      if (!valid) {
-        console.error(`❌ plugins/${app}: Schema validation failed`);
-        for (const err of validate.errors) {
-          console.error(`   ${err.instancePath || '/'}: ${err.message}`);
-        }
-        failureReason = 'Schema validation failed';
-        failed = true;
-      } else {
-        // Check icon.png exists (required for all plugins)
-        const iconPath = join(pluginDir, 'icon.png');
+        // Check icon.svg exists (required for all plugins)
+        const iconPath = join(pluginDir, 'icon.svg');
         if (!existsSync(iconPath)) {
-          console.error(`❌ plugins/${app}: icon.png not found (required)`);
-          failureReason = 'icon.png not found';
+          console.error(`❌ plugins/${plugin.path}: icon.svg not found (required)`);
+          failureReason = 'icon.svg not found';
           failed = true;
+      } else {
+        // Check test coverage (only for valid plugins)
+        const tools = getTools(frontmatter);
+        const testedTools = getTestedTools(pluginDir);
+        const untestedTools = tools.filter(t => !testedTools.has(t));
+        
+        if (untestedTools.length > 0) {
+          console.error(`❌ plugins/${plugin.path}: Missing tests for: ${untestedTools.join(', ')}`);
+          failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
+          failed = true;
+        } else if (tools.length > 0) {
+          console.log(`✓ plugins/${plugin.path} (${tools.length} tools, all tested)`);
         } else {
-          // Check test coverage (only for valid plugins)
-          const tools = getTools(frontmatter);
-          const testedTools = getTestedTools(pluginDir);
-          const untestedTools = tools.filter(t => !testedTools.has(t));
-          
-          if (untestedTools.length > 0) {
-            console.error(`❌ plugins/${app}: Missing tests for: ${untestedTools.join(', ')}`);
-            failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
-            failed = true;
-          } else if (tools.length > 0) {
-            console.log(`✓ plugins/${app} (${tools.length} tools, all tested)`);
-          } else {
-            console.log(`✓ plugins/${app}`);
-          }
+          console.log(`✓ plugins/${plugin.path}`);
         }
       }
     }
@@ -175,8 +194,10 @@ for (const app of apps) {
   
   if (failed) {
     hasErrors = true;
-    if (autoMove && moveToNeedsWork(app)) {
-      movedCount++;
+    // Note: auto-move with categories would need more complex logic to preserve category structure
+    // For now, just report the error
+    if (autoMove) {
+      console.log(`   (auto-move disabled for categorized plugins - fix manually)`);
     }
   }
 }
