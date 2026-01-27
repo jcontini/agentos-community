@@ -16,6 +16,16 @@ When you add or modify plugins, apps, themes, or components, a GitHub Action aut
 
 The manifest is what powers the AgentOS App Store. Just add your files with proper metadata and it updates automatically.
 
+### Setup: Auto-Resolve Manifest Conflicts
+
+To avoid merge conflicts when GitHub Actions updates `manifest.json`, configure a merge driver that automatically regenerates it:
+
+```bash
+git config merge.regenerate-manifest.driver "scripts/merge-manifest.sh %O %A %B"
+```
+
+This ensures that when `manifest.json` conflicts occur (e.g., when GitHub Actions commits while you're working), Git will automatically regenerate the manifest instead of showing a conflict.
+
 ### How to Test Locally
 
 ```bash
