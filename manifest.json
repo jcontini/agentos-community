@@ -1,12 +1,12 @@
 {
   "version": "1.0.0",
-  "updated_at": "2026-01-27T14:26:10.994Z",
+  "updated_at": "2026-01-27T14:30:06.287Z",
   "plugins": [
     {
       "id": "apple-calendar",
       "name": "Apple Calendar",
       "description": "Access macOS Calendar via native EventKit APIs",
-      "icon": "plugins/calendar/apple-calendar/icon.svg",
+      "icon": "plugins/apple-calendar/icon.svg",
       "tags": [
         "calendar",
         "events",
@@ -19,7 +19,7 @@
       "id": "brave",
       "name": "Brave Search",
       "description": "Privacy-focused web search with independent index",
-      "icon": "plugins/search/brave/icon.svg",
+      "icon": "plugins/brave/icon.svg",
       "tags": [
         "web",
         "search"
@@ -31,7 +31,7 @@
       "id": "curl",
       "name": "Curl",
       "description": "Simple URL fetching using curl (no API key needed)",
-      "icon": "plugins/search/curl/icon.svg",
+      "icon": "plugins/curl/icon.svg",
       "tags": [
         "web",
         "fetch",
@@ -44,7 +44,7 @@
       "id": "cursor",
       "name": "Cursor",
       "description": "AI-powered code editor conversation history",
-      "icon": "plugins/development/cursor/icon.svg",
+      "icon": "plugins/cursor/icon.svg",
       "tags": [
         "messages",
         "chat",
@@ -55,10 +55,22 @@
       "author": "community"
     },
     {
+      "id": "demo",
+      "name": "Demo",
+      "description": "Demos using free public APIs - no API keys needed!",
+      "icon": "plugins/demo/icon.svg",
+      "tags": [
+        "demo",
+        "examples"
+      ],
+      "version": "1.0.0",
+      "author": "community"
+    },
+    {
       "id": "exa",
       "name": "Exa",
       "description": "Semantic web search and content extraction",
-      "icon": "plugins/search/exa/icon.svg",
+      "icon": "plugins/exa/icon.svg",
       "tags": [
         "web",
         "search",
@@ -71,7 +83,7 @@
       "id": "firecrawl",
       "name": "Firecrawl",
       "description": "Web scraping with browser rendering for JS-heavy sites",
-      "icon": "plugins/search/firecrawl/icon.svg",
+      "icon": "plugins/firecrawl/icon.svg",
       "tags": [
         "web",
         "search",
@@ -81,10 +93,23 @@
       "author": "community"
     },
     {
+      "id": "hardcover",
+      "name": "Hardcover",
+      "description": "Modern alternative to Goodreads for tracking your reading",
+      "icon": "plugins/hardcover/icon.svg",
+      "tags": [
+        "books",
+        "reading",
+        "library"
+      ],
+      "version": "1.0.0",
+      "author": "community"
+    },
+    {
       "id": "imessage",
       "name": "iMessage",
       "description": "Read iMessages and SMS from macOS Messages app",
-      "icon": "plugins/messages/imessage/icon.svg",
+      "icon": "plugins/imessage/icon.svg",
       "tags": [
         "messages",
         "chat",
@@ -98,7 +123,7 @@
       "id": "instagram",
       "name": "Instagram",
       "description": "Read and send Instagram direct messages via private API",
-      "icon": "plugins/social/instagram/icon.svg",
+      "icon": "plugins/instagram/icon.svg",
       "tags": [
         "messages",
         "chat",
@@ -111,7 +136,7 @@
       "id": "linear",
       "name": "Linear",
       "description": "Project management for engineering teams",
-      "icon": "plugins/tasks/linear/icon.svg",
+      "icon": "plugins/linear/icon.svg",
       "tags": [
         "tasks",
         "issues",
@@ -121,10 +146,24 @@
       "author": "community"
     },
     {
+      "id": "logo-dev",
+      "name": "Logo.dev",
+      "description": "Company logos via CDN - lookup by domain, ticker, or name",
+      "icon": "plugins/logo-dev/icon.svg",
+      "tags": [
+        "media",
+        "images",
+        "logos",
+        "brands"
+      ],
+      "version": "1.0.0",
+      "author": "community"
+    },
+    {
       "id": "mysql",
       "name": "MySQL",
       "description": "Connect to MySQL and MariaDB databases",
-      "icon": "plugins/databases/mysql/icon.svg",
+      "icon": "plugins/mysql/icon.svg",
       "tags": [
         "database",
         "sql"
@@ -136,7 +175,7 @@
       "id": "reddit",
       "name": "Reddit",
       "description": "Read public Reddit communities, posts, and comments",
-      "icon": "plugins/social/reddit/icon.svg",
+      "icon": "plugins/reddit/icon.svg",
       "tags": [
         "social",
         "reddit",
@@ -149,7 +188,7 @@
       "id": "sqlite",
       "name": "SQLite",
       "description": "Connect to SQLite database files",
-      "icon": "plugins/databases/sqlite/icon.svg",
+      "icon": "plugins/sqlite/icon.svg",
       "tags": [
         "database",
         "sql"
@@ -161,7 +200,7 @@
       "id": "todoist",
       "name": "Todoist",
       "description": "Personal task management",
-      "icon": "plugins/tasks/todoist/icon.svg",
+      "icon": "plugins/todoist/icon.svg",
       "tags": [
         "tasks",
         "todos",
@@ -174,7 +213,7 @@
       "id": "youtube",
       "name": "YouTube",
       "description": "Get video metadata and transcripts using yt-dlp",
-      "icon": "plugins/social/youtube/icon.svg",
+      "icon": "plugins/youtube/icon.svg",
       "tags": [
         "media",
         "video"

@@ -7,7 +7,7 @@
  *   node scripts/generate-manifest.js --check   # Validate without writing
  */
 
-import { readdirSync, readFileSync, writeFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import yaml from 'js-yaml';
 
@@ -46,7 +46,13 @@ function walkDirectory(dir, depth = 0, maxDepth = 3) {
 function extractPluginMetadata(pluginDir) {
   const readmePath = join(pluginDir, 'readme.md');
   
-  if (!readFileSync(readmePath, 'utf-8')) return null;
+  if (!existsSync(readmePath)) return null;
+  
+  try {
+    readFileSync(readmePath, 'utf-8');
+  } catch {
+    return null;
+  }
   
   const content = readFileSync(readmePath, 'utf-8');
   const frontMatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -169,27 +175,39 @@ function generateManifest() {
     components: [],
   };
   
-  // Scan plugins (nested in category folders)
+  // Scan plugins recursively (handles both flat and nested structures)
   const pluginsDir = join(REPO_ROOT, 'plugins');
-  try {
-    const categoryDirs = readdirSync(pluginsDir, { withFileTypes: true })
-      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
-      .map(entry => join(pluginsDir, entry.name));
+  
+  function scanPluginsRecursive(dir, depth = 0, maxDepth = 3) {
+    if (depth > maxDepth) return;
     
-    for (const categoryDir of categoryDirs) {
-      try {
-        const pluginDirs = readdirSync(categoryDir, { withFileTypes: true })
-          .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
-          .map(entry => join(categoryDir, entry.name));
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue;
         
-        for (const pluginDir of pluginDirs) {
-          const metadata = extractPluginMetadata(pluginDir);
-          if (metadata) manifest.plugins.push(metadata);
+        const entryPath = join(dir, entry.name);
+        
+        if (entry.isDirectory()) {
+          // Check if this directory is a plugin (has readme.md)
+          const readmePath = join(entryPath, 'readme.md');
+          if (existsSync(readmePath)) {
+            const metadata = extractPluginMetadata(entryPath);
+            if (metadata) manifest.plugins.push(metadata);
+          } else {
+            // It's a category folder, recurse into it
+            scanPluginsRecursive(entryPath, depth + 1, maxDepth);
+          }
         }
-      } catch (err) {
-        console.warn(`Skipping category ${basename(categoryDir)}: ${err.message}`);
       }
+    } catch (err) {
+      // Silently skip directories we can't read
     }
+  }
+  
+  try {
+    scanPluginsRecursive(pluginsDir);
   } catch (err) {
     console.warn(`No plugins directory: ${err.message}`);
   }
