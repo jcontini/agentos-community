@@ -30,7 +30,7 @@ adapters:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.fetch:
+  webpage.read:
     description: Fetch a URL using curl (simple, no JS rendering)
     returns: webpage
     params:

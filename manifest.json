@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated_at": "2026-01-27T16:05:25.035Z",
+  "updated_at": "2026-01-27T16:11:54.176Z",
   "plugins": [
     {
       "id": "apple-calendar",
@@ -12,7 +12,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.619Z"
+      "updated_at": "2026-01-27T16:05:02.812Z"
     },
     {
       "id": "brave",
@@ -25,7 +25,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.619Z"
+      "updated_at": "2026-01-27T16:05:02.812Z"
     },
     {
       "id": "curl",
@@ -37,7 +37,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.619Z"
+      "updated_at": "2026-01-27T16:05:02.812Z"
     },
     {
       "id": "cursor",
@@ -49,7 +49,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.812Z"
     },
     {
       "id": "demo",
@@ -61,7 +61,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.813Z"
     },
     {
       "id": "exa",
@@ -74,7 +74,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.813Z"
     },
     {
       "id": "firecrawl",
@@ -87,7 +87,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.813Z"
     },
     {
       "id": "hardcover",
@@ -99,7 +99,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.813Z"
     },
     {
       "id": "imessage",
@@ -112,7 +112,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.620Z"
+      "updated_at": "2026-01-27T16:05:02.813Z"
     },
     {
       "id": "instagram",
@@ -126,7 +126,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.814Z"
     },
     {
       "id": "linear",
@@ -138,7 +138,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.814Z"
     },
     {
       "id": "logo-dev",
@@ -151,7 +151,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.814Z"
     },
     {
       "id": "mysql",
@@ -163,7 +163,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.814Z"
     },
     {
       "id": "reddit",
@@ -176,7 +176,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.814Z"
     },
     {
       "id": "sqlite",
@@ -188,7 +188,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.621Z"
+      "updated_at": "2026-01-27T16:05:02.815Z"
     },
     {
       "id": "todoist",
@@ -200,7 +200,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.622Z"
+      "updated_at": "2026-01-27T16:05:02.815Z"
     },
     {
       "id": "youtube",
@@ -213,38 +213,10 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-27T16:05:12.622Z"
+      "updated_at": "2026-01-27T16:05:02.815Z"
     }
   ],
-  "apps": [
-    {
-      "id": "browser",
-      "name": "Browser",
-      "description": "Watch AI search the web and read pages",
-      "icon": "apps/browser/icon.svg",
-      "version": "1.0.0",
-      "author": "agentos",
-      "updated_at": "2026-01-27T16:05:12.613Z"
-    },
-    {
-      "id": "plugins",
-      "name": "Plugins",
-      "description": "Browse installed plugins",
-      "icon": "apps/plugins/icon.svg",
-      "version": "1.0.0",
-      "author": "agentos",
-      "updated_at": "2026-01-27T16:05:12.613Z"
-    },
-    {
-      "id": "terminal",
-      "name": "Terminal",
-      "description": "View all AI activity as terminal output",
-      "icon": "apps/terminal/icon.svg",
-      "version": "1.0.0",
-      "author": "agentos",
-      "updated_at": "2026-01-27T16:05:12.613Z"
-    }
-  ],
+  "apps": [],
   "themes": [
     {
       "id": "macos9",
@@ -254,107 +226,16 @@
       "preview": "themes/os/macos9/preview.png",
       "version": "1.0.0",
       "author": "agentos",
-      "updated_at": "2026-01-27T16:05:12.624Z"
+      "updated_at": "2026-01-24T14:28:54.316Z"
     }
   ],
   "components": [
     {
-      "id": "activity-footer",
-      "name": "activity-footer",
-      "description": "",
+      "id": "layout/split-view",
+      "name": "Split View",
+      "description": "Resizable split panel layout",
       "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "grid",
-      "name": "grid",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "list",
-      "name": "list",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "markdown",
-      "name": "markdown",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "media-header",
-      "name": "media-header",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "plugin-browser",
-      "name": "plugin-browser",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "plugin-detail",
-      "name": "plugin-detail",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "plugin-grid",
-      "name": "plugin-grid",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "plugin-preferences",
-      "name": "plugin-preferences",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "terminal-line",
-      "name": "terminal-line",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "terminal-output",
-      "name": "terminal-output",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "text-input",
-      "name": "text-input",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "toggle",
-      "name": "toggle",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
-    },
-    {
-      "id": "url-bar",
-      "name": "url-bar",
-      "description": "",
-      "version": "1.0.0",
-      "author": "agentos"
+      "author": "community"
     }
   ]
 }

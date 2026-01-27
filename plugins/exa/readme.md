@@ -63,7 +63,7 @@ operations:
           title: .title
           published_at: .publishedDate
 
-  webpage.fetch:
+  webpage.read:
     description: Extract content from a URL
     returns: webpage
     params:
