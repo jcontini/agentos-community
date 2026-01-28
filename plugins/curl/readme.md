@@ -25,6 +25,7 @@ adapters:
       url: .url
       title: .title
       content: .content
+      content_type: .content_type
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -44,18 +45,29 @@ operations:
           set -e
           URL="{{params.url}}"
           
-          # Fetch the page
-          CONTENT=$(curl -sL -A "Mozilla/5.0 (compatible; AgentOS/1.0)" --max-time 30 "$URL")
+          # Create temp file for headers
+          HEADERS_FILE=$(mktemp)
+          trap "rm -f $HEADERS_FILE" EXIT
           
-          # Extract title from HTML
-          TITLE=$(echo "$CONTENT" | grep -oi '<title[^>]*>[^<]*</title>' | head -1 | sed 's/<[^>]*>//g' || echo "")
+          # Fetch the page with headers dumped to file
+          CONTENT=$(curl -sL -A "Mozilla/5.0 (compatible; AgentOS/1.0)" --max-time 30 -D "$HEADERS_FILE" "$URL")
+          
+          # Extract Content-Type from headers (e.g., "application/json; charset=utf-8" -> "application/json")
+          CONTENT_TYPE=$(grep -i '^content-type:' "$HEADERS_FILE" | tail -1 | cut -d: -f2 | cut -d';' -f1 | tr -d ' \r' || echo "text/plain")
+          
+          # Extract title from HTML (only for HTML content)
+          TITLE=""
+          if [[ "$CONTENT_TYPE" == text/html* ]]; then
+            TITLE=$(echo "$CONTENT" | grep -oi '<title[^>]*>[^<]*</title>' | head -1 | sed 's/<[^>]*>//g' || echo "")
+          fi
           
           # Output JSON
           jq -n \
             --arg url "$URL" \
             --arg title "$TITLE" \
             --arg content "$CONTENT" \
-            '{url: $url, title: $title, content: $content}'
+            --arg content_type "$CONTENT_TYPE" \
+            '{url: $url, title: $title, content: $content, content_type: $content_type}'
       timeout: 35
 ---
 

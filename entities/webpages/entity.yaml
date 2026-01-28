@@ -42,6 +42,10 @@ properties:
     type: datetime
     description: When we retrieved this content
 
+  content_type:
+    type: string
+    description: MIME type of the content (e.g., text/html, application/json)
+
 operations: [search, read]
 
 display:
@@ -69,6 +73,8 @@ views:
   read:
     title: "{{activity.response.title}}"
     layout:
-      - component: markdown
+      - component: content
         props:
-          content: "{{activity.response.content}}"
+          data: "{{activity.response.content}}"
+          type: "{{activity.response.content_type}}"
+          url: "{{activity.response.url}}"
