@@ -40,60 +40,119 @@ node scripts/generate-manifest.js --check
 
 ## Architecture Overview
 
+**Key insight: Entities = Apps.** Entities are self-contained packages that include schema, views, AND components. When you install a plugin that uses the `post` entity, you effectively get a "Posts" app.
+
 ```
-entities/          Universal schemas (what a task/message/webpage IS)
-  graph.yaml       Relationships between entities
-  task.yaml        Task schema
-  webpage.yaml     Webpage schema
+entities/          Self-contained packages (schema + views + components)
+  posts/           Example: post entity folder
+    entity.yaml    Schema + views
+    components/    UI components for this entity
+      post-item.tsx
+      post-header.tsx
+  tasks.yaml       Legacy format (being migrated to folders)
   ...
 
-plugins/           Adapters (how services map to universal entities)
-  tasks/           Category folder
-    todoist/       Maps Todoist API → task entity
-    linear/        Maps Linear API → task entity
-  search/          Category folder
-    exa/           Maps Exa API → webpage entity
-  calendar/
-    apple-calendar/
+plugins/           Adapters (how services map to entities)
+  reddit/          Maps Reddit API → post entity
+  todoist/         Maps Todoist API → task entity
+  youtube/         Maps YouTube API → video entity
   .needs-work/     Plugins that need completion
-    communication/
-    government/
-      us/
-        national/  Federal agencies (USPTO, etc.)
-        us-tx/     State agencies (TxDOT, etc.)
 
-components/        UI building blocks (TSX)
-apps/              Activity → component wiring (YAML)
 themes/            Visual styling (CSS)
 ```
 
-**The flow:** Entities define universal schemas → Plugins adapt service APIs to those schemas → Components render the data.
+**The flow:** 
+1. Plugins declare which entities they provide (via `adapters:` section)
+2. Entities define schema + views + components
+3. The viewer shell renders entity views using entity components + framework components
 
 ---
 
 ## Entities
 
-Entities are universal schemas that define what something IS, regardless of which service provides it.
+Entities are self-contained packages that define what something IS, how to display it, and the components to render it.
 
-**Location:** `entities/{entity}.yaml`
+**New format (preferred):** `entities/{entity}/entity.yaml` + `components/`
+
+```
+entities/
+  posts/                    # Entity folder
+    entity.yaml             # Schema + views
+    components/
+      post-item.tsx         # List item component
+      post-header.tsx       # Detail view header
+      comment-thread.tsx    # Nested comments
+```
+
+**Legacy format:** `entities/{entity}.yaml` (being migrated)
+
+### Entity Definition
 
 ```yaml
-id: task
-name: Task
-description: A unit of work to be done
+# entities/posts/entity.yaml
+
+id: post
+plural: posts
+name: Post
+description: A social media post, comment, or reply
+
+references:
+  schema_org: https://schema.org/SocialMediaPosting
+  wikidata: Q7246757
 
 properties:
   id: { type: string, required: true }
-  title: { type: string, required: true }
-  completed: { type: boolean, default: false }
-  priority: { type: integer, min: 1, max: 4 }
-  due_date: { type: date }
-  # ...
+  title: { type: string }
+  content: { type: string }
+  author:
+    type: object
+    properties:
+      name: { type: string, required: true }
+      url: { type: string, format: url }
+  # ... more properties
 
-operations: [list, get, create, update, delete, complete]
+operations: [list, search, get]
+
+display:
+  primary: title
+  secondary: author.name
+  icon: message-square
+
+# Views define how to render each operation
+views:
+  list:
+    title: "Posts"
+    layout:
+      - component: list
+        data:
+          source: activity
+        item_component: post-item    # Resolves to entity's components/
+        item_props:
+          title: "{{title}}"
+          author: "{{author.name}}"
+          # ...
+
+  get:
+    title: "{{activity.response.title}}"
+    layout:
+      - component: layout/scroll-area
+        children:
+          - component: post-header     # Entity component
+          - component: text            # Framework component
+          - component: comment-thread  # Entity component
 ```
 
-**Relationships** are defined in `entities/graph.yaml`:
+### Component Resolution
+
+When a view references a component:
+1. **Entity components** — Check `entities/{entity}/components/`
+2. **Framework components** — Check bundled `components/` (list, text, layout/*)
+
+Entity components can override framework components for that entity's views.
+
+### Relationships
+
+Defined in `entities/graph.yaml`:
 
 ```yaml
 relationships:
@@ -101,14 +160,9 @@ relationships:
     from: task
     to: project
     description: The project a task belongs to
-
-  task_labels:
-    from: task
-    to: label
-    description: Labels applied to the task
 ```
 
-When creating a plugin, check `entities/{entity}.yaml` to see what properties to map.
+When creating a plugin, check `entities/{entity}/entity.yaml` to see what properties to map.
 
 ---
 
@@ -432,20 +486,30 @@ operations:
 
 TSX files dynamically loaded and transpiled by the server.
 
-**Location:** `components/{name}.tsx` or `components/{category}/{name}.tsx`
+### Two Types of Components
+
+**1. Framework components** — Shared primitives used by all entities (live in `bundled/components/`):
 
 ```
-components/
-  list.tsx           # Core primitives
-  text.tsx
-  markdown.tsx
+bundled/components/
+  list.tsx           # List container
+  text.tsx           # Text display
+  markdown.tsx       # Markdown rendering
   layout/
-    stack.tsx        # Layout components
-    scroll-area.tsx
-  items/
-    search-result.tsx   # Item renderers for lists
-    history-item.tsx
+    stack.tsx        # Flex stack
+    scroll-area.tsx  # Scrollable container
 ```
+
+**2. Entity components** — Specific to an entity (live in entity folder):
+
+```
+entities/posts/components/
+  post-item.tsx      # List item for posts
+  post-header.tsx    # Detail view header
+  comment-thread.tsx # Nested comments
+```
+
+When views reference components, entity components are checked first, then framework components.
 
 ### Rules
 
@@ -500,301 +564,115 @@ Components use class names that themes style. Add your component's CSS to the th
 
 ## Apps
 
-Apps wire activities to components. They define what shows up when AI uses a capability.
+Apps come in three tiers:
 
-**Location:** `apps/{name}/app.yaml` with `icon.svg`
+### Tier 1: System Apps
 
-```
-apps/
-  browser/
-    app.yaml      # App definition
-    icon.svg      # App icon (shows on desktop)
-  settings/
-    app.yaml
-    icon.svg
-```
-
-### Basic Structure
+Not entity-based — special utilities:
+- `settings/` — System configuration
+- `store/` — Browse/install from community
+- `terminal/` — Activity log, fallback viewer
+- `firewall/` — Configure access rules
 
 ```yaml
-id: browser
-name: Browser
+id: settings
+name: Settings
 icon: icon.svg
-description: Watch AI search the web and read pages
 
-# Entity types this app displays
-entities:
-  - webpage
-
-# Menu bar (when app is focused)
-menus:
-  - name: Browser
-    items:
-      - label: About Browser
-        action: open_view
-        view: about
-  - name: History
-    action: open_view    # Direct click (no dropdown)
-    view: history
-
-# Views define what to show for different activities
 views:
-  search:
-    entity: webpage
-    operation: search
-    title: Browser
-    toolbar: [...]
-    layout: [...]
-
-  read:
-    entity: webpage
-    operation: read
-    title: "{{activity.response.title}}"
-    layout: [...]
-
-default_view: search
-```
-
-### Menus
-
-Apps can define menus that appear in the menu bar when focused.
-
-**Dropdown menus** have `items`:
-
-```yaml
-menus:
-  - name: File
-    items:
-      - label: New Window
-        action: new_window
-        shortcut: "⌘N"
-      - separator: true
-      - label: Close
-        action: close
-```
-
-**Direct-action menus** have `action` (clickable, no dropdown):
-
-```yaml
-menus:
-  - name: History
-    action: open_view
-    view: history
-```
-
-**Actions:**
-- `open_view` — Opens a new window with the specified view
-- `about` — Opens the app's about view
-- `close` — Closes the focused window
-
-### Views
-
-Views define how to display activities. There are two types:
-
-**Activity-driven views** — triggered by AI activity:
-
-```yaml
-views:
-  search:
-    entity: webpage        # Which entity type
-    operation: search      # Which operation
-    title: Browser
+  main:
+    title: Settings
     layout:
-      - component: list
-        data:
-          source: activity   # Use the triggering activity's response
-        item_component: items/search-result
-        item_props:
-          title: "{{title}}"
-          url: "{{url}}"
+      - component: settings-panel
 ```
 
-**Static views** — not tied to activities (About, Settings, etc.):
+### Tier 2: Dedicated Entity Apps
+
+Custom UI for specific entities. Can handle multiple entities:
 
 ```yaml
+# apps/messages/app.yaml
+id: messages
+name: Messages
+icon: icon.svg
+
 views:
-  about:
-    title: About Browser
-    layout:
-      - component: layout/stack
-        props:
-          gap: 16
-          align: center
-        children:
-          - component: text
-            props:
-              content: "Browser"
-              variant: title
-          - component: text
-            props:
-              content: "Watch AI search the web"
-              variant: body
+  conversations:
+    entity: conversation
+    operation: list
+    layout: [...]      # Custom layout
+  
+  messages:
+    entity: message
+    operation: list
+    layout: [...]
+  
+  thread:
+    entity: conversation
+    operation: get
+    layout: [...]
 ```
+
+**Entities are implicitly determined** from the views. No need to specify `entity:` at app level.
+
+Users choose default apps per entity in Settings.
+
+### Tier 3: Generic Viewer (Fallback)
+
+The "Browser" renders any entity with views defined. Uses entity's default views and components. Title bar is dynamic.
+
+### View Resolution
+
+When activity comes in:
+1. Check user's default app for this entity
+2. If app has view for entity/operation → use app's view
+3. Else → use entity's default view in generic viewer
+
+---
+
+## View Syntax Reference
+
+Views (in entity or app definitions) use this syntax:
 
 ### Data Sources
 
-**`source: activity`** — Uses the current activity's response:
-
 ```yaml
-layout:
-  - component: list
-    data:
-      source: activity    # Response from the triggering activity
-    item_component: items/search-result
-    item_props:
-      title: "{{title}}"  # Each item in response array
+# Use current activity's response
+data:
+  source: activity
+item_props:
+  title: "{{title}}"    # Each item in response array
+
+# Query activity history
+data:
+  source: activities
+  entity: webpage
+  limit: 100
 ```
 
-**`source: activities`** — Queries activity history:
+### Template Expressions
 
 ```yaml
-layout:
-  - component: list
-    data:
-      source: activities   # Query all matching activities
-      entity: webpage      # Filter by entity
-      limit: 100
-    item_component: items/history-item
-    item_props:
-      operation: "{{operation}}"
-      title: "{{response.title}}"
-      query: "{{request.params.query}}"
-      timestamp: "{{created_at}}"
-```
-
-### Template Syntax
-
-Props support template expressions with `{{...}}`:
-
-```yaml
-# Access activity data
 title: "{{activity.response.title}}"
 query: "{{activity.request.params.query}}"
-source: "{{activity.connector}}"
-
-# In list items, access item data directly
-title: "{{title}}"
-url: "{{url}}"
-
-# Fallback with ||
-title: "{{response.title || request.params.query}}"
+title: "{{response.title || request.params.query}}"  # Fallback
 ```
 
 ### Layout Components
-
-Compose layouts with container components:
 
 ```yaml
 layout:
   - component: layout/stack
     props:
       gap: 16
-      direction: vertical    # or horizontal
-      align: center          # start, center, end
-      padding: 24
+      direction: vertical
     children:
       - component: text
         props:
           content: "Hello"
-      - component: text
-        props:
-          content: "World"
 ```
 
-**Available layout components:**
-- `layout/stack` — Vertical or horizontal stack with gap
-- `layout/scroll-area` — Scrollable container
-- `layout/split-view` — Side-by-side panels
-
-### Toolbar
-
-Views can have a toolbar above the main layout:
-
-```yaml
-views:
-  search:
-    toolbar:
-      - component: url-bar
-        props:
-          mode: search
-          value: "{{activity.request.params.query}}"
-    layout:
-      - component: list
-        # ...
-```
-
-### Example: Complete App
-
-```yaml
-id: tasks
-name: Tasks
-icon: icon.svg
-description: View and manage tasks
-
-entities:
-  - task
-
-menus:
-  - name: Tasks
-    items:
-      - label: About Tasks
-        action: open_view
-        view: about
-  - name: History
-    action: open_view
-    view: history
-
-views:
-  list:
-    entity: task
-    operation: list
-    title: Tasks
-    layout:
-      - component: list
-        data:
-          source: activity
-        item_component: items/task-item
-        item_props:
-          title: "{{title}}"
-          completed: "{{completed}}"
-          due_date: "{{due_date}}"
-
-  about:
-    title: About Tasks
-    layout:
-      - component: layout/stack
-        props:
-          gap: 16
-          align: center
-          padding: 24
-        children:
-          - component: text
-            props:
-              content: "Tasks"
-              variant: title
-          - component: text
-            props:
-              content: "View and manage your tasks"
-              variant: body
-
-  history:
-    title: Task History
-    layout:
-      - component: layout/scroll-area
-        children:
-          - component: list
-            data:
-              source: activities
-              entity: task
-              limit: 100
-            item_component: items/history-item
-            item_props:
-              operation: "{{operation}}"
-              title: "{{response.title || request.params.title}}"
-              timestamp: "{{created_at}}"
-
-default_view: list
-```
+**Framework layout components:** `layout/stack`, `layout/scroll-area`
 
 ---
 

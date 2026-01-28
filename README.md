@@ -29,32 +29,31 @@ This means:
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'ui-monospace, monospace', 'lineColor': '#6b7280', 'primaryTextColor': '#f3f4f6' }}}%%
 flowchart LR
-    Entity(["📋 Entity<br/><small>task · event · contact · webpage</small>"])
-    Plugin(["⚡ Plugin<br/><small>todoist · linear · exa · imessage</small>"])
-    Cloud(["☁️ Cloud Services<br/><small>Todoist · Linear · Exa · Brave Search</small>"])
-    Local(["💻 Your Computer<br/><small>Calendar · Contacts · iMessage · SQLite</small>"])
-    App(["🖥️ App<br/><small>Browser · Tasks · Calendar</small>"])
-    Component(["🧩 Component<br/><small>list · tabs · url-bar</small>"])
+    Entity(["📋 Entity<br/><small>schema + views + components</small>"])
+    Plugin(["⚡ Plugin<br/><small>reddit · youtube · todoist</small>"])
+    Cloud(["☁️ Cloud Services<br/><small>Reddit · YouTube · Todoist</small>"])
+    Local(["💻 Your Computer<br/><small>Calendar · Contacts · iMessage</small>"])
+    Framework(["🧩 Framework<br/><small>list · text · layout</small>"])
     Theme(["🎨 Theme<br/><small>Mac OS 9 · Windows 98</small>"])
     
-    Entity -->|"implemented by"| Plugin
+    Plugin -->|"provides"| Entity
     Plugin -->|"connects to"| Cloud
     Plugin -->|"connects to"| Local
-    Entity -->|"displayed by"| App
-    App -->|"built with"| Component
-    Theme -->|"styles"| App
+    Entity -->|"uses"| Framework
+    Theme -->|"styles"| Entity
     
     style Entity fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
     style Plugin fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
     style Cloud fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
     style Local fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
-    style App fill:#4c1d95,stroke:#a78bfa,stroke-width:2px,color:#f3f4f6
-    style Component fill:#374151,stroke:#9ca3af,stroke-width:2px,color:#f3f4f6
+    style Framework fill:#374151,stroke:#9ca3af,stroke-width:2px,color:#f3f4f6
     style Theme fill:#374151,stroke:#9ca3af,stroke-width:2px,color:#f3f4f6
     
     linkStyle 0,1,2 stroke:#10b981,stroke-width:2px
-    linkStyle 3,4,5 stroke:#a78bfa,stroke-width:2px
+    linkStyle 3,4 stroke:#a78bfa,stroke-width:2px
 ```
+
+**Entities are self-contained.** They define their own views and components. The viewer shell just renders whatever entity is active.
 
 ### What You Can Do
 
@@ -77,89 +76,77 @@ flowchart LR
 This repository contains everything the AgentOS community builds:
 
 ```
-entities/          Universal schemas (task, video, book, conversation, etc.)
-plugins/           Service adapters (Linear → task, YouTube → video, etc.)
-components/        Reusable UI building blocks
-apps/              Entity renderers (Browser shows video/webpage, Tasks shows task)
+entities/          Self-contained packages (schema + views + components)
+plugins/           Service adapters (Reddit → post, YouTube → video, etc.)
+themes/            Visual styling (CSS)
 agents/            Setup instructions for AI clients (Cursor, Claude, etc.)
 ```
 
-### Entities
+### Entities = Apps
 
-Universal schemas that define what things ARE, regardless of which service provides them.
+**Key insight:** Entities ARE apps. Each entity is a self-contained package with:
+- **Schema** — properties, operations
+- **Views** — how to render each operation
+- **Components** — the UI pieces
+
+When you install a plugin that uses `post`, you effectively get a "Posts" app.
 
 ```
 entities/
-  media/            # video, book, audio, image
-  task.yaml         # Tasks from Todoist, Linear, etc.
-  webpage.yaml      # Web content from any URL
-  conversation.yaml # Chats from iMessage, WhatsApp, etc.
-  ...
+  posts/                    # Entity folder (new format)
+    entity.yaml             # Schema + views
+    components/
+      post-item.tsx         # List item
+      post-header.tsx       # Detail view header
+      comment-thread.tsx    # Nested comments
+  
+  tasks.yaml                # Legacy format (being migrated)
+  videos.yaml
+  webpages.yaml
 ```
-
-Entities live in folders for conceptual grouping (e.g., `media/` contains video, book, audio).
 
 ### Plugins
 
-Service adapters that transform API responses into universal entities. Plugins also declare **URL handlers** — patterns that route URLs to the right plugin.
+Service adapters that transform API responses into entities.
 
 ```
 plugins/
-  youtube/
+  reddit/
     readme.md       # YAML config + markdown docs
     icon.png        # Square icon
     tests/          # Integration tests
+  youtube/
   todoist/
-  exa/
   ...
 ```
 
-**URL Handlers:** When AI calls `url.read("youtube.com/...")`, the YouTube plugin handles it and returns a `video` entity. This happens automatically via URL pattern matching.
+| Plugin | Entity | What it provides |
+|--------|--------|------------------|
+| reddit | post | Posts and comments from Reddit |
+| youtube | video | Video metadata and transcripts |
+| todoist | task | Tasks and projects |
+| exa | webpage | Web search and content |
+| apple-calendar | event | Calendar events |
 
-| Category | Plugins | Entity |
-|----------|---------|--------|
-| Tasks | todoist, linear | task |
-| Messages | imessage, whatsapp | message, conversation |
-| Databases | postgres, sqlite, mysql | (custom) |
-| Calendar | apple-calendar | event |
-| Contacts | apple-contacts | contact |
-| Web | exa, firecrawl | webpage |
-| Media | youtube, goodreads, hardcover | video, book |
+### Themes
 
-### Components
-
-Reusable UI pieces that compose atoms (text, image, icon, container).
+Visual styling for the desktop environment.
 
 ```
-components/
-  url-bar/          # Location bar for browser views
-  search-result/    # Search result card
-  ...
+themes/
+  os/
+    macos9/         # Mac OS 9 theme
+    win98/          # Windows 98 theme
 ```
-
-### Apps
-
-Render entities with components. Each app defines views for the entity types it can display.
-
-```
-apps/
-  browser/          # Renders webpage, video, book, document
-  settings/         # System configuration
-  ...
-```
-
-**Entity routing is implicit.** The system scans app views to determine which app handles which entity. If multiple apps can render an entity, the user picks the default in Settings.
 
 ### Agents
 
-Setup instructions for AI clients that use AgentOS via MCP.
+Setup instructions for AI clients that use AgentOS.
 
 ```
 agents/
   cursor/           # Cursor IDE setup
   claude/           # Claude Desktop setup
-  raycast/           # Raycast setup
-  ...
 ```
 
 ---
@@ -214,10 +201,9 @@ curl http://localhost:3456/api/store/installed
 ### Available Items
 
 Current manifest includes:
-- **14 plugins** — todoist, linear, exa, firecrawl, youtube, reddit, and more
-- **4 apps** — browser, settings, plugins, terminal
-- **1 theme** — macos9
-- **23 components** — search-result, tabs, list, and more
+- **14+ plugins** — todoist, linear, exa, firecrawl, youtube, reddit, and more
+- **10+ entities** — post, video, task, event, message, webpage, and more
+- **1 theme** — macos9 (more coming)
 
 ---
 
