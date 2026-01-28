@@ -91,7 +91,7 @@ properties:
     type: datetime
     description: When we retrieved this data
 
-operations: [get, transcribe]
+operations: [get, transcript]
 
 display:
   primary: title
@@ -99,3 +99,61 @@ display:
   description: description
   image: thumbnail
   icon: play
+
+# Default views for rendering video activities
+# Apps can override these with their own views
+# Note: toolbar is provided by the app (e.g., browser's default_toolbar)
+views:
+  get:
+    title: "{{activity.response.title}}"
+    layout:
+      - component: layout/scroll-area
+        children:
+          - component: layout/stack
+            props:
+              direction: vertical
+              gap: "16px"
+            children:
+              - component: media-header
+                props:
+                  thumbnail: "{{activity.response.thumbnail}}"
+                  title: "{{activity.response.title}}"
+                  creator: "{{activity.response.creator_name}}"
+                  creatorUrl: "{{activity.response.creator_url}}"
+                  duration: "{{activity.response.duration_ms}}"
+              - component: text
+                props:
+                  content: "{{activity.response.description}}"
+                  variant: body
+        footer:
+          source: "{{activity.plugin}}"
+          duration: "{{activity.duration_ms}}"
+
+  transcript:
+    title: "{{activity.response.title}}"
+    layout:
+      - component: layout/scroll-area
+        children:
+          - component: layout/stack
+            props:
+              direction: vertical
+              gap: "16px"
+            children:
+              - component: media-header
+                props:
+                  thumbnail: "{{activity.response.thumbnail}}"
+                  title: "{{activity.response.title}}"
+                  creator: "{{activity.response.creator_name}}"
+                  creatorUrl: "{{activity.response.creator_url}}"
+                  duration: "{{activity.response.duration_ms}}"
+              - component: text
+                props:
+                  content: "Transcript"
+                  variant: caption
+              - component: text
+                props:
+                  content: "{{activity.response.description}}"
+                  variant: body
+        footer:
+          source: "{{activity.plugin}}"
+          duration: "{{activity.duration_ms}}"

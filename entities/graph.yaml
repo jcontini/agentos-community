@@ -114,33 +114,6 @@ relationships:
       from_side: organizations
       to_side: members
 
-  # === MESSAGE RELATIONSHIPS ===
-
-  message_conversation:
-    from: message
-    to: conversation
-    required: true
-    description: The conversation a message belongs to
-    # Accessors: message.conversation, conversation.messages
-
-  message_sender:
-    from: message
-    to: contact
-    description: The person who sent the message
-    accessors:
-      from_side: sender_contact
-      to_side: sent_messages
-
-  # === CONVERSATION RELATIONSHIPS ===
-
-  conversation_participants:
-    from: conversation
-    to: contact
-    description: People in the conversation
-    accessors:
-      from_side: participants
-      to_side: conversations
-
   # === NOTE RELATIONSHIPS ===
 
   note_subject:
