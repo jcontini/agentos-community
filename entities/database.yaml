@@ -1,105 +1,91 @@
-# Database Domain Entities
-# Represents database tables and their structure
+# Database Domain - tables and schema
 
-domain: database
-description: Database tables and schema
+---
+id: table
+plural: tables
+name: Table
+description: A database table
 
-entities:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Table - A database table
-  # ─────────────────────────────────────────────────────────────────────────────
-  table:
-    plural: tables
-    name: Table
-    description: A database table
+properties:
+  id:
+    type: string
+    required: true
+    description: Table name (unique identifier)
 
-    properties:
-      id:
-        type: string
-        required: true
-        description: Table name (unique identifier)
+  name:
+    type: string
+    required: true
+    description: Table name
 
-      name:
-        type: string
-        required: true
-        description: Table name
+  schema:
+    type: string
+    default: public
+    description: Database schema name
 
-      schema:
-        type: string
-        default: public
-        description: Database schema name
+  row_count:
+    type: integer
+    description: Approximate number of rows
 
-      row_count:
-        type: integer
-        description: Approximate number of rows
+  size:
+    type: string
+    description: Human-readable table size
 
-      size:
-        type: string
-        description: Human-readable table size
+  description:
+    type: string
+    description: Table comment/description
 
-      description:
-        type: string
-        description: Table comment/description
+  columns:
+    type: array
+    description: List of columns in the table
 
-      columns:
-        type: array
-        description: List of columns in the table
+operations: [list, get, search]
 
-    operations: [list, get, search]
+display:
+  primary: name
+  secondary: row_count
+  icon: table
 
-    display:
-      primary: name
-      secondary: row_count
-      icon: table
+---
+id: column
+plural: columns
+name: Column
+description: A column in a database table
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Column - A column in a database table
-  # ─────────────────────────────────────────────────────────────────────────────
-  column:
-    plural: columns
-    name: Column
-    description: A column in a database table
+properties:
+  id:
+    type: string
+    required: true
+    description: Column name (unique identifier)
 
-    properties:
-      id:
-        type: string
-        required: true
-        description: Column name (unique identifier)
+  name:
+    type: string
+    required: true
+    description: Column name
 
-      name:
-        type: string
-        required: true
-        description: Column name
+  type:
+    type: string
+    required: true
+    description: Data type
 
-      type:
-        type: string
-        required: true
-        description: Data type
+  nullable:
+    type: boolean
+    description: Whether column allows NULL values
 
-      nullable:
-        type: boolean
-        description: Whether column allows NULL values
+  default:
+    type: string
+    description: Default value
 
-      default:
-        type: string
-        description: Default value
+  is_primary_key:
+    type: boolean
+    description: Whether column is part of primary key
 
-      is_primary_key:
-        type: boolean
-        description: Whether column is part of primary key
+  max_length:
+    type: integer
+    description: Maximum length for character types
 
-      max_length:
-        type: integer
-        description: Maximum length for character types
+operations: []
 
-    operations: []
-
-    display:
-      primary: name
-      secondary: type
-      icon: columns
-
-relationships:
-  - from: column
-    to: table
-    type: belongs_to
+display:
+  primary: name
+  secondary: type
+  icon: columns

@@ -65,12 +65,9 @@ if [ -n "$STAGED_TESTS" ] || [ -n "$STAGED_READMES" ]; then
   echo ""
 fi
 
-# === Graph Validation (for entity changes) ===
-if [ -n "$STAGED_ENTITIES" ]; then
-  echo "🔗 Graph validation..."
-  node tests/entities/scripts/validate-graph.mjs || ERRORS=$((ERRORS + 1))
-  echo ""
-fi
+# === Entity Validation (for entity changes) ===
+# Note: graph.yaml removed - relationships now in domain files
+# Entity schema validation happens via vitest tests
 
 if [ $ERRORS -eq 0 ]; then
   echo "✅ All checks passed"
