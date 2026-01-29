@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated_at": "2026-01-29T00:58:51.855Z",
+  "updated_at": "2026-01-29T20:39:03.043Z",
   "plugins": [
     {
       "id": "apple-calendar",
@@ -14,7 +14,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.695Z"
+      "updated_at": "2026-01-29T20:38:54.714Z"
     },
     {
       "id": "brave",
@@ -27,7 +27,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.696Z"
+      "updated_at": "2026-01-29T20:38:54.714Z"
     },
     {
       "id": "curl",
@@ -41,19 +41,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.696Z"
-    },
-    {
-      "id": "cursor",
-      "name": "Cursor",
-      "description": "AI-powered code editor conversation history",
-      "icon": "plugins/cursor/icon.svg",
-      "tags": [
-        "AI"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.696Z"
+      "updated_at": "2026-01-29T20:38:54.714Z"
     },
     {
       "id": "exa",
@@ -67,7 +55,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.696Z"
+      "updated_at": "2026-01-29T20:38:54.714Z"
     },
     {
       "id": "facebook",
@@ -80,7 +68,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.696Z"
+      "updated_at": "2026-01-29T20:38:54.715Z"
     },
     {
       "id": "firecrawl",
@@ -94,46 +82,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.697Z"
-    },
-    {
-      "id": "hardcover",
-      "name": "Hardcover",
-      "description": "Modern alternative to Goodreads for tracking your reading",
-      "icon": "plugins/hardcover/icon.svg",
-      "tags": [
-        "books"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.697Z"
-    },
-    {
-      "id": "imessage",
-      "name": "iMessage",
-      "description": "Read iMessages and SMS from macOS Messages app",
-      "icon": "plugins/imessage/icon.svg",
-      "tags": [
-        "messages",
-        "chat"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.697Z"
-    },
-    {
-      "id": "instagram",
-      "name": "Instagram",
-      "description": "Read and send Instagram direct messages via private API",
-      "icon": "plugins/instagram/icon.svg",
-      "tags": [
-        "messages",
-        "chat",
-        "social"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.697Z"
+      "updated_at": "2026-01-29T20:38:54.715Z"
     },
     {
       "id": "linear",
@@ -147,32 +96,20 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.697Z"
+      "updated_at": "2026-01-29T20:38:54.715Z"
     },
     {
-      "id": "logo-dev",
-      "name": "Logo.dev",
-      "description": "Company logos via CDN - lookup by domain, ticker, or name",
-      "icon": "plugins/logo-dev/icon.svg",
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "description": "Connect to PostgreSQL databases",
+      "icon": "plugins/postgres/icon.svg",
       "tags": [
-        "media",
-        "brands"
+        "database",
+        "sql"
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.698Z"
-    },
-    {
-      "id": "mysql",
-      "name": "MySQL",
-      "description": "Connect to MySQL and MariaDB databases",
-      "icon": "plugins/mysql/icon.svg",
-      "tags": [
-        "database"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.698Z"
+      "updated_at": "2026-01-29T20:38:54.715Z"
     },
     {
       "id": "reddit",
@@ -186,19 +123,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.698Z"
-    },
-    {
-      "id": "sqlite",
-      "name": "SQLite",
-      "description": "Connect to SQLite database files",
-      "icon": "plugins/sqlite/icon.svg",
-      "tags": [
-        "database"
-      ],
-      "version": "1.0.0",
-      "author": "community",
-      "updated_at": "2026-01-29T00:58:42.698Z"
+      "updated_at": "2026-01-29T20:38:54.715Z"
     },
     {
       "id": "todoist",
@@ -212,7 +137,21 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.699Z"
+      "updated_at": "2026-01-29T20:38:54.716Z"
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "description": "Read WhatsApp messages from local macOS database",
+      "icon": "plugins/whatsapp/icon.svg",
+      "tags": [
+        "messages",
+        "chat",
+        "conversations"
+      ],
+      "version": "1.0.0",
+      "author": "community",
+      "updated_at": "2026-01-29T20:38:54.716Z"
     },
     {
       "id": "youtube",
@@ -225,7 +164,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T00:58:42.699Z"
+      "updated_at": "2026-01-29T20:38:54.716Z"
     }
   ],
   "apps": [],
@@ -238,7 +177,7 @@
       "preview": "themes/os/macos9/preview.png",
       "version": "1.0.0",
       "author": "agentos",
-      "updated_at": "2026-01-29T00:58:42.701Z"
+      "updated_at": "2026-01-29T20:38:54.719Z"
     }
   ],
   "components": []
