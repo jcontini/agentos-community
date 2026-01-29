@@ -3,6 +3,7 @@ id: whatsapp
 name: WhatsApp
 description: Read WhatsApp messages from local macOS database
 icon: icon.svg
+color: "#25D366"
 tags: [messages, chat, conversations]
 
 website: https://www.whatsapp.com/
@@ -19,14 +20,42 @@ instructions: |
   - JID format: PHONENUMBER@s.whatsapp.net (DM) or ID@g.us (group)
   - Session types: 0 = DM, 1 = group, 3 = broadcast/status
 
-# Action implementations (merged from mapping.yaml)
-actions:
-  list_conversations:
-    operation: read
-    label: "List conversations"
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+adapters:
+  conversation:
+    terminology: Chat
+    mapping:
+      id: .id
+      name: .name
+      is_group: ".type == 'group'"
+      unread_count: .unread_count
+      updated_at: .updated_at
+      _contact_jid: .contact_jid
+
+  message:
+    terminology: Message
+    mapping:
+      id: .id
+      conversation_id: .conversation_id
+      content: .content
+      sender: .sender_name
+      is_outgoing: .is_outgoing
+      timestamp: .timestamp
+      _reply_to_id: .reply_to_id
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+operations:
+  conversation.list:
     description: List all WhatsApp conversations
+    returns: conversation[]
     params:
-      limit: { type: number, default: 50 }
+      limit: { type: integer, default: 50 }
     sql:
       query: |
         SELECT 
@@ -41,26 +70,17 @@ actions:
           cs.ZCONTACTJID as contact_jid
         FROM ZWACHATSESSION cs
         WHERE cs.ZREMOVED = 0
-          AND cs.ZSESSIONTYPE IN (0, 1)  -- DM or group, exclude broadcasts
+          AND cs.ZSESSIONTYPE IN (0, 1)
         ORDER BY cs.ZLASTMESSAGEDATE DESC
         LIMIT {{params.limit | default: 50}}
       response:
-        mapping:
-          id: "[].id"
-          type: "[].type"
-          name: "[].name"
-          unread_count: "[].unread_count"
-          updated_at: "[].updated_at"
-          contact_jid: "[].contact_jid"
-          platform: "'whatsapp'"
-          connector: "'whatsapp'"
+        root: "/"
 
-  get_conversation:
-    operation: read
-    label: "Get conversation"
+  conversation.get:
     description: Get a specific conversation with metadata
+    returns: conversation
     params:
-      conversation_id: { type: string, required: true }
+      id: { type: string, required: true }
     sql:
       query: |
         SELECT 
@@ -76,55 +96,22 @@ actions:
           cs.ZCONTACTJID as contact_jid,
           (SELECT COUNT(*) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = cs.Z_PK) as message_count
         FROM ZWACHATSESSION cs
-        WHERE cs.Z_PK = {{params.conversation_id}}
+        WHERE cs.Z_PK = {{params.id}}
       response:
-        mapping:
-          id: ".id"
-          type: ".type"
-          name: ".name"
-          unread_count: ".unread_count"
-          is_archived: ".is_archived"
-          updated_at: ".updated_at"
-          platform: "'whatsapp'"
-          connector: "'whatsapp'"
+        root: "/0"
 
-  get_participants:
-    operation: read
-    label: "Get participants"
-    description: Get participants in a group conversation
-    params:
-      conversation_id: { type: string, required: true }
-    sql:
-      query: |
-        SELECT 
-          gm.Z_PK as id,
-          gm.ZMEMBERJID as handle,
-          COALESCE(gm.ZCONTACTNAME, gm.ZFIRSTNAME, gm.ZMEMBERJID) as name,
-          gm.ZISADMIN as is_admin,
-          gm.ZISACTIVE as is_active
-        FROM ZWAGROUPMEMBER gm
-        WHERE gm.ZCHATSESSION = {{params.conversation_id}}
-      response:
-        mapping:
-          id: "[].id"
-          type: "'user'"
-          handle: "[].handle"
-          name: "[].name"
-
-  list:
-    operation: read
-    label: "List messages"
+  message.list:
     description: List messages in a conversation
+    returns: message[]
     params:
       conversation_id: { type: string, required: true }
-      limit: { type: number, default: 100 }
+      limit: { type: integer, default: 100 }
     sql:
       query: |
         SELECT 
           m.Z_PK as id,
           {{params.conversation_id}} as conversation_id,
           m.ZTEXT as content,
-          'text' as content_type,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
             WHEN 1 THEN NULL 
@@ -140,34 +127,19 @@ actions:
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT {{params.limit | default: 100}}
       response:
-        mapping:
-          id: "[].id"
-          conversation_id: "[].conversation_id"
-          content: "[].content"
-          content_type: "[].content_type"
-          sender:
-            handle: "[].sender_handle"
-            name: "[].sender_name"
-            is_self: "[].is_outgoing"
-          is_outgoing: "[].is_outgoing"
-          timestamp: "[].timestamp"
-          reply_to:
-            message_id: "[].reply_to_id"
-          connector: "'whatsapp'"
+        root: "/"
 
-  get:
-    operation: read
-    label: "Get message"
+  message.get:
     description: Get a specific message by ID
+    returns: message
     params:
-      message_id: { type: string, required: true }
+      id: { type: string, required: true }
     sql:
       query: |
         SELECT 
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
           m.ZTEXT as content,
-          'text' as content_type,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
             WHEN 1 THEN NULL 
@@ -178,30 +150,16 @@ actions:
           m.ZSTARRED as is_starred,
           m.ZPARENTMESSAGE as reply_to_id
         FROM ZWAMESSAGE m
-        WHERE m.Z_PK = {{params.message_id}}
+        WHERE m.Z_PK = {{params.id}}
       response:
-        mapping:
-          id: ".id"
-          conversation_id: ".conversation_id"
-          content: ".content"
-          content_type: ".content_type"
-          sender:
-            handle: ".sender_handle"
-            name: ".sender_name"
-            is_self: ".is_outgoing"
-          is_outgoing: ".is_outgoing"
-          timestamp: ".timestamp"
-          reply_to:
-            message_id: ".reply_to_id"
-          connector: "'whatsapp'"
+        root: "/0"
 
-  search:
-    operation: read
-    label: "Search messages"
+  message.search:
     description: Search messages by text content
+    returns: message[]
     params:
       query: { type: string, required: true }
-      limit: { type: number, default: 50 }
+      limit: { type: integer, default: 50 }
     sql:
       query: |
         SELECT 
@@ -209,7 +167,6 @@ actions:
           m.ZCHATSESSION as conversation_id,
           cs.ZPARTNERNAME as conversation_name,
           m.ZTEXT as content,
-          'text' as content_type,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
             WHEN 1 THEN 'Me' 
@@ -222,24 +179,23 @@ actions:
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT {{params.limit | default: 50}}
       response:
-        mapping:
-          id: "[].id"
-          conversation_id: "[].conversation_id"
-          content: "[].content"
-          content_type: "[].content_type"
-          sender:
-            name: "[].sender_name"
-            is_self: "[].is_outgoing"
-          is_outgoing: "[].is_outgoing"
-          timestamp: "[].timestamp"
-          connector: "'whatsapp'"
+        root: "/"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# UTILITIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+utilities:
   get_unread:
-    operation: read
-    label: "Get unread messages"
     description: Get all unread messages
     params:
-      limit: { type: number, default: 50 }
+      limit: { type: integer, default: 50 }
+    returns:
+      id: string
+      conversation_id: string
+      content: string
+      sender_name: string
+      timestamp: string
     sql:
       query: |
         SELECT 
@@ -247,7 +203,6 @@ actions:
           m.ZCHATSESSION as conversation_id,
           cs.ZPARTNERNAME as conversation_name,
           m.ZTEXT as content,
-          'text' as content_type,
           COALESCE(m.ZPUSHNAME, m.ZFROMJID) as sender_name,
           datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp
         FROM ZWAMESSAGE m
@@ -258,72 +213,29 @@ actions:
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT {{params.limit | default: 50}}
       response:
-        mapping:
-          id: "[].id"
-          conversation_id: "[].conversation_id"
-          content: "[].content"
-          content_type: "[].content_type"
-          sender:
-            name: "[].sender_name"
-            is_self: "false"
-          is_outgoing: "false"
-          is_read: "false"
-          timestamp: "[].timestamp"
-          connector: "'whatsapp'"
+        root: "/"
 
-  get_profile_photo:
-    # Chained executor: SQL lookup contact → ls for photo file → SQL to build response
-    - operation: read
-      sql:
-        database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"
-        query: |
-          SELECT 
-            COALESCE(c.ZFULLNAME, '') as name, 
-            COALESCE(REPLACE(c.ZLID, '@lid', ''), '') as lid
-          FROM (SELECT 1) d
-          LEFT JOIN ZWAADDRESSBOOKCONTACT c 
-            ON c.ZPHONENUMBER LIKE '%' || substr('{{params.phone}}', -10) || '%'
-          LIMIT 1
-      as: contact
-    
-    - operation: read
-      command:
-        binary: /bin/bash
-        args:
-          - "-c"
-          - "lid='{{contact[0].lid}}'; dir=\"$HOME/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/Media/Profile\"; ls \"$dir/$lid-\"*.jpg 2>/dev/null | head -1 || ls \"$dir/$lid-\"*.thumb 2>/dev/null | head -1"
-      as: photo
-    
-    - operation: read
-      sql:
-        database: ":memory:"
-        query: |
-          SELECT 
-            CASE WHEN '{{contact[0].lid}}' NOT IN ('', 'null', 'undefined') THEN '{{contact[0].name}}' ELSE NULL END as name,
-            CASE WHEN '{{contact[0].lid}}' NOT IN ('', 'null', 'undefined') THEN '{{contact[0].lid}}' ELSE NULL END as lid,
-            CASE 
-              WHEN '{{contact[0].lid}}' IN ('', 'null', 'undefined') THEN NULL
-              WHEN trim('{{photo}}') != '' THEN trim('{{photo}}')
-              ELSE NULL
-            END as path,
-            CASE 
-              WHEN '{{contact[0].lid}}' IN ('', 'null', 'undefined') THEN NULL
-              WHEN trim('{{photo}}') LIKE '%.jpg' THEN 'hires'
-              WHEN trim('{{photo}}') LIKE '%.thumb' THEN 'thumb'
-              ELSE NULL
-            END as size,
-            CASE 
-              WHEN '{{contact[0].lid}}' IN ('', 'null', 'undefined') THEN 'contact_not_on_whatsapp'
-              WHEN trim('{{photo}}') = '' THEN 'no_photo_set'
-              ELSE NULL
-            END as reason
+  get_participants:
+    description: Get participants in a group conversation
+    params:
+      conversation_id: { type: string, required: true }
+    returns:
+      id: string
+      handle: string
+      name: string
+      is_admin: boolean
+    sql:
+      query: |
+        SELECT 
+          gm.Z_PK as id,
+          gm.ZMEMBERJID as handle,
+          COALESCE(gm.ZCONTACTNAME, gm.ZFIRSTNAME, gm.ZMEMBERJID) as name,
+          gm.ZISADMIN as is_admin,
+          gm.ZISACTIVE as is_active
+        FROM ZWAGROUPMEMBER gm
+        WHERE gm.ZCHATSESSION = {{params.conversation_id}}
       response:
-        mapping:
-          name: ".name"
-          lid: ".lid"
-          path: ".path"
-          size: ".size"
-          reason: ".reason"
+        root: "/"
 ---
 
 # WhatsApp
