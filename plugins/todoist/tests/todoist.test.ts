@@ -149,6 +149,46 @@ describe('Todoist Plugin', () => {
   });
 
   // ===========================================================================
+  // task.list_all (all tasks without smart defaults)
+  // ===========================================================================
+  describe('task.list_all', () => {
+    it('returns an array of tasks', async () => {
+      if (skipTests) return;
+      
+      const tasks = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'task.list_all',
+        params: {},
+      });
+
+      expect(Array.isArray(tasks)).toBe(true);
+    });
+
+    it('can filter by project_id', async () => {
+      if (skipTests) return;
+      
+      const projects = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'project.list',
+      });
+      
+      if (projects.length === 0) return;
+      
+      const tasks = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'task.list_all',
+        params: { project_id: projects[0].id },
+      });
+
+      expect(Array.isArray(tasks)).toBe(true);
+      // All returned tasks should be from this project
+      for (const task of tasks) {
+        expect(task._project_id).toBe(projects[0].id);
+      }
+    });
+  });
+
+  // ===========================================================================
   // task.filter (Todoist filter queries)
   // ===========================================================================
   describe('task.filter', () => {

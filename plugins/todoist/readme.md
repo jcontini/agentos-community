@@ -41,7 +41,7 @@ adapters:
       description: .description
       completed: .checked
       priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
-      due_date: .due.date
+      due_date: .due.date?
       created_at: .added_at
       _project_id: .project_id
       _parent_id: .parent_id
