@@ -37,14 +37,14 @@ adapters:
       id: .data.id
       title: .data.title
       content: .data.selftext
-      url: ".data.permalink | prepend: 'https://reddit.com'"
+      url: '"https://reddit.com" + .data.permalink'
       author.name: .data.author
-      author.url: ".data.author | prepend: 'https://reddit.com/u/'"
+      author.url: '"https://reddit.com/u/" + .data.author'
       community.name: .data.subreddit
-      community.url: ".data.subreddit | prepend: 'https://reddit.com/r/'"
+      community.url: '"https://reddit.com/r/" + .data.subreddit'
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
-      published_at: ".data.created_utc | from_unix"
+      published_at: .data.created_utc | todate
       replies: .replies
   
   group:
@@ -53,11 +53,11 @@ adapters:
       id: .name
       name: .display_name
       description: .public_description
-      url: ".display_name | prepend: 'https://reddit.com/r/'"
+      url: '"https://reddit.com/r/" + .display_name'
       icon: .community_icon
       member_count: .subscribers
       member_count_numeric: .subscribers
-      privacy: "OPEN"
+      privacy: '"OPEN"'
       posts: .posts
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -68,7 +68,7 @@ operations:
   post.search:
     description: Search posts across Reddit
     returns: post[]
-    web_url: "https://www.reddit.com/search/?q={{params.query}}"
+    web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 10, description: "Number of results (max 100)" }
@@ -79,44 +79,44 @@ operations:
       headers:
         User-Agent: "AgentOS/1.0"
       query:
-        q: "{{params.query}}"
-        limit: "{{params.limit | default:10}}"
-        sort: "{{params.sort | default:relevance}}"
+        q: .params.query
+        limit: .params.limit | tostring
+        sort: .params.sort
       response:
         root: "/data/children"
 
   post.list:
     description: List posts from a subreddit
     returns: post[]
-    web_url: "https://www.reddit.com/r/{{params.subreddit}}"
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
       sort: { type: string, default: "hot", description: "Sort by: hot, new, top, rising" }
       limit: { type: integer, default: 25, description: "Number of posts (max 100)" }
     rest:
       method: GET
-      url: "https://www.reddit.com/r/{{params.subreddit}}/{{params.sort | default:hot}}.json"
+      url: '"https://www.reddit.com/r/" + .params.subreddit + "/" + .params.sort + ".json"'
       headers:
         User-Agent: "AgentOS/1.0"
       query:
-        limit: "{{params.limit | default:25}}"
+        limit: .params.limit | tostring
       response:
         root: "/data/children"
 
   post.get:
     description: Get a Reddit post with comments
     returns: post
-    web_url: "https://www.reddit.com/comments/{{params.id}}"
+    web_url: '"https://www.reddit.com/comments/" + .params.id'
     params:
       id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
       comment_limit: { type: integer, default: 100, description: "Max comments to fetch" }
     rest:
       method: GET
-      url: "https://www.reddit.com/comments/{{params.id}}.json"
+      url: '"https://www.reddit.com/comments/" + .params.id + ".json"'
       headers:
         User-Agent: "AgentOS/1.0"
       query:
-        limit: "{{params.comment_limit | default:100}}"
+        limit: .params.comment_limit | tostring
       response:
         # Transform extracts post from .[0] and comments from .[1], mapping recursively
         # Output: { data: {post fields}, replies: [comments] } to match adapter mapping
@@ -139,7 +139,7 @@ operations:
   group.get:
     description: Get a subreddit with its top posts
     returns: group
-    web_url: "https://www.reddit.com/r/{{params.subreddit}}"
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
       limit: { type: integer, default: 25, description: "Number of posts to include" }
@@ -149,7 +149,7 @@ operations:
         - "-c"
         - |
           SUBREDDIT="{{params.subreddit}}"
-          LIMIT="{{params.limit | default:25}}"
+          LIMIT="{{params.limit}}"
           
           # Fetch subreddit metadata and posts
           ABOUT=$(curl -s -A "AgentOS/1.0" "https://www.reddit.com/r/${SUBREDDIT}/about.json")
@@ -180,7 +180,7 @@ operations:
   group.search:
     description: Search for subreddits (communities)
     returns: group[]
-    web_url: "https://www.reddit.com/subreddits/search/?q={{params.query}}"
+    web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 10, description: "Number of results (max 100)" }
@@ -190,8 +190,8 @@ operations:
       headers:
         User-Agent: "AgentOS/1.0"
       query:
-        q: "{{params.query}}"
-        limit: "{{params.limit | default:10}}"
+        q: .params.query
+        limit: .params.limit | tostring
       response:
         root: "/data/children"
 ---

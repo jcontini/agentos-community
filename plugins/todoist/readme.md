@@ -40,7 +40,7 @@ adapters:
       title: .content
       description: .description
       completed: .checked
-      priority: ".priority | invert:5"  # Invert: Todoist 4=urgent → AgentOS 1=highest
+      priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
       due_date: .due.date
       created_at: .added_at
       _project_id: .project_id
@@ -84,7 +84,7 @@ operations:
       method: GET
       url: https://api.todoist.com/api/v1/tasks/filter
       query:
-        query: "{{params.query}}"
+        query: .params.query
       response:
         root: /results
 
@@ -101,10 +101,10 @@ operations:
       method: GET
       url: https://api.todoist.com/api/v1/tasks
       query:
-        project_id: "{{params.project_id}}"
-        section_id: "{{params.section_id}}"
-        parent_id: "{{params.parent_id}}"
-        label: "{{params.label}}"
+        project_id: .params.project_id
+        section_id: .params.section_id
+        parent_id: .params.parent_id
+        label: .params.label
       response:
         root: /results
 
@@ -118,19 +118,19 @@ operations:
       method: GET
       url: https://api.todoist.com/api/v1/tasks/filter
       query:
-        query: "{{params.query}}"
+        query: .params.query
       response:
         root: /results
 
   task.get:
     description: Get a specific task by ID
     returns: task
-    web_url: "https://app.todoist.com/app/task/{{params.id}}"
+    web_url: '"https://app.todoist.com/app/task/" + .params.id'
     params:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: GET
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
   task.create:
     description: Create a new task
@@ -147,13 +147,13 @@ operations:
       method: POST
       url: https://api.todoist.com/api/v1/tasks
       body:
-        content: "{{params.title}}"
-        description: "{{params.description}}"
-        due_string: "{{params.due}}"
-        priority: "{{params.priority | invert:5}}"  # Invert: AgentOS 1=highest → Todoist 4=urgent
-        project_id: "{{params.project_id}}"
-        parent_id: "{{params.parent_id}}"
-        labels: "{{params.labels}}"
+        content: .params.title
+        description: .params.description
+        due_string: .params.due
+        priority: 5 - .params.priority  # Invert: AgentOS 1=highest → Todoist 4=urgent
+        project_id: .params.project_id
+        parent_id: .params.parent_id
+        labels: .params.labels
 
   task.update:
     description: Update an existing task (including moving to different project)
@@ -168,13 +168,13 @@ operations:
       project_id: { type: string, description: "Move to different project" }
     rest:
       method: POST
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
       body:
-        content: "{{params.title}}"
-        description: "{{params.description}}"
-        due_string: "{{params.due}}"
-        priority: "{{params.priority | invert:5}}"  # Invert: AgentOS 1=highest → Todoist 4=urgent
-        labels: "{{params.labels}}"
+        content: .params.title
+        description: .params.description
+        due_string: .params.due
+        priority: 5 - .params.priority  # Invert: AgentOS 1=highest → Todoist 4=urgent
+        labels: .params.labels
 
   task.complete:
     description: Mark a task as complete
@@ -183,7 +183,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/close"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/close"'
 
   task.reopen:
     description: Reopen a completed task
@@ -192,7 +192,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/reopen"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/reopen"'
 
   task.delete:
     description: Delete a task
@@ -201,7 +201,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: DELETE
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
   project.list:
     description: List all projects
@@ -241,11 +241,11 @@ utilities:
     returns: task
     rest:
       method: POST
-      url: "https://api.todoist.com/api/v1/tasks/{{params.id}}/move"
+      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/move"'
       body:
-        project_id: "{{params.project_id}}"
-        section_id: "{{params.section_id}}"
-        parent_id: "{{params.parent_id}}"
+        project_id: .params.project_id
+        section_id: .params.section_id
+        parent_id: .params.parent_id
 ---
 
 # Todoist

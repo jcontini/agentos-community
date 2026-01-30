@@ -31,7 +31,12 @@ properties:
     type: string
     format: url
     required: true
-    description: Permalink to the post
+    description: Permalink to the post (HN discussion, Reddit thread, etc.)
+
+  external_url:
+    type: string
+    format: url
+    description: External link target (the article being linked to, if any)
 
   # Author information
   author:
@@ -140,6 +145,7 @@ views:
           score: "{{engagement.score}}"
           commentCount: "{{engagement.comment_count}}"
           url: "{{url}}"
+          externalUrl: "{{external_url}}"
           publishedAt: "{{published_at}}"
 
   search:
@@ -158,6 +164,7 @@ views:
           score: "{{engagement.score}}"
           commentCount: "{{engagement.comment_count}}"
           url: "{{url}}"
+          externalUrl: "{{external_url}}"
           publishedAt: "{{published_at}}"
 
   # Single post view with nested replies

@@ -28,7 +28,7 @@ adapters:
       title: .title
       description: .description
       transcript: .transcript
-      duration_ms: ".duration | multiply:1000"
+      duration_ms: .duration * 1000
       thumbnail: .thumbnail
       creator_name: .channel
       creator_url: .channel_url

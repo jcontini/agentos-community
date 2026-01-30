@@ -58,18 +58,18 @@ operations:
       method: POST
       url: https://api.firecrawl.dev/v1/scrape
       body:
-        url: "{{params.url}}"
+        url: .params.url
         formats:
-          - markdown
+          - '"markdown"'
         onlyMainContent: true
-        waitFor: "{{params.wait_for_js | default:0}}"
-        timeout: "{{params.timeout | default:30000}}"
+        waitFor: .params.wait_for_js
+        timeout: .params.timeout
       response:
         root: "/data"
         mapping:
-          url: ".metadata.sourceURL"
-          title: ".metadata.title"
-          content: ".markdown"
+          url: .metadata.sourceURL
+          title: .metadata.title
+          content: .markdown
 ---
 
 # Firecrawl

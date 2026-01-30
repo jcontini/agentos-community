@@ -26,8 +26,10 @@ interface PostItemProps {
   score?: number;
   /** Number of comments */
   commentCount?: number;
-  /** Permalink URL */
+  /** Permalink URL (discussion page) */
   url?: string;
+  /** External link target (article being linked to) */
+  externalUrl?: string;
   /** Publication timestamp */
   publishedAt?: string;
 }
@@ -74,8 +76,11 @@ export function PostItem({
   score,
   commentCount,
   url,
+  externalUrl,
   publishedAt,
 }: PostItemProps) {
+  // Title links to external article if available, otherwise to discussion
+  const titleHref = externalUrl || url;
   // Use title if available, otherwise truncate content
   const displayTitle = title || (content ? content.slice(0, 100) + (content.length > 100 ? '...' : '') : 'Untitled');
   
@@ -103,10 +108,25 @@ export function PostItem({
     );
   }
   if (commentCount !== undefined) {
+    // Make comments a link to discussion when we have an external URL
     metaItems.push(
-      <span key="comments" className="text" data-variant="caption">
-        {commentCount} comments
-      </span>
+      externalUrl && url ? (
+        <a
+          key="comments"
+          className="text"
+          data-variant="caption"
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none' }}
+        >
+          {commentCount} comments
+        </a>
+      ) : (
+        <span key="comments" className="text" data-variant="caption">
+          {commentCount} comments
+        </span>
+      )
     );
   }
   
@@ -151,12 +171,12 @@ export function PostItem({
         data-direction="vertical"
         style={{ gap: '4px', flex: 1, minWidth: 0 }}
       >
-        {/* Title as link */}
+        {/* Title as link - goes to external article if available */}
         <a
           className="text"
           data-variant="title"
           data-overflow="ellipsis"
-          href={url}
+          href={titleHref}
           target="_blank"
           rel="noopener noreferrer"
           style={{ 

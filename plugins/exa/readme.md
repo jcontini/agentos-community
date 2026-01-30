@@ -46,7 +46,7 @@ operations:
   webpage.search:
     description: Search the web using neural/semantic search
     returns: webpage[]
-    web_url: "https://exa.ai/search?q={{params.query}}"
+    web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 5, description: "Number of results" }
@@ -54,9 +54,9 @@ operations:
       method: POST
       url: https://api.exa.ai/search
       body:
-        query: "{{params.query}}"
-        numResults: "{{params.limit | default:5}}"
-        type: "auto"
+        query: .params.query
+        numResults: .params.limit
+        type: '"auto"'
       response:
         root: "/results"
         # Search results have different shape than read (no .text field)
@@ -68,7 +68,7 @@ operations:
   webpage.read:
     description: Extract content from a URL
     returns: webpage
-    web_url: "{{params.url}}"
+    web_url: .params.url
     params:
       url: { type: string, required: true, description: "URL to fetch" }
     rest:
@@ -76,7 +76,7 @@ operations:
       url: https://api.exa.ai/contents
       body:
         urls:
-          - "{{params.url}}"
+          - .params.url
         text: true
       response:
         root: "/results/0"

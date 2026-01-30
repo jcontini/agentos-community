@@ -97,7 +97,7 @@ operations:
   task.list:
     description: List issues with optional filters
     returns: task[]
-    web_url: "https://linear.app/{{params.workspace_slug}}"
+    web_url: '"https://linear.app/" + .params.workspace_slug'
     params:
       limit: { type: integer, default: 50, description: "Max issues to return" }
       team_id: { type: string, description: "Filter by team ID" }
@@ -129,9 +129,9 @@ operations:
           }
         }
       variables:
-        limit: "{{params.limit | default: 50}}"
-        teamId: "{{params.team_id}}"
-        stateId: "{{params.state_id}}"
+        limit: .params.limit
+        teamId: .params.team_id
+        stateId: .params.state_id
       response:
         root: /data/issues/nodes
 
@@ -160,7 +160,7 @@ operations:
           }
         }
       variables:
-        id: "{{params.id}}"
+        id: .params.id
       response:
         root: /data/issue
 
@@ -193,13 +193,13 @@ operations:
         }
       variables:
         input:
-          teamId: "{{params.team_id}}"
-          title: "{{params.title}}"
-          description: "{{params.description}}"
-          priority: "{{params.priority}}"
-          projectId: "{{params.project_id}}"
-          parentId: "{{params.parent_id}}"
-          dueDate: "{{params.due}}"
+          teamId: .params.team_id
+          title: .params.title
+          description: .params.description
+          priority: .params.priority
+          projectId: .params.project_id
+          parentId: .params.parent_id
+          dueDate: .params.due
       response:
         root: /data/issueCreate/issue
 
@@ -230,13 +230,13 @@ operations:
           }
         }
       variables:
-        id: "{{params.id}}"
+        id: .params.id
         input:
-          title: "{{params.title}}"
-          description: "{{params.description}}"
-          priority: "{{params.priority}}"
-          stateId: "{{params.state_id}}"
-          dueDate: "{{params.due}}"
+          title: .params.title
+          description: .params.description
+          priority: .params.priority
+          stateId: .params.state_id
+          dueDate: .params.due
       response:
         root: /data/issueUpdate/issue
 
@@ -251,12 +251,12 @@ operations:
           issueDelete(id: $id) { success }
         }
       variables:
-        id: "{{params.id}}"
+        id: .params.id
 
   project.list:
     description: List all projects
     returns: project[]
-    web_url: "https://linear.app/{{params.workspace_slug}}/projects"
+    web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
     graphql:
       query: "{ projects { nodes { id name state } } }"
       response:
@@ -343,7 +343,7 @@ utilities:
           }
         }
       variables:
-        teamId: "{{params.team_id}}"
+        teamId: .params.team_id
       response:
         root: /data/workflowStates/nodes
 
@@ -364,7 +364,7 @@ utilities:
           }
         }
       variables:
-        teamId: "{{params.team_id}}"
+        teamId: .params.team_id
       response:
         root: /data/team/cycles/nodes
 
@@ -397,12 +397,12 @@ utilities:
           }
         }
       variables:
-        id: "{{params.id}}"
+        id: .params.id
       response:
         root: /data/issue
         mapping:
-          blocks: ".relations.nodes"
-          blocked_by: ".inverseRelations.nodes"
+          blocks: .relations.nodes
+          blocked_by: .inverseRelations.nodes
 
   add_blocker:
     description: Add a blocking relationship (blocker_id blocks id). Returns relation_id for removal.
@@ -422,9 +422,9 @@ utilities:
         }
       variables:
         input:
-          issueId: "{{params.blocker_id}}"
-          relatedIssueId: "{{params.id}}"
-          type: blocks
+          issueId: .params.blocker_id
+          relatedIssueId: .params.id
+          type: '"blocks"'
       response:
         root: /data/issueRelationCreate
         mapping:
@@ -445,7 +445,7 @@ utilities:
           }
         }
       variables:
-        id: "{{params.relation_id}}"
+        id: .params.relation_id
       response:
         root: /data/issueRelationDelete
         mapping:
@@ -469,9 +469,9 @@ utilities:
         }
       variables:
         input:
-          issueId: "{{params.id}}"
-          relatedIssueId: "{{params.related_id}}"
-          type: related
+          issueId: .params.id
+          relatedIssueId: .params.related_id
+          type: '"related"'
       response:
         root: /data/issueRelationCreate
         mapping:
