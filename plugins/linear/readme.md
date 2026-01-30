@@ -19,6 +19,16 @@ auth:
   prefix: ""
   label: API Key
   help_url: https://linear.app/settings/api
+  
+  # Account-level params for auto-injection
+  # These are configured per-account and injected into operations automatically
+  account_params:
+    team_id:
+      type: string
+      required: false
+      label: "Default Team"
+      description: "Filter operations to this team by default"
+      discover: get_teams  # Utility to help user find value
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
