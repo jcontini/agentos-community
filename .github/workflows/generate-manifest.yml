@@ -8,6 +8,7 @@ on:
       - 'apps/**'
       - 'themes/**'
       - 'components/**'
+      - 'entities/**'
       - 'scripts/generate-manifest.js'
 
   # Allow manual trigger
@@ -22,8 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,16 +35,12 @@ jobs:
       - name: Generate manifest
         run: node scripts/generate-manifest.js
       
-      - name: Check for changes
-        id: git-check
-        run: |
-          git diff --exit-code manifest.json || echo "changed=true" >> $GITHUB_OUTPUT
-      
-      - name: Commit and push if changed
-        if: steps.git-check.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
-          git commit -m "chore: auto-update manifest.json [skip ci]"
-          git push
+      - name: Upload manifest to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Manifest
+          body: Auto-generated manifest of community content
+          files: manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
