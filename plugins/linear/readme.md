@@ -22,13 +22,20 @@ auth:
   
   # Account-level params for auto-injection
   # These are configured per-account and injected into operations automatically
+  # AI should call `setup` utility after credential is added to auto-configure these
   account_params:
+    workspace_slug:
+      type: string
+      required: false
+      label: "Workspace URL"
+      description: "Organization URL slug for web links (e.g., 'thirdparty' in linear.app/thirdparty/...)"
+      discover: get_organization  # Returns urlKey field
     team_id:
       type: string
       required: false
       label: "Default Team"
       description: "Filter operations to this team by default"
-      discover: get_teams  # Utility to help user find value
+      discover: get_teams  # Returns team id and key
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -260,6 +267,30 @@ operations:
 # Naming convention: verb_noun
 
 utilities:
+  setup:
+    description: |
+      Auto-configure account params. Call this after adding a Linear credential.
+      Returns organization info (for workspace_slug) and teams (for team_id).
+      - If one team: set both workspace_slug and team_id automatically
+      - If multiple teams: set workspace_slug, ask user which team to use as default
+      After getting response, set params via PUT /api/settings/account_params
+    returns:
+      organization.urlKey: string
+      organization.name: string
+      teams: array
+      viewer.id: string
+      viewer.name: string
+      viewer.email: string
+    graphql:
+      query: |
+        {
+          organization { urlKey name }
+          teams { nodes { id key name } }
+          viewer { id name email }
+        }
+      response:
+        root: /data
+
   whoami:
     description: Get current authenticated user (for credential verification)
     returns:
@@ -270,6 +301,17 @@ utilities:
       query: "{ viewer { id name email } }"
       response:
         root: /data/viewer
+
+  get_organization:
+    description: Get organization info including workspace URL slug
+    returns:
+      id: string
+      name: string
+      urlKey: string
+    graphql:
+      query: "{ organization { id name urlKey } }"
+      response:
+        root: /data/organization
 
   get_teams:
     description: List all teams (needed to create issues)
@@ -438,8 +480,19 @@ utilities:
 instructions: |
   Linear plugin notes for AI:
   
+  **SETUP (do this after credential is added):**
+  1. Call `setup` utility — returns organization, teams, and user info
+  2. Extract workspace_slug from organization.urlKey
+  3. If one team: use its id as team_id
+     If multiple teams: ask user "Which Linear team should be your default?"
+  4. Set params via PUT /api/settings/account_params:
+     ```
+     PUT /api/settings/account_params
+     {"value": {"linear:AccountName": {"workspace_slug": "urlKey", "team_id": "team-id"}}}
+     ```
+  
   Creating issues:
-  - Requires team_id — call get_teams first to find available teams
+  - Requires team_id — if not set in account params, call get_teams first
   
   Completing/reopening issues:
   1. Get the issue's team_id (from task.get or task.list)
@@ -455,7 +508,7 @@ instructions: |
   Other notes:
   - Issues have human-readable IDs like "AGE-123" (in source_id field)
   - Priority: 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low
-  - Uses GraphQL API
+  - Web URLs: https://linear.app/{workspace_slug}/issue/{identifier}
 ---
 
 # Linear

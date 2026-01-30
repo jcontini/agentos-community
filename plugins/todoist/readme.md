@@ -77,6 +77,7 @@ operations:
   task.list:
     description: List actionable tasks (due today, overdue, or in inbox)
     returns: task[]
+    web_url: https://app.todoist.com/app/today
     params:
       query: { type: string, default: "today | overdue | #Inbox", description: "Todoist filter query" }
     rest:
@@ -90,6 +91,7 @@ operations:
   task.list_all:
     description: List all tasks with optional filters (no smart defaults)
     returns: task[]
+    web_url: https://app.todoist.com/app/upcoming
     params:
       project_id: { type: string, description: "Filter by project ID" }
       section_id: { type: string, description: "Filter by section ID" }
@@ -109,6 +111,7 @@ operations:
   task.filter:
     description: Get tasks matching a Todoist filter query
     returns: task[]
+    web_url: https://app.todoist.com/app/today
     params:
       query: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
     rest:
@@ -122,6 +125,7 @@ operations:
   task.get:
     description: Get a specific task by ID
     returns: task
+    web_url: "https://app.todoist.com/app/task/{{params.id}}"
     params:
       id: { type: string, required: true, description: "Task ID" }
     rest:
@@ -202,6 +206,7 @@ operations:
   project.list:
     description: List all projects
     returns: project[]
+    web_url: https://app.todoist.com/app/projects/active
     rest:
       method: GET
       url: https://api.todoist.com/api/v1/projects
@@ -211,6 +216,7 @@ operations:
   label.list:
     description: List all labels
     returns: label[]
+    web_url: https://app.todoist.com/app/labels
     rest:
       method: GET
       url: https://api.todoist.com/api/v1/labels
