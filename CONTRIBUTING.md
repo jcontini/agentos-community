@@ -549,6 +549,75 @@ operations:
           title: .title    # Search results lack full content
 ```
 
+### Response Transforms (jq)
+
+For APIs that return complex structures needing restructuring before mapping, use `response.transform` with jq expressions:
+
+```yaml
+operations:
+  post.get:
+    rest:
+      url: "https://api.example.com/posts/{{params.id}}"
+      response:
+        # Transform runs FIRST (before root extraction)
+        transform: |
+          {
+            id: .data.id,
+            title: .data.title,
+            replies: [.comments[] | {id, content: .body}]
+          }
+        # Then root extracts from transformed output
+        root: "/"
+```
+
+**Pipeline order:**
+1. API Response
+2. `response.transform` (jq expression, optional)
+3. `response.root` (path extraction, optional)
+4. `adapters.{entity}.mapping` (field normalization)
+
+**When to use transforms:**
+
+| Situation | Solution |
+|-----------|----------|
+| Simple path extraction | `response.root: "/data"` |
+| Need to merge multiple parts | `transform` to combine |
+| Recursive nested data (comments) | `transform` with `def` |
+| API returns `[post, comments]` array | `transform` to restructure |
+
+**Recursive transforms** for nested comments:
+
+```yaml
+# Reddit example: API returns [post_data, comments_data] array
+transform: |
+  def map_comment:
+    {
+      id: .id,
+      content: .body,
+      author: { name: .author },
+      published_at: (.created_utc | todate),
+      replies: [(.replies.data.children // [])[] | select(.kind == "t1") | .data | map_comment]
+    };
+  .[0].data.children[0].data + {
+    replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
+  }
+```
+
+**jq cheatsheet:**
+
+| Expression | Description |
+|------------|-------------|
+| `.field` | Access field |
+| `.[0]` | Array index |
+| `.[] \| ...` | Map over array |
+| `select(.x == "y")` | Filter |
+| `{a: .b, c: .d}` | Object construction |
+| `// default` | Null coalescing |
+| `def f: ...; f` | Define recursive function |
+| `todate` | Unix timestamp → ISO |
+
+**Note:** Transforms use `jaq` (pure Rust jq implementation). Most jq syntax works, with minor differences documented at [jaq](https://github.com/01mf02/jaq).
+
 ### Checklist
 
 - [ ] `icon.svg` exists (vector icon required)
