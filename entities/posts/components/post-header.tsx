@@ -20,18 +20,12 @@ export interface PostHeaderProps {
   author?: string;
   /** Author profile URL */
   authorUrl?: string;
-  /** Community/subreddit name */
-  community?: string;
-  /** Community URL */
-  communityUrl?: string;
   /** Score (upvotes - downvotes) */
   score?: number;
   /** Number of comments */
   commentCount?: number;
   /** Publication timestamp */
   publishedAt?: string;
-  /** Plugin that provided this data (for platform-specific display) */
-  plugin?: string;
 }
 
 /**
@@ -64,68 +58,20 @@ function formatNumber(num: number): string {
   return String(num);
 }
 
-/**
- * Get platform-specific community display name
- * e.g., "r/programming" for Reddit
- */
-function formatCommunity(name?: string, plugin?: string): string | undefined {
-  if (!name) return undefined;
-  
-  switch (plugin) {
-    case 'reddit':
-      return `r/${name}`;
-    default:
-      return name;
-  }
-}
-
 export function PostHeader({
   title,
   author,
   authorUrl,
-  community,
-  communityUrl,
   score,
   commentCount,
   publishedAt,
-  plugin,
 }: PostHeaderProps) {
-  const displayCommunity = formatCommunity(community, plugin);
-  
   return (
     <div
       className="stack"
       data-direction="vertical"
       style={{ gap: '8px', padding: '12px 16px' }}
     >
-      {/* Community breadcrumb - shown above title */}
-      {displayCommunity && (
-        communityUrl ? (
-          <a
-            className="text"
-            data-variant="caption"
-            href={communityUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ 
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.9rem'
-            }}
-          >
-            {displayCommunity}
-          </a>
-        ) : (
-          <span 
-            className="text" 
-            data-variant="caption"
-            style={{ fontWeight: 600, fontSize: '0.9rem' }}
-          >
-            {displayCommunity}
-          </span>
-        )
-      )}
-      
       {/* Title */}
       {title && (
         <span

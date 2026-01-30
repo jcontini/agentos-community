@@ -174,12 +174,9 @@ views:
               title: "{{activity.response.title}}"
               author: "{{activity.response.author.name}}"
               authorUrl: "{{activity.response.author.url}}"
-              community: "{{activity.response.community.name}}"
-              communityUrl: "{{activity.response.community.url}}"
               score: "{{activity.response.engagement.score}}"
               commentCount: "{{activity.response.engagement.comment_count}}"
               publishedAt: "{{activity.response.published_at}}"
-              plugin: "{{activity.response.plugin}}"
           - component: text
             props:
               content: "{{activity.response.content}}"
