@@ -42,6 +42,7 @@ operations:
   video.search:
     description: Search YouTube videos by query (returns 10 results sorted by relevance)
     returns: video[]
+    web_url: "https://www.youtube.com/results?search_query={{params.query}}"
     params:
       query:
         type: string
@@ -69,6 +70,7 @@ operations:
   video.search_recent:
     description: Search YouTube videos by query (returns 10 results sorted by upload date, newest first)
     returns: video[]
+    web_url: "https://www.youtube.com/results?search_query={{params.query}}&sp=CAI"
     params:
       query:
         type: string
@@ -96,6 +98,7 @@ operations:
   video.list:
     description: List the latest 20 videos from a YouTube channel or playlist
     returns: video[]
+    web_url: "{{params.url}}"
     handles_urls:
       - "youtube.com/@*"
       - "youtube.com/channel/*"
@@ -128,6 +131,7 @@ operations:
   video.get:
     description: Get video metadata (title, creator, thumbnail, duration)
     returns: video
+    web_url: "{{params.url}}"
     handles_urls:
       - "youtube.com/*"
       - "youtu.be/*"
@@ -148,6 +152,7 @@ operations:
   video.transcript:
     description: Get video transcript from auto-generated captions
     returns: video
+    web_url: "{{params.url}}"
     params:
       url:
         type: string

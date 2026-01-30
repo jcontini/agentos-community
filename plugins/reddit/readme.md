@@ -67,6 +67,7 @@ operations:
   post.search:
     description: Search posts across Reddit
     returns: post[]
+    web_url: "https://www.reddit.com/search/?q={{params.query}}"
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 10, description: "Number of results (max 100)" }
@@ -86,6 +87,7 @@ operations:
   post.list:
     description: List posts from a subreddit
     returns: post[]
+    web_url: "https://www.reddit.com/r/{{params.subreddit}}"
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
       sort: { type: string, default: "hot", description: "Sort by: hot, new, top, rising" }
@@ -103,6 +105,7 @@ operations:
   post.get:
     description: Get a Reddit post with comments
     returns: post
+    web_url: "https://www.reddit.com/comments/{{params.id}}"
     params:
       id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
       comment_limit: { type: integer, default: 100, description: "Max comments to fetch" }
@@ -119,6 +122,7 @@ operations:
   group.get:
     description: Get a subreddit with its top posts
     returns: group
+    web_url: "https://www.reddit.com/r/{{params.subreddit}}"
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
       limit: { type: integer, default: 25, description: "Number of posts to include" }
@@ -159,6 +163,7 @@ operations:
   group.search:
     description: Search for subreddits (communities)
     returns: group[]
+    web_url: "https://www.reddit.com/subreddits/search/?q={{params.query}}"
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 10, description: "Number of results (max 100)" }

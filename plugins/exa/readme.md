@@ -46,6 +46,7 @@ operations:
   webpage.search:
     description: Search the web using neural/semantic search
     returns: webpage[]
+    web_url: "https://exa.ai/search?q={{params.query}}"
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 5, description: "Number of results" }
@@ -67,6 +68,7 @@ operations:
   webpage.read:
     description: Extract content from a URL
     returns: webpage
+    web_url: "{{params.url}}"
     params:
       url: { type: string, required: true, description: "URL to fetch" }
     rest:

@@ -97,6 +97,7 @@ operations:
   task.list:
     description: List issues with optional filters
     returns: task[]
+    web_url: "https://linear.app/{{params.workspace_slug}}"
     params:
       limit: { type: integer, default: 50, description: "Max issues to return" }
       team_id: { type: string, description: "Filter by team ID" }
@@ -255,6 +256,7 @@ operations:
   project.list:
     description: List all projects
     returns: project[]
+    web_url: "https://linear.app/{{params.workspace_slug}}/projects"
     graphql:
       query: "{ projects { nodes { id name state } } }"
       response:
