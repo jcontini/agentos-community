@@ -1,11 +1,13 @@
 /**
  * Comment Thread Component
  * 
- * Renders a recursive tree of comments/replies.
- * Each comment can have nested replies, displayed with indentation.
+ * Renders a recursive tree of comments/replies with:
+ * - Threading lines (like Reddit)
+ * - Collapse/expand toggle
+ * - Upvote indicator
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Comment {
   id: string;
@@ -26,8 +28,6 @@ interface CommentThreadProps {
   replies?: Comment[];
   /** Whether there are more comments not loaded */
   hasMore?: boolean;
-  /** Current nesting depth (internal use) */
-  depth?: number;
 }
 
 interface SingleCommentProps {
@@ -53,18 +53,45 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 /**
- * Single comment with its metadata
+ * Format score
+ */
+function formatScore(score: number): string {
+  if (score >= 1000) {
+    return `${(score / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+  return String(score);
+}
+
+/**
+ * Single comment with its metadata and nested replies
  */
 function SingleComment({ comment, depth }: SingleCommentProps) {
-  const indentPx = depth * 16; // 16px per level
+  const [collapsed, setCollapsed] = useState(false);
+  const hasReplies = comment.replies && comment.replies.length > 0;
   
   return (
-    <div 
-      className="comment"
-      style={{ marginLeft: `${indentPx}px` }}
-    >
+    <div className={`comment ${collapsed ? 'comment--collapsed' : ''}`}>
+      {/* Collapse toggle */}
+      <div 
+        className="comment__collapse"
+        onClick={() => setCollapsed(!collapsed)}
+        title={collapsed ? 'Expand' : 'Collapse'}
+      >
+        {collapsed ? '+' : '−'}
+      </div>
+      
+      {/* Threading line (only if has replies and not collapsed) */}
+      {hasReplies && !collapsed && (
+        <div 
+          className="comment__thread-line"
+          onClick={() => setCollapsed(true)}
+          title="Collapse thread"
+        />
+      )}
+      
       {/* Comment header */}
       <div className="comment__header">
+        <span className="comment__vote">▲</span>
         {comment.author && (
           comment.author.url ? (
             <a 
@@ -82,13 +109,19 @@ function SingleComment({ comment, depth }: SingleCommentProps) {
         
         {comment.engagement?.score !== undefined && (
           <span className="comment__score">
-            {comment.engagement.score} points
+            {formatScore(comment.engagement.score)} points
           </span>
         )}
         
         {comment.published_at && (
           <span className="comment__time">
             {formatRelativeTime(comment.published_at)}
+          </span>
+        )}
+        
+        {collapsed && hasReplies && (
+          <span className="comment__score">
+            ({comment.replies!.length} {comment.replies!.length === 1 ? 'child' : 'children'})
           </span>
         )}
       </div>
@@ -99,9 +132,9 @@ function SingleComment({ comment, depth }: SingleCommentProps) {
       </div>
       
       {/* Nested replies */}
-      {comment.replies && comment.replies.length > 0 && (
+      {hasReplies && (
         <div className="comment__replies">
-          {comment.replies.map((reply) => (
+          {comment.replies!.map((reply) => (
             <SingleComment 
               key={reply.id} 
               comment={reply} 
@@ -114,11 +147,7 @@ function SingleComment({ comment, depth }: SingleCommentProps) {
   );
 }
 
-export function CommentThread({ 
-  replies, 
-  hasMore,
-  depth = 0 
-}: CommentThreadProps) {
+export function CommentThread({ replies, hasMore }: CommentThreadProps) {
   if (!replies || replies.length === 0) {
     return (
       <div className="comment-thread comment-thread--empty">
@@ -133,13 +162,13 @@ export function CommentThread({
         <SingleComment 
           key={comment.id} 
           comment={comment} 
-          depth={depth} 
+          depth={0} 
         />
       ))}
       
       {hasMore && (
         <div className="comment-thread__more">
-          <span>More comments not loaded</span>
+          More comments not loaded...
         </div>
       )}
     </div>
