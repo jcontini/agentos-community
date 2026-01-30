@@ -45,6 +45,7 @@ adapters:
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
       published_at: ".data.created_utc | from_unix"
+      replies: .replies
   
   group:
     terminology: Subreddit
@@ -117,7 +118,23 @@ operations:
       query:
         limit: "{{params.comment_limit | default:100}}"
       response:
-        root: "/0/data/children/0"
+        # Transform extracts post from .[0] and comments from .[1], mapping recursively
+        # Output: { data: {post fields}, replies: [comments] } to match adapter mapping
+        # Note: Reddit returns "" (empty string) for .replies when no nested replies exist
+        transform: |
+          def map_comment:
+            {
+              id: .id,
+              content: .body,
+              author: { name: .author, url: ("https://reddit.com/u/" + .author) },
+              engagement: { score: .ups },
+              published_at: (.created_utc | todate),
+              replies: [if .replies == "" then empty else (.replies.data.children[] | select(.kind == "t1") | .data | map_comment) end]
+            };
+          {
+            data: .[0].data.children[0].data,
+            replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
+          }
 
   group.get:
     description: Get a subreddit with its top posts
