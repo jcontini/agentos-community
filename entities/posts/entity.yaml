@@ -123,32 +123,24 @@ display:
 # Note: Browser provides padding and status bar automatically
 views:
   # List view - shows post.list and post.search results
+  # Note: Community/subreddit context is shown in the ConnectorBar (inner chrome)
   list:
     title: "Posts"
     layout:
-      - component: layout/stack
-        props:
-          direction: vertical
-          gap: "0"
-        children:
-          - component: community-header
-            props:
-              name: "{{activity.request.subreddit}}"
-              plugin: "{{activity.request.plugin}}"
-          - component: list
-            data:
-              source: activity
-            item_component: post-item
-            item_props:
-              id: "{{id}}"
-              title: "{{title}}"
-              content: "{{content}}"
-              author: "{{author.name}}"
-              community: "{{community.name}}"
-              score: "{{engagement.score}}"
-              commentCount: "{{engagement.comment_count}}"
-              url: "{{url}}"
-              publishedAt: "{{published_at}}"
+      - component: list
+        data:
+          source: activity
+        item_component: post-item
+        item_props:
+          id: "{{id}}"
+          title: "{{title}}"
+          content: "{{content}}"
+          author: "{{author.name}}"
+          community: "{{community.name}}"
+          score: "{{engagement.score}}"
+          commentCount: "{{engagement.comment_count}}"
+          url: "{{url}}"
+          publishedAt: "{{published_at}}"
 
   search:
     title: "Search Results"

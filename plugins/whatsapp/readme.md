@@ -3,7 +3,7 @@ id: whatsapp
 name: WhatsApp
 description: Read WhatsApp messages from local macOS database
 icon: icon.svg
-color: "#25D366"
+color: "#2CD46B"
 tags: [messages, chat, conversations]
 
 website: https://www.whatsapp.com/

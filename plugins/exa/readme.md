@@ -3,7 +3,7 @@ id: exa
 name: Exa
 description: Semantic web search and content extraction
 icon: icon.png
-color: "#5436DA"
+color: "#1F40ED"
 tags: [web, search, scraping]
 display: browser
 

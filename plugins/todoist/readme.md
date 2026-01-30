@@ -3,7 +3,7 @@ id: todoist
 name: Todoist
 description: Personal task management
 icon: icon.png
-color: "#E44332"
+color: "#DE483A"
 tags: [tasks, todos, reminders]
 
 website: https://todoist.com
