@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated_at": "2026-01-29T20:39:03.043Z",
+  "updated_at": "2026-01-30T21:59:02.846Z",
   "plugins": [
     {
       "id": "apple-calendar",
@@ -14,7 +14,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.714Z"
+      "updated_at": "2026-01-30T21:58:50.894Z"
     },
     {
       "id": "brave",
@@ -27,7 +27,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.714Z"
+      "updated_at": "2026-01-30T21:58:50.895Z"
     },
     {
       "id": "curl",
@@ -41,7 +41,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.714Z"
+      "updated_at": "2026-01-30T21:58:50.895Z"
     },
     {
       "id": "exa",
@@ -55,7 +55,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.714Z"
+      "updated_at": "2026-01-30T21:58:50.895Z"
     },
     {
       "id": "facebook",
@@ -68,7 +68,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.715Z"
+      "updated_at": "2026-01-30T21:58:50.895Z"
     },
     {
       "id": "firecrawl",
@@ -82,7 +82,21 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.715Z"
+      "updated_at": "2026-01-30T21:58:50.895Z"
+    },
+    {
+      "id": "hackernews",
+      "name": "Hacker News",
+      "description": "Read Hacker News stories, comments, and discussions",
+      "icon": "plugins/hackernews/icon.svg",
+      "tags": [
+        "news",
+        "tech",
+        "communities"
+      ],
+      "version": "1.0.0",
+      "author": "community",
+      "updated_at": "2026-01-30T21:58:50.895Z"
     },
     {
       "id": "linear",
@@ -96,7 +110,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.715Z"
+      "updated_at": "2026-01-30T21:58:50.896Z"
     },
     {
       "id": "postgres",
@@ -109,7 +123,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.715Z"
+      "updated_at": "2026-01-30T21:58:50.896Z"
     },
     {
       "id": "reddit",
@@ -123,7 +137,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.715Z"
+      "updated_at": "2026-01-30T21:58:50.896Z"
     },
     {
       "id": "todoist",
@@ -137,7 +151,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.716Z"
+      "updated_at": "2026-01-30T21:58:50.897Z"
     },
     {
       "id": "whatsapp",
@@ -151,7 +165,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.716Z"
+      "updated_at": "2026-01-30T21:58:50.897Z"
     },
     {
       "id": "youtube",
@@ -164,7 +178,7 @@
       ],
       "version": "1.0.0",
       "author": "community",
-      "updated_at": "2026-01-29T20:38:54.716Z"
+      "updated_at": "2026-01-30T21:58:50.897Z"
     }
   ],
   "apps": [],
@@ -177,7 +191,7 @@
       "preview": "themes/os/macos9/preview.png",
       "version": "1.0.0",
       "author": "agentos",
-      "updated_at": "2026-01-29T20:38:54.719Z"
+      "updated_at": "2026-01-30T21:58:50.899Z"
     }
   ],
   "components": []
