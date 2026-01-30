@@ -45,73 +45,23 @@ adapters:
 
 operations:
   post.list:
-    description: List front page stories from Hacker News
+    description: List Hacker News stories by feed type
     returns: post[]
-    web_url: https://news.ycombinator.com
+    web_url: '"https://news.ycombinator.com/" + (if .params.feed == "front" then "" else .params.feed end)'
     params:
+      feed:
+        type: string
+        default: "front"
+        description: "Feed type: front, new, ask, show"
       limit:
         type: integer
         default: 30
         description: "Number of stories (max 100)"
     rest:
       method: GET
-      url: https://hn.algolia.com/api/v1/search
+      url: '"https://hn.algolia.com/api/v1/" + (if .params.feed == "new" then "search_by_date" else "search" end)'
       query:
-        tags: front_page
-        hitsPerPage: .params.limit | tostring
-      response:
-        root: "/hits"
-
-  post.list_new:
-    description: List newest stories from Hacker News
-    returns: post[]
-    web_url: https://news.ycombinator.com/newest
-    params:
-      limit:
-        type: integer
-        default: 30
-        description: "Number of stories (max 100)"
-    rest:
-      method: GET
-      url: https://hn.algolia.com/api/v1/search_by_date
-      query:
-        tags: story
-        hitsPerPage: .params.limit | tostring
-      response:
-        root: "/hits"
-
-  post.list_ask:
-    description: List Ask HN posts
-    returns: post[]
-    web_url: https://news.ycombinator.com/ask
-    params:
-      limit:
-        type: integer
-        default: 30
-        description: "Number of posts (max 100)"
-    rest:
-      method: GET
-      url: https://hn.algolia.com/api/v1/search
-      query:
-        tags: ask_hn
-        hitsPerPage: .params.limit | tostring
-      response:
-        root: "/hits"
-
-  post.list_show:
-    description: List Show HN posts
-    returns: post[]
-    web_url: https://news.ycombinator.com/show
-    params:
-      limit:
-        type: integer
-        default: 30
-        description: "Number of posts (max 100)"
-    rest:
-      method: GET
-      url: https://hn.algolia.com/api/v1/search
-      query:
-        tags: show_hn
+        tags: '.params.feed | if . == "new" then "story" elif . == "ask" then "ask_hn" elif . == "show" then "show_hn" else "front_page" end'
         hitsPerPage: .params.limit | tostring
       response:
         root: "/hits"
@@ -193,31 +143,39 @@ The official HN Firebase API requires multiple requests to fetch a story with co
 
 | Operation | Description |
 |-----------|-------------|
-| `post.list` | Front page stories |
-| `post.list_new` | Newest stories |
-| `post.list_ask` | Ask HN posts |
-| `post.list_show` | Show HN posts |
+| `post.list` | List stories by feed type (front, new, ask, show) |
 | `post.search` | Search stories by keyword |
 | `post.get` | Get a single story with all comments |
+
+## Feeds
+
+The `post.list` operation supports different feeds via the `feed` param:
+
+| Feed | Description | HN URL |
+|------|-------------|--------|
+| `front` (default) | Front page / top stories | news.ycombinator.com |
+| `new` | Newest submissions | news.ycombinator.com/newest |
+| `ask` | Ask HN posts | news.ycombinator.com/ask |
+| `show` | Show HN posts | news.ycombinator.com/show |
 
 ## Examples
 
 ```bash
-# Front page stories
+# Front page stories (default)
 POST /api/plugins/hackernews/post.list
 {"limit": 30}
 
 # Newest stories
-POST /api/plugins/hackernews/post.list_new
-{}
+POST /api/plugins/hackernews/post.list
+{"feed": "new"}
 
 # Ask HN posts
-POST /api/plugins/hackernews/post.list_ask
-{}
+POST /api/plugins/hackernews/post.list
+{"feed": "ask", "limit": 20}
 
 # Show HN posts
-POST /api/plugins/hackernews/post.list_show
-{}
+POST /api/plugins/hackernews/post.list
+{"feed": "show"}
 
 # Search stories
 POST /api/plugins/hackernews/post.search
