@@ -22,9 +22,3 @@ chrome:
 
 # Default wallpaper (path relative to wallpapers root)
 default_wallpaper: macos/10-4.png
-
-# Available skins (color variations)
-skins:
-  - id: default
-    name: Default
-    description: Classic purple platinum appearance

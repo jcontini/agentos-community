@@ -81,7 +81,8 @@ fieldset {
 legend {
   text-align: left;
   padding: 0 4px 0.65em;
-  background-color: #ddd;
+  background-color: var(--content-bg);
+  color: var(--content-fg);
   display: block;
 }
 
@@ -394,8 +395,8 @@ button.primary::before, input[type=button].primary::before, input[type=submit].p
 
 input:not([type=button], [type=submit], [type=reset], [type=checkbox], [type=radio], [type=range]), textarea, .input,
 select[multiple], select[size]:not([size="1"]) {
-  background: #fff;
-  color: #000;
+  background: var(--content-bg);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: -1px -1px #888;
   margin: 2px;
@@ -550,14 +551,14 @@ input[type=radio]:disabled + label {
 
 .toggle-description {
   font-size: 11px;
-  color: #555;
+  color: var(--content-fg-secondary);
   margin-left: 18px; /* Align with label text (checkbox width + gap) */
   line-height: 1.3;
 }
 
 .toggle[data-disabled] .toggle-label,
 .toggle[data-disabled] .toggle-description {
-  color: #777;
+  color: var(--content-fg-muted);
 }
 
 .toggle[data-disabled] .toggle-row {
@@ -896,8 +897,8 @@ progress:not([value])::-webkit-progress-value {
 
 .window.active > .window-body,
 .window:focus-within > .window-body {
-  color: #000;
-  background: var(--window-bg);
+  color: var(--content-fg);
+  background: var(--content-bg);
   border: 1px solid #000;
   box-shadow: 1px 1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff, -1px -1px 0 #999, -1px 0 0 #999, 0 -1px 0 #999;
 }
@@ -1088,7 +1089,8 @@ progress:not([value])::-webkit-progress-value {
   position: relative;
   z-index: 1;
   margin-top: -4px;
-  background: #eee;
+  background: var(--content-bg-inset);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: inset 1px 1px 0 #ccc, inset 2px 2px 0 #fff, inset -1px -1px 0 #999, inset -2px -2px 0 #bbb;
   /*box-shadow: inset 1px 0 0 #ccc, inset 2px 0 0 #fff, inset -1px -1px 0 #999, inset -2px -2px 0 #bbb;*/
@@ -1099,8 +1101,8 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .list {
-  background: #fff;
-  color: #000;
+  background: var(--content-bg);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: -1px -1px #888, 1px 1px #fff;
   overflow: auto;
@@ -1146,7 +1148,7 @@ progress:not([value])::-webkit-progress-value {
 
 .list-loading-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 /* List empty state */
@@ -1163,7 +1165,7 @@ progress:not([value])::-webkit-progress-value {
 
 .list-empty-text {
   font-size: 12px;
-  color: #888;
+  color: var(--content-fg-muted);
 }
 
 /* List error state */
@@ -1255,7 +1257,7 @@ progress:not([value])::-webkit-progress-value {
 }
 .detailed tr {
   outline: none;
-  background: #eee;
+  background: var(--content-bg-subtle);
 }
 .detailed tr:focus {
   outline: none;
@@ -1316,7 +1318,7 @@ progress:not([value])::-webkit-progress-value {
 }
 .list ul[role=tree] li {
   list-style-type: none;
-  background: #eee;
+  background: var(--content-bg-subtle);
 }
 .list ul[role=tree] li > details {
   margin: 0;
@@ -1456,8 +1458,8 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: #fff;
-  color: #000;
+  background: var(--content-bg);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: -1px -1px #888;
   border-radius: 2px;
@@ -1481,7 +1483,7 @@ progress:not([value])::-webkit-progress-value {
   flex: 1;
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #000;
+  color: var(--content-fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1549,17 +1551,17 @@ progress:not([value])::-webkit-progress-value {
 .search-result-title {
   font-size: 14px;
   font-weight: bold;
-  color: #0000CC;
+  color: var(--link-color);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .search-result-title:visited {
-  color: #660099;
+  color: var(--link-color-visited);
 }
 
 .search-result-title:hover {
-  color: #0000FF;
+  color: var(--link-color-hover);
 }
 
 .search-result-title:active {
@@ -1574,14 +1576,14 @@ progress:not([value])::-webkit-progress-value {
 
 .search-result-snippet {
   font-size: 12px;
-  color: #333;
+  color: var(--content-fg);
   margin: 0;
   line-height: 1.4;
 }
 
 /* List item styling for search results */
 .list-item:has(.search-result) {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--content-border-subtle);
 }
 
 .list-item:has(.search-result):last-child {
@@ -1601,7 +1603,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .list-item[data-selected="true"] .search-result-snippet {
-  color: #000;
+  color: var(--content-fg);
 }
 
 /* =============================================================================
@@ -1682,8 +1684,8 @@ progress:not([value])::-webkit-progress-value {
 
 .text-input-field {
   flex: 1;
-  background: #fff;
-  color: #000;
+  background: var(--content-bg);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: -1px -1px #888;
   padding: 4px 6px;
@@ -1860,7 +1862,7 @@ progress:not([value])::-webkit-progress-value {
 
 .app-view-loading-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 /* App view empty state (no historical activity) */
@@ -1877,13 +1879,13 @@ progress:not([value])::-webkit-progress-value {
 
 .app-view-empty-text {
   font-size: 13px;
-  color: #333;
+  color: var(--content-fg);
   font-weight: 500;
 }
 
 .app-view-empty-hint {
   font-size: 11px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 /* =============================================================================
@@ -1893,7 +1895,7 @@ progress:not([value])::-webkit-progress-value {
 .markdown {
   padding: 12px 16px;
   line-height: 1.6;
-  color: #000;
+  color: var(--content-fg);
 }
 
 /* Markdown loading state */
@@ -1917,7 +1919,7 @@ progress:not([value])::-webkit-progress-value {
 
 .markdown-loading-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 /* Markdown empty state */
@@ -1930,7 +1932,7 @@ progress:not([value])::-webkit-progress-value {
 
 .markdown-empty-text {
   font-size: 12px;
-  color: #888;
+  color: var(--content-fg-muted);
 }
 
 /* Markdown error state */
@@ -1956,7 +1958,7 @@ progress:not([value])::-webkit-progress-value {
   font-size: 20px;
   font-weight: bold;
   margin: 16px 0 8px;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid var(--content-border);
   padding-bottom: 4px;
 }
 
@@ -1977,30 +1979,32 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .markdown a {
-  color: #0000CC;
+  color: var(--link-color);
   text-decoration: underline;
 }
 
 .markdown a:visited {
-  color: #660099;
+  color: var(--link-color-visited);
 }
 
 .markdown a:hover {
-  color: #0000FF;
+  color: var(--link-color-hover);
 }
 
 .markdown code {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  background: #eee;
+  background: var(--code-bg);
+  color: var(--code-fg);
   padding: 1px 4px;
   border-radius: 2px;
 }
 
 .markdown pre {
-  background: #eee;
+  background: var(--code-bg);
+  color: var(--code-fg);
   padding: 8px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--code-border);
   border-radius: 3px;
   overflow-x: auto;
 }
@@ -2031,8 +2035,8 @@ progress:not([value])::-webkit-progress-value {
   border-left: 3px solid var(--primary-3);
   margin: 8px 0;
   padding: 4px 12px;
-  background: #f5f5f5;
-  color: #555;
+  background: var(--content-bg-muted);
+  color: var(--content-fg-secondary);
 }
 
 /* =============================================================================
@@ -2041,51 +2045,52 @@ progress:not([value])::-webkit-progress-value {
 
 /* Base text styling */
 .text {
-  color: var(--window-fg);
+  color: var(--content-fg);
 }
 
 /* Variant-specific appearance */
 .text[data-variant="title"] {
-  color: #0000CC;
+  color: var(--link-color);
   text-decoration: underline;
 }
 
 .text[data-variant="title"]:visited {
-  color: #660099;
+  color: var(--link-color-visited);
 }
 
 .text[data-variant="title"]:hover {
-  color: #0000FF;
+  color: var(--link-color-hover);
 }
 
 .text[data-variant="url"] {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #006600;
+  color: var(--url-color);
 }
 
 .text[data-variant="caption"] {
   font-size: 11px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .text[data-variant="code"] {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  background: #eee;
+  background: var(--code-bg);
+  color: var(--code-fg);
   padding: 1px 4px;
   border-radius: 2px;
 }
 
 .text[data-variant="subtitle"] {
   font-weight: 500;
-  color: #333;
+  color: var(--content-fg);
 }
 
 .text[data-variant="label"] {
   font-size: 11px;
   font-weight: 500;
-  color: #444;
+  color: var(--content-fg-secondary);
 }
 
 /* =============================================================================
@@ -2333,7 +2338,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .history-item-url {
-  color: var(--text-secondary, #666);
+  color: var(--content-fg-secondary);
   font-size: 11px;
 }
 
@@ -2341,7 +2346,7 @@ progress:not([value])::-webkit-progress-value {
   display: flex;
   gap: 8px;
   font-size: 11px;
-  color: var(--text-secondary, #888);
+  color: var(--content-fg-muted);
 }
 
 .history-item-time {
@@ -2388,7 +2393,7 @@ progress:not([value])::-webkit-progress-value {
 .plugin-list-loading-text,
 .plugin-list-empty-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .plugin-list-error {
@@ -2435,19 +2440,19 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .plugin-list-master .detailed tbody tr:hover:not([aria-selected="true"]) {
-  background: #f0f0f0;
+  background: var(--content-bg-muted);
 }
 
 /* Disabled plugin text */
 .plugin-disabled {
-  color: #888;
+  color: var(--content-fg-muted);
 }
 
 /* Right pane: details */
 .plugin-list-detail {
   flex: 1;
   overflow: auto;
-  background: #f5f5f5;
+  background: var(--content-bg-muted);
   min-width: 200px;
 }
 
@@ -2464,7 +2469,7 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #888;
+  color: var(--content-fg-muted);
   font-size: 12px;
 }
 
@@ -2483,7 +2488,7 @@ progress:not([value])::-webkit-progress-value {
   margin: 0;
   font-size: 16px;
   font-weight: bold;
-  color: #000;
+  color: var(--content-fg);
 }
 
 .plugin-detail-toggle {
@@ -2491,7 +2496,7 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #555;
+  color: var(--content-fg-secondary);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -2503,7 +2508,7 @@ progress:not([value])::-webkit-progress-value {
 .plugin-detail-description {
   margin: 0;
   font-size: 12px;
-  color: #333;
+  color: var(--content-fg);
   line-height: 1.5;
 }
 
@@ -2529,19 +2534,19 @@ progress:not([value])::-webkit-progress-value {
 .plugin-detail-list-item {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #333;
+  color: var(--content-fg);
   padding: 2px 0;
 }
 
 .plugin-detail-list-item::before {
   content: "• ";
-  color: #888;
+  color: var(--content-fg-muted);
 }
 
 .plugin-detail-no-tools {
   margin: 0;
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-style: italic;
 }
 
@@ -2586,7 +2591,7 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .wallpaper-item {
@@ -2623,7 +2628,7 @@ progress:not([value])::-webkit-progress-value {
 .wallpaper-item-name {
   font-size: 11px;
   text-align: center;
-  color: #000;
+  color: var(--content-fg);
   word-break: break-word;
 }
 
@@ -2633,7 +2638,7 @@ progress:not([value])::-webkit-progress-value {
 
 .wallpaper-item-default {
   font-weight: normal;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 /* =============================================================================
@@ -2671,29 +2676,29 @@ progress:not([value])::-webkit-progress-value {
 .media-header__title {
   font-size: 16px;
   font-weight: bold;
-  color: #000;
+  color: var(--content-fg);
   line-height: 1.3;
 }
 
 .media-header__creator {
   font-size: 12px;
-  color: #0000CC;
+  color: var(--link-color);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .media-header__creator:visited {
-  color: #660099;
+  color: var(--link-color-visited);
 }
 
 .media-header__creator:hover {
-  color: #0000FF;
+  color: var(--link-color-hover);
 }
 
 .media-header__duration {
   font-size: 11px;
   font-family: "Monaco", "Menlo", monospace;
-  color: #666;
+  color: var(--content-fg-secondary);
   background: #ddd;
   padding: 2px 6px;
   border-radius: 3px;
@@ -2738,7 +2743,7 @@ progress:not([value])::-webkit-progress-value {
 .credential-list-loading-text,
 .credential-list-empty-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .credential-list-empty-icon {
@@ -2748,7 +2753,7 @@ progress:not([value])::-webkit-progress-value {
 
 .credential-list-empty-hint {
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-family: "Monaco", "Menlo", monospace;
 }
 
@@ -2773,13 +2778,13 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .credential-account {
-  color: #333;
+  color: var(--content-fg);
 }
 
 .credential-key-preview {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 10px;
-  color: #666;
+  color: var(--content-fg-secondary);
   letter-spacing: 0.5px;
 }
 
@@ -2817,7 +2822,7 @@ progress:not([value])::-webkit-progress-value {
 
 .about-panel-loading-text {
   font-size: 12px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .about-panel-error {
@@ -2849,13 +2854,13 @@ progress:not([value])::-webkit-progress-value {
 .about-panel-tagline {
   margin: 0 0 4px;
   font-size: 12px;
-  color: #555;
+  color: var(--content-fg-secondary);
 }
 
 .about-panel-version {
   margin: 0;
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
 }
 
 /* Info sections */
@@ -2884,14 +2889,14 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .about-panel-row dt {
-  color: #555;
+  color: var(--content-fg-secondary);
   flex-shrink: 0;
 }
 
 .about-panel-row dd {
   margin: 0;
   text-align: right;
-  color: #000;
+  color: var(--content-fg);
 }
 
 /* Paths section - values can be long */
@@ -2913,7 +2918,7 @@ progress:not([value])::-webkit-progress-value {
 
 .about-panel-size {
   margin-left: 8px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-family: inherit;
 }
 
@@ -3030,7 +3035,7 @@ progress:not([value])::-webkit-progress-value {
 
 .setting-description {
   font-size: 11px;
-  color: #555;
+  color: var(--content-fg-secondary);
   margin-left: 20px;
   margin-top: 2px;
 }
@@ -3043,7 +3048,7 @@ progress:not([value])::-webkit-progress-value {
 
 .setting-fieldset legend {
   padding: 0 4px;
-  background: transparent;
+  background: var(--content-bg);
 }
 
 .setting-fieldset legend .setting-toggle {
@@ -3053,7 +3058,7 @@ progress:not([value])::-webkit-progress-value {
 .setting-fieldset .setting-preview {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 12px;
-  color: #333;
+  color: var(--content-fg);
   padding: 4px 0;
 }
 
@@ -3067,7 +3072,7 @@ progress:not([value])::-webkit-progress-value {
 
 .setting-map-empty {
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-style: italic;
 }
 
@@ -3076,8 +3081,8 @@ progress:not([value])::-webkit-progress-value {
   align-items: baseline;
   gap: 8px;
   padding: 4px 8px;
-  background: #f5f5f5;
-  border: 1px solid #ccc;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
   border-radius: 3px;
   font-size: 12px;
 }
@@ -3085,19 +3090,19 @@ progress:not([value])::-webkit-progress-value {
 .setting-map-key {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #333;
+  color: var(--content-fg);
   font-weight: 500;
 }
 
 .setting-map-arrow {
-  color: #888;
+  color: var(--content-fg-muted);
   flex-shrink: 0;
 }
 
 .setting-map-value {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #006600;
+  color: var(--url-color);
 }
 
 /* URL/File handlers display - grouped by plugin */
@@ -3110,7 +3115,7 @@ progress:not([value])::-webkit-progress-value {
 
 .setting-handlers-empty {
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-style: italic;
 }
 
@@ -3119,8 +3124,8 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 12px;
   padding: 6px 10px;
-  background: #f5f5f5;
-  border: 1px solid #ccc;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
   border-radius: 3px;
   font-size: 12px;
 }
@@ -3128,7 +3133,7 @@ progress:not([value])::-webkit-progress-value {
 .setting-handler-plugin {
   font-weight: bold;
   font-size: 12px;
-  color: #000;
+  color: var(--content-fg);
   min-width: 80px;
   flex-shrink: 0;
 }
@@ -3143,11 +3148,11 @@ progress:not([value])::-webkit-progress-value {
 .setting-handler-pattern {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 10px;
-  color: #333;
-  background: #e8e8e8;
+  color: var(--content-fg);
+  background: var(--content-bg-inset);
   padding: 2px 6px;
   border-radius: 3px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--content-border);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3156,7 +3161,7 @@ progress:not([value])::-webkit-progress-value {
 
 /* Drag handle for sortable items */
 .setting-handler-pattern .drag-handle {
-  color: #888;
+  color: var(--content-fg-muted);
   cursor: grab;
   font-size: 8px;
   letter-spacing: -1px;
@@ -3169,7 +3174,7 @@ progress:not([value])::-webkit-progress-value {
 
 /* Rank number for ordered items */
 .setting-handler-pattern .plugin-rank {
-  color: #666;
+  color: var(--content-fg-secondary);
   font-weight: 500;
 }
 
@@ -3192,7 +3197,7 @@ progress:not([value])::-webkit-progress-value {
 
 .setting-list-empty {
   font-size: 11px;
-  color: #888;
+  color: var(--content-fg-muted);
   font-style: italic;
   padding: 4px 0;
 }
@@ -3203,8 +3208,8 @@ progress:not([value])::-webkit-progress-value {
   justify-content: space-between;
   gap: 8px;
   padding: 4px 8px;
-  background: #f5f5f5;
-  border: 1px solid #ccc;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
   border-radius: 3px;
   font-size: 12px;
 }
@@ -3212,7 +3217,7 @@ progress:not([value])::-webkit-progress-value {
 .setting-list-item-text {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
-  color: #333;
+  color: var(--content-fg);
   word-break: break-all;
   flex: 1;
 }
@@ -3280,24 +3285,30 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #fff;
+  background: var(--content-bg);
+  color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: -1px -1px #888;
   border-radius: 2px;
 }
 
+/* Dark mode override - var(--content-bg) not resolving correctly here */
+[data-mode="dark"] .setting-path-display {
+  background: #1e1e1e;
+}
+
 .setting-path-value {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 12px;
-  color: #000;
+  color: var(--content-fg);
   flex: 1;
   word-break: break-all;
 }
 
 .setting-path-custom {
   font-size: 10px;
-  color: #666;
-  background: #eee;
+  color: var(--content-fg-secondary);
+  background: var(--content-bg-inset);
   padding: 2px 6px;
   border-radius: 3px;
   flex-shrink: 0;
@@ -3348,8 +3359,9 @@ progress:not([value])::-webkit-progress-value {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #888;
-  background: #fff;
+  border-right: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--content-fg);
 }
 
 .profile-editor-list-header {
@@ -3357,8 +3369,8 @@ progress:not([value])::-webkit-progress-value {
   justify-content: space-between;
   align-items: center;
   padding: 8px 10px;
-  border-bottom: 1px solid #ccc;
-  background: #eee;
+  border-bottom: 1px solid var(--content-border);
+  background: var(--content-bg-muted);
 }
 
 .profile-editor-list-title {
@@ -3398,15 +3410,16 @@ progress:not([value])::-webkit-progress-value {
 .profile-editor-profile {
   padding: 6px 10px;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--content-border-subtle);
 }
 
 .profile-editor-profile:hover {
-  background: #f5f5f5;
+  background: var(--content-bg-subtle);
 }
 
 .profile-editor-profile.selected {
   background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 .profile-editor-profile-name {
@@ -3419,7 +3432,7 @@ progress:not([value])::-webkit-progress-value {
 .profile-editor-empty {
   padding: 20px;
   text-align: center;
-  color: #666;
+  color: var(--content-fg-secondary);
   font-size: 11px;
 }
 
@@ -3437,6 +3450,8 @@ progress:not([value])::-webkit-progress-value {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--content-bg);
+  color: var(--content-fg);
 }
 
 .profile-editor-preview-header {
@@ -3444,8 +3459,8 @@ progress:not([value])::-webkit-progress-value {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid #ccc;
-  background: #eee;
+  border-bottom: 1px solid var(--content-border);
+  background: var(--content-bg-muted);
 }
 
 .profile-editor-preview-title {
@@ -3462,7 +3477,8 @@ progress:not([value])::-webkit-progress-value {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: #fff;
+  background: var(--content-bg);
+  color: var(--content-fg);
 }
 
 .profile-editor-preview-content .markdown {
@@ -3472,14 +3488,14 @@ progress:not([value])::-webkit-progress-value {
 
 .profile-editor-preview-footer {
   padding: 6px 12px;
-  border-top: 1px solid #ccc;
-  background: #f5f5f5;
+  border-top: 1px solid var(--content-border);
+  background: var(--content-bg-muted);
 }
 
 .profile-editor-path {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 10px;
-  color: #666;
+  color: var(--content-fg-secondary);
 }
 
 .profile-editor-no-selection {
@@ -3487,7 +3503,7 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #999;
+  color: var(--content-fg-muted);
   font-size: 12px;
 }
 
@@ -4135,7 +4151,7 @@ progress:not([value])::-webkit-progress-value {
 
 .plugin-detail-view-list-item {
   padding: 4px 8px;
-  background: #f5f5f5;
+  background: var(--content-bg-muted);
   border-radius: 3px;
 }
 
@@ -4170,4 +4186,248 @@ progress:not([value])::-webkit-progress-value {
 
 .button--danger:hover {
   background: #e04555;
+}
+
+/* =============================================================================
+   Theme Picker Component
+   Used in Settings > Appearance to select OS themes
+   ============================================================================= */
+
+.theme-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.theme-picker-header {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.theme-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  background: var(--content-bg);
+  color: var(--content-fg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  gap: 12px;
+  font: inherit;
+}
+
+.theme-item:hover {
+  background: var(--content-bg-subtle);
+}
+
+.theme-item--selected {
+  border: 2px solid var(--accent);
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+.theme-item--selected .theme-item-name,
+.theme-item--selected .theme-item-description {
+  color: var(--selection-fg);
+}
+
+.theme-item-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid #666;
+  flex-shrink: 0;
+}
+
+.theme-item-preview--macos {
+  background: linear-gradient(135deg, #CCCCCC 0%, #9999CC 100%);
+}
+
+.theme-item-preview--windows {
+  background: linear-gradient(135deg, #008080 0%, #000080 100%);
+}
+
+.theme-item-preview--other {
+  background: linear-gradient(135deg, #666666 0%, #333333 100%);
+}
+
+.theme-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.theme-item-name {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.theme-item-description {
+  font-size: 11px;
+  color: var(--content-fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-item-checkmark {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Loading/Error/Empty states */
+.theme-picker--loading,
+.theme-picker--error,
+.theme-picker--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.theme-picker-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--content-fg-secondary);
+}
+
+.theme-picker-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c00;
+}
+
+.theme-picker-empty {
+  color: var(--content-fg-muted);
+}
+
+/* =============================================================================
+   Appearance Controls Component
+   Color mode toggle and accent color picker in Settings
+   ============================================================================= */
+
+.appearance-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.appearance-section-header {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Color Mode Toggle */
+.color-mode-options {
+  display: flex;
+  gap: 8px;
+}
+
+.color-mode-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--content-border);
+  border-radius: 8px;
+  background: var(--content-bg);
+  color: var(--content-fg);
+  cursor: pointer;
+  transition: all 0.15s;
+  font: inherit;
+}
+
+.color-mode-button:hover {
+  background: var(--content-bg-subtle);
+}
+
+.color-mode-button--selected {
+  border: 2px solid var(--accent);
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+.color-mode-button-icon {
+  font-size: 20px;
+}
+
+.color-mode-button-label {
+  font-size: 12px;
+}
+
+.color-mode-button--selected .color-mode-button-label {
+  font-weight: 600;
+}
+
+.color-mode-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--content-fg-secondary);
+}
+
+/* Accent Color Presets */
+.accent-color-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accent-color-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--content-border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.accent-color-button--selected {
+  border: 3px solid #000;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
+}
+
+/* Custom Color Picker */
+.accent-color-custom {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accent-color-custom-label {
+  font-size: 12px;
+  color: var(--content-fg-secondary);
+}
+
+.accent-color-custom-input {
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.accent-color-custom-value {
+  font-size: 11px;
+  font-family: "Monaco", "Menlo", monospace;
+  color: var(--content-fg-secondary);
 }
