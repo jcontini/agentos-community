@@ -98,12 +98,15 @@ function extractPluginMetadata(pluginDir) {
   // Get the most recent file modification time in this plugin's folder
   const updatedAt = getLatestModTime(pluginDir);
   
+  // Extract entities from adapters keys (e.g., { post: {...}, group: {...} } → ["post", "group"])
+  const entities = metadata.adapters ? Object.keys(metadata.adapters) : [];
+  
   return {
     id: metadata.id || basename(pluginDir),
     name: metadata.name || basename(pluginDir),
     description: metadata.description || '',
     icon: `plugins/${relativePath}/icon.svg`,
-    tags: metadata.tags || [],
+    entities,
     version: metadata.version || '1.0.0',
     author: metadata.author || 'community',
     updated_at: updatedAt,
