@@ -44,6 +44,7 @@ display:
   primary: name
   secondary: row_count
   icon: table
+  show_in_library: false
 
 ---
 id: column
@@ -89,3 +90,4 @@ display:
   primary: name
   secondary: type
   icon: columns
+  show_in_library: false

@@ -2215,6 +2215,27 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg-secondary);
 }
 
+.markdown img {
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+/* Small inline icons/emojis - constrain SVGs that would otherwise blow up */
+.markdown img[src*=".svg"],
+.markdown img[src*="emoji"],
+.markdown img[src*="icon"] {
+  max-height: 1.5em;
+  max-width: 1.5em;
+  vertical-align: middle;
+  display: inline;
+  margin: 0 2px;
+}
+
 /* =============================================================================
    Text Primitive - Theme Appearance
    ============================================================================= */
@@ -5339,16 +5360,67 @@ progress:not([value])::-webkit-progress-value {
   background: var(--content-bg);
 }
 
-/* Tag sidebar */
+/* Sidebar (matches Accounts sidebar) */
 .store-sidebar {
-  width: 120px;
+  width: 200px;
   border-right: 1px solid var(--content-border);
   background: var(--content-bg-muted);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
-  padding: 10px 12px;
 }
 
+.store-sidebar-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--content-border);
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--content-bg-muted);
+}
+
+.store-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.store-sidebar-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--content-border-subtle);
+  font-size: 13px;
+  color: var(--content-fg);
+}
+
+.store-sidebar-item:hover:not(.store-sidebar-item--selected) {
+  background: var(--content-bg-subtle);
+}
+
+.store-sidebar-item--selected {
+  background: var(--content-bg);
+  font-weight: 600;
+}
+
+.store-sidebar-item-name {
+  flex: 1;
+}
+
+.store-sidebar-badge {
+  background: var(--content-border);
+  color: var(--content-fg-secondary);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.store-sidebar-item--selected .store-sidebar-badge {
+  background: var(--content-border-subtle);
+}
+
+/* Legacy .store-tag classes (kept for compatibility) */
 .store-sidebar-title {
   font-size: 10px;
   font-weight: 600;
@@ -5367,7 +5439,7 @@ progress:not([value])::-webkit-progress-value {
   background: transparent;
 }
 
-.store-tag:hover {
+.store-tag:hover:not(.store-tag--active) {
   background: var(--content-bg-subtle);
 }
 

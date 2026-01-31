@@ -162,3 +162,4 @@ operations: [list, get, create, delete]
 display:
   primary: name
   icon: tag
+  show_in_library: false
