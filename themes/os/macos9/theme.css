@@ -4833,3 +4833,372 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
   pointer-events: none;
 }
+
+/* =============================================================================
+ * Account List (Accounts app)
+ * Master-detail view for managing plugin accounts and credentials
+ * ============================================================================= */
+
+.account-list {
+  display: flex;
+  height: 100%;
+  background: var(--content-bg);
+}
+
+.account-list-loading,
+.account-list-error {
+  padding: 20px;
+  text-align: center;
+}
+
+.account-list-error {
+  color: var(--status-urgent);
+}
+
+/* Sidebar */
+.account-list-sidebar {
+  width: 200px;
+  border-right: 1px solid var(--content-border);
+  background: var(--content-bg-muted);
+  display: flex;
+  flex-direction: column;
+}
+
+.account-list-sidebar-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--content-border);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--content-fg);
+}
+
+.account-list-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.account-list-empty-sidebar {
+  padding: 16px;
+  text-align: center;
+  color: var(--content-fg-secondary);
+  font-size: 12px;
+}
+
+/* Plugin Items */
+.account-list-plugin-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  background: transparent;
+  border-bottom: 1px solid var(--content-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-list-plugin-item:hover {
+  background: var(--content-bg-subtle);
+}
+
+.account-list-plugin-item--selected {
+  background: var(--content-bg);
+}
+
+.account-list-plugin-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.account-list-plugin-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--content-fg);
+}
+
+.account-list-plugin-name--selected {
+  font-weight: 600;
+}
+
+.account-list-badge {
+  background: var(--content-border);
+  color: var(--content-fg-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.account-list-badge--selected {
+  background: var(--content-border-subtle);
+}
+
+/* Content area */
+.account-list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.account-list-empty-content {
+  text-align: center;
+  color: var(--content-fg-secondary);
+  margin-top: 40px;
+}
+
+.account-list-empty-content p {
+  margin: 8px 0;
+}
+
+.account-list-empty-hint {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.account-list-empty-content code {
+  background: var(--content-bg-muted);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 11px;
+}
+
+/* Plugin Header in content */
+.account-list-plugin-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.account-list-plugin-header-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.account-list-plugin-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--content-fg);
+}
+
+.account-list-plugin-entities {
+  font-size: 12px;
+  color: var(--content-fg-secondary);
+}
+
+/* Credential card */
+.account-list-credential {
+  border: 1px solid var(--content-border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--content-bg-muted);
+}
+
+.account-list-credential-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.account-list-credential-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--content-fg);
+}
+
+.account-list-credential-preview {
+  font-size: 12px;
+  color: var(--content-fg-secondary);
+  font-family: "Monaco", "Menlo", monospace;
+}
+
+.account-list-remove-btn {
+  background: none;
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--content-fg-secondary);
+}
+
+.account-list-remove-btn:hover {
+  background: var(--content-bg-subtle);
+  color: var(--content-fg);
+}
+
+/* Parameters section */
+.account-list-params {
+  margin-top: 12px;
+}
+
+.account-list-params-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--content-fg-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.account-list-edit-btn {
+  background: none;
+  border: none;
+  color: var(--link-color);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.account-list-edit-btn:hover {
+  text-decoration: underline;
+}
+
+.account-list-params-empty {
+  padding: 8px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--content-fg-muted);
+}
+
+.account-list-params-list {
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.account-list-param-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--content-border-subtle);
+  font-size: 12px;
+}
+
+.account-list-param-row:last-child {
+  border-bottom: none;
+}
+
+.account-list-param-key {
+  background: var(--content-bg-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 8px;
+  font-weight: 500;
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 11px;
+}
+
+.account-list-param-value {
+  flex: 1;
+  font-family: "Monaco", "Menlo", monospace;
+  font-size: 11px;
+  color: var(--content-fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-list-param-remove {
+  background: none;
+  border: none;
+  color: var(--status-urgent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+
+.account-list-param-remove:hover {
+  text-decoration: underline;
+}
+
+/* Add param form */
+.account-list-param-form {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+  border-top: 1px solid var(--content-border);
+  background: var(--content-bg-muted);
+}
+
+.account-list-param-input {
+  padding: 4px 6px;
+  border: 1px solid var(--content-border);
+  border-radius: 3px;
+  font-size: 12px;
+  background: var(--content-bg);
+  color: var(--content-fg);
+}
+
+.account-list-param-input--key {
+  width: 80px;
+}
+
+.account-list-param-input--value {
+  flex: 1;
+}
+
+.account-list-param-add-btn {
+  padding: 4px 10px;
+  background: var(--accent, #339);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.account-list-param-add-btn:disabled {
+  background: var(--content-border);
+  cursor: not-allowed;
+}
+
+.account-list-params-actions {
+  margin-top: 8px;
+}
+
+.account-list-done-btn {
+  padding: 4px 12px;
+  background: var(--content-bg-muted);
+  color: var(--content-fg);
+  border: 1px solid var(--content-border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.account-list-done-btn:hover {
+  background: var(--content-bg-subtle);
+}
+
+/* Help link */
+.account-list-help {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.account-list-help a {
+  color: var(--link-color);
+}
+
+.account-list-help a:hover {
+  text-decoration: underline;
+}
+
+.account-list-details {
+  /* Container for account details - no special styling needed */
+}
