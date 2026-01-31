@@ -943,55 +943,69 @@ progress:not([value])::-webkit-progress-value {
   padding: 2px 4px 0;
 }
 
-.title-bar-buttons {
-  display: flex;
-  gap: 3px;
-  visibility: hidden;
-}
-
-.window.active > .title-bar > .title-bar-buttons,
-.window:focus-within > .title-bar > .title-bar-buttons,
-.dialog.active > .title-bar > .title-bar-buttons,
-.dialog:focus-within > .title-bar > .title-bar-buttons,
-.title-bar.active > .title-bar-buttons {
-  visibility: visible;
-}
-
-.title-bar-buttons:first-child {
-  margin-left: -1px;
-}
-
-.title-bar-buttons:last-child {
-  margin-right: -1px;
-}
-
-.title-bar-buttons button {
-  width: 11px;
-  height: 11px;
+/* Window controls: close box (left) and zoom box (right) */
+.title-bar-close,
+.title-bar-zoom {
+  width: 13px;
+  height: 13px;
   min-width: 0;
   border-radius: 0;
   border: 1px solid #222;
   margin: 2px 1px 5px;
   padding: 0;
-  background: linear-gradient(to bottom right, #999, #fff);
-  box-shadow: -1px -1px 0 #888, -1px 0 0 #888, 0 -1px #888, 1px 1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff, inset 1px 1px 0 #ccc, inset -1px -1px 0 #888;
+  background: linear-gradient(135deg, #a9a9a9 0%, #c7c7c7 50%, #f1f2f1 100%);
+  box-shadow: -1px -1px 0 #888, -1px 0 0 #888, 0 -1px #888, 1px 1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff;
+  cursor: default;
+  visibility: hidden;
+  flex-shrink: 0;
+  position: relative;
 }
 
-.title-bar-buttons button:active {
-  background: linear-gradient(to bottom right, #444, #bbb);
-  box-shadow: -1px -1px 0 #888, 1px 1px 0 #fff, inset -1px -1px 0 #999;
+/* Close box on the left */
+.title-bar-close {
+  margin-left: -1px;
+}
+
+/* Zoom box on the right */
+.title-bar-zoom {
+  margin-right: -1px;
+}
+
+/* Show buttons only on active window */
+.window.active > .title-bar > .title-bar-close,
+.window.active > .title-bar > .title-bar-zoom,
+.window:focus-within > .title-bar > .title-bar-close,
+.window:focus-within > .title-bar > .title-bar-zoom,
+.dialog.active > .title-bar > .title-bar-close,
+.dialog.active > .title-bar > .title-bar-zoom,
+.dialog:focus-within > .title-bar > .title-bar-close,
+.dialog:focus-within > .title-bar > .title-bar-zoom {
+  visibility: visible;
+}
+
+/* Pressed state */
+.title-bar-close:active,
+.title-bar-zoom:active {
+  background: linear-gradient(135deg, #888 0%, #999 50%, #aaa 100%);
+  box-shadow: -1px -1px 0 #888, 1px 1px 0 #fff, inset 1px 1px 0 #666;
 }
 
 /* Dark mode: title bar buttons */
-[data-mode="dark"] .title-bar-buttons button {
+[data-mode="dark"] .title-bar-close,
+[data-mode="dark"] .title-bar-zoom {
   border-color: #181818;
-  background: linear-gradient(to bottom right, #2a2a2a, #404040);
-  box-shadow: -1px -1px 0 #1f1f1f, -1px 0 0 #1f1f1f, 0 -1px #1f1f1f, 1px 1px 0 #404040, 1px 0 0 #404040, 0 1px 0 #404040, inset 1px 1px 0 #383838, inset -1px -1px 0 #232323;
+  background: linear-gradient(135deg, #2a2a2a 0%, #353535 50%, #404040 100%);
+  box-shadow: -1px -1px 0 #1f1f1f, -1px 0 0 #1f1f1f, 0 -1px #1f1f1f, 1px 1px 0 #404040, 1px 0 0 #404040, 0 1px 0 #404040;
 }
 
-[data-mode="dark"] .title-bar-buttons button:active {
-  background: linear-gradient(to bottom right, #1f1f1f, #353535);
-  box-shadow: -1px -1px 0 #1f1f1f, 1px 1px 0 #404040, inset -1px -1px 0 #2a2a2a;
+[data-mode="dark"] .title-bar-close:active,
+[data-mode="dark"] .title-bar-zoom:active {
+  background: linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 50%, #353535 100%);
+  box-shadow: -1px -1px 0 #1f1f1f, 1px 1px 0 #404040, inset 1px 1px 0 #181818;
+}
+
+[data-mode="dark"] .title-bar-zoom::before {
+  border-color: #181818;
 }
 
 .window-body {
