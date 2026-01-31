@@ -65,54 +65,55 @@
    OS chrome (windows, menus, tabs, buttons) adapts to dark mode
    ============================================================================= */
 [data-mode="dark"] {
-  --desktop-bg: #2a2a4a;
-  --window-bg: #2d2d2d;
-  --window-fg: #e0e0e0;
-  --window-frame-bg: #3a3a3a;
+  /* Cursor-inspired palette: softer darks instead of pure black */
+  --desktop-bg: #1a1a2e;
+  --window-bg: #1f1f1f;
+  --window-fg: #d4d4d4;
+  --window-frame-bg: #2a2a2a;
   
   /* Primary accent colors for dark mode */
   --primary-1: #224;
   --primary-2: #446;
   --primary-3: #668;
   --primary-4: #88a;
-  --primary-5: #445;
-  --primary-6: #333;
+  --primary-5: #383848;
+  --primary-6: #2a2a2a;
   --selection-bg: var(--primary-3);
   --selection-fg: #fff;
   
-  /* Chrome colors - darker variants */
-  --chrome-bg: #3a3a3a;
-  --chrome-bg-inactive: #2d2d2d;
-  --chrome-fg: #e0e0e0;
+  /* Chrome colors - Cursor-style darks */
+  --chrome-bg: #2a2a2a;
+  --chrome-bg-inactive: #232323;
+  --chrome-fg: #d4d4d4;
   --chrome-fg-inactive: #888;
-  --chrome-border: #1a1a1a;
-  --chrome-border-light: #555;
-  --chrome-border-medium: #444;
-  --chrome-border-dark: #333;
-  --chrome-border-darker: #222;
-  --chrome-shadow: #1a1a1a;
+  --chrome-border: #181818;
+  --chrome-border-light: #404040;
+  --chrome-border-medium: #353535;
+  --chrome-border-dark: #2a2a2a;
+  --chrome-border-darker: #1f1f1f;
+  --chrome-shadow: #181818;
   
   /* Button colors */
-  --button-bg: #4a4a4a;
-  --button-bg-active: #666;
-  --button-shadow-light: #666;
-  --button-shadow-dark: #222;
+  --button-bg: #353535;
+  --button-bg-active: #454545;
+  --button-shadow-light: #4a4a4a;
+  --button-shadow-dark: #1a1a1a;
   
   /* Tab colors */
-  --tab-bg: #3a3a3a;
-  --tab-bg-active: #2d2d2d;
+  --tab-bg: #2a2a2a;
+  --tab-bg-active: #1f1f1f;
   
   /* Menu colors */
-  --menu-bg: #3a3a3a;
+  --menu-bg: #2a2a2a;
   
   /* Scrollbar colors */
-  --scrollbar-track: #2a2a2a;
-  --scrollbar-button: #4a4a4a;
-  --scrollbar-button-active: #555;
+  --scrollbar-track: #1f1f1f;
+  --scrollbar-button: #3a3a3a;
+  --scrollbar-button-active: #454545;
   
   /* Title bar stripe pattern - more muted for dark mode */
-  --titlebar-stripe-light: #555;
-  --titlebar-stripe-dark: #2a2a2a;
+  --titlebar-stripe-light: #404040;
+  --titlebar-stripe-dark: #252525;
   
   /* Hover overlay */
   --hover-overlay: rgba(255, 255, 255, 0.08);
@@ -983,14 +984,14 @@ progress:not([value])::-webkit-progress-value {
 
 /* Dark mode: title bar buttons */
 [data-mode="dark"] .title-bar-buttons button {
-  border-color: #111;
-  background: linear-gradient(to bottom right, #3a3a3a, #555);
-  box-shadow: -1px -1px 0 #222, -1px 0 0 #222, 0 -1px #222, 1px 1px 0 #555, 1px 0 0 #555, 0 1px 0 #555, inset 1px 1px 0 #4a4a4a, inset -1px -1px 0 #2a2a2a;
+  border-color: #181818;
+  background: linear-gradient(to bottom right, #2a2a2a, #404040);
+  box-shadow: -1px -1px 0 #1f1f1f, -1px 0 0 #1f1f1f, 0 -1px #1f1f1f, 1px 1px 0 #404040, 1px 0 0 #404040, 0 1px 0 #404040, inset 1px 1px 0 #383838, inset -1px -1px 0 #232323;
 }
 
 [data-mode="dark"] .title-bar-buttons button:active {
-  background: linear-gradient(to bottom right, #222, #444);
-  box-shadow: -1px -1px 0 #222, 1px 1px 0 #555, inset -1px -1px 0 #333;
+  background: linear-gradient(to bottom right, #1f1f1f, #353535);
+  box-shadow: -1px -1px 0 #1f1f1f, 1px 1px 0 #404040, inset -1px -1px 0 #2a2a2a;
 }
 
 .window-body {
@@ -1227,8 +1228,8 @@ progress:not([value])::-webkit-progress-value {
 
 /* Dark mode selected tab - gradient lighter at top, matches panel at bottom */
 [data-mode="dark"] .tabs > menu > button[aria-selected=true] {
-  background: linear-gradient(to bottom, #444 0%, #3a3a3a 30%, #2d2d2d 100%);
-  box-shadow: inset 0 1px var(--chrome-border-dark), inset 0 2px #555;
+  background: linear-gradient(to bottom, #353535 0%, #2a2a2a 30%, #1f1f1f 100%);
+  box-shadow: inset 0 1px var(--chrome-border-dark), inset 0 2px #404040;
 }
 
 .tabs > [role=tabpanel] {
@@ -1248,7 +1249,7 @@ progress:not([value])::-webkit-progress-value {
 /* Dark mode: tab panel border and inset shadows */
 [data-mode="dark"] .tabs > [role=tabpanel] {
   border-color: var(--chrome-border-medium);
-  box-shadow: inset 1px 1px 0 #444, inset 2px 2px 0 #555, inset -1px -1px 0 #222, inset -2px -2px 0 #333;
+  box-shadow: inset 1px 1px 0 #353535, inset 2px 2px 0 #404040, inset -1px -1px 0 #1f1f1f, inset -2px -2px 0 #252525;
 }
 
 .list {
@@ -3511,7 +3512,7 @@ progress:not([value])::-webkit-progress-value {
 
 /* Dark mode override - var(--content-bg) not resolving correctly here */
 [data-mode="dark"] .setting-path-display {
-  background: #1e1e1e;
+  background: #181818;
 }
 
 .setting-path-value {
