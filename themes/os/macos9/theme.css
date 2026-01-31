@@ -332,11 +332,11 @@ legend {
   background-image: linear-gradient(180deg, var(--primary-5), var(--primary-5) 1px, transparent 1px, transparent 2px), linear-gradient(180deg, var(--primary-4), var(--primary-4) 1px, transparent 1px, transparent 2px), linear-gradient(180deg, transparent, transparent 1px, var(--primary-1) 1px, var(--primary-1) 2px);
 }
 
-/* Force classic scrollbars (not overlay) */
-* {
-  scrollbar-width: auto;
-  scrollbar-color: var(--primary-4) #aaa;
-}
+/* 
+ * NOTE: Do NOT use scrollbar-width or scrollbar-color here!
+ * Chrome 121+ (2024) made these standard properties override ::-webkit-scrollbar styling.
+ * We rely on webkit scrollbar pseudo-elements for the classic Mac OS 9 look.
+ */
 
 ::-webkit-scrollbar {
   background: var(--scrollbar-track);
@@ -981,6 +981,18 @@ progress:not([value])::-webkit-progress-value {
   box-shadow: -1px -1px 0 #888, 1px 1px 0 #fff, inset -1px -1px 0 #999;
 }
 
+/* Dark mode: title bar buttons */
+[data-mode="dark"] .title-bar-buttons button {
+  border-color: #111;
+  background: linear-gradient(to bottom right, #3a3a3a, #555);
+  box-shadow: -1px -1px 0 #222, -1px 0 0 #222, 0 -1px #222, 1px 1px 0 #555, 1px 0 0 #555, 0 1px 0 #555, inset 1px 1px 0 #4a4a4a, inset -1px -1px 0 #2a2a2a;
+}
+
+[data-mode="dark"] .title-bar-buttons button:active {
+  background: linear-gradient(to bottom right, #222, #444);
+  box-shadow: -1px -1px 0 #222, 1px 1px 0 #555, inset -1px -1px 0 #333;
+}
+
 .window-body {
   flex-grow: 1;
   min-height: 0;          /* Allow shrinking in flex context */
@@ -1028,6 +1040,23 @@ progress:not([value])::-webkit-progress-value {
   margin: 0;
   top: -1px;
   min-width: 200px;
+}
+
+/* Submenus - hidden by default, shown on hover */
+[role=menu] li.has-submenu {
+  position: relative;
+}
+
+[role=menu] li.has-submenu > .submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -1px;
+}
+
+[role=menu] li.has-submenu.submenu-open > .submenu,
+[role=menu] li.has-submenu:hover > .submenu {
+  display: block;
 }
 [role=menu] li[role=separator] {
   border-top: 1px solid var(--chrome-border-dark);
@@ -1196,6 +1225,12 @@ progress:not([value])::-webkit-progress-value {
   background-image: url(tab-selected-dark.svg);
 }
 
+/* Dark mode selected tab - gradient lighter at top, matches panel at bottom */
+[data-mode="dark"] .tabs > menu > button[aria-selected=true] {
+  background: linear-gradient(to bottom, #444 0%, #3a3a3a 30%, #2d2d2d 100%);
+  box-shadow: inset 0 1px var(--chrome-border-dark), inset 0 2px #555;
+}
+
 .tabs > [role=tabpanel] {
   position: relative;
   z-index: 1;
@@ -1204,11 +1239,16 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
   border: 1px solid #000;
   box-shadow: inset 1px 1px 0 #ccc, inset 2px 2px 0 #fff, inset -1px -1px 0 #999, inset -2px -2px 0 #bbb;
-  /*box-shadow: inset 1px 0 0 #ccc, inset 2px 0 0 #fff, inset -1px -1px 0 #999, inset -2px -2px 0 #bbb;*/
   flex: 1;            /* Take remaining space */
   min-height: 0;      /* Allow shrinking below content size */
   overflow: auto;     /* Scroll when content overflows */
-  padding: 16px;      /* macOS 9 style inner padding */
+  /* No padding here - let content inside handle padding so scrollbar is edge-to-edge */
+}
+
+/* Dark mode: tab panel border and inset shadows */
+[data-mode="dark"] .tabs > [role=tabpanel] {
+  border-color: var(--chrome-border-medium);
+  box-shadow: inset 1px 1px 0 #444, inset 2px 2px 0 #555, inset -1px -1px 0 #222, inset -2px -2px 0 #333;
 }
 
 .list {
@@ -1884,6 +1924,11 @@ progress:not([value])::-webkit-progress-value {
 .scroll-area {
   max-height: var(--scroll-max-height, 100%);
   overflow: auto;
+}
+
+/* When scroll-area is inside a tabpanel, add padding to its content */
+.tabs > [role=tabpanel] > .scroll-area > * {
+  padding: 16px;
 }
 
 .scroll-area[data-direction="vertical"] {
@@ -2974,6 +3019,41 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg-muted);
 }
 
+.about-panel-description {
+  padding: 0 16px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.about-panel-description p {
+  margin: 0;
+}
+
+.about-panel-links {
+  padding: 12px 16px 0;
+}
+
+.about-panel-link {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  text-decoration: underline;
+  color: var(--content-fg-secondary);
+  cursor: pointer;
+}
+
+.about-panel-link:hover {
+  color: var(--content-fg);
+}
+
+[data-mode="dark"] .about-panel-link {
+  color: var(--content-fg-muted);
+}
+
+[data-mode="dark"] .about-panel-link:hover {
+  color: var(--content-fg);
+}
+
 /* Info sections */
 .about-panel-section {
   margin: 0;
@@ -3112,6 +3192,32 @@ progress:not([value])::-webkit-progress-value {
 
 .about-panel-error-message {
   color: #c00;
+}
+
+/* =============================================================================
+   Scrollbar Test Component
+   Debug panel for testing scrollbar implementations
+   ============================================================================= */
+
+.scrollbar-test {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scrollbar-test h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.scrollbar-test-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.scrollbar-test-box {
+  font-size: 12px;
 }
 
 /* =============================================================================
@@ -4315,26 +4421,29 @@ progress:not([value])::-webkit-progress-value {
   margin-bottom: 4px;
 }
 
-.theme-picker-list {
+.theme-picker-list,
+.theme-picker-grid {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .theme-item {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px;
   border: 1px solid var(--content-border);
   border-radius: 4px;
   background: var(--content-bg);
   color: var(--content-fg);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
-  text-align: left;
-  gap: 12px;
+  text-align: center;
+  gap: 6px;
   font: inherit;
+  position: relative;
+  min-width: 80px;
 }
 
 .theme-item:hover {
@@ -4347,14 +4456,13 @@ progress:not([value])::-webkit-progress-value {
   color: var(--selection-fg);
 }
 
-.theme-item--selected .theme-item-name,
-.theme-item--selected .theme-item-description {
+.theme-item--selected .theme-item-name {
   color: var(--selection-fg);
 }
 
 .theme-item-preview {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 4px;
   border: 1px solid #666;
   flex-shrink: 0;
@@ -4372,30 +4480,18 @@ progress:not([value])::-webkit-progress-value {
   background: linear-gradient(135deg, #666666 0%, #333333 100%);
 }
 
-.theme-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
 .theme-item-name {
   font-weight: bold;
-  font-size: 13px;
-}
-
-.theme-item-description {
   font-size: 11px;
-  color: var(--content-fg-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .theme-item-checkmark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   color: var(--accent);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
 }
 
@@ -4444,6 +4540,97 @@ progress:not([value])::-webkit-progress-value {
   margin-bottom: 10px;
 }
 
+/* Themed Dropdown - Custom dropdown that matches the OS theme */
+.themed-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.themed-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 180px;
+  padding: 3px 8px;
+  background-color: var(--button-bg);
+  color: var(--chrome-fg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 0 var(--button-bg), inset 2px 2px 0 var(--button-shadow-light), inset -1px -1px 1px var(--button-shadow-dark);
+  font-weight: bold;
+  cursor: default;
+  user-select: none;
+  text-align: left;
+}
+
+.themed-dropdown-trigger.active,
+.themed-dropdown-trigger:active {
+  background-color: var(--button-bg-active);
+  color: #fff;
+  box-shadow: inset 1px 1px 1px var(--chrome-border-darker), inset -1px -1px 1px var(--chrome-shadow);
+}
+
+.themed-dropdown-value {
+  flex: 1;
+}
+
+.themed-dropdown-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+
+.themed-dropdown-menu {
+  /* Position set by JS for fixed positioning to escape scroll containers */
+  padding: 0;
+  list-style: none;
+  background-color: var(--menu-bg);
+  border: 1px solid var(--chrome-border);
+  box-shadow: inset 1px 1px var(--chrome-border-light), inset -1px -1px var(--chrome-border-dark), 2px 2px 4px rgba(0,0,0,0.2);
+  z-index: 10000;
+}
+
+.themed-dropdown-menu li {
+  padding: 3px 8px 3px 24px;
+  cursor: default;
+  position: relative;
+}
+
+.themed-dropdown-menu li:hover {
+  background: var(--primary-2);
+  color: #fff;
+}
+
+.themed-dropdown-menu li.selected {
+  font-weight: bold;
+}
+
+.themed-dropdown-check {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Dark mode adjustments */
+[data-mode="dark"] .themed-dropdown-trigger {
+  background-color: var(--button-bg);
+  color: var(--chrome-fg);
+}
+
+[data-mode="dark"] .themed-dropdown-trigger.active,
+[data-mode="dark"] .themed-dropdown-trigger:active {
+  background-color: var(--button-bg-active);
+  color: #fff;
+}
+
+[data-mode="dark"] .themed-dropdown-menu {
+  background-color: var(--menu-bg);
+}
+
 /* Color Mode Toggle */
 .color-mode-options {
   display: flex;
@@ -4476,10 +4663,6 @@ progress:not([value])::-webkit-progress-value {
   color: var(--selection-fg);
 }
 
-.color-mode-button-icon {
-  font-size: 20px;
-}
-
 .color-mode-button-label {
   font-size: 12px;
 }
@@ -4494,6 +4677,97 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg-secondary);
 }
 
+/* Mode Preview - mini window showing what each mode looks like */
+.mode-preview {
+  width: 72px;
+  height: 48px;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #666;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.mode-preview--auto {
+  padding: 0;
+}
+
+.mode-preview-split {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.mode-preview-half {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.mode-preview-half--light {
+  background-color: #c0c0c0;
+}
+
+.mode-preview-half--dark {
+  background-color: #333;
+}
+
+/* Mini window inside the preview */
+.mode-preview-window {
+  width: 36px;
+  height: 28px;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+.mode-preview-window--light {
+  background: #ddd;
+  border: 1px solid #888;
+}
+
+.mode-preview-window--dark {
+  background: #2d2d2d;
+  border: 1px solid #555;
+}
+
+.mode-preview-titlebar {
+  height: 8px;
+  flex-shrink: 0;
+}
+
+.mode-preview-window--light .mode-preview-titlebar {
+  background: linear-gradient(to bottom, #eee 0%, #ccc 100%);
+  border-bottom: 1px solid #888;
+}
+
+.mode-preview-window--dark .mode-preview-titlebar {
+  background: linear-gradient(to bottom, #444 0%, #333 100%);
+  border-bottom: 1px solid #222;
+}
+
+.mode-preview-content {
+  flex: 1;
+}
+
+.mode-preview-window--light .mode-preview-content {
+  background: #fff;
+}
+
+.mode-preview-window--dark .mode-preview-content {
+  background: #1a1a1a;
+}
+
 /* Accent Color Presets */
 .accent-color-presets {
   display: flex;
@@ -4504,6 +4778,12 @@ progress:not([value])::-webkit-progress-value {
 .accent-color-button {
   width: 32px;
   height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  padding: 0;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 2px solid var(--content-border);
   cursor: pointer;
@@ -4515,30 +4795,41 @@ progress:not([value])::-webkit-progress-value {
   box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
 }
 
-/* Custom Color Picker */
-.accent-color-custom {
-  margin-top: 12px;
+/* Custom Color Picker - inline dropper style */
+.accent-color-picker {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--content-border);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  background: var(--content-bg);
+  position: relative;
+  transition: all 0.15s;
 }
 
-.accent-color-custom-label {
-  font-size: 12px;
-  color: var(--content-fg-secondary);
+.accent-color-picker:hover {
+  background: var(--content-bg-subtle);
 }
 
-.accent-color-custom-input {
-  width: 40px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--content-border);
-  border-radius: 4px;
+.accent-color-picker-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
 }
 
-.accent-color-custom-value {
-  font-size: 11px;
-  font-family: "Monaco", "Menlo", monospace;
-  color: var(--content-fg-secondary);
+.accent-color-picker-icon {
+  font-size: 14px;
+  color: var(--content-fg);
+  pointer-events: none;
 }
