@@ -63,6 +63,14 @@ display:
   secondary: due_date
   status: completed
   icon: check-square
+  # Sort by priority (1=highest, so ascending), then by due date, completed items last
+  sort:
+    - field: completed
+      completed_last: true
+    - field: priority
+      order: asc
+    - field: due_date
+      order: asc
 
 ---
 id: project
