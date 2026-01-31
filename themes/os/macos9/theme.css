@@ -21,6 +21,101 @@
   --primary-6: #eee;
   --selection-bg: var(--primary-5);
   --selection-fg: #000;
+  
+  /* Chrome (OS UI) colors - used for window frames, menus, buttons */
+  --chrome-bg: #CCCCCC;
+  --chrome-bg-inactive: #ddd;
+  --chrome-fg: #000;
+  --chrome-fg-inactive: #777;
+  --chrome-border: #000;
+  --chrome-border-light: #fff;
+  --chrome-border-medium: #aaa;
+  --chrome-border-dark: #888;
+  --chrome-border-darker: #555;
+  --chrome-shadow: #999;
+  
+  /* Button colors */
+  --button-bg: #DDDDDD;
+  --button-bg-active: #666666;
+  --button-shadow-light: #fff;
+  --button-shadow-dark: #555;
+  
+  /* Tab colors */
+  --tab-bg: #CCCCCC;
+  --tab-bg-active: #eee;
+  
+  /* Menu colors */
+  --menu-bg: #ddd;
+  
+  /* Scrollbar colors */
+  --scrollbar-track: #aaa;
+  --scrollbar-button: #ddd;
+  --scrollbar-button-active: #777;
+  
+  /* Title bar stripe pattern */
+  --titlebar-stripe-light: #fff;
+  --titlebar-stripe-dark: #777;
+  
+  /* Hover overlay */
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+}
+
+/* =============================================================================
+   Dark Mode - Chrome Overrides
+   OS chrome (windows, menus, tabs, buttons) adapts to dark mode
+   ============================================================================= */
+[data-mode="dark"] {
+  --desktop-bg: #2a2a4a;
+  --window-bg: #2d2d2d;
+  --window-fg: #e0e0e0;
+  --window-frame-bg: #3a3a3a;
+  
+  /* Primary accent colors for dark mode */
+  --primary-1: #224;
+  --primary-2: #446;
+  --primary-3: #668;
+  --primary-4: #88a;
+  --primary-5: #445;
+  --primary-6: #333;
+  --selection-bg: var(--primary-3);
+  --selection-fg: #fff;
+  
+  /* Chrome colors - darker variants */
+  --chrome-bg: #3a3a3a;
+  --chrome-bg-inactive: #2d2d2d;
+  --chrome-fg: #e0e0e0;
+  --chrome-fg-inactive: #888;
+  --chrome-border: #1a1a1a;
+  --chrome-border-light: #555;
+  --chrome-border-medium: #444;
+  --chrome-border-dark: #333;
+  --chrome-border-darker: #222;
+  --chrome-shadow: #1a1a1a;
+  
+  /* Button colors */
+  --button-bg: #4a4a4a;
+  --button-bg-active: #666;
+  --button-shadow-light: #666;
+  --button-shadow-dark: #222;
+  
+  /* Tab colors */
+  --tab-bg: #3a3a3a;
+  --tab-bg-active: #2d2d2d;
+  
+  /* Menu colors */
+  --menu-bg: #3a3a3a;
+  
+  /* Scrollbar colors */
+  --scrollbar-track: #2a2a2a;
+  --scrollbar-button: #4a4a4a;
+  --scrollbar-button-active: #555;
+  
+  /* Title bar stripe pattern - more muted for dark mode */
+  --titlebar-stripe-light: #555;
+  --titlebar-stripe-dark: #2a2a2a;
+  
+  /* Hover overlay */
+  --hover-overlay: rgba(255, 255, 255, 0.08);
 }
 
 body {
@@ -54,8 +149,8 @@ code {
 }
 
 .top-panel {
-  border-bottom: 1px solid #000000;
-  box-shadow: inset 1px 0 0 #fff, inset 0 1px 0 #fff, inset -1px 0 0 #999, inset 0 -1px 0 #999;
+  border-bottom: 1px solid var(--chrome-border);
+  box-shadow: inset 1px 0 0 var(--chrome-border-light), inset 0 1px 0 var(--chrome-border-light), inset -1px 0 0 var(--chrome-shadow), inset 0 -1px 0 var(--chrome-shadow);
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
 }
@@ -98,8 +193,8 @@ legend {
   height: 16px;
   min-width: 0;
   padding: 0;
-  background: #ddd;
-  box-shadow: inset 1px 1px #fff, inset -1px -1px #bbb;
+  background: var(--scrollbar-button);
+  box-shadow: inset 1px 1px var(--chrome-border-light), inset -1px -1px var(--chrome-border-medium);
   border-radius: 0;
 }
 .horizontal-scrollbar > button::after,
@@ -112,19 +207,19 @@ legend {
 .horizontal-scrollbar > button:not(:disabled):active,
 .vertical-scrollbar > button:not(:disabled):active {
   padding: 0;
-  background: #777;
-  box-shadow: inset 1px 1px #555, inset -1px -1px #999;
+  background: var(--scrollbar-button-active);
+  box-shadow: inset 1px 1px var(--chrome-border-darker), inset -1px -1px var(--chrome-shadow);
   box-shadow: none;
   outline: none;
 }
 .horizontal-scrollbar > .scrollbar-track,
 .vertical-scrollbar > .scrollbar-track {
   flex-grow: 1;
-  background: #aaa;
+  background: var(--scrollbar-track);
   position: relative;
-  box-shadow: inset 1px 1px #777, inset 2px 2px #888, inset -1px -1px #ccc, inset -2px -2px #bbb;
+  box-shadow: inset 1px 1px var(--chrome-fg-inactive), inset 2px 2px var(--chrome-border-dark), inset -1px -1px var(--tab-bg), inset -2px -2px var(--chrome-border-medium);
   overflow: hidden;
-  border: 1px solid #000;
+  border: 1px solid var(--chrome-border);
 }
 .horizontal-scrollbar > .scrollbar-track > .scrollbar-thumb,
 .vertical-scrollbar > .scrollbar-track > .scrollbar-thumb {
@@ -244,22 +339,22 @@ legend {
 }
 
 ::-webkit-scrollbar {
-  background: #aaa;
-  box-shadow: inset 1px 1px #777, inset 2px 2px #888, inset -1px -1px #ccc, inset -2px -2px #bbb;
-  border: 1px solid #000;
+  background: var(--scrollbar-track);
+  box-shadow: inset 1px 1px var(--chrome-fg-inactive), inset 2px 2px var(--chrome-border-dark), inset -1px -1px var(--tab-bg), inset -2px -2px var(--chrome-border-medium);
+  border: 1px solid var(--chrome-border);
   width: 16px;
   height: 16px;
 }
 
 ::-webkit-scrollbar-corner {
-  background: #aaa;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-button,
 ::-webkit-scrollbar-thumb {
-  background: #ddd;
-  box-shadow: inset 1px 1px #fff, inset -1px -1px #bbb;
-  border: 1px solid #000;
+  background: var(--scrollbar-button);
+  box-shadow: inset 1px 1px var(--chrome-border-light), inset -1px -1px var(--chrome-border-medium);
+  border: 1px solid var(--chrome-border);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -299,7 +394,7 @@ legend {
   display: none;
 }
 ::-webkit-scrollbar-button:active {
-  background: #777;
+  background: var(--scrollbar-button-active);
   box-shadow: none;
 }
 
@@ -337,11 +432,11 @@ legend {
 
 button, input[type=button], input[type=submit], input[type=reset], .button,
 select:not([size], [multiple]), select[size="1"] {
-  background-color: #DDDDDD;
-  color: #000000;
-  border: 1px solid #000;
+  background-color: var(--button-bg);
+  color: var(--chrome-fg);
+  border: 1px solid var(--chrome-border);
   border-radius: 3px;
-  box-shadow: inset 1px 1px 0 #DDDDDD, inset 2px 2px 0 #fff, inset -1px -1px 1px #555;
+  box-shadow: inset 1px 1px 0 var(--button-bg), inset 2px 2px 0 var(--button-shadow-light), inset -1px -1px 1px var(--button-shadow-dark);
   padding: 2px 10px;
   min-width: 58px;
   text-align: center;
@@ -352,16 +447,16 @@ select:not([size], [multiple]), select[size="1"] {
 button:disabled, button.disabled, input[type=button]:disabled, input[type=button].disabled, input[type=submit]:disabled, input[type=submit].disabled, input[type=reset]:disabled, input[type=reset].disabled, .button:disabled, .button.disabled,
 select:not([size], [multiple]):disabled,
 select:not([size], [multiple]).disabled, select[size="1"]:disabled, select[size="1"].disabled {
-  color: #777;
-  border-color: #888;
+  color: var(--chrome-fg-inactive);
+  border-color: var(--chrome-border-dark);
   box-shadow: none;
 }
 button:not(:disabled, .disabled):active, button.active, input[type=button]:not(:disabled, .disabled):active, input[type=button].active, input[type=submit]:not(:disabled, .disabled):active, input[type=submit].active, input[type=reset]:not(:disabled, .disabled):active, input[type=reset].active, .button:not(:disabled, .disabled):active, .button.active,
 select:not([size], [multiple]):not(:disabled, .disabled):active,
 select:not([size], [multiple]).active, select[size="1"]:not(:disabled, .disabled):active, select[size="1"].active {
-  background-color: #666666;
+  background-color: var(--button-bg-active);
   color: #fff;
-  box-shadow: inset 1px 1px 1px #333, inset -1px -1px 1px #999;
+  box-shadow: inset 1px 1px 1px var(--chrome-border-darker), inset -1px -1px 1px var(--chrome-shadow);
 }
 button:focus-visible, input[type=button]:focus-visible, input[type=submit]:focus-visible, input[type=reset]:focus-visible, .button:focus-visible,
 select:not([size], [multiple]):focus-visible, select[size="1"]:focus-visible {
@@ -773,8 +868,8 @@ progress:not([value])::-webkit-progress-value {
   }
 }
 .title-bar {
-  background: #ddd;
-  color: #777;
+  background: var(--chrome-bg-inactive);
+  color: var(--chrome-fg-inactive);
   display: flex;
   gap: 4px;
 }
@@ -801,8 +896,8 @@ progress:not([value])::-webkit-progress-value {
   display: flex;
   flex-direction: column;
   padding: 2px 4px 4px;
-  border: 1px solid #555;
-  background: #ddd;
+  border: 1px solid var(--chrome-border-darker);
+  background: var(--chrome-bg-inactive);
   overflow: hidden;
 }
 
@@ -811,9 +906,9 @@ progress:not([value])::-webkit-progress-value {
 .dialog.active,
 .dialog:focus-within,
 .menu {
-  background: var(--window-frame-bg);
-  border: 1px solid #000000;
-  box-shadow: 1px 1px 0 #000000, inset 1px 0 0 #fff, inset 0 1px 0 #fff, inset -1px 0 0 #999, inset 0 -1px 0 #999;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  box-shadow: 1px 1px 0 var(--chrome-border), inset 1px 0 0 var(--chrome-border-light), inset 0 1px 0 var(--chrome-border-light), inset -1px 0 0 var(--chrome-shadow), inset 0 -1px 0 var(--chrome-shadow);
 }
 
 .window.active > .title-bar,
@@ -822,8 +917,8 @@ progress:not([value])::-webkit-progress-value {
 .dialog:focus-within > .title-bar,
 .menu > .title-bar,
 .title-bar.active {
-  background: var(--window-frame-bg);
-  color: #000;
+  background: var(--chrome-bg);
+  color: var(--chrome-fg);
 }
 .window.active > .title-bar > .title-bar-text::before, .window.active > .title-bar > .title-bar-text::after,
 .window:focus-within > .title-bar > .title-bar-text::before,
@@ -836,7 +931,7 @@ progress:not([value])::-webkit-progress-value {
 .menu > .title-bar > .title-bar-text::after,
 .title-bar.active > .title-bar-text::before,
 .title-bar.active > .title-bar-text::after {
-  background-image: linear-gradient(0deg, #fff, #fff 1px, transparent 1px, transparent 1px), linear-gradient(0deg, transparent, transparent 1px, #777 1px, #777 1px);
+  background-image: linear-gradient(0deg, var(--titlebar-stripe-light), var(--titlebar-stripe-light) 1px, transparent 1px, transparent 1px), linear-gradient(0deg, transparent, transparent 1px, var(--titlebar-stripe-dark) 1px, var(--titlebar-stripe-dark) 1px);
   background-repeat: repeat-y;
   background-position-x: -1px, 1px;
   background-position-y: -1px, -1px;
@@ -890,22 +985,22 @@ progress:not([value])::-webkit-progress-value {
   flex-grow: 1;
   min-height: 0;          /* Allow shrinking in flex context */
   overflow: auto;
-  color: #555;
-  border: 1px solid #555;
-  background: #eee;
+  color: var(--chrome-fg-inactive);
+  border: 1px solid var(--chrome-border-darker);
+  background: var(--tab-bg-active);
 }
 
 .window.active > .window-body,
 .window:focus-within > .window-body {
   color: var(--content-fg);
   background: var(--content-bg);
-  border: 1px solid #000;
-  box-shadow: 1px 1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff, -1px -1px 0 #999, -1px 0 0 #999, 0 -1px 0 #999;
+  border: 1px solid var(--chrome-border);
+  box-shadow: 1px 1px 0 var(--chrome-border-light), 1px 0 0 var(--chrome-border-light), 0 1px 0 var(--chrome-border-light), -1px -1px 0 var(--chrome-shadow), -1px 0 0 var(--chrome-shadow), 0 -1px 0 var(--chrome-shadow);
 }
 
 [role=menubar] {
-  color: #000;
-  background-color: var(--window-frame-bg);
+  color: var(--chrome-fg);
+  background-color: var(--chrome-bg);
 }
 [role=menubar] > li > ul, [role=menubar] > li > .menu {
   left: 0;
@@ -914,10 +1009,10 @@ progress:not([value])::-webkit-progress-value {
 }
 
 [role=menu] {
-  color: #000;
-  background-color: #ddd;
-  border: 1px solid #000;
-  box-shadow: inset 1px 1px #fff, inset -1px -1px #888, 1px 1px #000;
+  color: var(--chrome-fg);
+  background-color: var(--menu-bg);
+  border: 1px solid var(--chrome-border);
+  box-shadow: inset 1px 1px var(--chrome-border-light), inset -1px -1px var(--chrome-border-dark), 1px 1px var(--chrome-border);
 }
 [role=menu] li {
   padding: 1px 3px 1px 21px;
@@ -935,8 +1030,8 @@ progress:not([value])::-webkit-progress-value {
   min-width: 200px;
 }
 [role=menu] li[role=separator] {
-  border-top: 1px solid #888;
-  border-bottom: 1px solid #fff;
+  border-top: 1px solid var(--chrome-border-dark);
+  border-bottom: 1px solid var(--chrome-border-light);
   height: 0;
   padding: 0;
   margin: 2px 0;
@@ -1001,7 +1096,7 @@ progress:not([value])::-webkit-progress-value {
 
 [role=menu] li[aria-disabled],
 [role=menubar] li[aria-disabled] {
-  color: #777;
+  color: var(--chrome-fg-inactive);
 }
 
 /* Tab container - padding at top matches macOS 9 pattern */
@@ -1030,9 +1125,9 @@ progress:not([value])::-webkit-progress-value {
   min-width: 0;
   height: 23px;
   position: relative;
-  background: #CCCCCC;
+  background: var(--tab-bg);
   height: 23px;
-  box-shadow: inset 0 1px #000, inset 0 2px #ccc, inset 0 3px #ddd;
+  box-shadow: inset 0 1px var(--chrome-border), inset 0 2px var(--tab-bg), inset 0 3px var(--chrome-bg-inactive);
 }
 .tabs > menu > button:focus {
   outline: none;
@@ -1064,8 +1159,8 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .tabs > menu > button:not([aria-selected=true]):active {
-  background: #666;
-  box-shadow: inset 0 1px #000, inset 0 2px #444, inset 0 3px #555;
+  background: var(--button-bg-active);
+  box-shadow: inset 0 1px var(--chrome-border), inset 0 2px var(--chrome-border-darker), inset 0 3px var(--button-shadow-dark);
 }
 
 .tabs > menu > button:not([aria-selected=true]):active::before,
@@ -1074,15 +1169,31 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .tabs > menu > button[aria-selected=true] {
-  color: #000;
-  background: #eee;
-  box-shadow: inset 0 1px #000, inset 0 2px #ccc, inset 0 3px #fff;
+  color: var(--chrome-fg);
+  background: var(--tab-bg-active);
+  box-shadow: inset 0 1px var(--chrome-border), inset 0 2px var(--tab-bg), inset 0 3px var(--chrome-border-light);
   z-index: 2;
   height: 25px;
 }
 .tabs > menu > button[aria-selected=true]::before, .tabs > menu > button[aria-selected=true]::after {
   background-image: url(tab-selected.svg);
   height: 25px;
+}
+
+/* Dark mode tab SVGs */
+[data-mode="dark"] .tabs > menu > button::before,
+[data-mode="dark"] .tabs > menu > button::after {
+  background-image: url(tab-dark.svg);
+}
+
+[data-mode="dark"] .tabs > menu > button:not([aria-selected=true]):active::before,
+[data-mode="dark"] .tabs > menu > button:not([aria-selected=true]):active::after {
+  background-image: url(tab-active-dark.svg);
+}
+
+[data-mode="dark"] .tabs > menu > button[aria-selected=true]::before,
+[data-mode="dark"] .tabs > menu > button[aria-selected=true]::after {
+  background-image: url(tab-selected-dark.svg);
 }
 
 .tabs > [role=tabpanel] {
@@ -1409,9 +1520,9 @@ progress:not([value])::-webkit-progress-value {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: var(--window-frame-bg);
-  border-bottom: 1px solid #000;
-  box-shadow: inset 0 -1px 0 #999;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--chrome-border);
+  box-shadow: inset 0 -1px 0 var(--chrome-shadow);
 }
 
 .url-bar-nav {
@@ -1428,23 +1539,23 @@ progress:not([value])::-webkit-progress-value {
   min-width: 0;
   padding: 0;
   border-radius: 3px;
-  background-color: #ddd;
-  color: #000;
-  border: 1px solid #000;
-  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 1px #888;
+  background-color: var(--button-bg);
+  color: var(--chrome-fg);
+  border: 1px solid var(--chrome-border);
+  box-shadow: inset 1px 1px 0 var(--button-shadow-light), inset -1px -1px 1px var(--chrome-border-dark);
 }
 
 .url-bar-nav-button:disabled {
-  color: #999;
-  border-color: #888;
+  color: var(--chrome-shadow);
+  border-color: var(--chrome-border-dark);
   box-shadow: none;
-  background: #ccc;
+  background: var(--tab-bg);
 }
 
 .url-bar-nav-button:not(:disabled):active {
-  background-color: #666;
+  background-color: var(--button-bg-active);
   color: #fff;
-  box-shadow: inset 1px 1px 1px #333, inset -1px -1px 1px #999;
+  box-shadow: inset 1px 1px 1px var(--chrome-border-darker), inset -1px -1px 1px var(--chrome-shadow);
 }
 
 .url-bar-nav-button svg {
@@ -1460,8 +1571,8 @@ progress:not([value])::-webkit-progress-value {
   padding: 3px 8px;
   background: var(--content-bg);
   color: var(--content-fg);
-  border: 1px solid #000;
-  box-shadow: -1px -1px #888;
+  border: 1px solid var(--chrome-border);
+  box-shadow: -1px -1px var(--chrome-border-dark);
   border-radius: 2px;
   min-height: 22px;
 }
@@ -1617,10 +1728,10 @@ progress:not([value])::-webkit-progress-value {
   justify-content: space-between;
   gap: 12px;
   padding: 6px 12px;
-  background: #eee;
-  border-top: 1px solid #aaa;
+  background: var(--tab-bg-active);
+  border-top: 1px solid var(--chrome-border-medium);
   font-size: 11px;
-  color: #555;
+  color: var(--chrome-fg-inactive);
   margin-top: auto; /* Push to bottom of flex container */
   flex-shrink: 0;   /* Don't shrink when content is tall */
 }
@@ -2109,12 +2220,12 @@ progress:not([value])::-webkit-progress-value {
   display: flex;
   align-items: stretch;
   
-  background: var(--window-frame-bg);
+  background: var(--chrome-bg);
   
   font-family: var(--preferred-font);
   font-size: 12px;
   font-weight: normal;
-  color: #000;
+  color: var(--chrome-fg);
   user-select: none;
 }
 
@@ -2126,7 +2237,7 @@ progress:not([value])::-webkit-progress-value {
   right: 0;
   bottom: 0;
   height: 2px;
-  background: linear-gradient(to bottom, #999 0, #999 1px, #000 1px, #000 2px);
+  background: linear-gradient(to bottom, var(--chrome-shadow) 0, var(--chrome-shadow) 1px, var(--chrome-border) 1px, var(--chrome-border) 2px);
   pointer-events: none;
 }
 
@@ -2212,11 +2323,11 @@ progress:not([value])::-webkit-progress-value {
   margin: 0;
   padding: 2px 0;
   
-  background: var(--window-frame-bg);
-  border: 1px solid #000;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
   box-shadow: 
-    inset 1px 1px 0 #fff,
-    inset -1px -1px 0 #888,
+    inset 1px 1px 0 var(--chrome-border-light),
+    inset -1px -1px 0 var(--chrome-border-dark),
     2px 2px 4px rgba(0,0,0,0.3);
   
   list-style: none;
@@ -2237,7 +2348,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .menu-bar-left > li > ul[role="menu"] li[aria-disabled] {
-  color: #888;
+  color: var(--chrome-fg-inactive);
 }
 
 .menu-bar-left > li > ul[role="menu"] li[aria-disabled]:hover,
@@ -2250,8 +2361,8 @@ progress:not([value])::-webkit-progress-value {
   height: 0;
   padding: 0;
   margin: 4px 0;
-  border-top: 1px solid #888;
-  border-bottom: 1px solid #fff;
+  border-top: 1px solid var(--chrome-border-dark);
+  border-bottom: 1px solid var(--chrome-border-light);
 }
 
 .menu-bar-left > li > ul[role="menu"] li[data-shortcut]::after {
@@ -2265,7 +2376,7 @@ progress:not([value])::-webkit-progress-value {
 /* Center: Solid fill (same as window chrome) */
 .menu-bar-center {
   flex: 1;
-  background: var(--window-frame-bg);
+  background: var(--chrome-bg);
 }
 
 /* App name in menu bar - bold when focused */
@@ -2608,7 +2719,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .wallpaper-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover-overlay);
 }
 
 .wallpaper-item--selected {
@@ -2620,9 +2731,9 @@ progress:not([value])::-webkit-progress-value {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
-  border: 1px solid #000;
+  border: 1px solid var(--chrome-border);
   border-radius: 2px;
-  box-shadow: 1px 1px 0 #fff, -1px -1px 0 #888;
+  box-shadow: 1px 1px 0 var(--chrome-border-light), -1px -1px 0 var(--chrome-border-dark);
 }
 
 .wallpaper-item-name {
@@ -2650,8 +2761,8 @@ progress:not([value])::-webkit-progress-value {
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: #eee;
-  border-bottom: 1px solid #aaa;
+  background: var(--tab-bg-active);
+  border-bottom: 1px solid var(--chrome-border-medium);
 }
 
 .media-header__thumbnail {
@@ -3696,8 +3807,8 @@ progress:not([value])::-webkit-progress-value {
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  background: #eee;
-  border-bottom: 1px solid #888;
+  background: var(--tab-bg-active);
+  border-bottom: 1px solid var(--chrome-border-dark);
   flex-shrink: 0;
 }
 
@@ -3721,8 +3832,8 @@ progress:not([value])::-webkit-progress-value {
 .plugin-browser-view-switcher {
   display: flex;
   gap: 2px;
-  background: #ddd;
-  border: 1px solid #888;
+  background: var(--chrome-bg-inactive);
+  border: 1px solid var(--chrome-border-dark);
   border-radius: 3px;
   padding: 2px;
 }
@@ -3738,19 +3849,19 @@ progress:not([value])::-webkit-progress-value {
   border: 1px solid transparent;
   border-radius: 2px;
   cursor: pointer;
-  color: #666;
+  color: var(--chrome-fg-inactive);
 }
 
 .plugin-browser-view-switcher button:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: var(--button-shadow-light);
+  border-color: var(--tab-bg);
 }
 
 .plugin-browser-view-switcher button.active {
-  background: #fff;
-  border-color: #888;
-  color: #000;
-  box-shadow: inset 0 1px 0 #fff;
+  background: var(--chrome-border-light);
+  border-color: var(--chrome-border-dark);
+  color: var(--chrome-fg);
+  box-shadow: inset 0 1px 0 var(--chrome-border-light);
 }
 
 /* Content area */
@@ -3911,8 +4022,8 @@ progress:not([value])::-webkit-progress-value {
 .plugin-detail-panel {
   width: 280px;
   flex-shrink: 0;
-  border-left: 1px solid #888;
-  background: #f5f5f5;
+  border-left: 1px solid var(--chrome-border-dark);
+  background: var(--content-bg-muted);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -3923,8 +4034,8 @@ progress:not([value])::-webkit-progress-value {
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: #eee;
-  border-bottom: 1px solid #ccc;
+  background: var(--tab-bg-active);
+  border-bottom: 1px solid var(--tab-bg);
 }
 
 .plugin-detail-panel-header img {
@@ -4001,10 +4112,10 @@ progress:not([value])::-webkit-progress-value {
 /* Status bar */
 .plugin-browser-status {
   padding: 4px 8px;
-  background: #eee;
-  border-top: 1px solid #888;
+  background: var(--tab-bg-active);
+  border-top: 1px solid var(--chrome-border-dark);
   font-size: 11px;
-  color: #333;
+  color: var(--chrome-fg);
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -4012,7 +4123,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 .plugin-browser-status-desc {
-  color: #666;
+  color: var(--chrome-fg-inactive);
 }
 
 /* =============================================================================

@@ -3,6 +3,7 @@ name: Mac OS 9
 type: os
 description: Classic Mac OS 9 appearance with platinum styling
 family: macos
+color-scheme: both  # Supports light and dark mode for chrome
 
 # Credits - this theme is ported from classic-stylesheets
 credits:
