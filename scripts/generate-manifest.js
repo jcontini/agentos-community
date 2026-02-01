@@ -106,6 +106,7 @@ function extractPluginMetadata(pluginDir) {
     name: metadata.name || basename(pluginDir),
     description: metadata.description || '',
     icon: `plugins/${relativePath}/icon.svg`,
+    color: metadata.color || null,
     entities,
     version: metadata.version || '1.0.0',
     author: metadata.author || 'community',
