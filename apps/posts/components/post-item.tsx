@@ -2,7 +2,7 @@
  * Post Item Component
  * 
  * Renders a single post in a list view (Reddit, HN, Twitter, etc.).
- * Uses primitive CSS patterns (stack, text) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [score] | title (link)
@@ -88,21 +88,21 @@ export function PostItem({
   const metaItems: React.ReactNode[] = [];
   if (community) {
     metaItems.push(
-      <span key="community" className="text" data-variant="caption">
+      <span key="community" data-component="text" data-variant="caption">
         r/{community}
       </span>
     );
   }
   if (author) {
     metaItems.push(
-      <span key="author" className="text" data-variant="caption">
+      <span key="author" data-component="text" data-variant="caption">
         by {author}
       </span>
     );
   }
   if (publishedAt) {
     metaItems.push(
-      <span key="time" className="text" data-variant="caption">
+      <span key="time" data-component="text" data-variant="caption">
         {formatRelativeTime(publishedAt)}
       </span>
     );
@@ -113,17 +113,16 @@ export function PostItem({
       externalUrl && url ? (
         <a
           key="comments"
-          className="text"
+          data-component="text"
           data-variant="caption"
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ textDecoration: 'none' }}
         >
           {commentCount} comments
         </a>
       ) : (
-        <span key="comments" className="text" data-variant="caption">
+        <span key="comments" data-component="text" data-variant="caption">
           {commentCount} comments
         </span>
       )
@@ -135,7 +134,7 @@ export function PostItem({
   metaItems.forEach((item, index) => {
     if (index > 0) {
       metaWithSeparators.push(
-        <span key={`sep-${index}`} className="text" data-variant="caption">·</span>
+        <span key={`sep-${index}`} data-component="text" data-variant="caption">·</span>
       );
     }
     metaWithSeparators.push(item);
@@ -143,23 +142,23 @@ export function PostItem({
   
   return (
     <div
-      className="stack"
+      data-component="stack"
       data-direction="horizontal"
-      style={{ gap: '12px', padding: '8px 12px', alignItems: 'flex-start' }}
+      data-gap="lg"
+      data-padding="md"
+      data-align="start"
     >
       {/* Score column */}
       {score !== undefined && (
         <div
-          className="stack"
+          data-component="stack"
           data-direction="vertical"
-          style={{ 
-            alignItems: 'center', 
-            minWidth: '40px',
-            paddingTop: '2px',
-          }}
+          data-gap="none"
+          data-align="center"
+          data-score-column
         >
-          <span className="text" data-variant="caption" style={{ fontSize: '10px', lineHeight: 1 }}>▲</span>
-          <span className="text" data-variant="caption" style={{ fontWeight: 'bold' }}>
+          <span data-component="text" data-variant="muted" data-size="xs">▲</span>
+          <span data-component="text" data-variant="caption" data-weight="bold">
             {formatScore(score)}
           </span>
         </div>
@@ -167,24 +166,19 @@ export function PostItem({
       
       {/* Content */}
       <div
-        className="stack"
+        data-component="stack"
         data-direction="vertical"
-        style={{ gap: '4px', flex: 1, minWidth: 0 }}
+        data-gap="xs"
+        data-flex="1"
       >
         {/* Title as link - goes to external article if available */}
         <a
-          className="text"
+          data-component="text"
           data-variant="title"
           data-overflow="ellipsis"
           href={titleHref}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis', 
-            whiteSpace: 'nowrap',
-            textDecoration: 'none',
-          }}
         >
           {displayTitle}
         </a>
@@ -192,9 +186,11 @@ export function PostItem({
         {/* Meta line */}
         {metaWithSeparators.length > 0 && (
           <div
-            className="stack"
+            data-component="stack"
             data-direction="horizontal"
-            style={{ gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}
+            data-gap="sm"
+            data-align="center"
+            data-wrap="wrap"
           >
             {metaWithSeparators}
           </div>

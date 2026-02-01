@@ -2,7 +2,7 @@
  * Search Result Component
  * 
  * Renders a single web search result (Exa, Firecrawl, etc.).
- * Uses primitive CSS patterns (stack, text) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [favicon] | title (link)
@@ -88,72 +88,60 @@ export function SearchResult({
   
   return (
     <div
-      className="stack"
+      data-component="stack"
       data-direction="horizontal"
-      style={{ gap: '12px', padding: '8px 12px', alignItems: 'flex-start' }}
+      data-gap="lg"
+      data-padding="md"
+      data-align="start"
     >
       {/* Favicon or initials */}
       {showImage && (
         <img
-          className="image"
+          data-component="image"
           data-variant="icon"
           data-size="sm"
           src={getProxiedSrc(favicon)}
           alt=""
           onError={() => setImageError(true)}
-          style={{ flexShrink: 0 }}
         />
       )}
       {showInitials && (
         <div
-          className="image image--initials"
+          className="image--initials"
           data-variant="icon"
           data-size="sm"
-          style={{ 
-            backgroundColor: getColorFromDomain(domain),
-            flexShrink: 0,
-          }}
+          style={{ backgroundColor: getColorFromDomain(domain) }}
           role="img"
           aria-hidden="true"
         >
-          <span className="image__initials">{getInitials(domain)}</span>
+          {getInitials(domain)}
         </div>
       )}
       
       {/* Content */}
       <div
-        className="stack"
+        data-component="stack"
         data-direction="vertical"
-        style={{ gap: '4px', flex: 1, minWidth: 0 }}
+        data-gap="xs"
+        data-flex="1"
       >
         {/* Title as link */}
         <a
-          className="text"
+          data-component="text"
           data-variant="title"
           data-overflow="ellipsis"
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis', 
-            whiteSpace: 'nowrap',
-            textDecoration: 'none',
-          }}
         >
           {title || domain}
         </a>
         
         {/* URL */}
         <span
-          className="text"
+          data-component="text"
           data-variant="url"
           data-overflow="ellipsis"
-          style={{ 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis', 
-            whiteSpace: 'nowrap',
-          }}
         >
           {url}
         </span>
@@ -161,15 +149,9 @@ export function SearchResult({
         {/* Snippet */}
         {snippet && (
           <span
-            className="text"
-            data-variant="body"
-            data-max-lines="2"
-            style={{ 
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
+            data-component="text"
+            data-variant="secondary"
+            data-lines="2"
           >
             {snippet}
           </span>

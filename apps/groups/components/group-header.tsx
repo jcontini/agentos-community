@@ -3,7 +3,7 @@
  * 
  * Displays the header for a single group view with icon, name, description,
  * member count, privacy setting, and visit link.
- * Uses primitive CSS patterns (stack, text, image) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  */
 
 import React, { useState } from 'react';
@@ -125,14 +125,16 @@ export function GroupHeader({
   
   return (
     <div 
-      className="stack" 
+      data-component="stack" 
       data-direction="horizontal"
-      style={{ gap: '12px', padding: '12px', alignItems: 'center' }}
+      data-gap="lg"
+      data-padding="lg"
+      data-align="center"
     >
       {/* Compact avatar or initials */}
       {showImage && (
         <img
-          className="image"
+          data-component="image"
           data-variant="avatar"
           data-size="md"
           src={icon}
@@ -142,51 +144,55 @@ export function GroupHeader({
       )}
       {showInitials && (
         <div
-          className="image image--initials"
+          className="image--initials"
           data-variant="avatar"
           data-size="md"
           style={{ backgroundColor: getColorFromName(name) }}
           role="img"
           aria-label={name}
         >
-          <span className="image__initials">{getInitials(name)}</span>
+          {getInitials(name)}
         </div>
       )}
       
       {/* Info: name + meta + description (compact) */}
       <div 
-        className="stack" 
+        data-component="stack" 
         data-direction="vertical"
-        style={{ gap: '2px', flex: 1, minWidth: 0 }}
+        data-gap="xs"
+        data-flex="1"
       >
         {/* Name row with meta */}
         <div 
-          className="stack" 
+          data-component="stack" 
           data-direction="horizontal"
-          style={{ gap: '8px', alignItems: 'baseline' }}
+          data-gap="md"
+          data-align="baseline"
         >
           {displayName && url ? (
             <a
-              className="text"
+              data-component="text"
               data-variant="title"
+              data-size="lg"
+              data-weight="bold"
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontSize: '1rem', fontWeight: 'bold' }}
             >
               {displayName}
             </a>
           ) : displayName && (
             <span
-              className="text"
-              style={{ fontSize: '1rem', fontWeight: 'bold' }}
+              data-component="text"
+              data-size="lg"
+              data-weight="bold"
             >
               {displayName}
             </span>
           )}
           
           {/* Inline meta */}
-          <span className="text" data-variant="caption">
+          <span data-component="text" data-variant="caption">
             {[displayMemberCount && `${displayMemberCount} members`, privacyLabel].filter(Boolean).join(' • ')}
           </span>
         </div>
@@ -194,13 +200,9 @@ export function GroupHeader({
         {/* Description - single line truncated */}
         {description && (
           <span 
-            className="text" 
+            data-component="text" 
             data-variant="caption"
-            style={{ 
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
+            data-overflow="ellipsis"
           >
             {description}
           </span>

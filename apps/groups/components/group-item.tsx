@@ -2,7 +2,7 @@
  * Group Item Component
  * 
  * Renders a single group in a list view (Facebook Groups, Reddit subreddits, etc.).
- * Uses primitive CSS patterns (stack, text, image) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [avatar] | name (link)
@@ -132,14 +132,16 @@ export function GroupItem({
   
   return (
     <div 
-      className="stack" 
+      data-component="stack" 
       data-direction="horizontal"
-      style={{ gap: '12px', padding: '8px 12px', alignItems: 'flex-start' }}
+      data-gap="lg"
+      data-padding="md"
+      data-align="start"
     >
       {/* Avatar or Initials */}
       {showImage && (
         <img
-          className="image"
+          data-component="image"
           data-variant="avatar"
           data-size="md"
           src={getProxiedSrc(icon)}
@@ -149,33 +151,33 @@ export function GroupItem({
       )}
       {showInitials && (
         <div
-          className="image image--initials"
+          className="image--initials"
           data-variant="avatar"
           data-size="md"
           style={{ backgroundColor: getColorFromName(name) }}
           role="img"
           aria-label={name}
         >
-          <span className="image__initials">{getInitials(name)}</span>
+          {getInitials(name)}
         </div>
       )}
       
       {/* Content */}
       <div 
-        className="stack" 
+        data-component="stack" 
         data-direction="vertical"
-        style={{ gap: '4px', minWidth: 0, flex: 1 }}
+        data-gap="xs"
+        data-flex="1"
       >
         {/* Name as link */}
         {name && (
           <a
-            className="text"
+            data-component="text"
             data-variant="title"
             data-overflow="ellipsis"
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {name}
           </a>
@@ -184,15 +186,9 @@ export function GroupItem({
         {/* Description */}
         {description && (
           <span
-            className="text"
-            data-variant="body"
-            data-max-lines="2"
-            style={{ 
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
+            data-component="text"
+            data-variant="secondary"
+            data-lines="2"
           >
             {description}
           </span>
@@ -201,20 +197,21 @@ export function GroupItem({
         {/* Meta: member count, privacy */}
         {(displayMemberCount || privacyLabel) && (
           <div 
-            className="stack" 
+            data-component="stack" 
             data-direction="horizontal"
-            style={{ gap: '6px', alignItems: 'center' }}
+            data-gap="sm"
+            data-align="center"
           >
             {displayMemberCount && (
-              <span className="text" data-variant="caption">
+              <span data-component="text" data-variant="caption">
                 {displayMemberCount}
               </span>
             )}
             {displayMemberCount && privacyLabel && (
-              <span className="text" data-variant="caption">•</span>
+              <span data-component="text" data-variant="caption">•</span>
             )}
             {privacyLabel && (
-              <span className="text" data-variant="caption">
+              <span data-component="text" data-variant="caption">
                 {privacyLabel}
               </span>
             )}

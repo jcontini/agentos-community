@@ -2,7 +2,7 @@
  * Video Header Component
  * 
  * Displays a video header with thumbnail, title, creator, and duration.
- * Uses primitive CSS patterns (stack, text, image) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [thumbnail 16:9] | title
@@ -107,61 +107,58 @@ export function VideoHeader({
   
   return (
     <div
-      className="stack"
+      data-component="stack"
       data-direction="horizontal"
-      style={{ gap: '16px', alignItems: 'flex-start' }}
+      data-gap="xl"
+      data-align="start"
     >
       {/* Thumbnail */}
       {showImage && (
         <img
-          className="image"
+          data-component="image"
           data-variant="thumbnail"
           data-size="lg"
           src={getProxiedSrc(thumbnail)}
           alt={title}
           onError={() => setImageError(true)}
-          style={{ flexShrink: 0 }}
         />
       )}
       {showFallback && (
         <div
-          className="image image--initials"
+          className="image--initials"
           data-variant="thumbnail"
           data-size="lg"
-          style={{ 
-            backgroundColor: getColorFromTitle(title),
-            flexShrink: 0,
-          }}
+          style={{ backgroundColor: getColorFromTitle(title) }}
           role="img"
           aria-label={title}
         >
-          <span className="image__initials">{getInitials(title)}</span>
+          {getInitials(title)}
         </div>
       )}
       
       {/* Metadata */}
       <div
-        className="stack"
+        data-component="stack"
         data-direction="vertical"
-        style={{ gap: '6px', flex: 1, minWidth: 0 }}
+        data-gap="sm"
+        data-flex="1"
       >
         {/* Title */}
         {url ? (
           <a
-            className="text"
+            data-component="text"
             data-variant="title"
+            data-size="lg"
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: '1.125rem', lineHeight: 1.3, textDecoration: 'none' }}
           >
             {title}
           </a>
         ) : (
           <span
-            className="text"
-            data-variant="title"
-            style={{ fontSize: '1.125rem', lineHeight: 1.3 }}
+            data-component="text"
+            data-size="lg"
           >
             {title}
           </span>
@@ -171,30 +168,29 @@ export function VideoHeader({
         {creator && (
           creatorUrl ? (
             <a
-              className="text"
-              data-variant="body"
+              data-component="text"
+              data-variant="secondary"
               href={creatorUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ textDecoration: 'none' }}
             >
               {creator}
             </a>
           ) : (
-            <span className="text" data-variant="body">{creator}</span>
+            <span data-component="text" data-variant="secondary">{creator}</span>
           )
         )}
         
         {/* Duration */}
         {duration !== undefined && duration > 0 && (
-          <span className="text" data-variant="caption">
+          <span data-component="text" data-variant="caption">
             {formatDuration(duration)}
           </span>
         )}
         
         {/* Optional label (e.g., "Transcript") */}
         {label && (
-          <span className="text" data-variant="section-header" style={{ marginTop: '4px' }}>
+          <span data-component="text" data-variant="label">
             {label}
           </span>
         )}

@@ -2,7 +2,7 @@
  * Video Search Result Component
  * 
  * Renders a single video search result (YouTube, Vimeo, etc.).
- * Uses primitive CSS patterns (stack, text, image) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [thumbnail] | title (link)
@@ -130,76 +130,59 @@ export function VideoSearchResult({
   
   return (
     <div
-      className="stack"
+      data-component="stack"
       data-direction="horizontal"
-      style={{ gap: '12px', padding: '8px 12px', alignItems: 'flex-start' }}
+      data-gap="lg"
+      data-padding="md"
+      data-align="start"
     >
       {/* Thumbnail */}
       {showImage && (
         <img
-          className="image"
+          data-component="image"
           data-variant="thumbnail"
-          data-size="sm"
+          data-size="md"
           src={getProxiedSrc(thumbnail)}
           alt=""
           onError={() => setImageError(true)}
-          style={{ flexShrink: 0, width: '120px', height: '68px', objectFit: 'cover', borderRadius: '4px' }}
         />
       )}
       {showFallback && (
         <div
-          className="image image--initials"
+          className="image--initials"
           data-variant="thumbnail"
-          data-size="sm"
-          style={{ 
-            backgroundColor: getColorFromTitle(title),
-            flexShrink: 0,
-            width: '120px',
-            height: '68px',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          data-size="md"
+          style={{ backgroundColor: getColorFromTitle(title) }}
           role="img"
           aria-hidden="true"
         >
-          <span className="image__initials" style={{ fontSize: '1.5rem' }}>{getInitials(title)}</span>
+          {getInitials(title)}
         </div>
       )}
       
       {/* Content */}
       <div
-        className="stack"
+        data-component="stack"
         data-direction="vertical"
-        style={{ gap: '4px', flex: 1, minWidth: 0 }}
+        data-gap="xs"
+        data-flex="1"
       >
         {/* Title */}
         {source_url ? (
           <a
-            className="text"
+            data-component="text"
             data-variant="title"
+            data-overflow="ellipsis"
             href={source_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              textDecoration: 'none',
-            }}
           >
             {title}
           </a>
         ) : (
           <span
-            className="text"
-            data-variant="title"
-            style={{ 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-            }}
+            data-component="text"
+            data-overflow="ellipsis"
           >
             {title}
           </span>
@@ -209,29 +192,20 @@ export function VideoSearchResult({
         {creator_name && (
           creator_url ? (
             <a
-              className="text"
-              data-variant="body"
+              data-component="text"
+              data-variant="secondary"
+              data-overflow="ellipsis"
               href={creator_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ 
-                textDecoration: 'none',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
             >
               {creator_name}
             </a>
           ) : (
             <span
-              className="text"
-              data-variant="body"
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+              data-component="text"
+              data-variant="secondary"
+              data-overflow="ellipsis"
             >
               {creator_name}
             </span>
@@ -240,7 +214,7 @@ export function VideoSearchResult({
         
         {/* Duration + Views */}
         {metaLine && (
-          <span className="text" data-variant="caption">
+          <span data-component="text" data-variant="caption">
             {metaLine}
           </span>
         )}
@@ -248,15 +222,9 @@ export function VideoSearchResult({
         {/* Description (optional, truncated) */}
         {description && (
           <span
-            className="text"
-            data-variant="body"
-            style={{ 
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              opacity: 0.8,
-            }}
+            data-component="text"
+            data-variant="muted"
+            data-lines="2"
           >
             {description}
           </span>

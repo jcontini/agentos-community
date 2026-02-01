@@ -3,7 +3,7 @@
  * 
  * Displays the header for a single post view with title, author,
  * community, score, comment count, and timestamp.
- * Uses primitive CSS patterns (stack, text) for theme compatibility.
+ * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * title
@@ -68,16 +68,17 @@ export function PostHeader({
 }: PostHeaderProps) {
   return (
     <div
-      className="stack"
+      data-component="stack"
       data-direction="vertical"
-      style={{ gap: '8px', padding: '12px 16px' }}
+      data-gap="md"
+      data-padding="lg"
     >
       {/* Title */}
       {title && (
         <span
-          className="text"
-          data-variant="title"
-          style={{ fontSize: '1.25rem', lineHeight: 1.3 }}
+          data-component="text"
+          data-size="xl"
+          data-weight="medium"
         >
           {title}
         </span>
@@ -85,39 +86,40 @@ export function PostHeader({
       
       {/* Meta line: author • time */}
       <div
-        className="stack"
+        data-component="stack"
         data-direction="horizontal"
-        style={{ gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}
+        data-gap="sm"
+        data-align="center"
+        data-wrap="wrap"
       >
         {/* Author */}
         {author && (
           <>
-            <span className="text" data-variant="caption">Posted by</span>
+            <span data-component="text" data-variant="caption">Posted by</span>
             {authorUrl ? (
               <a
-                className="text"
+                data-component="text"
                 data-variant="caption"
                 href={authorUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ textDecoration: 'none' }}
               >
                 {author}
               </a>
             ) : (
-              <span className="text" data-variant="caption">{author}</span>
+              <span data-component="text" data-variant="caption">{author}</span>
             )}
           </>
         )}
         
         {/* Separator */}
         {author && publishedAt && (
-          <span className="text" data-variant="caption">•</span>
+          <span data-component="text" data-variant="caption">•</span>
         )}
         
         {/* Time */}
         {publishedAt && (
-          <span className="text" data-variant="caption">
+          <span data-component="text" data-variant="caption">
             {formatRelativeTime(publishedAt)}
           </span>
         )}
@@ -126,17 +128,18 @@ export function PostHeader({
       {/* Stats line: score · comments */}
       {(score !== undefined || commentCount !== undefined) && (
         <div
-          className="stack"
+          data-component="stack"
           data-direction="horizontal"
-          style={{ gap: '12px', alignItems: 'center' }}
+          data-gap="lg"
+          data-align="center"
         >
           {score !== undefined && (
-            <span className="text" data-variant="caption">
+            <span data-component="text" data-variant="caption">
               <strong>{formatNumber(score)}</strong> points
             </span>
           )}
           {commentCount !== undefined && (
-            <span className="text" data-variant="caption">
+            <span data-component="text" data-variant="caption">
               <strong>{formatNumber(commentCount)}</strong> comments
             </span>
           )}

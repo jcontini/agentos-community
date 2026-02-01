@@ -3,6 +3,7 @@
  * 
  * Displays a breadcrumb-style header showing which community/subreddit
  * the posts belong to. Used in list views to provide context.
+ * Uses primitive data-attributes for full theme compatibility.
  */
 
 import React from 'react';
@@ -58,34 +59,27 @@ export function CommunityHeader({
   
   return (
     <div
-      style={{
-        padding: '12px 16px',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-      }}
+      data-component="stack"
+      data-padding="lg"
+      data-header-bar
     >
       {communityUrl ? (
         <a
-          className="text"
+          data-component="text"
           data-variant="title"
+          data-size="lg"
+          data-weight="bold"
           href={communityUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: '1rem',
-          }}
         >
           {displayName}
         </a>
       ) : (
         <span
-          className="text"
-          data-variant="title"
-          style={{
-            fontWeight: 600,
-            fontSize: '1rem',
-          }}
+          data-component="text"
+          data-size="lg"
+          data-weight="bold"
         >
           {displayName}
         </span>
