@@ -1,0 +1,136 @@
+# Photo Entity - images with metadata
+# Used for: wallpapers, albums, profile pictures, any image picker
+
+---
+id: photo
+plural: photos
+name: Photo
+description: An image file with metadata
+
+references:
+  schema_org: https://schema.org/ImageObject
+  wikidata: Q125191
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Display name/filename
+
+  src:
+    type: string
+    required: true
+    description: Full URL or path to the image
+
+  thumbnail:
+    type: string
+    description: URL or path to thumbnail version
+
+  width:
+    type: integer
+    description: Image width in pixels
+
+  height:
+    type: integer
+    description: Image height in pixels
+
+  size:
+    type: integer
+    description: File size in bytes
+
+  mime_type:
+    type: string
+    description: MIME type (e.g., image/png, image/jpeg)
+
+  alt:
+    type: string
+    description: Alt text for accessibility
+
+  description:
+    type: string
+    description: Photo description/caption
+
+  tags:
+    type: array
+    items: string
+    description: Tags for categorization
+
+  created_at:
+    type: datetime
+    description: When photo was taken or created
+
+  source:
+    type: string
+    description: Where this photo came from (plugin, bundled, local)
+
+operations: [list, get]
+
+display:
+  primary: name
+  icon: image
+  show_as_app: false
+  # Default view is grid
+  default_view: grid
+  # Grid item shows thumbnail
+  grid_item:
+    image: thumbnail
+    fallback: src
+    label: name
+
+---
+id: album
+plural: albums
+name: Album
+description: A collection of photos
+
+references:
+  schema_org: https://schema.org/ImageGallery
+  wikidata: Q189936
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Album name
+
+  description:
+    type: string
+    description: Album description
+
+  cover_photo:
+    type: string
+    description: ID of the cover photo
+
+  photo_count:
+    type: integer
+    description: Number of photos in album
+
+  created_at:
+    type: datetime
+    description: When album was created
+
+  updated_at:
+    type: datetime
+    description: When album was last updated
+
+  source:
+    type: string
+    description: Source of this album (bundled, plugin, local)
+
+operations: [list, get]
+
+display:
+  primary: name
+  secondary: photo_count
+  icon: folder
+  show_as_app: false
