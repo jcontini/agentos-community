@@ -110,3 +110,4 @@ display:
   primary: title
   secondary: start
   icon: calendar
+  show_as_app: true

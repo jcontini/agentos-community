@@ -76,6 +76,7 @@ display:
   secondary: member_count
   description: description
   icon: users
+  show_as_app: true
 
 # Views for rendering group activities
 # Note: Browser provides padding and status bar automatically

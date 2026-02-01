@@ -63,6 +63,7 @@ display:
   secondary: due_date
   status: completed
   icon: check-square
+  show_as_app: true
   # Sort by priority (1=highest, so ascending), then by due date, completed items last
   sort:
     - field: completed
@@ -162,4 +163,4 @@ operations: [list, get, create, delete]
 display:
   primary: name
   icon: tag
-  show_in_library: false
+  show_as_app: false

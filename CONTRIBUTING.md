@@ -73,56 +73,63 @@ node scripts/generate-manifest.js --check
 
 ## Architecture Overview
 
-**Key insight: Entities = Apps.** Entities are self-contained packages that include schema, views, AND components. When you install a plugin that uses the `post` entity, you effectively get a "Posts" app.
+**Key insight: Apps contain models.** Apps are self-contained packages that include models (data schema), views, and components. When you install a plugin that provides `task` operations, you get a "Tasks" app on your desktop.
 
 ```
-entities/          Self-contained packages (schema + views + components)
-  posts/           Example: post entity folder
-    entity.yaml    Schema + views
-    components/    UI components for this entity
+apps/              Self-contained app packages
+  tasks/           Example: Tasks app
+    models.yaml    Data models (task, project, label)
+    icon.png       Desktop icon
+    components/    UI components for this app
+  posts/           Example: Posts app
+    models.yaml    Data models (post)
+    icon.png       Desktop icon
+    components/
       post-item.tsx
       post-header.tsx
-  tasks.yaml       Legacy format (being migrated to folders)
-  ...
+  operations.yaml  Shared operation definitions
+  .needs-work/     Apps that need completion
 
-plugins/           Adapters (how services map to entities)
-  reddit/          Maps Reddit API → post entity
-  todoist/         Maps Todoist API → task entity
-  youtube/         Maps YouTube API → video entity
+plugins/           Adapters (how services map to app models)
+  reddit/          Maps Reddit API → post model
+  todoist/         Maps Todoist API → task model
+  youtube/         Maps YouTube API → video model
   .needs-work/     Plugins that need completion
 
 themes/            Visual styling (CSS)
 ```
 
 **The flow:** 
-1. Plugins declare which entities they provide (via `adapters:` section)
-2. Entities define schema + views + components
-3. The viewer shell renders entity views using entity components + framework components
+1. Plugins declare which models they provide (via `adapters:` section)
+2. Apps define models + views + components
+3. Apps with `show_as_app: true` appear on the desktop when plugins support them
+4. The viewer shell renders app views using app components + framework components
 
 ---
 
-## Entities
+## Apps
 
-Entities are self-contained packages that define what something IS, how to display it, and the components to render it.
+Apps are self-contained packages that define models (data schemas), how to display them, and the components to render them.
 
-**New format (preferred):** `entities/{entity}/entity.yaml` + `components/`
+**Structure:** `apps/{app}/models.yaml` + `icon.png` + `components/`
 
 ```
-entities/
-  posts/                    # Entity folder
-    entity.yaml             # Schema + views
+apps/
+  posts/                    # App folder
+    models.yaml             # Data models + views
+    icon.png                # Desktop icon (PNG preferred, SVG fallback)
     components/
       post-item.tsx         # List item component
       post-header.tsx       # Detail view header
       comment-thread.tsx    # Nested comments
 ```
 
-**Legacy format:** `entities/{entity}.yaml` (being migrated)
+### Models Definition
 
-### Entity Definition
+A `models.yaml` file can contain multiple related models (e.g., task + project + label).
 
 ```yaml
-# entities/posts/entity.yaml
+# apps/posts/models.yaml
 
 id: post
 plural: posts
@@ -150,6 +157,7 @@ display:
   primary: title
   secondary: author.name
   icon: message-square
+  show_as_app: true         # Shows on desktop (default: false)
 
 # Views define how to render each operation
 views:
@@ -159,7 +167,7 @@ views:
       - component: list
         data:
           source: activity
-        item_component: post-item    # Resolves to entity's components/
+        item_component: post-item    # Resolves to app's components/
         item_props:
           title: "{{title}}"
           author: "{{author.name}}"
@@ -170,22 +178,38 @@ views:
     layout:
       - component: layout/scroll-area
         children:
-          - component: post-header     # Entity component
+          - component: post-header     # App component
           - component: text            # Framework component
-          - component: comment-thread  # Entity component
+          - component: comment-thread  # App component
 ```
+
+### show_as_app
+
+Controls whether a model appears as an app on the desktop:
+- `show_as_app: true` — Main models (task, message, event, post, video, group)
+- `show_as_app: false` (default) — Supporting models (project, label, calendar, conversation)
 
 ### Component Resolution
 
 When a view references a component:
-1. **Entity components** — Check `entities/{entity}/components/`
+1. **App components** — Check `apps/{app}/components/`
 2. **Framework components** — Check bundled `components/` (list, text, layout/*)
 
-Entity components can override framework components for that entity's views.
+App components can override framework components for that app's views.
+
+### Icon Loading
+
+Desktop icons resolve in order:
+1. `apps/{app}/icon.png` — PNG (preferred)
+2. `apps/{app}/icon.svg` — SVG fallback
+3. Lucide icon from `display.icon` field
+4. First letter fallback
+
+**Important:** If PNG exists, SVG is not loaded.
 
 ### Relationships
 
-Defined in `entities/graph.yaml`:
+Defined in `apps/graph.yaml`:
 
 ```yaml
 relationships:
@@ -195,7 +219,7 @@ relationships:
     description: The project a task belongs to
 ```
 
-When creating a plugin, check `entities/{entity}/entity.yaml` to see what properties to map.
+When creating a plugin, check `apps/{app}/models.yaml` to see what properties to map.
 
 ---
 
@@ -426,14 +450,14 @@ response:
 
 ## Components
 
-Entity components live in `entities/{entity}/components/`. They compose framework primitives — never custom CSS.
+App components live in `apps/{app}/components/`. They compose framework primitives — never custom CSS.
 
 **Key rules:**
 - Use `data-*` attributes for styling: `data-component="text" data-variant="title"`
-- Proxy external images with `getProxiedSrc()` (see `entities/posts/components/post-item.tsx`)
+- Proxy external images with `getProxiedSrc()` (see `apps/posts/components/post-item.tsx`)
 - Export default: `export default MyComponent`
 
-**See examples:** `entities/posts/components/`, `entities/groups/components/`
+**See examples:** `apps/posts/components/`, `apps/groups/components/`
 
 ---
 

@@ -104,6 +104,7 @@ display:
   description: description
   image: thumbnail
   icon: play
+  show_as_app: true
 
 # Views for rendering video activities
 # Note: Browser provides padding and status bar automatically
