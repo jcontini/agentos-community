@@ -209,39 +209,10 @@ Current manifest includes:
 
 ## For Developers
 
-### Development Setup
-
 ```bash
 git clone https://github.com/jcontini/agentos-community
 cd agentos-community
 npm install    # Sets up pre-commit hooks
 ```
 
-### Testing
-
-**Validation** (schema + test coverage):
-```bash
-npm run validate              # Check all plugins
-```
-
-**Functional tests** (actual API calls):
-```bash
-npm test                      # Run all tests (excludes .needs-work)
-npm run test:needs-work       # Test plugins in .needs-work
-npm test plugins/exa/tests    # Test specific plugin
-```
-
-**Test structure:** Tests are organized by domain (`tests/plugins/`, `tests/entities/`). See [CONTRIBUTING.md](CONTRIBUTING.md#testing) for details.
-
-**The `.needs-work` folder:** Plugins that fail validation are automatically moved to `plugins/.needs-work/` to keep the main directory clean.
-
-### Manifest Generation
-
-The `manifest.json` auto-generates via GitHub Actions. To test locally:
-
-```bash
-node scripts/generate-manifest.js        # Regenerate
-node scripts/generate-manifest.js --check  # Validate only
-```
-
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for plugin development, testing, and contribution terms.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for plugin development, testing, and contribution guidelines.

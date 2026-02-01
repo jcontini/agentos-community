@@ -1,0 +1,207 @@
+# AgentOS Community — Agent Guide
+
+> Read this first. It gives you orientation and operational patterns for contributing to this repo.
+
+---
+
+## First: Read CONTRIBUTING.md
+
+**CONTRIBUTING.md is the source of truth** for plugin structure, entity schemas, component rules, and testing. Read it before making changes.
+
+This file (AGENTS.md) adds agent-specific workflow guidance.
+
+---
+
+## What This Repo Is
+
+**Community content for AgentOS** — plugins, entities, themes, and components that users install via the App Store.
+
+- **Core repo** (`agentos`) — the Rust/React app itself
+- **This repo** (`agentos-community`) — installable content
+
+When users click "Install" in the AgentOS App Store, it downloads from this repo to `~/.agentos/installed/`.
+
+---
+
+## Key Directories
+
+| Path | Purpose |
+|------|---------|
+| `plugins/` | Service adapters (Reddit → post, YouTube → video, etc.) |
+| `entities/` | Schema + views + components for each entity type |
+| `themes/` | Visual styling (CSS) |
+| `agents/` | Setup instructions for AI clients (Cursor, Claude, etc.) |
+| `tests/` | Test utilities and fixtures |
+| `scripts/` | Manifest generation, setup scripts |
+
+### Plugin Organization
+
+Plugins are organized by category:
+
+```
+plugins/
+  todoist/           # Top-level for common plugins
+  linear/
+  exa/
+  apple-calendar/    # Native macOS integrations
+  .needs-work/       # Plugins that need completion
+    communication/
+    databases/
+    government/
+```
+
+---
+
+## Development Workflow
+
+**Recommended:** Edit in `~/.agentos/installed/`, test with running server, copy here when ready.
+
+```bash
+# 1. Edit directly in installed folder (fast iteration)
+vim ~/.agentos/installed/plugins/reddit/readme.md
+
+# 2. Restart AgentOS server and test
+cd ~/dev/agentos && ./restart.sh
+curl -X POST http://localhost:3456/api/plugins/reddit/post.list \
+  -d '{"subreddit": "programming", "limit": 1}'
+
+# 3. When working, copy to community repo
+cp -r ~/.agentos/installed/plugins/reddit ~/dev/agentos-community/plugins/
+
+# 4. Validate and commit
+cd ~/dev/agentos-community
+npm run validate
+git add -A && git commit -m "Update Reddit plugin"
+```
+
+**Why this workflow:**
+- Changes in `~/.agentos/installed/` take effect on server restart
+- No copy step between edits — fast feedback
+- Community repo stays clean — only tested code gets committed
+
+---
+
+## Commands
+
+```bash
+npm run validate              # Schema validation + test coverage (run first!)
+npm test                      # Functional tests (excludes .needs-work)
+npm run test:needs-work       # Test plugins in .needs-work
+npm test plugins/exa/tests    # Test specific plugin
+```
+
+### Validation vs Tests
+
+| Command | What it checks |
+|---------|----------------|
+| `npm run validate` | Schema structure, test coverage, required files (icon.svg) |
+| `npm test` | Actually calls APIs, verifies behavior |
+
+**Always run `npm run validate` first** — it catches structural issues before you test functionality.
+
+---
+
+## Plugin Checklist
+
+Before committing a plugin:
+
+- [ ] `icon.svg` or `icon.png` exists
+- [ ] `npm run validate` passes
+- [ ] Mapping covers entity properties (check `entities/{entity}/entity.yaml`)
+- [ ] Functional tests pass (`npm test`)
+
+## Expression Syntax
+
+Plugins use **jaq expressions** (jq syntax), not template strings:
+
+```yaml
+# Correct — jaq expressions
+url: '"https://api.example.com/tasks/" + .params.id'
+query:
+  limit: .params.limit | tostring
+  priority: 5 - .params.priority
+
+# Wrong — old template syntax
+url: "https://api.example.com/tasks/{{params.id}}"
+```
+
+**Common patterns:**
+- String concat: `'"https://example.com/" + .params.id'`
+- To string: `.params.limit | tostring`
+- URL encode: `.params.query | @uri`
+- Unix → ISO: `.created_utc | todate`
+- Optional: `.due.date?`
+- Conditional: `'if .params.x == "y" then "a" else "b" end'`
+
+See CONTRIBUTING.md for detailed plugin structure, adapters, executors, and transforms.
+
+---
+
+## Entity Components
+
+**Components must only compose primitives — never custom CSS.**
+
+```tsx
+// Good: uses data-* attributes for styling
+<div data-component="stack" data-direction="horizontal" data-gap="md">
+  <span data-component="text" data-variant="title">{title}</span>
+</div>
+
+// Bad: custom CSS that breaks themes
+<div style={{ display: 'flex', gap: '16px' }}>
+  <span className="my-title">{title}</span>
+</div>
+```
+
+**Why:** Themes style primitives via `[data-component="text"]` selectors. Custom CSS breaks theming.
+
+**Image proxy:** External images need proxying to bypass hotlink protection:
+
+```tsx
+function getProxiedSrc(src: string | undefined): string | undefined {
+  if (!src) return undefined;
+  if (src.startsWith('/') || src.startsWith('data:') || src.startsWith('blob:')) return src;
+  return `/api/proxy/image?url=${encodeURIComponent(src)}`;
+}
+```
+
+See CONTRIBUTING.md for full component guidelines.
+
+---
+
+## The `.needs-work` Folder
+
+Plugins that fail validation are moved to `plugins/.needs-work/`:
+
+- Missing `icon.svg`
+- Schema validation errors
+- Missing tests for operations
+
+**To fix a plugin:**
+1. Fix the issues
+2. Run `npm run validate`
+3. Move to working folder: `mv plugins/.needs-work/my-plugin plugins/my-plugin`
+
+---
+
+## Manifest
+
+**Never edit `manifest.json` manually!**
+
+GitHub Actions auto-generate it on push to `main`. To test locally:
+
+```bash
+node scripts/generate-manifest.js        # Regenerate
+node scripts/generate-manifest.js --check  # Validate only
+```
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `CONTRIBUTING.md` | Complete technical reference — plugin structure, entities, components |
+| `tests/plugins/plugin.schema.json` | Schema source of truth for plugin YAML |
+| `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
+| `entities/{entity}/entity.yaml` | Entity schema — what properties to map |

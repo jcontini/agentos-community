@@ -4,6 +4,8 @@ Declarative YAML for entities, plugins, components, apps, and themes.
 
 **Schema reference:** `tests/plugins/plugin.schema.json` — the source of truth for plugin structure.
 
+**Using an AI agent?** Have it read `AGENTS.md` for operational guidance and workflow patterns.
+
 ---
 
 ## Development Workflow
@@ -203,76 +205,62 @@ Plugins are adapters that transform service-specific API responses into universa
 
 ### Structure
 
-Plugins are organized into category folders based on entity type or domain:
-
 ```
-plugins/{category}/{name}/
+plugins/{name}/
   readme.md     # Plugin definition (YAML front matter + markdown docs)
-  icon.svg      # Required — vector icon
+  icon.svg      # Required — vector icon (or icon.png)
   tests/        # Functional tests
 ```
 
-**Category types:**
-- **Entity-type categories:** `calendar/`, `contacts/`, `tasks/`, `search/`, `messages/`
-- **Domain categories:** `communication/`, `development/`, `social/`, `databases/`, `domains/`, `storage/`, `media/books/`
-- **Government plugins:** Use ISO 3166 codes — `government/us/national/`, `government/us/us-tx/`
+**Common plugins** live at root: `plugins/todoist/`, `plugins/linear/`, `plugins/reddit/`
+
+**Category folders** for organization when needed:
+- `.needs-work/` — Plugins that need completion
+- `government/us/national/` — Use ISO 3166 codes for government plugins
 
 ```yaml
 # readme.md YAML front matter
-requires:     # System dependencies (optional)
-handles:      # URL patterns this plugin routes (optional)
-sources:      # External resources for CSP (optional)
-adapters:     # How API data maps to entity schemas
-operations:   # Entity CRUD (returns: entity, entity[], or void)
-utilities:    # Helpers with custom return shapes (optional)
+id: todoist
+name: Todoist
+description: Personal task management
+icon: icon.png
+color: "#DE483A"            # Brand color for UI
+tags: [tasks, todos]
+display: browser            # Optional: how to display (browser, etc.)
+
+website: https://todoist.com
+privacy_url: https://...
+terms_url: https://...
+
+auth: { ... }               # Authentication config
+adapters: { ... }           # How API data maps to entity schemas
+operations: { ... }         # Entity CRUD (returns: entity, entity[], or void)
+utilities: { ... }          # Helpers with custom return shapes (optional)
+instructions: |             # AI notes — tips for using this plugin
+  Plugin-specific notes for AI...
+
+# Optional
+requires: [...]             # System dependencies
+handles: { urls: [...] }    # URL patterns this plugin routes
+sources: { images: [...] }  # External resources for CSP
 ```
 
-**Examples:** `plugins/tasks/todoist/` (REST API), `plugins/calendar/apple-calendar/` (Swift/native)
+**Examples:** `plugins/todoist/` (REST API), `plugins/apple-calendar/` (Swift/native)
 
-### Dependencies
+### Optional: Dependencies, URL Handlers, External Sources
 
-Plugins can declare system dependencies that must be installed:
-
+**Dependencies** — system requirements:
 ```yaml
 requires:
   - name: yt-dlp
-    install:
-      macos: brew install yt-dlp
-      linux: sudo apt install -y yt-dlp
-      windows: choco install yt-dlp -y
+    install: { macos: "brew install yt-dlp" }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `name` | Dependency name (shown to user) |
-| `install.macos` | macOS install command |
-| `install.linux` | Linux install command |
-| `install.windows` | Windows install command |
-
-The system checks if dependencies are available and shows install instructions if missing.
-
-### URL Handlers
-
-Plugins can register for URL patterns. When AI calls `url.read(url)`, the system routes to the appropriate plugin:
-
+**URL handlers** — route URLs to plugins:
 ```yaml
 handles:
-  urls:
-    - "youtube.com/*"
-    - "youtu.be/*"
-    - "music.youtube.com/*"
+  urls: ["youtube.com/*", "youtu.be/*"]
 ```
-
-**Pattern syntax:**
-- `*` matches any characters within a path segment
-- Patterns match against the URL's host + path (without protocol)
-- First matching plugin wins (order defined in Settings)
-
-**Example flow:**
-1. AI calls `url.read("https://youtube.com/watch?v=abc123")`
-2. System matches `youtube.com/*` → routes to YouTube plugin
-3. YouTube plugin returns a `video` entity
-4. Browser displays video view (entity routing)
 
 ### External Sources
 
@@ -326,642 +314,142 @@ adapters:
       task_labels: full
     mapping:
       id: .id
-      title: .content           # API field → entity property
-      completed: .is_completed
-      priority: ".priority | invert:5"  # Transform if needed
+      title: .content
+      completed: .checked
+      priority: 5 - .priority   # Invert: Todoist 4=urgent → AgentOS 1=highest
+      due_date: .due.date?      # Optional field
       _project_id: .project_id  # Relationship data (underscore prefix)
 ```
 
 **Relationship fields** use underscore prefix (`_project_id`) — these connect to `graph.yaml` relationships.
 
-### Nested Mappings
+**Dot syntax** for nested objects: `author.name: .data.author` creates `{ author: { name: ... } }`
 
-For rich entity schemas, use nested YAML objects:
-
-```yaml
-# Example: Reddit plugin mapping to post entity
-adapters:
-  post:
-    terminology: Post
-    mapping:
-      id: .data.id
-      title: .data.title
-      content: .data.selftext
-      url: ".data.permalink | prepend: 'https://reddit.com'"
-      author:                              # Nested object
-        name: .data.author
-        url: ".data.author | prepend: 'https://reddit.com/u/'"
-      community:
-        name: .data.subreddit
-        url: ".data.subreddit | prepend: 'https://reddit.com/r/'"
-      engagement:
-        score: .data.score
-        comment_count: .data.num_comments
-      published_at: ".data.created_utc | from_unix"
-```
-
-Nested mappings are recursively evaluated — each leaf value is a JMESPath expression with optional transform.
-
-### Transforms
-
-Apply transforms after extracting a value using the pipe syntax: `.path | transform`
-
-| Transform | Description | Example |
-|-----------|-------------|---------|
-| `prepend:'prefix'` | Add string prefix | `.author \| prepend: 'https://reddit.com/u/'` |
-| `from_unix` | Unix timestamp → ISO datetime | `.created_utc \| from_unix` |
-| `invert:N` | Calculate N - value | `.priority \| invert:5` (for 1-5 → 5-1) |
-| `divide:N` | Divide by N | `.score \| divide:100` |
-| `multiply:N` | Multiply by N | `.progress \| multiply:100` |
-| `to_datetime` | Format as datetime string | `.timestamp \| to_datetime` |
-
-**Quoting:** Use single quotes around string arguments: `prepend: 'https://example.com/'`
+**See real examples:** `plugins/reddit/readme.md`, `plugins/todoist/readme.md`
 
 ### Operations
 
-Entity CRUD. Return type determines which adapter mapping applies.
+Entity CRUD. **Naming:** `entity.operation` — `task.list`, `webpage.search`, `event.create`
 
-**Naming:** `entity.operation` — `task.list`, `webpage.search`, `event.create`
-
-**Return types:** `entity` (single), `entity[]` (array), `void` (no data returned)
-
-```yaml
-operations:
-  task.list:
-    description: List all tasks
-    returns: task[]
-    rest:
-      method: GET
-      url: https://api.example.com/tasks
-      response:
-        root: "/data"           # JSON Pointer — must start with /
-```
+**Return types:** `entity` (single), `entity[]` (array), `void` (no data)
 
 ### Executors
 
-Each operation uses exactly one executor. Available types:
+| Executor | Use case | Example plugin |
+|----------|----------|----------------|
+| `rest` | HTTP APIs | `plugins/todoist/` |
+| `graphql` | GraphQL APIs | `plugins/linear/` |
+| `swift` | macOS native APIs | `plugins/apple-calendar/` |
+| `command` | Shell commands | `plugins/reddit/` (group.get) |
+| `sql` | Database queries | — |
 
-| Executor | Use case | Required fields |
-|----------|----------|-----------------|
-| `rest` | HTTP APIs | `url`, optional `method`, `query`, `body` |
-| `graphql` | GraphQL APIs | `query`, optional `variables` |
-| `sql` | Database queries | `query` |
-| `swift` | macOS native APIs | `script` |
-| `command` | Shell commands | `binary` |
-| `csv` | CSV file parsing | `path` |
-
-#### REST Executor
-
+**REST example:**
 ```yaml
 operations:
   task.list:
+    description: List actionable tasks
     returns: task[]
+    web_url: https://app.todoist.com/app/today
     rest:
       method: GET
-      url: https://api.example.com/tasks
+      url: https://api.todoist.com/api/v1/tasks/filter
       query:
-        filter: "{{params.filter}}"
+        query: .params.query
       response:
-        root: "/data"
+        root: /results
 ```
 
-#### SQL Executor
+**Dynamic URLs:** `url: '"https://api.example.com/tasks/" + .params.id'`
 
-```yaml
-operations:
-  message.list:
-    returns: message[]
-    sql:
-      query: |
-        SELECT id, text, date FROM messages
-        WHERE conversation_id = '{{params.conversation_id}}'
-        ORDER BY date DESC
-        LIMIT {{params.limit | default: 50}}
-```
+**`web_url`:** Links to web interface (jaq expression)
 
-#### Swift Executor (macOS only)
+### Expression Syntax (jaq)
 
-For native macOS APIs (EventKit, Contacts, etc.):
+All values use jaq expressions (Rust jq). Access `.params.*`, do math, conditionals:
 
-```yaml
-operations:
-  event.list:
-    returns: event[]
-    swift:
-      script: |
-        import EventKit
-        import Foundation
-        
-        // Swift code that prints JSON to stdout
-        let args = CommandLine.arguments
-        let days = args.count > 1 ? Int(args[1]) ?? 7 : 7
-        // ... implementation ...
-        print(jsonString)
-      args:
-        - "{{params.days}}"
-        - "{{params.calendar_id}}"
-```
+| Pattern | Example |
+|---------|---------|
+| Dynamic URL | `'"https://api.example.com/tasks/" + .params.id'` |
+| Query param | `.params.limit \| tostring` |
+| URL encode | `.params.query \| @uri` |
+| Math | `5 - .params.priority` |
+| Conditional | `'if .params.feed == "new" then "story" else "front_page" end'` |
+| Unix → ISO | `.created_utc \| todate` |
+| Static string | `'"Bearer "'` |
+| Optional | `.due.date?` |
 
-#### Command Executor
-
-```yaml
-operations:
-  file.list:
-    returns: file[]
-    command:
-      binary: /usr/bin/find
-      args:
-        - "{{params.path}}"
-        - "-type"
-        - "f"
-```
-
-### Template Syntax
-
-Parameters are substituted using `{{params.name}}` syntax:
-
-```yaml
-params:
-  limit: { type: integer, default: 50 }
-  query: { type: string }
-
-rest:
-  url: https://api.example.com/search
-  query:
-    q: "{{params.query}}"
-    limit: "{{params.limit}}"
-```
-
-**Filters:** `{{params.limit | default: 50}}` — provides fallback value
+**See examples:** `plugins/todoist/readme.md`, `plugins/hackernews/readme.md`
 
 ### Utilities
 
-Helpers returning custom shapes (not entities).
+Helpers returning custom shapes (not entities). **Naming:** `verb_noun` — `move_task`, `get_teams`
 
-```yaml
-utilities:
-  move_task:
-    description: Move task to different project
-    params:
-      id: { type: string, required: true }
-      project_id: { type: string, required: true }
-    returns:
-      success: boolean
-    rest: ...
-```
+**See examples:** `plugins/todoist/readme.md` (move_task), `plugins/linear/readme.md` (get_teams, setup)
 
-**Naming:** `verb_noun` — `move_task`, `get_teams`
+### Advanced
 
-### Key Rules
-
-| Rule | Details |
-|------|---------|
-| JSON Pointer for `response.root` | Must start with `/` (e.g., `/data`, `/results/0`) |
-| Single source of truth | Mapping in adapters, not duplicated per operation |
-| Relationship fields use `_` prefix | `_project_id`, `_parent_id` |
-| Handle API quirks internally | Use mutation handlers, not instructions |
-
-### Mutation Handlers
-
-When an API can't update a field through the normal endpoint:
-
+**Mutation handlers** — when API can't update a field normally:
 ```yaml
 adapters:
   task:
     relationships:
       task_project:
         support: full
-        mutation: move_task  # Routes project_id changes through utility
+        mutation: move_task  # Routes changes through utility
 ```
 
-### Operation-Level Mapping Override
+**Operation-level mapping** — when API returns different shapes:
+```yaml
+response:
+  mapping:           # Override adapter mapping for this operation
+    url: .url
+    title: .title
+```
 
-When API returns different shapes per operation:
+### Response Transforms
+
+For complex API responses, use `response.transform` with jaq/jq:
 
 ```yaml
-operations:
-  webpage.search:
-    returns: webpage[]
-    rest:
-      response:
-        mapping:           # Override adapter mapping
-          url: .url
-          title: .title    # Search results lack full content
+response:
+  transform: |
+    def map_comment: { id: .id, content: .text, replies: [.children[]? | map_comment] };
+    { objectID: (.id | tostring), replies: [.children[]? | map_comment] }
+  root: /data
 ```
 
-### Response Transforms (jq)
+**Pipeline:** API Response → `transform` → `root` → Adapter mapping
 
-For APIs that return complex structures needing restructuring before mapping, use `response.transform` with jq expressions:
-
-```yaml
-operations:
-  post.get:
-    rest:
-      url: "https://api.example.com/posts/{{params.id}}"
-      response:
-        # Transform runs FIRST (before root extraction)
-        transform: |
-          {
-            id: .data.id,
-            title: .data.title,
-            replies: [.comments[] | {id, content: .body}]
-          }
-        # Then root extracts from transformed output
-        root: "/"
-```
-
-**Pipeline order:**
-1. API Response
-2. `response.transform` (jq expression, optional)
-3. `response.root` (path extraction, optional)
-4. `adapters.{entity}.mapping` (field normalization)
-
-**When to use transforms:**
-
-| Situation | Solution |
-|-----------|----------|
-| Simple path extraction | `response.root: "/data"` |
-| Need to merge multiple parts | `transform` to combine |
-| Recursive nested data (comments) | `transform` with `def` |
-| API returns `[post, comments]` array | `transform` to restructure |
-
-**Recursive transforms** for nested comments:
-
-```yaml
-# Reddit example: API returns [post_data, comments_data] array
-transform: |
-  def map_comment:
-    {
-      id: .id,
-      content: .body,
-      author: { name: .author },
-      published_at: (.created_utc | todate),
-      replies: [(.replies.data.children // [])[] | select(.kind == "t1") | .data | map_comment]
-    };
-  .[0].data.children[0].data + {
-    replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
-  }
-```
-
-**jq cheatsheet:**
-
-| Expression | Description |
-|------------|-------------|
-| `.field` | Access field |
-| `.[0]` | Array index |
-| `.[] \| ...` | Map over array |
-| `select(.x == "y")` | Filter |
-| `{a: .b, c: .d}` | Object construction |
-| `// default` | Null coalescing |
-| `def f: ...; f` | Define recursive function |
-| `todate` | Unix timestamp → ISO |
-
-**Note:** Transforms use `jaq` (pure Rust jq implementation). Most jq syntax works, with minor differences documented at [jaq](https://github.com/01mf02/jaq).
-
-### Checklist
-
-- [ ] `icon.svg` exists (vector icon required)
-- [ ] Plugin is in the correct category folder
-- [ ] `npm run validate` passes (schema validation)
-- [ ] Parameters verified against API docs
-- [ ] Mapping covers entity properties (`entities/{entity}.yaml`)
-- [ ] Relationship fields use `_` prefix
-- [ ] API quirks handled internally
-- [ ] Functional tests pass (`npm test`)
+**See examples:** `plugins/reddit/readme.md` (post.get), `plugins/hackernews/readme.md` (post.get)
 
 ---
 
 ## Components
 
-TSX files dynamically loaded and transpiled by the server.
+Entity components live in `entities/{entity}/components/`. They compose framework primitives — never custom CSS.
 
-### Two Types of Components
+**Key rules:**
+- Use `data-*` attributes for styling: `data-component="text" data-variant="title"`
+- Proxy external images with `getProxiedSrc()` (see `entities/posts/components/post-item.tsx`)
+- Export default: `export default MyComponent`
 
-**1. Primitives** — Theme-agnostic building blocks in `bundled/components/`:
-
-```
-bundled/components/
-  text.tsx           # Text with data-variant (title, body, caption, etc.)
-  image.tsx          # Image with fallback and auto-proxy
-  stack.tsx          # Flex container (horizontal/vertical)
-  list.tsx           # List container
-  scroll-area.tsx    # Scrollable container
-  url-bar.tsx        # URL input bar
-```
-
-**2. Entity components** — Composed from primitives, in entity folder:
-
-```
-entities/posts/components/
-  post-item.tsx      # List item for posts
-  post-header.tsx    # Detail view header
-```
-
-When views reference components, entity components are checked first, then primitives.
-
-### Primitives-Based Architecture
-
-**Entity components should ONLY compose primitives — never define custom CSS.**
-
-This ensures:
-- **Theme agnostic** — Components work with any theme (Mac OS 9, Windows XP, dark mode)
-- **Consistent styling** — All text, images, spacing come from the design system
-- **Easy maintenance** — Change a primitive once, all entities update
-
-### Rules
-
-1. **Import React explicitly** — `import React from 'react'`
-2. **Export default** — `export default MyComponent`
-3. **TypeScript interfaces for props** — document your component's API
-4. **No custom CSS** — compose primitives only, use `data-*` attributes for variants
-5. **Proxy external images** — use `getProxiedSrc()` for external URLs
-
-### Example Entity Component
-
-```tsx
-import React from 'react';
-
-interface GroupItemProps {
-  name: string;
-  description?: string;
-  icon?: string;
-  members?: number;
-}
-
-// Proxy external images to bypass hotlink protection
-function getProxiedSrc(src: string | undefined): string | undefined {
-  if (!src) return undefined;
-  if (src.startsWith('/') || src.startsWith('data:') || src.startsWith('blob:')) return src;
-  if (src.startsWith('http://') || src.startsWith('https://')) {
-    return `/api/proxy/image?url=${encodeURIComponent(src)}`;
-  }
-  return src;
-}
-
-export function GroupItem({ name, description, icon, members }: GroupItemProps) {
-  return (
-    <div data-component="stack" data-direction="horizontal" data-gap="md" data-align="center">
-      {icon && (
-        <img
-          src={getProxiedSrc(icon)}
-          alt={name}
-          data-component="image"
-          data-size="md"
-        />
-      )}
-      <div data-component="stack" data-direction="vertical" data-gap="xs">
-        <span data-component="text" data-variant="title">{name}</span>
-        {description && (
-          <span data-component="text" data-variant="caption">{description}</span>
-        )}
-      </div>
-      {members !== undefined && (
-        <span data-component="text" data-variant="meta">{members} members</span>
-      )}
-    </div>
-  );
-}
-
-export default GroupItem;
-```
-
-### Styling via Data Attributes
-
-Themes style primitives using `data-*` selectors:
-
-```css
-/* themes/os/macos9/theme.css */
-[data-component="text"][data-variant="title"] {
-  font-weight: bold;
-  font-size: 14px;
-}
-[data-component="text"][data-variant="caption"] {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-[data-component="stack"][data-direction="horizontal"] {
-  display: flex;
-  flex-direction: row;
-}
-```
-
-**Entity components never add to theme CSS** — they just compose existing primitives.
-
----
-
-## Apps
-
-Apps come in three tiers:
-
-### Tier 1: System Apps
-
-Not entity-based — special utilities:
-- `settings/` — System configuration
-- `store/` — Browse/install from community
-- `terminal/` — Activity log, fallback viewer
-- `firewall/` — Configure access rules
-
-```yaml
-id: settings
-name: Settings
-icon: icon.svg
-
-views:
-  main:
-    title: Settings
-    layout:
-      - component: settings-panel
-```
-
-### Tier 2: Dedicated Entity Apps
-
-Custom UI for specific entities. Can handle multiple entities:
-
-```yaml
-# apps/messages/app.yaml
-id: messages
-name: Messages
-icon: icon.svg
-
-views:
-  conversations:
-    entity: conversation
-    operation: list
-    layout: [...]      # Custom layout
-  
-  messages:
-    entity: message
-    operation: list
-    layout: [...]
-  
-  thread:
-    entity: conversation
-    operation: get
-    layout: [...]
-```
-
-**Entities are implicitly determined** from the views. No need to specify `entity:` at app level.
-
-Users choose default apps per entity in Settings.
-
-### Tier 3: Generic Viewer (Fallback)
-
-The "Browser" renders any entity with views defined. Uses entity's default views and components. Title bar is dynamic.
-
-### View Resolution
-
-When activity comes in:
-1. Check user's default app for this entity
-2. If app has view for entity/operation → use app's view
-3. Else → use entity's default view in generic viewer
-
----
-
-## View Syntax Reference
-
-Views (in entity or app definitions) use this syntax:
-
-### Data Sources
-
-```yaml
-# Use current activity's response
-data:
-  source: activity
-item_props:
-  title: "{{title}}"    # Each item in response array
-
-# Query activity history
-data:
-  source: activities
-  entity: webpage
-  limit: 100
-```
-
-### Template Expressions
-
-```yaml
-title: "{{activity.response.title}}"
-query: "{{activity.request.params.query}}"
-title: "{{response.title || request.params.query}}"  # Fallback
-```
-
-### Layout Components
-
-```yaml
-layout:
-  - component: layout/stack
-    props:
-      gap: 16
-      direction: vertical
-    children:
-      - component: text
-        props:
-          content: "Hello"
-```
-
-**Framework layout components:** `layout/stack`, `layout/scroll-area`
-
----
-
-## Themes
-
-CSS and assets in `themes/{family}/{theme-id}/`.
-
-**Example:** `themes/os/macos9/`
+**See examples:** `entities/posts/components/`, `entities/groups/components/`
 
 ---
 
 ## Testing
 
-### Test Types
-
-| Type | Command | What it checks |
-|------|---------|----------------|
-| **Validation** | `npm run validate` | Schema + test coverage — run this first |
-| **Functional tests** | `npm test` | Actually calls APIs, verifies behavior |
-
-### Validation
-
-`npm run validate` checks three things:
-
-1. **Schema validation** — YAML structure matches `tests/plugins/plugin.schema.json`
-2. **Test coverage** — every operation and utility has a test
-3. **Required files** — `icon.svg` exists
-
 ```bash
-npm run validate                    # All plugins
-npm run validate -- --filter exa    # Single plugin
-npm run validate -- --no-move       # Validate without auto-moving failures
+npm run validate              # Schema + test coverage (run first!)
+npm test                      # Functional tests
+npm test plugins/exa/tests    # Single plugin
 ```
 
-**Auto-move behavior:** By default, plugins that fail validation are automatically moved to `plugins/.needs-work/`. This keeps the main plugins directory clean. Use `--no-move` to disable this (useful for pre-commit hooks).
+**Validation** checks: schema structure, test coverage, required files (icon).
 
-A plugin fails validation if any operation/utility lacks a test. The validator looks for `tool: 'operation.name'` in your test files.
+**`.needs-work/`** — Plugins that fail validation are auto-moved here. Fix issues, run `npm run validate`, then move back.
 
-**Test structure:** Tests are organized by domain:
-- `tests/plugins/` — Plugin schema and operations tests
-- `tests/entities/` — Entity schema and graph validation
-
-### Functional Tests
-
-Verify real API behavior:
-
-```bash
-npm test                                              # All tests (excludes .needs-work)
-npm run test:needs-work                               # Only plugins in .needs-work
-npm test plugins/search/exa/tests                     # Single plugin
-npm test plugins/.needs-work/communication/whatsapp   # Specific .needs-work plugin
-```
-
-**Note:** Tests automatically exclude plugins in `plugins/.needs-work/` to focus on working plugins. You can still test specific plugins in `.needs-work` by specifying their path directly.
-
-### The `.needs-work` Folder
-
-Plugins that need completion live in `plugins/.needs-work/`, organized by category:
-
-```
-plugins/.needs-work/
-  communication/
-    whatsapp/
-  government/
-    us/
-      national/
-        uspto/
-      us-tx/
-        tx-dot/
-```
-
-**What goes in `.needs-work`:**
-- Missing `icon.svg`
-- Schema validation errors
-- Missing tests for operations/utilities
-- Work-in-progress plugin specs
-
-To fix a plugin in `.needs-work`:
-1. Fix the issues (add icon, fix schema, add tests)
-2. Run `npm run validate` to verify
-3. Move it to the working category: `mv plugins/.needs-work/tasks/my-plugin plugins/tasks/my-plugin`
-
-### Writing Tests
-
-Tests live in `plugins/{category}/{name}/tests/{name}.test.ts`. Every operation needs at least one test.
-
-```typescript
-import { aos, TEST_PREFIX } from '../../../../tests/utils/fixtures';
-
-describe('My Plugin', () => {
-  it('operation.list returns array', async () => {
-    const result = await aos().call('UsePlugin', {
-      plugin: 'my-plugin',
-      tool: 'entity.list',  // This tool is now marked as tested
-      params: {},
-    });
-    expect(Array.isArray(result)).toBe(true);
-  });
-});
-```
-
-See `plugins/tasks/todoist/tests/` or `plugins/calendar/apple-calendar/tests/` for comprehensive examples.
+**Writing tests:** See `plugins/todoist/tests/todoist.test.ts` for examples. Every operation needs at least one test.
 
 ---
 
