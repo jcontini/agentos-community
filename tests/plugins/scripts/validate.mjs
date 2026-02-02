@@ -67,6 +67,41 @@ function loadModelIds() {
 
 const validModelIds = loadModelIds();
 
+// Load entity properties for adapter validation
+function loadEntityProperties() {
+  const entityProps = {};
+  
+  function scanDir(dir) {
+    if (!existsSync(dir)) return;
+    const entries = readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        scanDir(fullPath);
+      } else if (entry.name === 'models.yaml') {
+        try {
+          const content = readFileSync(fullPath, 'utf-8');
+          const docs = parseAllDocuments(content);
+          for (const doc of docs) {
+            const data = doc.toJS();
+            if (data && data.id && data.properties) {
+              entityProps[data.id] = Object.keys(data.properties);
+            }
+          }
+        } catch (err) {
+          // Skip parse errors
+        }
+      }
+    }
+  }
+  
+  scanDir(MODELS_DIR);
+  return entityProps;
+}
+
+const entityProperties = loadEntityProperties();
+
 // Show loaded models (only in verbose mode or if few models)
 if (process.argv.includes('--verbose')) {
   console.log(`📦 Loaded ${validModelIds.size} models: ${[...validModelIds].sort().join(', ')}\n`);
@@ -102,6 +137,37 @@ function validateReturns(frontmatter) {
   
   if (errors.length > 0) {
     errors.push(`Valid models: ${[...validModelIds].sort().join(', ')}`);
+  }
+  
+  return errors;
+}
+
+// Validate adapter mappings reference valid entity properties
+function validateAdapterMappings(frontmatter) {
+  const errors = [];
+  
+  if (!frontmatter.adapters) return errors;
+  
+  for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
+    if (!adapter.mapping) continue;
+    
+    const validProps = entityProperties[entityName];
+    if (!validProps) {
+      // Entity not found - already caught by returns validation
+      continue;
+    }
+    
+    for (const propName of Object.keys(adapter.mapping)) {
+      // Skip internal properties (prefixed with _)
+      if (propName.startsWith('_')) continue;
+      
+      // For nested props like "author.name", check the top-level "author" exists
+      const topLevelProp = propName.split('.')[0];
+      
+      if (!validProps.includes(topLevelProp)) {
+        errors.push(`Adapter '${entityName}' maps unknown property '${topLevelProp}'. Valid: ${validProps.join(', ')}`);
+      }
+    }
   }
   
   return errors;
@@ -253,26 +319,37 @@ for (const plugin of plugins) {
         failureReason = 'Invalid model references';
         failed = true;
       } else {
-        // Check icon.svg exists (required for all plugins)
-        const iconPath = join(pluginDir, 'icon.svg');
-        if (!existsSync(iconPath)) {
-          console.error(`❌ plugins/${plugin.path}: icon.svg not found (required)`);
-          failureReason = 'icon.svg not found';
+        // Validate adapter mappings reference valid entity properties
+        const adapterErrors = validateAdapterMappings(frontmatter);
+        if (adapterErrors.length > 0) {
+          console.error(`❌ plugins/${plugin.path}: Invalid adapter mappings`);
+          for (const err of adapterErrors) {
+            console.error(`   ${err}`);
+          }
+          failureReason = 'Invalid adapter mappings';
           failed = true;
         } else {
-          // Check test coverage (only for valid plugins)
-          const tools = getTools(frontmatter);
-          const testedTools = getTestedTools(pluginDir);
-          const untestedTools = tools.filter(t => !testedTools.has(t));
-          
-          if (untestedTools.length > 0) {
-            console.error(`❌ plugins/${plugin.path}: Missing tests for: ${untestedTools.join(', ')}`);
-            failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
+          // Check icon exists (PNG or SVG)
+          const hasIcon = existsSync(join(pluginDir, 'icon.svg')) || existsSync(join(pluginDir, 'icon.png'));
+          if (!hasIcon) {
+            console.error(`❌ plugins/${plugin.path}: icon.svg or icon.png not found (required)`);
+            failureReason = 'icon not found';
             failed = true;
-          } else if (tools.length > 0) {
-            console.log(`✓ plugins/${plugin.path} (${tools.length} tools, all tested)`);
           } else {
-            console.log(`✓ plugins/${plugin.path}`);
+            // Check test coverage (only for valid plugins)
+            const tools = getTools(frontmatter);
+            const testedTools = getTestedTools(pluginDir);
+            const untestedTools = tools.filter(t => !testedTools.has(t));
+            
+            if (untestedTools.length > 0) {
+              console.error(`❌ plugins/${plugin.path}: Missing tests for: ${untestedTools.join(', ')}`);
+              failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
+              failed = true;
+            } else if (tools.length > 0) {
+              console.log(`✓ plugins/${plugin.path} (${tools.length} tools, all tested)`);
+            } else {
+              console.log(`✓ plugins/${plugin.path}`);
+            }
           }
         }
       }

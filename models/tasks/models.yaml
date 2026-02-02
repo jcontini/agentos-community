@@ -16,6 +16,10 @@ properties:
     required: true
     description: Unique identifier
 
+  source_id:
+    type: string
+    description: Human-readable ID from source (e.g., "AGE-123" in Linear)
+
   title:
     type: string
     required: true
@@ -29,6 +33,11 @@ properties:
     type: boolean
     default: false
     description: Whether task is done
+
+  status:
+    type: string
+    enum: [open, in_progress, done, cancelled]
+    description: Task status (more granular than completed boolean)
 
   completed_at:
     type: datetime
@@ -101,6 +110,10 @@ properties:
   color:
     type: string
     description: Display color
+
+  state:
+    type: string
+    description: Project state (e.g., active, completed, paused)
 
   archived:
     type: boolean

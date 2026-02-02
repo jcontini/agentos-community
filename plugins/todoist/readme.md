@@ -54,7 +54,6 @@ adapters:
       id: .id
       name: .name
       color: .color
-      is_favorite: .is_favorite
       _parent_id: .parent_id
 
   label:
@@ -63,7 +62,6 @@ adapters:
       id: .id
       name: .name
       color: .color
-      is_favorite: .is_favorite
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

@@ -12,6 +12,20 @@ references:
 
 properties:
   # Identity
+  id:
+    type: string
+    required: true
+    description: Unique identifier (often the platform's video ID)
+
+  source_id:
+    type: string
+    description: Original platform ID (e.g., YouTube video ID like "dQw4w9WgXcQ")
+
+  source_url:
+    type: string
+    format: url
+    description: URL to view video on original platform
+
   title:
     type: string
     required: true

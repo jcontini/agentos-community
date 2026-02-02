@@ -57,7 +57,7 @@ adapters:
       completed: ".state.type == 'completed'"
       status: ".state.type == 'completed' ? 'done' : .state.type == 'canceled' ? 'cancelled' : .state.type == 'started' ? 'in_progress' : 'open'"
       priority: .priority
-      due: .dueDate
+      due_date: .dueDate
       url: .url
       created_at: .createdAt
       updated_at: .updatedAt

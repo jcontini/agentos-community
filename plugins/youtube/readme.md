@@ -24,15 +24,16 @@ adapters:
   video:
     terminology: Video
     mapping:
+      id: .id
+      source_id: .id
+      source_url: .webpage_url
       title: .title
       description: .description
       transcript: .transcript
       duration_ms: .duration * 1000
       thumbnail: .thumbnail
-      creator_name: .channel
-      creator_url: .channel_url
-      source_id: .id
-      source_url: .webpage_url
+      creator.name: .channel
+      creator.url: .channel_url
       published_at: .upload_date
       resolution: .resolution
       view_count: .view_count
@@ -320,8 +321,7 @@ All operations return videos with these fields:
   "description": "Video description...",
   "duration_ms": 360000,
   "thumbnail": "https://i.ytimg.com/vi/...",
-  "creator_name": "Channel Name",
-  "creator_url": "https://youtube.com/channel/...",
+  "creator": { "name": "Channel Name", "url": "https://youtube.com/channel/..." },
   "source_id": "dQw4w9WgXcQ",
   "source_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
   "view_count": 12345,
