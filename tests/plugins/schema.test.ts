@@ -115,12 +115,11 @@ describe('Plugin Schema Validation', () => {
 });
 
 describe('Schema Completeness', () => {
-  it('all plugins have tags', () => {
+  it('no plugins have tags (deprecated)', () => {
     for (const pluginPath of getPlugins()) {
       const content = readFileSync(join(PLUGINS_DIR, pluginPath, 'readme.md'), 'utf-8');
       const frontmatter = parseFrontmatter(content);
-      expect(frontmatter?.tags, `${pluginPath} missing tags`).toBeDefined();
-      expect(Array.isArray(frontmatter?.tags), `${pluginPath} tags should be array`).toBe(true);
+      expect(frontmatter?.tags, `${pluginPath} should not have tags (deprecated)`).toBeUndefined();
     }
   });
 

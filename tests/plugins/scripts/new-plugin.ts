@@ -132,7 +132,6 @@ name: ${displayName}
 description: "TODO: Describe what this plugin does"
 icon: icon.svg
 color: "#000000"
-tags: [todo]
 
 website: https://example.com
 ${authBlock}
