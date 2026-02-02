@@ -51,7 +51,7 @@ adapters:
       task_labels: read_only
     mapping:
       id: .id
-      source_id: .identifier
+      remote_id: .identifier
       title: .title
       description: .description
       completed: ".state.type == 'completed'"
@@ -502,7 +502,7 @@ instructions: |
   - remove_relation takes relation_id param, returns operation_result
   
   Other notes:
-  - Issues have human-readable IDs like "AGE-123" (in source_id field)
+  - Issues have human-readable IDs like "AGE-123" (in remote_id field)
   - Priority: 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low
   - Web URLs: https://linear.app/{workspace_slug}/issue/{identifier}
 ---

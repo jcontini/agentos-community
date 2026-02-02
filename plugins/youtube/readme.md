@@ -25,7 +25,7 @@ adapters:
     terminology: Video
     mapping:
       id: .id
-      source_id: .id
+      remote_id: .id
       source_url: .webpage_url
       title: .title
       description: .description
@@ -322,7 +322,7 @@ All operations return videos with these fields:
   "duration_ms": 360000,
   "thumbnail": "https://i.ytimg.com/vi/...",
   "creator": { "name": "Channel Name", "url": "https://youtube.com/channel/..." },
-  "source_id": "dQw4w9WgXcQ",
+  "remote_id": "dQw4w9WgXcQ",
   "source_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
   "view_count": 12345,
   "published_at": "20210101"

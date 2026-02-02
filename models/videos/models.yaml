@@ -17,9 +17,9 @@ properties:
     required: true
     description: Unique identifier (often the platform's video ID)
 
-  source_id:
+  remote_id:
     type: string
-    description: Original platform ID (e.g., YouTube video ID like "dQw4w9WgXcQ")
+    description: ID from the remote service (e.g., YouTube video ID "dQw4w9WgXcQ")
 
   source_url:
     type: string

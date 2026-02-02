@@ -16,9 +16,9 @@ properties:
     required: true
     description: Unique identifier
 
-  source_id:
+  remote_id:
     type: string
-    description: Human-readable ID from source (e.g., "AGE-123" in Linear)
+    description: ID from the remote service (e.g., "AGE-123" in Linear)
 
   title:
     type: string
