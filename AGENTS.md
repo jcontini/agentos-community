@@ -4,7 +4,23 @@
 
 ---
 
-## First: Read CONTRIBUTING.md
+## First: Check Skills
+
+**Before starting work, check if there's a relevant skill:**
+
+```bash
+ls ~/.agentos/drive/skills/
+```
+
+Skills contain detailed guidance for specific tasks. If the user asks you to do something that matches a skill, **read the skill first** before proceeding.
+
+| Skill | When to Use |
+|-------|-------------|
+| `write-plugin.md` | Creating or modifying plugins |
+
+---
+
+## Second: Read CONTRIBUTING.md
 
 **CONTRIBUTING.md is the source of truth** for plugin structure, entity schemas, component rules, and testing. Read it before making changes.
 
