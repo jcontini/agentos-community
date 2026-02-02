@@ -80,7 +80,10 @@ operations:
       response:
         raw: true
 
-  dns_record.list:
+# Utilities - entity-level operations that return dns_record model
+  # Named domain.dns_* because they're utilities OF the domain entity
+  
+  domain.dns_list:
     description: List all DNS records for a domain
     returns: dns_record[]
     params:
@@ -96,7 +99,7 @@ operations:
         inject:
           domain: .params.domain
 
-  dns_record.create:
+  domain.dns_create:
     description: Create a new DNS record
     returns: dns_record
     params:
@@ -120,7 +123,7 @@ operations:
       response:
         raw: true
 
-  dns_record.update:
+  domain.dns_update:
     description: Update an existing DNS record
     returns: dns_record
     params:
@@ -145,9 +148,9 @@ operations:
       response:
         raw: true
 
-  dns_record.delete:
+  domain.dns_delete:
     description: Delete a DNS record
-    returns: dns_record
+    returns: void
     params:
       domain: { type: string, required: true, description: "Domain name" }
       id: { type: string, required: true, description: "Record ID" }
@@ -193,13 +196,13 @@ curl -X POST http://localhost:3456/api/plugins/porkbun/domain.list \
   -H "X-Agent: cursor"
 
 # List DNS records for a domain
-curl -X POST http://localhost:3456/api/plugins/porkbun/dns_record.list \
+curl -X POST http://localhost:3456/api/plugins/porkbun/domain.dns_list \
   -H "Content-Type: application/json" \
   -H "X-Agent: cursor" \
   -d '{"domain": "example.com"}'
 
 # Add A record for GitHub Pages
-curl -X POST http://localhost:3456/api/plugins/porkbun/dns_record.create \
+curl -X POST http://localhost:3456/api/plugins/porkbun/domain.dns_create \
   -H "Content-Type: application/json" \
   -H "X-Agent: cursor" \
   -d '{"domain": "example.com", "name": "", "type": "A", "content": "185.199.108.153"}'

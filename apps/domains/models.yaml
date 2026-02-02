@@ -1,0 +1,223 @@
+# Domains - domain registration and DNS management
+
+---
+id: domain
+plural: domains
+name: Domain
+description: A registered domain name
+
+references:
+  wikidata: Q32635
+  # Note: Schema.org and OGP have no direct equivalent for domain names
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier (usually the fqdn)
+
+  fqdn:
+    type: string
+    required: true
+    description: Fully qualified domain name (e.g. example.com)
+
+  registrar:
+    type: string
+    description: Where the domain is registered (gandi, porkbun, namecheap)
+
+  status:
+    type: string
+    enum: [active, expired, pending, redemption, available, unavailable]
+    description: Registration status
+
+  expires_at:
+    type: datetime
+    description: When registration expires
+
+  auto_renew:
+    type: boolean
+    description: Whether auto-renewal is enabled
+
+  nameservers:
+    type: array
+    items: string
+    description: Current nameservers
+
+  created_at:
+    type: datetime
+    description: When domain was first registered
+
+  url:
+    type: string
+    description: URL to manage this domain at the registrar
+
+operations: [list, get, check]
+
+# Entity-level utilities - related operations that aren't CRUD on domain itself
+# These return dns_record shapes, not domain entities
+# All plugins implementing domain should implement these utilities
+utilities:
+  dns_list:
+    description: List all DNS records for a domain
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name (e.g. example.com)
+    returns: dns_record[]
+
+  dns_get:
+    description: Get a specific DNS record
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name
+      name:
+        type: string
+        required: true
+        description: Record name (@ for apex, www, mail, etc.)
+      type:
+        type: string
+        required: true
+        description: Record type (A, CNAME, MX, TXT, etc.)
+    returns: dns_record
+
+  dns_create:
+    description: Create a new DNS record
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name
+      name:
+        type: string
+        required: true
+        description: Record name (@ for apex)
+      type:
+        type: string
+        required: true
+        description: Record type (A, AAAA, CNAME, MX, TXT, NS, SRV)
+      values:
+        type: array
+        items: string
+        required: true
+        description: Record values
+      ttl:
+        type: integer
+        default: 3600
+        description: Time to live in seconds
+      priority:
+        type: integer
+        description: Priority (for MX records)
+    returns: dns_record
+
+  dns_update:
+    description: Update an existing DNS record
+    params:
+      domain:
+        type: string
+        required: true
+      id:
+        type: string
+        description: Record ID (if provider uses IDs)
+      name:
+        type: string
+        required: true
+      type:
+        type: string
+        required: true
+      values:
+        type: array
+        items: string
+        required: true
+      ttl:
+        type: integer
+        default: 3600
+    returns: dns_record
+
+  dns_delete:
+    description: Delete a DNS record
+    params:
+      domain:
+        type: string
+        required: true
+      id:
+        type: string
+        description: Record ID (if provider uses IDs)
+      name:
+        type: string
+        required: true
+      type:
+        type: string
+        required: true
+    returns: void
+
+display:
+  primary: fqdn
+  secondary: registrar
+  badge: status
+  icon: globe
+  show_as_app: true
+  sort:
+    - field: expires_at
+      order: asc
+
+---
+# dns_record is a model (shape), not a standalone entity
+# It's what the dns_* utilities return
+# No operations or show_as_app - it's configuration data, not an entity
+
+id: dns_record
+plural: dns_records
+name: DNS Record
+description: A DNS record for a domain - configuration data, not a standalone entity
+
+properties:
+  id:
+    type: string
+    description: Provider-specific record ID (optional, some providers use name+type)
+
+  domain:
+    type: string
+    required: true
+    description: Parent domain (e.g. example.com)
+
+  name:
+    type: string
+    required: true
+    description: Record name (@ for apex, www, mail, etc.)
+
+  type:
+    type: string
+    required: true
+    enum: [A, AAAA, CNAME, MX, TXT, NS, SRV, CAA]
+    description: Record type
+
+  values:
+    type: array
+    items: string
+    required: true
+    description: Record values
+
+  ttl:
+    type: integer
+    default: 3600
+    description: Time to live in seconds
+
+  priority:
+    type: integer
+    description: Priority (for MX, SRV records)
+
+  provider:
+    type: string
+    description: DNS provider (may differ from registrar)
+
+# No operations - dns_record is accessed via domain utilities
+# No show_as_app - renders within domain detail view
+
+display:
+  primary: name
+  secondary: type
+  icon: settings
+  show_as_app: false
