@@ -4,7 +4,7 @@
   "title": "AgentOS Plugin",
   "description": "Schema for AgentOS plugin readme.md frontmatter",
   "type": "object",
-  "required": ["id", "name", "description", "tags"],
+  "required": ["id", "name", "description"],
   "properties": {
     "id": {
       "type": "string",
@@ -30,12 +30,8 @@
       "description": "URL to the service's website"
     },
     "tags": {
-      "type": "array",
-      "description": "Domain tags for discoverability (e.g., [tasks, issues])",
-      "items": {
-        "type": "string"
-      },
-      "minItems": 1
+      "not": {},
+      "description": "DEPRECATED: Tags are no longer used. Entity types provide discoverability."
     },
     "auth": {
       "oneOf": [

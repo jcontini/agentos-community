@@ -4,7 +4,6 @@ name: Facebook
 description: Query public Facebook group information without login
 icon: icon.svg
 color: "#106BFF"
-tags: [social, communities]
 display: browser
 
 website: https://facebook.com

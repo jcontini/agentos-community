@@ -53,12 +53,15 @@ display:
   secondary: url
   description: snippet
   icon: globe
+  show_as_app: true
+  app_name: Browser
 
 # Views for rendering webpage activities
 # Note: Browser provides padding and status bar automatically
 views:
   search:
     title: Browser
+    tool_alias: search_web
     layout:
       - component: list
         data:
@@ -72,6 +75,7 @@ views:
 
   read:
     title: "{{activity.response.title}}"
+    tool_alias: read_webpage
     layout:
       - component: content
         props:

@@ -4,7 +4,6 @@ name: Exa
 description: Semantic web search and content extraction
 icon: icon.png
 color: "#1F40ED"
-tags: [web, search, scraping]
 display: browser
 
 website: https://exa.ai

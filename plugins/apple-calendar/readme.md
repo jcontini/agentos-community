@@ -4,7 +4,6 @@ name: Apple Calendar
 description: Access macOS Calendar via native EventKit APIs
 icon: icon.png
 color: "#000000"
-tags: [calendar, events, scheduling]
 
 website: https://www.apple.com/macos/
 platform: macos

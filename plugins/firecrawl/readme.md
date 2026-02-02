@@ -1,10 +1,9 @@
 ---
 id: firecrawl
 name: Firecrawl
-description: Web scraping with browser rendering for JS-heavy sites
+description: Read webpages with browser rendering for JS-heavy sites
 icon: icon.png
 color: "#FF5308"
-tags: [web, search, scraping]
 display: browser
 
 website: https://firecrawl.dev
@@ -23,7 +22,7 @@ instructions: |
   - Renders JavaScript - use for React, Vue, Angular, SPAs
   - Good for Notion pages, dynamic content
   - Slower than Exa but handles modern web apps
-  - Cost: ~$0.009/page for scrape
+  - Cost: ~$0.009/page
   - For search, use Exa instead (Firecrawl search requires semantic queries)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -45,13 +44,13 @@ adapters:
 
 operations:
   # Note: Search removed - Firecrawl's semantic search requires full-sentence queries
-  # which is confusing. Use Exa for search, Firecrawl for JS-heavy scraping.
+  # which is confusing. Use Exa for search, Firecrawl for JS-heavy pages.
 
   webpage.read:
-    description: Scrape a URL with browser rendering (handles JS-heavy sites)
+    description: Read a URL with browser rendering (handles JS-heavy sites)
     returns: webpage
     params:
-      url: { type: string, required: true, description: "URL to scrape" }
+      url: { type: string, required: true, description: "URL to read" }
       wait_for_js: { type: integer, default: 0, description: "Milliseconds to wait for JS (0=fast, 1000+=for SPAs)" }
       timeout: { type: integer, default: 30000, description: "Request timeout in ms" }
     rest:
@@ -75,7 +74,7 @@ operations:
 
 # Firecrawl
 
-Web scraping with browser rendering. Handles JS-heavy sites that other tools struggle with.
+Read webpages with full browser rendering. Handles JS-heavy sites that other tools struggle with.
 
 ## Setup
 
@@ -86,7 +85,7 @@ Web scraping with browser rendering. Handles JS-heavy sites that other tools str
 
 - Full browser rendering
 - SPA support (React, Vue, Angular)
-- Notion page scraping
+- Notion page reading
 - Main content extraction
 
 ## When to Use

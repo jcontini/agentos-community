@@ -4,7 +4,6 @@ name: Hacker News
 description: Read Hacker News stories, comments, and discussions
 icon: icon.svg
 color: "#FF6600"
-tags: [news, tech, communities]
 display: browser
 
 website: https://news.ycombinator.com

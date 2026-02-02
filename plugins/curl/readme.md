@@ -4,7 +4,6 @@ name: Curl
 description: Simple URL fetching using curl (no API key needed)
 icon: icon.svg
 color: "#333333"
-tags: [web, fetch, local]
 display: browser
 
 instructions: |

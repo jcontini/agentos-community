@@ -4,7 +4,6 @@ name: Reddit
 description: Read public Reddit communities, posts, and comments
 icon: icon.png
 color: "#FF4500"
-tags: [social, reddit, communities]
 display: browser
 
 website: https://reddit.com

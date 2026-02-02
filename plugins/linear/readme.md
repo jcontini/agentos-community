@@ -4,7 +4,6 @@ name: Linear
 description: Project management for engineering teams
 icon: icon.png
 color: "#636FD3"
-tags: [tasks, issues, projects]
 
 website: https://linear.app
 privacy_url: https://linear.app/privacy
