@@ -72,22 +72,36 @@ if (process.argv.includes('--verbose')) {
   console.log(`📦 Loaded ${validModelIds.size} models: ${[...validModelIds].sort().join(', ')}\n`);
 }
 
-// Validate utility returns reference valid models
-function validateUtilityReturns(frontmatter) {
+// Validate that returns references valid models
+function validateReturns(frontmatter) {
   const errors = [];
   
-  if (!frontmatter.utilities) return errors;
-  
-  for (const [utilName, util] of Object.entries(frontmatter.utilities)) {
-    if (typeof util.returns === 'string' && util.returns !== 'void') {
-      // It's a model reference - check if it exists
-      // Handle array notation: "model[]" -> "model"
-      const modelName = util.returns.replace(/\[\]$/, '');
-      
-      if (!validModelIds.has(modelName)) {
-        errors.push(`Utility '${utilName}' returns unknown model '${modelName}'. Valid models: ${[...validModelIds].sort().join(', ')}`);
+  // Check operations
+  if (frontmatter.operations) {
+    for (const [opName, op] of Object.entries(frontmatter.operations)) {
+      if (typeof op.returns === 'string' && op.returns !== 'void') {
+        const modelName = op.returns.replace(/\[\]$/, '');
+        if (!validModelIds.has(modelName)) {
+          errors.push(`Operation '${opName}' returns unknown model '${modelName}'`);
+        }
       }
     }
+  }
+  
+  // Check utilities
+  if (frontmatter.utilities) {
+    for (const [utilName, util] of Object.entries(frontmatter.utilities)) {
+      if (typeof util.returns === 'string' && util.returns !== 'void') {
+        const modelName = util.returns.replace(/\[\]$/, '');
+        if (!validModelIds.has(modelName)) {
+          errors.push(`Utility '${utilName}' returns unknown model '${modelName}'`);
+        }
+      }
+    }
+  }
+  
+  if (errors.length > 0) {
+    errors.push(`Valid models: ${[...validModelIds].sort().join(', ')}`);
   }
   
   return errors;
@@ -229,8 +243,8 @@ for (const plugin of plugins) {
       failureReason = 'Schema validation failed';
       failed = true;
     } else {
-      // Validate utility returns reference valid models
-      const modelErrors = validateUtilityReturns(frontmatter);
+      // Validate operations and utilities return valid models
+      const modelErrors = validateReturns(frontmatter);
       if (modelErrors.length > 0) {
         console.error(`❌ plugins/${plugin.path}: Invalid model references`);
         for (const err of modelErrors) {
