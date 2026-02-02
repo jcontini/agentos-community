@@ -1,0 +1,67 @@
+# Common Models — shared result types for utilities
+#
+# These models provide standard return shapes for utility operations.
+# Use them instead of inline schemas for consistent contracts.
+
+---
+id: operation_result
+plural: operation_results
+name: Operation Result
+description: Standard result for actions that succeed or fail
+
+properties:
+  success:
+    type: boolean
+    required: true
+    description: Whether the operation succeeded
+
+  message:
+    type: string
+    description: Human-readable result message
+
+  id:
+    type: string
+    description: ID of affected resource (if applicable)
+
+# No operations — this is a return shape, not a queryable entity
+operations: []
+
+display:
+  primary: message
+  icon: check-circle
+  show_as_app: false
+
+---
+id: batch_result
+plural: batch_results
+name: Batch Result
+description: Result for operations that process multiple items
+
+properties:
+  succeeded:
+    type: integer
+    required: true
+    description: Number of items successfully processed
+
+  failed:
+    type: integer
+    required: true
+    description: Number of items that failed
+
+  total:
+    type: integer
+    required: true
+    description: Total items attempted
+
+  errors:
+    type: array
+    items: string
+    description: Error messages for failed items
+
+# No operations — this is a return shape, not a queryable entity
+operations: []
+
+display:
+  primary: total
+  icon: list-checks
+  show_as_app: false
