@@ -2,7 +2,7 @@
 id: gandi
 name: Gandi
 description: Domain registration, DNS management, and SSL certificates
-icon: icon.svg
+icon: icon.png
 
 website: https://www.gandi.net
 privacy_url: https://www.gandi.net/en/contracts/privacy-policy

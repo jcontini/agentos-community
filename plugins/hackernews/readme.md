@@ -2,7 +2,7 @@
 id: hackernews
 name: Hacker News
 description: Read Hacker News stories, comments, and discussions
-icon: icon.svg
+icon: icon.png
 color: "#FF6600"
 display: browser
 
