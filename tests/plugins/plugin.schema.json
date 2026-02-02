@@ -260,35 +260,45 @@
     },
     "utility": {
       "type": "object",
-      "description": "Helper operation that returns a custom shape (not an entity)",
+      "description": "Helper operation that returns a custom shape, model reference, or entity",
       "required": ["returns"],
       "properties": {
         "description": {
           "type": "string",
           "description": "Human-readable description of what this utility does"
         },
-        "returns": {
-          "oneOf": [
-            {
-              "type": "object",
-              "description": "Inline schema for the return value",
-              "additionalProperties": {
-                "type": "string",
-                "description": "Property type (string, boolean, integer, datetime, etc.)"
-              }
-            },
-            {
-              "type": "string",
-              "description": "Simple return type (e.g., 'boolean', 'string')"
-            }
-          ]
-        },
         "params": {
           "type": "object",
-          "description": "Utility parameters",
+          "description": "Utility parameters (inputs)",
           "additionalProperties": {
             "$ref": "#/definitions/paramDef"
           }
+        },
+        "returns": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Model/entity reference (e.g., 'operation_result', 'file', 'dns_record[]') or void",
+              "pattern": "^([a-z_]+(\\[\\])?|void)$"
+            },
+            {
+              "type": "object",
+              "description": "Inline schema for plugin-specific return shapes",
+              "additionalProperties": {
+                "oneOf": [
+                  { "type": "string", "description": "Property type (string, boolean, integer, array, etc.)" },
+                  {
+                    "type": "object",
+                    "description": "Detailed property definition",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "description": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         },
         "rest": {
           "$ref": "#/definitions/restExecutor"

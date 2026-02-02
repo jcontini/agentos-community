@@ -1,11 +1,18 @@
-# Photo Entity - images with metadata
-# Used for: wallpapers, albums, profile pictures, any image picker
+# Image Entity - visual media files
+# Covers: photos, logos, screenshots, AI-generated, wallpapers, icons
+#
+# The `source` field indicates provenance:
+#   - camera-roll: photos from device
+#   - logo-dev: downloaded logos
+#   - ai-generated: AI-created images
+#   - bundled: shipped with AgentOS
+#   - screenshot: screen captures
 
 ---
-id: photo
-plural: photos
-name: Photo
-description: An image file with metadata
+id: image
+plural: images
+name: Image
+description: A visual media file (photo, logo, screenshot, AI-generated, etc.)
 
 references:
   schema_org: https://schema.org/ImageObject
@@ -25,7 +32,7 @@ properties:
   src:
     type: string
     required: true
-    description: Full URL or path to the image
+    description: Full URL or local path to the image
 
   thumbnail:
     type: string
@@ -53,7 +60,7 @@ properties:
 
   description:
     type: string
-    description: Photo description/caption
+    description: Image description/caption
 
   tags:
     type: array
@@ -62,11 +69,15 @@ properties:
 
   created_at:
     type: datetime
-    description: When photo was taken or created
+    description: When image was taken or created
 
   source:
     type: string
-    description: Where this photo came from (plugin, bundled, local)
+    description: Origin (camera-roll, logo-dev, ai-generated, bundled, screenshot)
+
+  source_url:
+    type: string
+    description: Original URL if image was downloaded from web
 
 operations: [list, get]
 
@@ -74,9 +85,7 @@ display:
   primary: name
   icon: image
   show_as_app: false
-  # Default view is grid
   default_view: grid
-  # Grid item shows thumbnail
   grid_item:
     image: thumbnail
     fallback: src
@@ -86,7 +95,7 @@ display:
 id: album
 plural: albums
 name: Album
-description: A collection of photos
+description: A collection of images
 
 references:
   schema_org: https://schema.org/ImageGallery
@@ -107,13 +116,13 @@ properties:
     type: string
     description: Album description
 
-  cover_photo:
+  cover_image:
     type: string
-    description: ID of the cover photo
+    description: ID of the cover image
 
-  photo_count:
+  image_count:
     type: integer
-    description: Number of photos in album
+    description: Number of images in album
 
   created_at:
     type: datetime
@@ -131,6 +140,6 @@ operations: [list, get]
 
 display:
   primary: name
-  secondary: photo_count
+  secondary: image_count
   icon: folder
   show_as_app: false

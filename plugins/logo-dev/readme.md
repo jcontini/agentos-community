@@ -13,6 +13,18 @@ auth:
   label: Publishable Key
   help_url: https://www.logo.dev/dashboard
 
+adapters:
+  image:
+    terminology: Logo
+    mapping:
+      id: .path
+      name: .name
+      src: .url
+      size: .size
+      mime_type: .mime_type
+      source: '"logo-dev"'
+      source_url: .source_url
+
 instructions: |
   Logo.dev returns company logos as images via CDN URLs.
   
@@ -40,19 +52,13 @@ instructions: |
 utilities:
   # Download logo to A: drive
   download_logo:
-    description: "Download company logo to A: drive"
-    returns:
-      path: string
-      name: string
-      size: integer
-      mime_type: string
-      url: string
-      source_url: string
+    description: "Download company logo to A: drive. Returns image entity."
     params:
       domain: { type: string, required: true, description: "Domain (e.g., shopify.com)" }
       size: { type: integer, default: 128, description: "Size in pixels (16-800)" }
       format: { type: string, default: "png", description: "Image format (jpg, png, webp)" }
       dest: { type: string, description: "Destination path in A: drive (default: icons/{domain}.{format})" }
+    returns: image
     download:
       url: '"https://img.logo.dev/" + .params.domain + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
       path: '(.params.dest // ("icons/" + .params.domain + "." + (.params.format // "png")))'
@@ -60,12 +66,12 @@ utilities:
   # Generate a logo URL for a domain
   logo_url:
     description: Generate CDN URL for a company logo by domain
-    returns: void
     params:
       domain: { type: string, required: true, description: "Domain (e.g., shopify.com)" }
       size: { type: integer, default: 128, description: "Size in pixels (16-800)" }
       format: { type: string, default: "png", description: "Image format (jpg, png, webp)" }
       theme: { type: string, default: "auto", description: "Theme (auto, light, dark)" }
+    returns: void
     rest:
       method: GET
       url: '"https://img.logo.dev/" + .params.domain + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png") + "&theme=" + (.params.theme // "auto")'
@@ -75,11 +81,11 @@ utilities:
   # Generate a logo URL for a stock ticker
   ticker_url:
     description: Generate CDN URL for a company logo by stock ticker
-    returns: void
     params:
       ticker: { type: string, required: true, description: "Stock ticker (e.g., AAPL)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
+    returns: void
     rest:
       method: GET
       url: '"https://img.logo.dev/ticker:" + .params.ticker + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
@@ -89,11 +95,11 @@ utilities:
   # Generate a logo URL by company name
   name_url:
     description: Generate CDN URL for a company logo by name
-    returns: void
     params:
       name: { type: string, required: true, description: "Company name (e.g., Shopify)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
+    returns: void
     rest:
       method: GET
       url: '"https://img.logo.dev/name:" + (.params.name | @uri) + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
@@ -103,11 +109,11 @@ utilities:
   # Generate a logo URL for cryptocurrency
   crypto_url:
     description: Generate CDN URL for a cryptocurrency logo
-    returns: void
     params:
       symbol: { type: string, required: true, description: "Crypto symbol (e.g., BTC, ETH)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
+    returns: void
     rest:
       method: GET
       url: '"https://img.logo.dev/crypto:" + .params.symbol + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
