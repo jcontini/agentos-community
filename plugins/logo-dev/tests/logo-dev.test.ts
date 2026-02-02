@@ -54,4 +54,20 @@ describe("Logo.dev Plugin", () => {
       expect(true).toBe(true);
     });
   });
+
+  describe("download_logo", () => {
+    it("downloads logo to A: drive", async () => {
+      if (skipTests) return;
+      const result = await aos().call("UsePlugin", {
+        plugin,
+        tool: "download_logo",
+        params: { domain: "github.com", size: 64 },
+      });
+      expect(result).toHaveProperty("path");
+      expect(result).toHaveProperty("name");
+      expect(result).toHaveProperty("size");
+      expect(result).toHaveProperty("mime_type");
+      expect(result.path).toContain("github.com");
+    });
+  });
 });

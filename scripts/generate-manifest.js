@@ -130,7 +130,7 @@ function extractAppMetadata(appDir) {
       id: metadata.id || basename(appDir),
       name: metadata.name || basename(appDir),
       description: metadata.description || '',
-      icon: `apps/${basename(appDir)}/icon.svg`,
+      icon: `models/${basename(appDir)}/icon.svg`,
       version: metadata.version || '1.0.0',
       author: metadata.author || 'agentos',
       updated_at: updatedAt,
@@ -256,8 +256,8 @@ function generateManifest() {
     console.warn(`No plugins directory: ${err.message}`);
   }
   
-  // Scan apps
-  const appsDir = join(REPO_ROOT, 'apps');
+  // Scan models (apps are spawned from models at runtime)
+  const appsDir = join(REPO_ROOT, 'models');
   try {
     const appDirs = readdirSync(appsDir, { withFileTypes: true })
       .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))

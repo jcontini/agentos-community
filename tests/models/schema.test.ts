@@ -16,13 +16,13 @@ import { join, relative } from 'path';
 import { parseAllDocuments, parse as parseYaml } from 'yaml';
 
 const INTEGRATIONS_ROOT = join(__dirname, '../..');
-const APPS_DIR = join(INTEGRATIONS_ROOT, 'apps');
+const MODELS_DIR = join(INTEGRATIONS_ROOT, 'models');
 
 // Files to exclude from model validation (not model definitions)
 const EXCLUDE_FILES = ['operations.yaml'];
 
 // Recursively get all models.yaml files
-const getModelFiles = (dir: string = APPS_DIR): string[] => {
+const getModelFiles = (dir: string = MODELS_DIR): string[] => {
   if (!existsSync(dir)) return [];
   
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -33,7 +33,7 @@ const getModelFiles = (dir: string = APPS_DIR): string[] => {
     if (entry.isDirectory()) {
       files.push(...getModelFiles(fullPath));
     } else if (entry.name.endsWith('.yaml') && !EXCLUDE_FILES.includes(entry.name)) {
-      files.push(relative(APPS_DIR, fullPath));
+      files.push(relative(MODELS_DIR, fullPath));
     }
   }
   
@@ -107,8 +107,8 @@ describe('App Models Schema Validation', () => {
     expect(modelFiles.length).toBeGreaterThan(0);
   });
 
-  describe.each(modelFiles)('apps/%s', (file) => {
-    const filePath = join(APPS_DIR, file);
+  describe.each(modelFiles)('models/%s', (file) => {
+    const filePath = join(MODELS_DIR, file);
 
     it('is valid YAML', () => {
       const raw = readFileSync(filePath, 'utf-8');

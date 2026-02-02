@@ -171,7 +171,7 @@ By contributing, you grant AgentOS the right to use your contributions in offici
 
 **The AgentOS App Store fetches items directly from this repository.** No backend servers, no infrastructure costs—GitHub IS the backend.
 
-When you add or modify plugins/apps/themes/components, a GitHub Action automatically:
+When you add or modify plugins/models/themes/components, a GitHub Action automatically:
 1. Scans the repository structure
 2. Reads metadata from YAML front matter
 3. Generates an updated `manifest.json`

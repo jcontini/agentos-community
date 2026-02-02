@@ -48,15 +48,16 @@ node scripts/generate-manifest.js --check # Validate only
 
 ## Architecture Overview
 
-**Key insight: Apps contain models.** Apps define models (data schema), views, and components. Plugins are adapters that map external APIs to these models.
+**Key insight: Models define the schema, apps are runtime.** Models define entity schemas, views, and components. Plugins are adapters that map external APIs to these models. Apps are spawned at runtime from models with `show_as_app: true`.
 
 ```
-apps/              Self-contained app packages
+models/            Entity and model definitions
   tasks/           models.yaml + icon.png + components/
   posts/           models.yaml + icon.png + components/
   domains/         models.yaml (domain entity + dns_record model)
+  common/          Shared models (operation_result, batch_result)
 
-plugins/           Adapters (how services map to app models)
+plugins/           Adapters (how services map to models)
   reddit/          Maps Reddit API → post model
   todoist/         Maps Todoist API → task model
   porkbun/         Maps Porkbun API → domain model
@@ -112,9 +113,9 @@ plugins/{name}/
 
 ### Quick Reference
 
-**App structure:**
+**Model structure:**
 ```
-apps/{app}/
+models/{domain}/
   models.yaml     # Entity definitions + views
   icon.png        # Desktop icon (PNG preferred)
   components/     # TSX components
@@ -130,14 +131,14 @@ apps/{app}/
 
 ## Components
 
-App components live in `apps/{app}/components/`. They compose framework primitives — never custom CSS.
+Model components live in `models/{domain}/components/`. They compose framework primitives — never custom CSS.
 
 **Key rules:**
 - Use `data-*` attributes: `data-component="text" data-variant="title"`
 - Proxy external images with `getProxiedSrc()`
 - Export default: `export default MyComponent`
 
-**See examples:** `apps/posts/components/`, `apps/groups/components/`
+**See examples:** `models/posts/components/`, `models/groups/components/`
 
 ---
 

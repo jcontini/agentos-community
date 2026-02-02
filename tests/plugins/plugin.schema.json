@@ -252,6 +252,9 @@
         },
         "csv": {
           "$ref": "#/definitions/csvExecutor"
+        },
+        "download": {
+          "$ref": "#/definitions/downloadExecutor"
         }
       }
     },
@@ -304,6 +307,9 @@
         },
         "csv": {
           "$ref": "#/definitions/csvExecutor"
+        },
+        "download": {
+          "$ref": "#/definitions/downloadExecutor"
         }
       }
     },
@@ -535,6 +541,36 @@
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "downloadExecutor": {
+      "type": "object",
+      "description": "Download file to A: drive",
+      "required": ["url", "path"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to download (jaq expression, supports .params and .auth.key)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Destination path in A: drive (jaq expression)"
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers (values are jaq expressions)",
+          "additionalProperties": { "type": "string" }
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to overwrite existing files"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 60,
+          "description": "Download timeout in seconds"
         }
       }
     },
