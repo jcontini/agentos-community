@@ -15,13 +15,14 @@
 import { readFileSync, readdirSync, existsSync, renameSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, parseAllDocuments } from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');  // tests/plugins/scripts/ -> root
 const APPS_DIR = join(ROOT, 'plugins');
+const MODELS_DIR = join(ROOT, 'models');
 const NEEDS_WORK_DIR = join(APPS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'plugin.schema.json');
 
@@ -30,6 +31,67 @@ const schema = JSON.parse(readFileSync(SCHEMA_PATH, 'utf-8'));
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
+
+// Load all model IDs from models/ folder
+function loadModelIds() {
+  const modelIds = new Set();
+  
+  function scanDir(dir) {
+    if (!existsSync(dir)) return;
+    const entries = readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        scanDir(fullPath);
+      } else if (entry.name === 'models.yaml') {
+        try {
+          const content = readFileSync(fullPath, 'utf-8');
+          const docs = parseAllDocuments(content);
+          for (const doc of docs) {
+            const data = doc.toJS();
+            if (data && data.id) {
+              modelIds.add(data.id);
+            }
+          }
+        } catch (err) {
+          console.warn(`Warning: Failed to parse ${fullPath}: ${err.message}`);
+        }
+      }
+    }
+  }
+  
+  scanDir(MODELS_DIR);
+  return modelIds;
+}
+
+const validModelIds = loadModelIds();
+
+// Show loaded models (only in verbose mode or if few models)
+if (process.argv.includes('--verbose')) {
+  console.log(`📦 Loaded ${validModelIds.size} models: ${[...validModelIds].sort().join(', ')}\n`);
+}
+
+// Validate utility returns reference valid models
+function validateUtilityReturns(frontmatter) {
+  const errors = [];
+  
+  if (!frontmatter.utilities) return errors;
+  
+  for (const [utilName, util] of Object.entries(frontmatter.utilities)) {
+    if (typeof util.returns === 'string' && util.returns !== 'void') {
+      // It's a model reference - check if it exists
+      // Handle array notation: "model[]" -> "model"
+      const modelName = util.returns.replace(/\[\]$/, '');
+      
+      if (!validModelIds.has(modelName)) {
+        errors.push(`Utility '${utilName}' returns unknown model '${modelName}'. Valid models: ${[...validModelIds].sort().join(', ')}`);
+      }
+    }
+  }
+  
+  return errors;
+}
 
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
@@ -167,26 +229,37 @@ for (const plugin of plugins) {
       failureReason = 'Schema validation failed';
       failed = true;
     } else {
+      // Validate utility returns reference valid models
+      const modelErrors = validateUtilityReturns(frontmatter);
+      if (modelErrors.length > 0) {
+        console.error(`❌ plugins/${plugin.path}: Invalid model references`);
+        for (const err of modelErrors) {
+          console.error(`   ${err}`);
+        }
+        failureReason = 'Invalid model references';
+        failed = true;
+      } else {
         // Check icon.svg exists (required for all plugins)
         const iconPath = join(pluginDir, 'icon.svg');
         if (!existsSync(iconPath)) {
           console.error(`❌ plugins/${plugin.path}: icon.svg not found (required)`);
           failureReason = 'icon.svg not found';
           failed = true;
-      } else {
-        // Check test coverage (only for valid plugins)
-        const tools = getTools(frontmatter);
-        const testedTools = getTestedTools(pluginDir);
-        const untestedTools = tools.filter(t => !testedTools.has(t));
-        
-        if (untestedTools.length > 0) {
-          console.error(`❌ plugins/${plugin.path}: Missing tests for: ${untestedTools.join(', ')}`);
-          failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
-          failed = true;
-        } else if (tools.length > 0) {
-          console.log(`✓ plugins/${plugin.path} (${tools.length} tools, all tested)`);
         } else {
-          console.log(`✓ plugins/${plugin.path}`);
+          // Check test coverage (only for valid plugins)
+          const tools = getTools(frontmatter);
+          const testedTools = getTestedTools(pluginDir);
+          const untestedTools = tools.filter(t => !testedTools.has(t));
+          
+          if (untestedTools.length > 0) {
+            console.error(`❌ plugins/${plugin.path}: Missing tests for: ${untestedTools.join(', ')}`);
+            failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
+            failed = true;
+          } else if (tools.length > 0) {
+            console.log(`✓ plugins/${plugin.path} (${tools.length} tools, all tested)`);
+          } else {
+            console.log(`✓ plugins/${plugin.path}`);
+          }
         }
       }
     }
