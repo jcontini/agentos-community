@@ -103,6 +103,96 @@ plugins/{name}/
 
 ---
 
+## Utility Return Types
+
+Utilities are operations that don't fit standard CRUD patterns. Unlike operations (which return entities), utilities can return various shapes.
+
+### When to Use Each Return Type
+
+| Return Type | When to Use | Example |
+|-------------|-------------|---------|
+| `void` | Side-effect only, raw response | `logo_url` (returns image) |
+| `operation_result` | Action success/fail | `remove_relation`, `dns_delete` |
+| Model reference | Structured data shared across plugins | `dns_list` → `dns_record[]` |
+| Inline schema | Plugin-specific introspection | `get_workflow_states` (Linear-only) |
+
+### Standard Result Models
+
+**`operation_result`** — Use for actions that succeed or fail:
+```yaml
+# Returns: { success: boolean, message?: string, id?: string }
+utilities:
+  remove_relation:
+    returns: operation_result
+    # ...
+  
+  add_blocker:
+    returns: operation_result  # relation ID goes in `id` field
+    # ...
+```
+
+**`batch_result`** — Use for bulk operations:
+```yaml
+# Returns: { succeeded: int, failed: int, total: int, errors?: string[] }
+utilities:
+  bulk_archive:
+    returns: batch_result
+    # ...
+```
+
+### Heuristics: Choosing the Right Return Type
+
+**Use `operation_result` when:**
+- The action succeeds or fails (previously you'd return `{ success: boolean }`)
+- The caller only needs confirmation
+- An ID of an affected/created resource is the only meaningful output
+
+**Use a model reference when:**
+- Multiple plugins return the same shape (e.g., `dns_record` across Gandi, Porkbun)
+- The UI needs to render the result consistently
+- AI agents need a predictable contract for downstream actions
+
+**Use inline schema when:**
+- The data is plugin-specific introspection (`get_workflow_states`, `get_cycles`)
+- The shape is unlikely to be reused across plugins
+- It's configuration/setup data, not domain data
+
+**Use `void` when:**
+- The response is raw (image, file, redirect)
+- The action has no meaningful return data
+
+### Examples
+
+```yaml
+# Good: Standard result for success/fail action
+utilities:
+  dns_delete:
+    returns: operation_result
+
+# Good: Model reference for shared concept
+utilities:
+  dns_list:
+    returns: dns_record[]  # Defined in models/domains/models.yaml
+
+# Good: Inline for plugin-specific introspection
+utilities:
+  get_workflow_states:
+    returns:
+      id: string
+      name: string
+      type: string
+    # Linear-specific, no need for shared model
+
+# Good: Void for raw responses
+utilities:
+  logo_url:
+    returns: void
+    response:
+      raw: true
+```
+
+---
+
 ## Writing Apps
 
 **For detailed app writing guidance, read the skill:**
