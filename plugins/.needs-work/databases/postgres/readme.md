@@ -3,7 +3,6 @@ id: postgres
 name: PostgreSQL
 description: Connect to PostgreSQL databases
 icon: icon.svg
-tags: [database, sql]
 
 website: https://www.postgresql.org
 docs_url: https://www.postgresql.org/docs/current/

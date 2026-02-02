@@ -34,7 +34,6 @@ description: Submit Texas vehicle registration forms, address changes, and more
 icon: icon.png
 
 website: https://www.txdmv.gov
-tags: [government, dmv, vehicle, registration, texas, forms]
 
 # This plugin doesn't "provide" capabilities - it consumes them
 # (It's not a utility other plugins would use)

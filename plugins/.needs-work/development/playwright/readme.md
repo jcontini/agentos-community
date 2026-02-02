@@ -6,7 +6,6 @@ icon: icon.svg
 
 website: https://playwright.dev
 
-tags: [browser automation, web testing, recording, playback]
 
 settings:
   headless:

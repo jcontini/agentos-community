@@ -3,7 +3,6 @@ id: imessage
 name: iMessage
 description: Read iMessages and SMS from macOS Messages app
 icon: icon.png
-tags: [messages, chat]
 
 website: https://support.apple.com/messages
 platform: macos

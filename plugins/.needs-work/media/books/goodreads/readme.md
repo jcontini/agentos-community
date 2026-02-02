@@ -4,7 +4,6 @@ name: Goodreads
 description: Import your reading library from Goodreads CSV export
 icon: icon.png
 website: https://goodreads.com
-tags: [books, reading, library]
 
 # No auth needed - CSV file import only
 auth: null

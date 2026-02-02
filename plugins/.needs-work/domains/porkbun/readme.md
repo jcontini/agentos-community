@@ -3,7 +3,6 @@ id: porkbun
 name: Porkbun
 description: Domain DNS management via Porkbun API
 icon: icon.svg
-tags: [domain, dns]
 
 website: https://porkbun.com
 privacy_url: https://porkbun.com/products/privacy

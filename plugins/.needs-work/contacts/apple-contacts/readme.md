@@ -3,7 +3,6 @@ id: apple-contacts
 name: Apple Contacts
 description: Access macOS Contacts via native APIs with multi-account support
 icon: icon.png
-tags: [contacts, people, address-book]
 
 website: https://www.apple.com/macos/
 platform: macos

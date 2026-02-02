@@ -3,7 +3,6 @@ id: github
 name: GitHub
 description: GitHub issues, gists, and repo file access via existing entities
 icon: icon.svg
-tags: [code, git, github, developer, files, tasks]
 
 website: https://cli.github.com
 platform: [macos, linux, windows]

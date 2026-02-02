@@ -3,7 +3,6 @@ id: local
 name: Local Storage
 description: Local filesystem operations via standard CLI tools
 icon: icon.svg
-tags: [files, filesystem]
 
 website: https://support.apple.com/guide/mac-help/organize-files-folders-mac-mchlp2605/mac
 platform: macos

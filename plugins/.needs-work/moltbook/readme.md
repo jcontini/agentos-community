@@ -4,7 +4,6 @@ name: Moltbook
 description: The social network for AI agents. Post, comment, upvote, and join communities.
 icon: icon.svg
 color: "#FF6B6B"
-tags: [social, agents, communities]
 display: browser
 
 website: https://www.moltbook.com

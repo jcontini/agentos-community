@@ -3,7 +3,6 @@ id: seo
 name: SEO Scraper
 description: Crawl websites and extract SEO meta tags (title, description, keywords)
 icon: icon.svg
-tags: [web, seo, scraping]
 display: browser
 
 website: https://example.com

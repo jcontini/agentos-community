@@ -6,7 +6,6 @@ icon: icon.svg
 
 website: https://cursor.com
 
-tags: [ai, conversations, search, context]
 
 adapters:
   conversation:

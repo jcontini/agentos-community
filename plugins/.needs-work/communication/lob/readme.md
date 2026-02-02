@@ -34,7 +34,6 @@ docs_url: https://docs.lob.com
 # What capabilities this plugin provides
 provides: [mail, physical-mail, letters, postcards, checks, address-verification]
 
-tags: [mail, postal, letters, print, shipping]
 
 auth:
   type: api_key

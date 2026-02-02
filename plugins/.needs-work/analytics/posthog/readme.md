@@ -3,7 +3,6 @@ id: posthog
 name: PostHog
 description: Access PostHog analytics, user data, and session recordings
 icon: icon.svg
-tags: [analytics, telemetry, debugging]
 display: browser
 
 website: https://posthog.com

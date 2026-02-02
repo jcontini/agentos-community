@@ -3,7 +3,6 @@ id: instagram
 name: Instagram
 description: Read and send Instagram direct messages via private API
 icon: icon.png
-tags: [messages, chat, social]
 
 website: https://www.instagram.com
 platform: all

@@ -3,7 +3,6 @@ id: domainr
 name: Domainr
 description: Domain name search and availability checking
 icon: icon.svg
-tags: [domain, dns, search]
 
 website: https://domainr.com
 privacy_url: https://www.fastly.com/privacy
