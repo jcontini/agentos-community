@@ -372,7 +372,7 @@ describe('Linear Plugin', () => {
       expect(task2.id).toBeDefined();
     });
 
-    it('add_blocker creates blocking relationship and returns relation_id', async () => {
+    it('add_blocker creates blocking relationship and returns operation_result', async () => {
       if (skipTests) return;
       if (!task1?.id || !task2?.id) {
         console.log('  Skipping: tasks not created');
@@ -387,8 +387,8 @@ describe('Linear Plugin', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.relation_id).toBeDefined();
-      blockerRelationId = result.relation_id;
+      expect(result.id).toBeDefined(); // relation ID in standard `id` field
+      blockerRelationId = result.id;
     });
 
     it('remove_relation removes blocking relationship', async () => {
@@ -408,7 +408,7 @@ describe('Linear Plugin', () => {
       expect(result.success).toBe(true);
     });
 
-    it('add_related links two issues and returns relation_id', async () => {
+    it('add_related links two issues and returns operation_result', async () => {
       if (skipTests) return;
       if (!task1?.id || !task2?.id) {
         console.log('  Skipping: tasks not created');
@@ -423,8 +423,8 @@ describe('Linear Plugin', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.relation_id).toBeDefined();
-      relatedRelationId = result.relation_id;
+      expect(result.id).toBeDefined(); // relation ID in standard `id` field
+      relatedRelationId = result.id;
     });
 
     it('remove_relation removes related relationship', async () => {

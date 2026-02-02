@@ -404,13 +404,11 @@ utilities:
           blocked_by: .inverseRelations.nodes
 
   add_blocker:
-    description: Add a blocking relationship (blocker_id blocks id). Returns relation_id for removal.
+    description: Add a blocking relationship (blocker_id blocks id). Returns relation ID in `id` field.
     params:
       id: { type: string, required: true, description: "Issue being blocked" }
       blocker_id: { type: string, required: true, description: "Issue that is blocking" }
-    returns:
-      success: boolean
-      relation_id: string
+    returns: operation_result
     graphql:
       query: |
         mutation($input: IssueRelationCreateInput!) {
@@ -428,14 +426,13 @@ utilities:
         root: /data/issueRelationCreate
         mapping:
           success: .success
-          relation_id: .issueRelation.id
+          id: .issueRelation.id
 
   remove_relation:
-    description: Remove a relationship by its ID (get relation_id from add_blocker/add_related response or issue query)
+    description: Remove a relationship by its ID (get ID from add_blocker/add_related response or issue query)
     params:
       relation_id: { type: string, required: true, description: "Relation ID to delete" }
-    returns:
-      success: boolean
+    returns: operation_result
     graphql:
       query: |
         mutation($id: String!) {
@@ -451,13 +448,11 @@ utilities:
           success: .success
 
   add_related:
-    description: Link two issues as related. Returns relation_id for removal.
+    description: Link two issues as related. Returns relation ID in `id` field.
     params:
       id: { type: string, required: true, description: "First issue ID" }
       related_id: { type: string, required: true, description: "Second issue ID" }
-    returns:
-      success: boolean
-      relation_id: string
+    returns: operation_result
     graphql:
       query: |
         mutation($input: IssueRelationCreateInput!) {
@@ -475,7 +470,7 @@ utilities:
         root: /data/issueRelationCreate
         mapping:
           success: .success
-          relation_id: .issueRelation.id
+          id: .issueRelation.id
 
 
 instructions: |
@@ -502,9 +497,9 @@ instructions: |
   4. Call task.update with state_id
   
   Managing relationships:
-  - add_blocker/add_related return relation_id — save it for removal
+  - add_blocker/add_related return operation_result with relation ID in `id` field
   - get_relations returns all relationships with their IDs
-  - remove_relation takes relation_id (not issue IDs)
+  - remove_relation takes relation_id param, returns operation_result
   
   Other notes:
   - Issues have human-readable IDs like "AGE-123" (in source_id field)
