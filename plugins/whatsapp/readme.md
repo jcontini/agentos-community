@@ -29,7 +29,7 @@ adapters:
     mapping:
       id: .id
       name: .name
-      is_group: ".type == 'group'"
+      is_group: '.type == "group"'
       unread_count: .unread_count
       updated_at: .updated_at
       _contact_jid: .contact_jid
