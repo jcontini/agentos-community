@@ -44,6 +44,7 @@ adapters:
       is_outgoing: .is_outgoing
       timestamp: .timestamp
       _reply_to_id: .reply_to_id
+      _sender_handle: .sender_handle
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
