@@ -1,0 +1,18 @@
+# List view for posts
+title: "Posts"
+layout:
+  - component: list
+    data:
+      source: activity
+    item_component: post-item
+    item_props:
+      id: "{{id}}"
+      title: "{{title}}"
+      content: "{{content}}"
+      author: "{{author.name}}"
+      community: "{{community.name}}"
+      score: "{{engagement.score}}"
+      commentCount: "{{engagement.comment_count}}"
+      url: "{{url}}"
+      externalUrl: "{{external_url}}"
+      publishedAt: "{{published_at}}"

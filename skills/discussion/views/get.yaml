@@ -1,0 +1,24 @@
+# Single post view with nested replies
+title: "{{activity.response.title}}"
+layout:
+  - component: layout/stack
+    props:
+      direction: vertical
+      gap: "16px"
+    children:
+      - component: post-header
+        props:
+          title: "{{activity.response.title}}"
+          author: "{{activity.response.author.name}}"
+          authorUrl: "{{activity.response.author.url}}"
+          score: "{{activity.response.engagement.score}}"
+          commentCount: "{{activity.response.engagement.comment_count}}"
+          publishedAt: "{{activity.response.published_at}}"
+      - component: text
+        props:
+          content: "{{activity.response.content}}"
+          variant: body
+      - component: comment-thread
+        props:
+          replies: "{{activity.response.replies}}"
+          hasMore: "{{activity.response.has_more_replies}}"

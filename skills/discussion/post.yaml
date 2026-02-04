@@ -38,7 +38,6 @@ properties:
     format: url
     description: External link target (the article being linked to, if any)
 
-  # Author information
   author:
     type: object
     description: Who wrote this post
@@ -56,7 +55,6 @@ properties:
         format: url
         description: Profile image URL
 
-  # Community/container (subreddit, channel, etc.)
   community:
     type: object
     description: The community this was posted in
@@ -69,7 +67,6 @@ properties:
         format: url
         description: Community URL
 
-  # Engagement metrics (platforms expose different subsets)
   engagement:
     type: object
     description: Engagement metrics
@@ -90,24 +87,20 @@ properties:
         type: integer
         description: Retweets, reposts, shares
 
-  # Hierarchy - comments are posts with parent_id
   parent_id:
     type: string
     description: Parent post/comment ID (null = top-level post)
 
-  # Nested replies (populated by get operation)
   replies:
     type: array
     description: Nested reply tree (recursive post structure)
     items:
       type: post
 
-  # Pagination hint for truncated threads
   has_more_replies:
     type: boolean
     description: Whether there are more replies not included
 
-  # Timestamps
   published_at:
     type: datetime
     description: When the post was published
@@ -124,72 +117,3 @@ display:
   description: content
   icon: message-square
   show_as_app: true
-
-# Views for rendering post activities
-# Note: Browser provides padding and status bar automatically
-views:
-  # List view - shows post.list and post.search results
-  # Note: Community/subreddit context is shown in the ConnectorBar (inner chrome)
-  list:
-    title: "Posts"
-    layout:
-      - component: list
-        data:
-          source: activity
-        item_component: post-item
-        item_props:
-          id: "{{id}}"
-          title: "{{title}}"
-          content: "{{content}}"
-          author: "{{author.name}}"
-          community: "{{community.name}}"
-          score: "{{engagement.score}}"
-          commentCount: "{{engagement.comment_count}}"
-          url: "{{url}}"
-          externalUrl: "{{external_url}}"
-          publishedAt: "{{published_at}}"
-
-  search:
-    title: "Search Results"
-    layout:
-      - component: list
-        data:
-          source: activity
-        item_component: post-item
-        item_props:
-          id: "{{id}}"
-          title: "{{title}}"
-          content: "{{content}}"
-          author: "{{author.name}}"
-          community: "{{community.name}}"
-          score: "{{engagement.score}}"
-          commentCount: "{{engagement.comment_count}}"
-          url: "{{url}}"
-          externalUrl: "{{external_url}}"
-          publishedAt: "{{published_at}}"
-
-  # Single post view with nested replies
-  get:
-    title: "{{activity.response.title}}"
-    layout:
-      - component: layout/stack
-        props:
-          direction: vertical
-          gap: "16px"
-        children:
-          - component: post-header
-            props:
-              title: "{{activity.response.title}}"
-              author: "{{activity.response.author.name}}"
-              authorUrl: "{{activity.response.author.url}}"
-              score: "{{activity.response.engagement.score}}"
-              commentCount: "{{activity.response.engagement.comment_count}}"
-              publishedAt: "{{activity.response.published_at}}"
-          - component: text
-            props:
-              content: "{{activity.response.content}}"
-              variant: body
-          - component: comment-thread
-            props:
-              replies: "{{activity.response.replies}}"
-              hasMore: "{{activity.response.has_more_replies}}"
