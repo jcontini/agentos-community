@@ -48,27 +48,26 @@ node scripts/generate-manifest.js --check # Validate only
 
 ## Architecture Overview
 
-**Key insight: Models define the schema, apps are runtime.** Models define entity schemas, views, and components. Plugins are adapters that map external APIs to these models. Apps are spawned at runtime from models with `show_as_app: true`.
+**Key insight: Skills define entities, apps are runtime.** Skills contain entity schemas, views, and components. Plugins are adapters that map external APIs to these entities. Apps are spawned at runtime from entities with `show_as_app: true`.
 
 ```
-models/            Entity and model definitions
-  tasks/           models.yaml + icon.png + components/
-  posts/           models.yaml + icon.png + components/
-  domains/         models.yaml (domain entity + dns_record model)
-  common/          Shared models (operation_result, batch_result)
+skills/            Entity definitions organized by skill
+  tasks/           task.yaml, project.yaml, label.yaml + icon.png + views/
+  discussion/      post.yaml + icon.png + views/
+  messaging/       message.yaml, conversation.yaml + views/
+  common/          Shared definitions (operations.yaml, base.yaml)
 
-plugins/           Adapters (how services map to models)
-  reddit/          Maps Reddit API → post model
-  todoist/         Maps Todoist API → task model
-  porkbun/         Maps Porkbun API → domain model
+plugins/           Adapters (how services map to entities)
+  reddit/          Maps Reddit API → post entity
+  todoist/         Maps Todoist API → task entity
 
 themes/            Visual styling (CSS)
 ```
 
 **The flow:** 
-1. Plugins declare which models they provide (via `adapters:` section)
-2. Apps define models + views + components
-3. Apps with `show_as_app: true` appear on the desktop when plugins support them
+1. Plugins declare which entities they provide (via `adapters:` section)
+2. Skills define entities + views + components
+3. Entities with `show_as_app: true` appear on the desktop when plugins support them
 
 ---
 
@@ -172,7 +171,7 @@ utilities:
 # Good: Model reference for shared concept
 utilities:
   dns_list:
-    returns: dns_record[]  # Defined in models/domains/models.yaml
+    returns: dns_record[]  # Defined in skills/common/
 
 # Good: Inline for plugin-specific introspection
 utilities:
@@ -203,12 +202,12 @@ utilities:
 
 ### Quick Reference
 
-**Model structure:**
+**Skill structure:**
 ```
-models/{domain}/
-  models.yaml     # Entity definitions + views
+skills/{skill}/
+  {entity}.yaml   # Entity definition (one per file)
   icon.png        # Desktop icon (PNG preferred)
-  components/     # TSX components
+  views/          # TSX components + view configs
 ```
 
 **Models can define:**
@@ -221,14 +220,14 @@ models/{domain}/
 
 ## Components
 
-Model components live in `models/{domain}/components/`. They compose framework primitives — never custom CSS.
+Entity components live in `skills/{skill}/views/`. They compose framework primitives — never custom CSS.
 
 **Key rules:**
 - Use `data-*` attributes: `data-component="text" data-variant="title"`
 - Proxy external images with `getProxiedSrc()`
 - Export default: `export default MyComponent`
 
-**See examples:** `models/posts/components/`, `models/groups/components/`
+**See examples:** `skills/discussion/views/`, `skills/groups/views/`
 
 ---
 

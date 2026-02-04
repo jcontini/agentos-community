@@ -44,7 +44,7 @@ When users click "Install" in the AgentOS App Store, it downloads from this repo
 | Path | Purpose |
 |------|---------|
 | `plugins/` | Service adapters (Reddit → post, YouTube → video, etc.) |
-| `models/` | Entity schemas + views + components (apps spawn from these at runtime) |
+| `skills/` | Entity schemas + views + components (apps spawn from entities at runtime) |
 | `themes/` | Visual styling (CSS) |
 | `agents/` | Setup instructions for AI clients (Cursor, Claude, etc.) |
 | `tests/` | Test utilities and fixtures |
@@ -123,7 +123,7 @@ Before committing a plugin:
 
 - [ ] `icon.svg` or `icon.png` exists
 - [ ] `npm run validate` passes
-- [ ] Mapping covers entity properties (check `models/{domain}/models.yaml`)
+- [ ] Mapping covers entity properties (check `skills/{skill}/{entity}.yaml`)
 - [ ] Functional tests pass (`npm test`)
 
 ## Expression Syntax
@@ -220,4 +220,4 @@ node scripts/generate-manifest.js --check  # Validate only
 | `CONTRIBUTING.md` | Complete technical reference — plugin structure, entities, components |
 | `tests/plugins/plugin.schema.json` | Schema source of truth for plugin YAML |
 | `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
-| `models/{domain}/models.yaml` | Entity schema — what properties to map |
+| `skills/{skill}/{entity}.yaml` | Entity schema — what properties to map |
