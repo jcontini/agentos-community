@@ -1,0 +1,195 @@
+# Post Entity
+# A social media post, comment, or reply (Reddit, Twitter, HN, etc.)
+#
+# Design principle: Comments ARE posts - just posts with a parent_id.
+# This unifies the model across platforms while preserving tree structure.
+
+id: post
+plural: posts
+name: Post
+description: A social media post, comment, or reply
+
+references:
+  schema_org: https://schema.org/SocialMediaPosting
+  wikidata: Q7246757  # social media post
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  title:
+    type: string
+    description: Post title (null for comments, tweets)
+
+  content:
+    type: string
+    description: Post body/text content
+
+  url:
+    type: string
+    format: url
+    required: true
+    description: Permalink to the post (HN discussion, Reddit thread, etc.)
+
+  external_url:
+    type: string
+    format: url
+    description: External link target (the article being linked to, if any)
+
+  # Author information
+  author:
+    type: object
+    description: Who wrote this post
+    properties:
+      name:
+        type: string
+        required: true
+        description: Username or display name
+      url:
+        type: string
+        format: url
+        description: Profile URL
+      avatar:
+        type: string
+        format: url
+        description: Profile image URL
+
+  # Community/container (subreddit, channel, etc.)
+  community:
+    type: object
+    description: The community this was posted in
+    properties:
+      name:
+        type: string
+        description: Community name (e.g., "programming")
+      url:
+        type: string
+        format: url
+        description: Community URL
+
+  # Engagement metrics (platforms expose different subsets)
+  engagement:
+    type: object
+    description: Engagement metrics
+    properties:
+      score:
+        type: integer
+        description: Net score (upvotes - downvotes) for Reddit, HN
+      likes:
+        type: integer
+        description: Like count for Twitter, YouTube
+      views:
+        type: integer
+        description: View count
+      comment_count:
+        type: integer
+        description: Number of replies/comments
+      shares:
+        type: integer
+        description: Retweets, reposts, shares
+
+  # Hierarchy - comments are posts with parent_id
+  parent_id:
+    type: string
+    description: Parent post/comment ID (null = top-level post)
+
+  # Nested replies (populated by get operation)
+  replies:
+    type: array
+    description: Nested reply tree (recursive post structure)
+    items:
+      type: post
+
+  # Pagination hint for truncated threads
+  has_more_replies:
+    type: boolean
+    description: Whether there are more replies not included
+
+  # Timestamps
+  published_at:
+    type: datetime
+    description: When the post was published
+
+  fetched_at:
+    type: datetime
+    description: When we retrieved this data
+
+operations: [list, search, get]
+
+display:
+  primary: title
+  secondary: author.name
+  description: content
+  icon: message-square
+  show_as_app: true
+
+# Views for rendering post activities
+# Note: Browser provides padding and status bar automatically
+views:
+  # List view - shows post.list and post.search results
+  # Note: Community/subreddit context is shown in the ConnectorBar (inner chrome)
+  list:
+    title: "Posts"
+    layout:
+      - component: list
+        data:
+          source: activity
+        item_component: post-item
+        item_props:
+          id: "{{id}}"
+          title: "{{title}}"
+          content: "{{content}}"
+          author: "{{author.name}}"
+          community: "{{community.name}}"
+          score: "{{engagement.score}}"
+          commentCount: "{{engagement.comment_count}}"
+          url: "{{url}}"
+          externalUrl: "{{external_url}}"
+          publishedAt: "{{published_at}}"
+
+  search:
+    title: "Search Results"
+    layout:
+      - component: list
+        data:
+          source: activity
+        item_component: post-item
+        item_props:
+          id: "{{id}}"
+          title: "{{title}}"
+          content: "{{content}}"
+          author: "{{author.name}}"
+          community: "{{community.name}}"
+          score: "{{engagement.score}}"
+          commentCount: "{{engagement.comment_count}}"
+          url: "{{url}}"
+          externalUrl: "{{external_url}}"
+          publishedAt: "{{published_at}}"
+
+  # Single post view with nested replies
+  get:
+    title: "{{activity.response.title}}"
+    layout:
+      - component: layout/stack
+        props:
+          direction: vertical
+          gap: "16px"
+        children:
+          - component: post-header
+            props:
+              title: "{{activity.response.title}}"
+              author: "{{activity.response.author.name}}"
+              authorUrl: "{{activity.response.author.url}}"
+              score: "{{activity.response.engagement.score}}"
+              commentCount: "{{activity.response.engagement.comment_count}}"
+              publishedAt: "{{activity.response.published_at}}"
+          - component: text
+            props:
+              content: "{{activity.response.content}}"
+              variant: body
+          - component: comment-thread
+            props:
+              replies: "{{activity.response.replies}}"
+              hasMore: "{{activity.response.has_more_replies}}"

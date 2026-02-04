@@ -1,0 +1,13 @@
+id: organizational
+name: Organizational Skills
+description: Getting things done - tasks, projects, events, files, notes
+icon: icon.png
+
+entities:
+  - task
+  - project
+  - label
+  - event
+  - calendar
+  - file
+  - note

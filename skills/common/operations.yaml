@@ -1,0 +1,155 @@
+# Standard Operations
+#
+# These define the contract for common entity operations.
+# Plugins implementing {entity}.{operation} must conform to these schemas.
+#
+# Return types use "entity" as placeholder - replaced by actual entity at runtime:
+#   - webpage.search returns webpage[]
+#   - task.get returns task
+
+# =============================================================================
+# Collection Operations (return entity[])
+# =============================================================================
+
+list:
+  description: List all items, optionally filtered
+  params:
+    limit:
+      type: integer
+      default: 50
+      description: Maximum number of results
+    offset:
+      type: integer
+      description: Number of results to skip (for pagination)
+  returns: entity[]
+
+search:
+  description: Search by query string
+  params:
+    query:
+      type: string
+      required: true
+      description: Search query
+    limit:
+      type: integer
+      default: 10
+      description: Maximum number of results
+  returns: entity[]
+
+filter:
+  description: Filter by service-specific query language
+  params:
+    query:
+      type: string
+      required: true
+      description: Filter query (service-specific syntax)
+  returns: entity[]
+
+# =============================================================================
+# Single-Item Operations (return entity)
+# =============================================================================
+
+get:
+  description: Get a single item by ID
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID
+  returns: entity
+
+read:
+  description: Read/fetch content from a URL or path
+  params:
+    url:
+      type: string
+      required: true
+      description: URL or path to read
+  returns: entity
+
+create:
+  description: Create a new item
+  params:
+    # Entity-specific params defined in entity schema
+    # Common ones might include: title, description, etc.
+  returns: entity
+
+update:
+  description: Update an existing item
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to update
+    # Additional params are entity-specific
+  returns: entity
+
+# =============================================================================
+# Void Operations (return nothing)
+# =============================================================================
+
+delete:
+  description: Delete an item
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to delete
+  returns: void
+
+# =============================================================================
+# Entity-Specific Operations
+# =============================================================================
+# These are commonly used but not universal.
+# Entities must explicitly list them in their operations array.
+
+complete:
+  description: Mark an item as complete/done
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to complete
+  returns: void
+
+reopen:
+  description: Reopen a completed item
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to reopen
+  returns: void
+
+archive:
+  description: Archive an item (soft delete)
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to archive
+  returns: void
+
+unarchive:
+  description: Restore an archived item
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID to unarchive
+  returns: void
+
+send:
+  description: Send a message or communication
+  params:
+    # Entity-specific (to, content, etc.)
+  returns: entity
+
+transcript:
+  description: Get transcript/text content
+  params:
+    id:
+      type: string
+      required: true
+      description: Item ID
+  returns: entity

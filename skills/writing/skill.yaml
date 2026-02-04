@@ -1,0 +1,8 @@
+id: writing
+name: Writing Skills  
+description: Creating and documenting - documents, drafts, notes
+icon: icon.png
+
+entities:
+  - document
+  - draft
