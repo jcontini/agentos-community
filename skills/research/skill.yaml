@@ -2,8 +2,3 @@ id: research
 name: Research Skills
 description: Finding and learning - web search, reading, videos
 icon: icon.png
-
-entities:
-  - webpage
-  - video
-  - bookmark
