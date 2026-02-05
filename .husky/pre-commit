@@ -65,6 +65,14 @@ if [ -n "$STAGED_TESTS" ] || [ -n "$STAGED_READMES" ]; then
   echo ""
 fi
 
+# === Pattern Validation (for readme changes) ===
+# Checks: typed references, display fields, adapter best practices
+if [ -n "$STAGED_READMES" ]; then
+  echo "🔗 Pattern validation..."
+  node tests/plugins/scripts/validate-patterns.mjs --filter $APPS || ERRORS=$((ERRORS + 1))
+  echo ""
+fi
+
 # === Entity Validation (for entity changes) ===
 # Note: graph.yaml removed - relationships now in domain files
 # Entity schema validation happens via vitest tests
