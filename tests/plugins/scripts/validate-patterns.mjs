@@ -74,10 +74,14 @@ const EXPECTED_TYPED_REFS = {
 /**
  * Expected display fields when a typed reference exists.
  * If you have posted_by: person, you should also have these display fields.
+ * 
+ * Note: Message entities use flat 'sender' field (not nested), so 'from'
+ * typed refs don't need extra display fields — the 'sender' mapping suffices.
  */
 const EXPECTED_DISPLAY_FIELDS = {
   posted_by: ['author.name', 'author.url'],
-  from: ['sender.name', 'sender.phone'],
+  created_by: ['creator.name', 'creator.url'],
+  from: [], // message.sender is flat string, not nested object
   creator: ['creator.name', 'creator.url'],
   assignee: ['assignee.name'],
   participant: [], // participants are arrays, handled differently
