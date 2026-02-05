@@ -193,38 +193,50 @@ export class HttpTestClient extends EventEmitter {
   }
 
   /**
-   * Call any tool via HTTP API
+   * Call a plugin tool via HTTP API
+   * 
+   * For UsePlugin calls, uses /api/plugins/{plugin}/{tool}
+   * Other tools are not supported via HTTP (use MCP)
    */
   async call(tool: string, args: Record<string, unknown> = {}): Promise<unknown> {
     if (!this.connected) {
       throw new Error('Not connected');
     }
 
-    this.log(`Calling ${tool}:`, JSON.stringify(args).slice(0, 200));
+    // UsePlugin is the standard way to call plugins
+    if (tool === 'UsePlugin') {
+      const { plugin, tool: pluginTool, params = {} } = args as {
+        plugin: string;
+        tool: string;
+        params?: Record<string, unknown>;
+      };
+      
+      this.log(`Calling ${plugin}/${pluginTool}:`, JSON.stringify(params).slice(0, 200));
 
-    const response = await fetch(`${BASE_URL}/api/tools/call`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tool,
-        arguments: args,
-      }),
-      signal: AbortSignal.timeout(this.options.timeout),
-    });
+      const response = await fetch(`${BASE_URL}/api/plugins/${plugin}/${pluginTool}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Agent': 'test-runner',
+        },
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(this.options.timeout),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new HttpError(
-        (errorData as { error?: string }).error || `HTTP ${response.status}`,
-        response.status,
-        errorData
-      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new HttpError(
+          (errorData as { error?: string }).error || `HTTP ${response.status}`,
+          response.status,
+          errorData
+        );
+      }
+
+      return response.json();
     }
 
-    const data = await response.json() as ToolCallResponse;
-    
-    // HTTP API returns plain data directly
-    return data.result;
+    // Non-UsePlugin tools not supported via HTTP
+    throw new Error(`Tool "${tool}" not supported via HTTP API. Use MCP for non-plugin tools.`);
   }
 
   /**

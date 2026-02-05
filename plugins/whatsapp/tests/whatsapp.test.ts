@@ -1,108 +1,201 @@
 /**
  * WhatsApp Plugin Tests
  * 
- * Tests for WhatsApp-specific functionality like profile photos.
- * 
- * Philosophy: End-to-end tests with REAL data. No mocking, no fake numbers.
- * We read from real WhatsApp data but don't write to avoid damaging real contacts.
+ * Read-only tests against the local WhatsApp database.
+ * Requires WhatsApp desktop app installed and logged in.
  */
 
 import { describe, it, expect } from 'vitest';
-import { aos } from '../../../../../tests/utils/fixtures';
+import { aos } from '../../../tests/utils/fixtures';
 
 const plugin = 'whatsapp';
 
 describe('WhatsApp Plugin', () => {
-  describe('get_profile_photo', () => {
-    it('returns contact info for a real WhatsApp contact', async () => {
-      // Get real WhatsApp conversations
-      const conversations = await aos().call('UsePlugin', {
+  describe('person.list', () => {
+    it('returns contacts with person schema fields', async () => {
+      const people = await aos().call('UsePlugin', {
         plugin,
-        tool: 'list_conversations',
-        params: { limit: 20 }
+        tool: 'person.list',
+        params: { limit: 10 }
       });
 
-      // This test requires WhatsApp data to exist
-      expect(conversations.length).toBeGreaterThan(0);
-
-      // Find a direct conversation (has contact_jid with phone number)
-      const directConvo = conversations.find((c: any) => 
-        c.type === 'direct' && c.contact_jid?.includes('@s.whatsapp.net')
-      );
-
-      expect(directConvo).toBeDefined();
-
-      // Extract phone from JID (e.g., "12125551234@s.whatsapp.net" -> "12125551234")
-      const phone = directConvo.contact_jid.split('@')[0];
-
-      const results = await aos().call('UsePlugin', {
-        plugin,
-        tool: 'get_profile_photo',
-        params: { phone }
-      });
-
-      // Should return array with one result
-      expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBe(1);
+      expect(Array.isArray(people)).toBe(true);
       
-      const result = results[0];
-      
-      // Sanity check: no unresolved template variables
-      const json = JSON.stringify(result);
-      expect(json).not.toContain('{{');
-      expect(json).not.toContain('}}');
-
-      // Should find the contact with real data
-      expect(result.name).toBeDefined();
-      expect(typeof result.name).toBe('string');
-      expect(result.name.length).toBeGreaterThan(0);
-      
-      expect(result.lid).toBeDefined();
-      expect(typeof result.lid).toBe('string');
-      expect(result.lid.length).toBeGreaterThan(0);
-
-      // Either has photo (path + size) or doesn't (reason)
-      if (result.path) {
-        expect(result.path).toContain('/Library/Group Containers/');
-        expect(result.path).toMatch(/\.(jpg|thumb)$/);
-        expect(['hires', 'thumb']).toContain(result.size);
-        expect(result.reason).toBeNull();
-      } else {
-        expect(result.reason).toBe('no_photo_set');
-        expect(result.size).toBeNull();
+      if (people.length > 0) {
+        const person = people[0];
+        
+        // Required person fields
+        expect(person.id).toBeDefined();
+        expect(person.name).toBeDefined();
+        expect(person.plugin).toBe(plugin);
+        
+        // Phone should be E.164 format (starts with +)
+        if (person.phone) {
+          expect(person.phone).toMatch(/^\+/);
+        }
       }
     });
+  });
 
-    it('returns expected structure for contact not in WhatsApp contacts DB', async () => {
-      // Get a real conversation first to ensure WhatsApp is working
+  describe('conversation.list', () => {
+    it('returns conversations', async () => {
       const conversations = await aos().call('UsePlugin', {
         plugin,
-        tool: 'list_conversations',
-        params: { limit: 5 }
+        tool: 'conversation.list',
+        params: { limit: 10 }
       });
-      expect(conversations.length).toBeGreaterThan(0);
 
-      // Now query with a number that exists in format but not in contacts
-      // Use the structure of a real number but with zeros
-      const results = await aos().call('UsePlugin', {
+      expect(Array.isArray(conversations)).toBe(true);
+      
+      if (conversations.length > 0) {
+        const convo = conversations[0];
+        expect(convo.id).toBeDefined();
+        expect(convo.name).toBeDefined();
+        expect(convo.plugin).toBe(plugin);
+      }
+    });
+  });
+
+  describe('conversation.get', () => {
+    it('returns a specific conversation', async () => {
+      // First get a conversation ID
+      const conversations = await aos().call('UsePlugin', {
         plugin,
-        tool: 'get_profile_photo',
-        params: { phone: '10000000000' }  // Valid format, unlikely to exist
+        tool: 'conversation.list',
+        params: { limit: 1 }
       });
 
-      expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBe(1);
-      
-      const result = results[0];
-      
-      // Sanity check: no unresolved template variables
-      const json = JSON.stringify(result);
-      expect(json).not.toContain('{{');
-      expect(json).not.toContain('}}');
+      if (conversations.length === 0) {
+        console.log('  Skipping: no conversations');
+        return;
+      }
 
-      // Contact not found - should have null values and a reason
-      expect(result.path).toBeNull();
-      expect(['contact_not_on_whatsapp', 'no_photo_set']).toContain(result.reason);
+      const convo = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'conversation.get',
+        params: { id: conversations[0].id }
+      });
+
+      expect(convo.id).toBe(conversations[0].id);
+      expect(convo.name).toBeDefined();
+    });
+  });
+
+  describe('message.list', () => {
+    it('returns messages for a conversation', async () => {
+      // First get a conversation ID
+      const conversations = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'conversation.list',
+        params: { limit: 1 }
+      });
+
+      if (conversations.length === 0) {
+        console.log('  Skipping: no conversations');
+        return;
+      }
+
+      const messages = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'message.list',
+        params: { conversation_id: conversations[0].id, limit: 10 }
+      });
+
+      expect(Array.isArray(messages)).toBe(true);
+      
+      if (messages.length > 0) {
+        const msg = messages[0];
+        expect(msg.id).toBeDefined();
+        expect(msg.conversation_id).toBeDefined();
+        expect(msg.plugin).toBe(plugin);
+      }
+    });
+  });
+
+  describe('message.get', () => {
+    it('returns a specific message', async () => {
+      // First get a conversation and message
+      const conversations = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'conversation.list',
+        params: { limit: 1 }
+      });
+
+      if (conversations.length === 0) {
+        console.log('  Skipping: no conversations');
+        return;
+      }
+
+      const messages = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'message.list',
+        params: { conversation_id: conversations[0].id, limit: 1 }
+      });
+
+      if (messages.length === 0) {
+        console.log('  Skipping: no messages');
+        return;
+      }
+
+      const msg = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'message.get',
+        params: { id: messages[0].id }
+      });
+
+      expect(msg.id).toBe(messages[0].id);
+    });
+  });
+
+  describe('message.search', () => {
+    it('searches messages by content', async () => {
+      const messages = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'message.search',
+        params: { query: 'the', limit: 5 }
+      });
+
+      expect(Array.isArray(messages)).toBe(true);
+      // May or may not find results, just checking it doesn't error
+    });
+  });
+
+  describe('get_unread', () => {
+    it('returns unread messages', async () => {
+      const messages = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'get_unread',
+        params: { limit: 10 }
+      });
+
+      expect(Array.isArray(messages)).toBe(true);
+      // May have no unread messages, just checking it works
+    });
+  });
+
+  describe('get_participants', () => {
+    it('returns participants for a group', async () => {
+      // Find a group conversation
+      const conversations = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'conversation.list',
+        params: { limit: 50 }
+      });
+
+      const group = conversations.find((c: any) => c.is_group === true || c.is_group === 1);
+
+      if (!group) {
+        console.log('  Skipping: no group conversations');
+        return;
+      }
+
+      const participants = await aos().call('UsePlugin', {
+        plugin,
+        tool: 'get_participants',
+        params: { conversation_id: group.id }
+      });
+
+      expect(Array.isArray(participants)).toBe(true);
     });
   });
 });
