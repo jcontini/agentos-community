@@ -37,14 +37,23 @@ adapters:
       title: .data.title
       content: .data.selftext
       url: '"https://reddit.com" + .data.permalink'
-      author.name: .data.author
-      author.url: '"https://reddit.com/u/" + .data.author'
       community.name: .data.subreddit
       community.url: '"https://reddit.com/r/" + .data.subreddit'
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
       published_at: .data.created_utc | todate
       replies: .replies
+      
+      # Display fields for views (denormalized on post entity)
+      author.name: .data.author
+      author.url: '"https://reddit.com/u/" + .data.author'
+      
+      # Typed reference: creates person entity and 'posted_by' relationship
+      # Uses raw API path — all mapping expressions reference raw data
+      posted_by:
+        person:
+          id: .data.author
+          name: .data.author
   
   group:
     terminology: Subreddit
@@ -76,7 +85,8 @@ operations:
       method: GET
       url: https://www.reddit.com/search.json
       headers:
-        User-Agent: "AgentOS/1.0"
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
       query:
         q: .params.query
         limit: .params.limit | tostring
@@ -96,7 +106,8 @@ operations:
       method: GET
       url: '"https://www.reddit.com/r/" + .params.subreddit + "/" + .params.sort + ".json"'
       headers:
-        User-Agent: "AgentOS/1.0"
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
       query:
         limit: .params.limit | tostring
       response:
@@ -113,7 +124,8 @@ operations:
       method: GET
       url: '"https://www.reddit.com/comments/" + .params.id + ".json"'
       headers:
-        User-Agent: "AgentOS/1.0"
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
       query:
         limit: .params.comment_limit | tostring
       response:
@@ -187,7 +199,8 @@ operations:
       method: GET
       url: https://www.reddit.com/subreddits/search.json
       headers:
-        User-Agent: "AgentOS/1.0"
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
       query:
         q: .params.query
         limit: .params.limit | tostring
