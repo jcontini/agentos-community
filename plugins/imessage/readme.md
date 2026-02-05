@@ -96,7 +96,9 @@ operations:
           WHERE cmj.chat_id = c.ROWID
         )
         ORDER BY updated_at DESC
-        LIMIT {{params.limit | default: 50}}
+        LIMIT :limit
+      params:
+        limit: '.params.limit // 50'
       response:
         root: "/"
 
@@ -127,7 +129,9 @@ operations:
            JOIN chat_handle_join chj ON h.ROWID = chj.handle_id
            WHERE chj.chat_id = c.ROWID) as participant_handles
         FROM chat c
-        WHERE c.ROWID = {{params.id}}
+        WHERE c.ROWID = :id
+      params:
+        id: .params.id
       response:
         root: "/0"
 
@@ -141,7 +145,7 @@ operations:
       query: |
         SELECT 
           m.ROWID as id,
-          {{params.conversation_id}} as conversation_id,
+          :conversation_id as conversation_id,
           m.text as content,
           m.is_from_me as is_outgoing,
           CASE m.is_from_me 
@@ -152,10 +156,13 @@ operations:
         FROM message m
         LEFT JOIN handle h ON m.handle_id = h.ROWID
         JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
-        WHERE cmj.chat_id = {{params.conversation_id}}
+        WHERE cmj.chat_id = :conversation_id
           AND m.text IS NOT NULL AND m.text != ''
         ORDER BY m.date DESC
-        LIMIT {{params.limit | default: 100}}
+        LIMIT :limit
+      params:
+        conversation_id: .params.conversation_id
+        limit: '.params.limit // 100'
       response:
         root: "/"
 
@@ -180,7 +187,9 @@ operations:
         LEFT JOIN handle h ON m.handle_id = h.ROWID
         LEFT JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
         LEFT JOIN chat c ON cmj.chat_id = c.ROWID
-        WHERE m.ROWID = {{params.id}}
+        WHERE m.ROWID = :id
+      params:
+        id: .params.id
       response:
         root: "/0"
 
@@ -207,9 +216,12 @@ operations:
         LEFT JOIN handle h ON m.handle_id = h.ROWID
         LEFT JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
         LEFT JOIN chat c ON cmj.chat_id = c.ROWID
-        WHERE m.text LIKE '%{{params.query}}%'
+        WHERE m.text LIKE '%' || :query || '%'
         ORDER BY m.date DESC
-        LIMIT {{params.limit | default: 50}}
+        LIMIT :limit
+      params:
+        query: .params.query
+        limit: '.params.limit // 50'
       response:
         root: "/"
 ---

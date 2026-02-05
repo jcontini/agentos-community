@@ -86,7 +86,9 @@ operations:
         WHERE cs.ZREMOVED = 0
           AND cs.ZSESSIONTYPE IN (0, 1)
         ORDER BY cs.ZLASTMESSAGEDATE DESC
-        LIMIT {{params.limit | default: 50}}
+        LIMIT :limit
+      params:
+        limit: '.params.limit // 50'
       response:
         root: "/"
 
@@ -110,7 +112,9 @@ operations:
           cs.ZCONTACTJID as contact_jid,
           (SELECT COUNT(*) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = cs.Z_PK) as message_count
         FROM ZWACHATSESSION cs
-        WHERE cs.Z_PK = {{params.id}}
+        WHERE cs.Z_PK = :id
+      params:
+        id: .params.id
       response:
         root: "/0"
 
@@ -124,7 +128,7 @@ operations:
       query: |
         SELECT 
           m.Z_PK as id,
-          {{params.conversation_id}} as conversation_id,
+          :conversation_id as conversation_id,
           m.ZTEXT as content,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
@@ -136,10 +140,13 @@ operations:
           m.ZSTARRED as is_starred,
           m.ZPARENTMESSAGE as reply_to_id
         FROM ZWAMESSAGE m
-        WHERE m.ZCHATSESSION = {{params.conversation_id}}
+        WHERE m.ZCHATSESSION = :conversation_id
           AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit | default: 100}}
+        LIMIT :limit
+      params:
+        conversation_id: .params.conversation_id
+        limit: '.params.limit // 100'
       response:
         root: "/"
 
@@ -164,7 +171,9 @@ operations:
           m.ZSTARRED as is_starred,
           m.ZPARENTMESSAGE as reply_to_id
         FROM ZWAMESSAGE m
-        WHERE m.Z_PK = {{params.id}}
+        WHERE m.Z_PK = :id
+      params:
+        id: .params.id
       response:
         root: "/0"
 
@@ -189,9 +198,12 @@ operations:
           datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp
         FROM ZWAMESSAGE m
         LEFT JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
-        WHERE m.ZTEXT LIKE '%{{params.query}}%'
+        WHERE m.ZTEXT LIKE '%' || :query || '%'
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit | default: 50}}
+        LIMIT :limit
+      params:
+        query: .params.query
+        limit: '.params.limit // 50'
       response:
         root: "/"
 
@@ -225,7 +237,9 @@ utilities:
           AND m.ZISFROMME = 0
           AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
         ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT {{params.limit | default: 50}}
+        LIMIT :limit
+      params:
+        limit: '.params.limit // 50'
       response:
         root: "/"
 
@@ -247,7 +261,9 @@ utilities:
           gm.ZISADMIN as is_admin,
           gm.ZISACTIVE as is_active
         FROM ZWAGROUPMEMBER gm
-        WHERE gm.ZCHATSESSION = {{params.conversation_id}}
+        WHERE gm.ZCHATSESSION = :conversation_id
+      params:
+        conversation_id: .params.conversation_id
       response:
         root: "/"
 
@@ -267,7 +283,7 @@ utilities:
       profile_photo: string
     sql:
       attach:
-        contacts: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"
+        contacts: '"~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"'
       query: |
         SELECT DISTINCT
           -- Identity
@@ -296,7 +312,9 @@ utilities:
           AND cs.ZREMOVED = 0
           AND cs.ZCONTACTJID IS NOT NULL
         ORDER BY cs.ZLASTMESSAGEDATE DESC
-        LIMIT {{params.limit | default: 500}}
+        LIMIT :limit
+      params:
+        limit: '.params.limit // 500'
       response:
         root: "/"
 ---
