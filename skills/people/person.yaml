@@ -47,7 +47,6 @@ properties:
 
   # Avatar references image entity
   avatar:
-    type: string
     references: image
     description: Primary profile photo
 
