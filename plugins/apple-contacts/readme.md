@@ -56,8 +56,8 @@ adapters:
       last_name: .last_name
       middle_name: .middle_name
       nickname: .nickname
-      phone: '.phones | if type == "string" then split(",")[0] else null end'
-      email: '.emails | if type == "string" then split(",")[0] else null end'
+      phone: '.phones_json | fromjson | .[0].value? // null'
+      email: '.emails_json | fromjson | .[0].value? // null'
       avatar: 'if .has_photo == 1 then "contacts://photo/" + .id else null end'
       organization: .organization
       job_title: .job_title
@@ -65,9 +65,88 @@ adapters:
       birthday: .birthday
       notes: .notes
       
-      # Raw arrays for building accounts
-      _phones_raw: .phones
-      _emails_raw: .emails
+      # Build unified accounts array from phones, emails, URLs, and social profiles
+      accounts: |
+        # Check if label is Apple internal format like _$!<Home>!$_
+        def is_apple_label: . != null and test("^_\\$!<");
+        
+        # Check if label is generic (should fall back to URL domain)
+        def is_generic_label: . != null and (. | ascii_downcase | test("^(profile|website|homepage|home-page|company|company-website|business|personal|other|home|work)$"));
+        
+        # Parse Apple label: _$!<Home>!$_ → "home"
+        def parse_apple_label: if is_apple_label then gsub("^_\\$!<|>!\\$_$"; "") | ascii_downcase else null end;
+        
+        # Extract domain from URL → platform type (linkedin.com → linkedin, www.github.com → github)
+        def url_to_platform: 
+          if . == null then null 
+          else capture("https?://(?:www\\.)?(?<d>[^/]+)").d? // null |
+            if . then split(".")[0] |
+              # Normalize a few known aliases
+              if . == "x" then "twitter" elif . == "angel" then "angellist" else . end
+            else null end
+          end;
+        
+        # Extract username from URL using common patterns
+        def extract_username:
+          if . == null then null
+          # /in/username, /pub/username (LinkedIn)
+          elif test("/in/|/pub/") then capture("/(in|pub)/(?<u>[^/?]+)").u
+          # /user/username, /users/username
+          elif test("/users?/") then capture("/users?/(?<u>[^/?]+)").u
+          # /profile/username (but not profile.php?id=)
+          elif test("/profile/[^.?]") then capture("/profile/(?<u>[^/?]+)").u
+          # profile.php?id=123 (Facebook legacy)
+          elif test("profile\\.php\\?id=") then capture("profile\\.php\\?id=(?<u>[0-9]+)").u
+          # /@username (Medium, etc)
+          elif test("/@") then capture("/@(?<u>[^/?]+)").u
+          # /people/username (TripIt, etc)
+          elif test("/people/") then capture("/people/(?<u>[^/?]+)").u
+          # Generic: first path segment after domain (works for most: github.com/user, twitter.com/user)
+          else capture("https?://[^/]+/(?<u>[^/?]+)").u? // null
+          end;
+        
+        # Normalize truncated/variant service names from Apple's social profiles table
+        def normalize_service:
+          if . == null then null 
+          else ascii_downcase |
+            # Handle Apple's truncated mess: "li", "lin", "linke" → "linkedin"
+            if . == "li" or test("^lin") then "linkedin"
+            elif test("^fac") then "facebook"
+            elif test("^twit") or . == "x" then "twitter"
+            elif test("^ins") then "instagram"
+            elif test("^plus") then "google-plus"
+            else . end
+          end;
+        
+        # Phones → accounts (only include label if not null)
+        ((.phones_json // "[]") | fromjson | map(select(.value) | 
+          (.label | parse_apple_label) as $lbl |
+          {type: "phone", value: .value} + (if $lbl then {label: $lbl} else {} end)
+        )) as $phones |
+        
+        # Emails → accounts (only include label if not null)
+        ((.emails_json // "[]") | fromjson | map(select(.value) | 
+          (.label | parse_apple_label) as $lbl |
+          {type: "email", value: .value} + (if $lbl then {label: $lbl} else {} end)
+        )) as $emails |
+        
+        # URLs → accounts
+        # If label is Apple internal or generic → extract type from URL domain
+        # Otherwise use label as type (like "LinkedIn", "Dex Contact Details", "about.me")
+        ((.urls_json // "[]") | fromjson | map(select(.url) |
+          (.label | ascii_downcase | gsub(" "; "-")) as $normalized_label |
+          (if (.label | is_apple_label) or (.label | is_generic_label) then .url | url_to_platform else $normalized_label end) as $type |
+          (.url | extract_username) as $username |
+          select($type) | {type: $type} + (if $username then {value: $username} else {} end) + {url: .url}
+        )) as $url_accounts |
+        
+        # Social profiles → accounts (normalize truncated service names)
+        ((.social_json // "[]") | fromjson | map(select(.username) |
+          {type: (.service | normalize_service), value: (.username | ascii_downcase)}
+        )) as $social_accounts |
+        
+        # Combine: phones + emails + (URLs and social deduped by type, prefer entries with usernames)
+        $phones + $emails + (($url_accounts + $social_accounts) | group_by(.type) | map(sort_by(if .value then 0 else 1 end) | .[0]))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -100,17 +179,26 @@ operations:
           datetime(r.ZMODIFICATIONDATE + 978307200, 'unixepoch') as modified_at,
           datetime(r.ZCREATIONDATE + 978307200, 'unixepoch') as created_at,
           CASE WHEN r.ZTHUMBNAILIMAGEDATA IS NOT NULL THEN 1 ELSE 0 END as has_photo,
-          GROUP_CONCAT(DISTINCT p.ZFULLNUMBER) as phones,
-          GROUP_CONCAT(DISTINCT e.ZADDRESS) as emails,
-          GROUP_CONCAT(DISTINCT u.ZURL) as urls
+          
+          -- JSON arrays for phones, emails, URLs, social profiles
+          (SELECT json_group_array(json_object('value', p.ZFULLNUMBER, 'label', p.ZLABEL))
+           FROM ZABCDPHONENUMBER p WHERE p.ZOWNER = r.Z_PK) as phones_json,
+          
+          (SELECT json_group_array(json_object('value', e.ZADDRESS, 'label', e.ZLABEL))
+           FROM ZABCDEMAILADDRESS e WHERE e.ZOWNER = r.Z_PK) as emails_json,
+          
+          (SELECT json_group_array(json_object('url', u.ZURL, 'label', u.ZLABEL))
+           FROM ZABCDURLADDRESS u WHERE u.ZOWNER = r.Z_PK) as urls_json,
+          
+          (SELECT json_group_array(json_object('service', sp.ZSERVICENAME, 'username', sp.ZUSERNAME))
+           FROM ZABCDSOCIALPROFILE sp WHERE sp.ZOWNER = r.Z_PK) as social_json
+          
         FROM ZABCDRECORD r
-        LEFT JOIN ZABCDPHONENUMBER p ON p.ZOWNER = r.Z_PK
-        LEFT JOIN ZABCDEMAILADDRESS e ON e.ZOWNER = r.Z_PK
-        LEFT JOIN ZABCDURLADDRESS u ON u.ZOWNER = r.Z_PK
         WHERE r.ZUNIQUEID LIKE '%:ABPerson'
-        GROUP BY r.Z_PK
         ORDER BY r.ZMODIFICATIONDATE DESC
-        LIMIT 50
+        LIMIT :limit
+      params:
+        limit: '.params.limit // 50'
 
   person.get:
     description: Get full contact details by ID including addresses, notes, birthday
@@ -251,8 +339,20 @@ operations:
           COALESCE(r.ZFIRSTNAME || ' ' || r.ZLASTNAME, r.ZORGANIZATION) as display_name,
           date(r.ZBIRTHDAY + 978307200, 'unixepoch') as birthday,
           CASE WHEN r.ZTHUMBNAILIMAGEDATA IS NOT NULL THEN 1 ELSE 0 END as has_photo,
-          GROUP_CONCAT(DISTINCT p.ZFULLNUMBER) as phones,
-          GROUP_CONCAT(DISTINCT e.ZADDRESS) as emails
+          
+          -- JSON arrays for accounts building
+          (SELECT json_group_array(json_object('value', p2.ZFULLNUMBER, 'label', p2.ZLABEL))
+           FROM ZABCDPHONENUMBER p2 WHERE p2.ZOWNER = r.Z_PK) as phones_json,
+          
+          (SELECT json_group_array(json_object('value', e2.ZADDRESS, 'label', e2.ZLABEL))
+           FROM ZABCDEMAILADDRESS e2 WHERE e2.ZOWNER = r.Z_PK) as emails_json,
+          
+          (SELECT json_group_array(json_object('url', u.ZURL, 'label', u.ZLABEL))
+           FROM ZABCDURLADDRESS u WHERE u.ZOWNER = r.Z_PK) as urls_json,
+          
+          (SELECT json_group_array(json_object('service', sp.ZSERVICENAME, 'username', sp.ZUSERNAME))
+           FROM ZABCDSOCIALPROFILE sp WHERE sp.ZOWNER = r.Z_PK) as social_json
+           
         FROM ZABCDRECORD r
         LEFT JOIN ZABCDPHONENUMBER p ON p.ZOWNER = r.Z_PK
         LEFT JOIN ZABCDEMAILADDRESS e ON e.ZOWNER = r.Z_PK
