@@ -1,4 +1,5 @@
-# Person entity - the unified social graph
+# Person Entity - unified social graph node
+# Unified across all platforms via the accounts array
 
 id: person
 plural: people
@@ -15,58 +16,99 @@ properties:
     required: true
     description: Unique identifier
 
+  # Display name (best known name for this person)
   name:
     type: string
     required: true
-    description: Display name (best known name for this person)
+    description: Primary display name
 
-  real_name:
+  # Structured name fields (from Apple Contacts, vCard)
+  first_name:
     type: string
-    description: Actual name (from push name, profile, etc.)
-
-  contact_name:
+    description: First/given name
+  last_name:
     type: string
-    description: Name saved in contacts
+    description: Last/family name
+  middle_name:
+    type: string
+    description: Middle name
+  nickname:
+    type: string
+    description: Nickname or alias
 
+  # Primary contact info (quick access)
+  phone:
+    type: string
+    description: Primary phone (E.164 format)
   email:
     type: string
     format: email
-    description: Email address
+    description: Primary email
 
-  phone:
-    type: string
-    description: Phone number (E.164 format)
-
+  # Avatar references image entity
   avatar:
-    type: string
-    format: url
-    description: Profile photo URL or path
+    references: image
+    description: Primary profile photo
 
-  about:
+  # Work info
+  organization:
     type: string
-    description: Bio or status text
-
-  username:
+    description: Company or organization
+  job_title:
     type: string
-    description: Username on a platform
-
-  url:
+    description: Job title or role
+  department:
     type: string
-    format: url
-    description: Profile URL
+    description: Department within organization
 
+  # Rich data
+  birthday:
+    type: date
+    description: Birth date
+  notes:
+    type: string
+    description: User notes about this person
+
+  # Unified accounts array - the key innovation
+  # All contact methods in one extensible array
+  accounts:
+    type: array
+    description: All ways to reach or identify this person
+    items:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          description: |
+            Account type. Core: phone, email.
+            Social: twitter, github, linkedin, instagram, facebook.
+            Messaging: whatsapp, imessage, telegram, signal, slack.
+            Any string allowed for extensibility.
+        value:
+          type: string
+          description: The identifier (format depends on type)
+        label:
+          type: string
+          description: Context like work, personal, home, old
+        avatar:
+          references: image
+          description: Profile photo for this specific account
+        source:
+          type: string
+          description: Where we learned about this account (apple-contacts, whatsapp, etc.)
+
+  # Legacy fields (being replaced by accounts array)
   identities:
     type: array
-    description: Cross-platform identities
+    description: "[DEPRECATED] Cross-platform identities - use accounts instead"
     items:
       type: object
       properties:
         platform:
           type: string
-          enum: [phone, email, whatsapp, whatsapp_lid, imessage, twitter, github, linkedin]
         identifier:
           type: string
-          description: The identifier on that platform
 
   sources:
     type: array
@@ -89,11 +131,17 @@ properties:
     type: datetime
     description: When last updated
 
+# For cross-plugin deduplication
+# Ordered by strength - try each until a match is found
+identifiers:
+  - phone
+  - email
+
 operations: [list, get, search]
 
 display:
   primary: name
-  secondary: phone
+  secondary: organization
   icon: user
   show_as_app: true
   sort:

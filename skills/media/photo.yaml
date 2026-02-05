@@ -1,0 +1,85 @@
+# Photo Entity - photographs with capture metadata
+# Extends image with EXIF data
+
+id: photo
+plural: photos
+name: Photo
+description: A photograph with capture metadata (EXIF)
+extends: image
+
+references:
+  schema_org: https://schema.org/Photograph
+  wikidata: Q125191  # photograph
+
+properties:
+  # Inherits from image: id, url, path, hash, format, width, height, size, alt, fetched_at
+
+  # When (EXIF DateTimeOriginal)
+  date_taken:
+    type: datetime
+    description: When the photo was captured
+
+  # Where (EXIF GPS)
+  location:
+    type: object
+    description: GPS coordinates where photo was taken
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+      altitude:
+        type: number
+        description: Meters above sea level
+
+  # What camera (EXIF Make, Model, LensModel)
+  camera:
+    type: object
+    description: Camera information
+    properties:
+      make:
+        type: string
+        description: Manufacturer (Apple, Canon, Sony)
+      model:
+        type: string
+        description: Camera model (iPhone 15 Pro, EOS R5)
+      lens:
+        type: string
+        description: Lens model
+
+  # How (EXIF exposure settings)
+  settings:
+    type: object
+    description: Camera settings at capture time
+    properties:
+      aperture:
+        type: number
+        description: f-number (e.g., 2.8)
+      shutter_speed:
+        type: string
+        description: Exposure time (e.g., "1/1000")
+      iso:
+        type: integer
+        description: ISO sensitivity
+      focal_length:
+        type: number
+        description: Focal length in millimeters
+
+  # Organization
+  album:
+    references: album
+    description: Photo album this belongs to
+
+# Inherit identifiers from image (hash)
+
+operations: [list, get, search]
+
+display:
+  primary: date_taken
+  secondary: location
+  image: url
+  icon: camera
+  show_as_app: true
+  sort:
+    - field: date_taken
+      order: desc
