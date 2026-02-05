@@ -30,6 +30,14 @@ adapters:
       is_group: '.type == "group"'
       updated_at: .updated_at
       _participant_handles: .participant_handles
+      
+      # Typed reference: extract person from first participant (DMs)
+      # Handles are already E.164 format (+12025551234) or email
+      participant:
+        person:
+          phone: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (startswith("+")) then . elif test("^[0-9]+$") then "+" + . else null end) else null end'
+          email: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (contains("@") and (startswith("+") | not)) then . else null end) else null end'
+          name: .name
 
   message:
     terminology: Message
@@ -41,6 +49,14 @@ adapters:
       is_outgoing: .is_outgoing
       timestamp: .timestamp
       _sender_handle: .sender_handle
+      
+      # Typed reference: extract sender as person (incoming messages only)
+      # Handles are already E.164 format (+12025551234) or email
+      from:
+        person:
+          phone: 'if (.is_outgoing != true and ._sender_handle != null) then (if (._sender_handle | startswith("+")) then ._sender_handle elif (._sender_handle | test("^[0-9]+$")) then "+" + ._sender_handle else null end) else null end'
+          email: 'if (.is_outgoing != true and ._sender_handle != null and (._sender_handle | contains("@")) and (._sender_handle | startswith("+") | not)) then ._sender_handle else null end'
+          name: .sender
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

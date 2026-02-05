@@ -33,6 +33,13 @@ adapters:
       unread_count: .unread_count
       updated_at: .updated_at
       _contact_jid: .contact_jid
+      
+      # Typed reference: extract person from conversation partner (DMs only)
+      # JID format: "12125551234@s.whatsapp.net" → phone: "+12125551234"
+      participant:
+        person:
+          phone: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else null end'
+          name: .name
 
   message:
     terminology: Message
@@ -45,6 +52,13 @@ adapters:
       timestamp: .timestamp
       _reply_to_id: .reply_to_id
       _sender_handle: .sender_handle
+      
+      # Typed reference: extract sender as person (incoming messages only)
+      # JID format: "12125551234@s.whatsapp.net" → phone: "+12125551234"
+      from:
+        person:
+          phone: 'if (.is_outgoing != true and ._sender_handle != null and (._sender_handle | type == "string") and (._sender_handle | endswith("@s.whatsapp.net"))) then (._sender_handle | split("@") | .[0] | "+" + .) else null end'
+          name: .sender
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

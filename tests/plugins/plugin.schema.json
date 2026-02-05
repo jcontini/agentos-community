@@ -207,8 +207,22 @@
           "description": "API response → entity property mappings. Defined once, applied to all operations returning this entity.",
           "additionalProperties": {
             "oneOf": [
-              { "type": "string", "description": "JMESPath expression (e.g., '.id', '.content', '5 - .priority')" },
-              { "type": "null", "description": "Not provided by this API" }
+              { "type": "string", "description": "jaq expression (e.g., '.id', '.content', '5 - .priority')" },
+              { "type": "null", "description": "Not provided by this API" },
+              {
+                "type": "object",
+                "description": "Typed reference: creates linked entity and relationship. Key is entity type, value is identity fields.",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                  "type": "object",
+                  "description": "Identity fields for the linked entity (e.g., { phone: '.sender_jid | ...', name: '.sender_name' })",
+                  "additionalProperties": {
+                    "type": "string",
+                    "description": "jaq expression for identity field"
+                  }
+                }
+              }
             ]
           }
         }

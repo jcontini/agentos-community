@@ -22,7 +22,7 @@ import addFormats from 'ajv-formats';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');  // tests/plugins/scripts/ -> root
 const APPS_DIR = join(ROOT, 'plugins');
-const MODELS_DIR = join(ROOT, 'models');
+const SKILLS_DIR = join(ROOT, 'skills');  // Renamed from models
 const NEEDS_WORK_DIR = join(APPS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'plugin.schema.json');
 
@@ -32,9 +32,10 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
 
-// Load all model IDs from models/ folder
-function loadModelIds() {
-  const modelIds = new Set();
+// Load all entity IDs from skills/ folder
+// Skills structure: skills/{skill}/{entity}.yaml (e.g., skills/messaging/message.yaml)
+function loadEntityIds() {
+  const entityIds = new Set();
   
   function scanDir(dir) {
     if (!existsSync(dir)) return;
@@ -42,17 +43,14 @@ function loadModelIds() {
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views' && entry.name !== 'common') {
         scanDir(fullPath);
-      } else if (entry.name === 'models.yaml') {
+      } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
           const content = readFileSync(fullPath, 'utf-8');
-          const docs = parseAllDocuments(content);
-          for (const doc of docs) {
-            const data = doc.toJS();
-            if (data && data.id) {
-              modelIds.add(data.id);
-            }
+          const data = parseYaml(content);
+          if (data && data.id) {
+            entityIds.add(data.id);
           }
         } catch (err) {
           console.warn(`Warning: Failed to parse ${fullPath}: ${err.message}`);
@@ -61,11 +59,11 @@ function loadModelIds() {
     }
   }
   
-  scanDir(MODELS_DIR);
-  return modelIds;
+  scanDir(SKILLS_DIR);
+  return entityIds;
 }
 
-const validModelIds = loadModelIds();
+const validEntityIds = loadEntityIds();
 
 // Load entity properties for adapter validation
 function loadEntityProperties() {
@@ -77,17 +75,14 @@ function loadEntityProperties() {
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views' && entry.name !== 'common') {
         scanDir(fullPath);
-      } else if (entry.name === 'models.yaml') {
+      } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
           const content = readFileSync(fullPath, 'utf-8');
-          const docs = parseAllDocuments(content);
-          for (const doc of docs) {
-            const data = doc.toJS();
-            if (data && data.id && data.properties) {
-              entityProps[data.id] = Object.keys(data.properties);
-            }
+          const data = parseYaml(content);
+          if (data && data.id && data.properties) {
+            entityProps[data.id] = Object.keys(data.properties);
           }
         } catch (err) {
           // Skip parse errors
@@ -96,18 +91,18 @@ function loadEntityProperties() {
     }
   }
   
-  scanDir(MODELS_DIR);
+  scanDir(SKILLS_DIR);
   return entityProps;
 }
 
 const entityProperties = loadEntityProperties();
 
-// Show loaded models (only in verbose mode or if few models)
+// Show loaded entities (only in verbose mode)
 if (process.argv.includes('--verbose')) {
-  console.log(`📦 Loaded ${validModelIds.size} models: ${[...validModelIds].sort().join(', ')}\n`);
+  console.log(`📦 Loaded ${validEntityIds.size} entities: ${[...validEntityIds].sort().join(', ')}\n`);
 }
 
-// Validate that returns references valid models
+// Validate that returns references valid entities
 function validateReturns(frontmatter) {
   const errors = [];
   
@@ -115,9 +110,9 @@ function validateReturns(frontmatter) {
   if (frontmatter.operations) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
       if (typeof op.returns === 'string' && op.returns !== 'void') {
-        const modelName = op.returns.replace(/\[\]$/, '');
-        if (!validModelIds.has(modelName)) {
-          errors.push(`Operation '${opName}' returns unknown model '${modelName}'`);
+        const entityName = op.returns.replace(/\[\]$/, '');
+        if (!validEntityIds.has(entityName)) {
+          errors.push(`Operation '${opName}' returns unknown entity '${entityName}'`);
         }
       }
     }
@@ -127,16 +122,16 @@ function validateReturns(frontmatter) {
   if (frontmatter.utilities) {
     for (const [utilName, util] of Object.entries(frontmatter.utilities)) {
       if (typeof util.returns === 'string' && util.returns !== 'void') {
-        const modelName = util.returns.replace(/\[\]$/, '');
-        if (!validModelIds.has(modelName)) {
-          errors.push(`Utility '${utilName}' returns unknown model '${modelName}'`);
+        const entityName = util.returns.replace(/\[\]$/, '');
+        if (!validEntityIds.has(entityName)) {
+          errors.push(`Utility '${utilName}' returns unknown entity '${entityName}'`);
         }
       }
     }
   }
   
   if (errors.length > 0) {
-    errors.push(`Valid models: ${[...validModelIds].sort().join(', ')}`);
+    errors.push(`Valid entities: ${[...validEntityIds].sort().join(', ')}`);
   }
   
   return errors;
@@ -157,9 +152,13 @@ function validateAdapterMappings(frontmatter) {
       continue;
     }
     
-    for (const propName of Object.keys(adapter.mapping)) {
+    for (const [propName, propValue] of Object.entries(adapter.mapping)) {
       // Skip internal properties (prefixed with _)
       if (propName.startsWith('_')) continue;
+      
+      // Skip typed references (objects that create relationships, not properties)
+      // Typed references have structure: { entity_type: { identity_field: "jaq expr" } }
+      if (typeof propValue === 'object' && propValue !== null) continue;
       
       // For nested props like "author.name", check the top-level "author" exists
       const topLevelProp = propName.split('.')[0];
@@ -309,14 +308,14 @@ for (const plugin of plugins) {
       failureReason = 'Schema validation failed';
       failed = true;
     } else {
-      // Validate operations and utilities return valid models
-      const modelErrors = validateReturns(frontmatter);
-      if (modelErrors.length > 0) {
-        console.error(`❌ plugins/${plugin.path}: Invalid model references`);
-        for (const err of modelErrors) {
+      // Validate operations and utilities return valid entities
+      const entityErrors = validateReturns(frontmatter);
+      if (entityErrors.length > 0) {
+        console.error(`❌ plugins/${plugin.path}: Invalid entity references`);
+        for (const err of entityErrors) {
           console.error(`   ${err}`);
         }
-        failureReason = 'Invalid model references';
+        failureReason = 'Invalid entity references';
         failed = true;
       } else {
         // Validate adapter mappings reference valid entity properties

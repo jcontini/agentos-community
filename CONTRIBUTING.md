@@ -48,25 +48,33 @@ node scripts/generate-manifest.js --check # Validate only
 
 ## Architecture Overview
 
-**Key insight: Skills define entities, apps are runtime.** Skills contain entity schemas, views, and components. Plugins are adapters that map external APIs to these entities. Apps are spawned at runtime from entities with `show_as_app: true`.
+**Skills are the single source of truth for entity types.** Want a new entity type? Add a skill YAML file. That's it. The skill defines:
+
+- **Schema** — properties, types, validation
+- **Relationships** — what this entity connects to (via properties or relationships table)
+- **Display** — how it appears in UI, whether it shows as an app
+- **Views** — TSX components for rendering
+
+Plugins are adapters that map external APIs to these entity types. No hardcoded types anywhere.
 
 ```
-skills/            Entity definitions organized by skill
+skills/            Entity type definitions (single source of truth)
   tasks/           task.yaml, project.yaml, label.yaml + icon.png + views/
   discussion/      post.yaml + icon.png + views/
   messaging/       message.yaml, conversation.yaml + views/
-  common/          Shared definitions (operations.yaml, base.yaml)
+  people/          person.yaml + views/
 
 plugins/           Adapters (how services map to entities)
   reddit/          Maps Reddit API → post entity
   todoist/         Maps Todoist API → task entity
+  whatsapp/        Maps WhatsApp DB → message, conversation, person entities
 
 themes/            Visual styling (CSS)
 ```
 
 **The flow:** 
-1. Plugins declare which entities they provide (via `adapters:` section)
-2. Skills define entities + views + components
+1. Skills define entity types (schema, display, views)
+2. Plugins declare which entities they provide (via `adapters:` section)
 3. Entities with `show_as_app: true` appear on the desktop when plugins support them
 
 ---
