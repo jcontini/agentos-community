@@ -31,12 +31,22 @@ adapters:
       content: .text
       url: '"https://news.ycombinator.com/item?id=" + .objectID'
       external_url: .url
+      replies: .replies
+      
+      # Display fields for views (denormalized on post entity)
       author.name: .author
       author.url: '"https://news.ycombinator.com/user?id=" + .author'
+      
+      # Engagement metrics
       engagement.score: .points
       engagement.comment_count: .num_comments
       published_at: .created_at
-      replies: .replies
+      
+      # Typed reference: creates person entity and posted_by relationship
+      posted_by:
+        person:
+          id: .author
+          name: .author
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

@@ -32,11 +32,19 @@ adapters:
       transcript: .transcript
       duration_ms: .duration * 1000
       thumbnail: .thumbnail
-      creator.name: .channel
-      creator.url: .channel_url
       published_at: .upload_date
       resolution: .resolution
       view_count: .view_count
+      
+      # Display fields for views (denormalized on video entity)
+      creator.name: .channel
+      creator.url: .channel_url
+      
+      # Typed reference: creates person entity and created_by relationship
+      created_by:
+        person:
+          id: .channel
+          name: .channel
 
 operations:
   video.search:
