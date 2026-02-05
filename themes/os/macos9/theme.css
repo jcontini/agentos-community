@@ -1,13 +1,6 @@
-/* Chicago - the classic Mac OS system font */
-@font-face {
-  font-family: "Chicago";
-  src: url(chicago.ttf) format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
-
 :root {
-  --preferred-font: "Chicago", "Charcoal", Geneva, sans-serif;
+  /* Charcoal is the classic Mac OS 8/9 system font */
+  --preferred-font: "Charcoal", "Geneva", -apple-system, BlinkMacSystemFont, sans-serif;
   --desktop-bg: #9999CC;
   --window-bg: #DDDDDD;
   --window-fg: #000000;
