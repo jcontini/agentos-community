@@ -236,6 +236,55 @@ utilities:
         WHERE gm.ZCHATSESSION = {{params.conversation_id}}
       response:
         root: "/"
+
+  get_contacts_rich:
+    description: Get all contacts with rich data from multiple WhatsApp databases (names, phones, photos)
+    params:
+      limit: { type: integer, default: 500 }
+    returns:
+      jid: string
+      phone: string
+      lid: string
+      real_name: string
+      contact_name: string
+      display_name: string
+      about: string
+      username: string
+      profile_photo: string
+    sql:
+      attach:
+        contacts: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"
+      query: |
+        SELECT DISTINCT
+          -- Identity
+          cs.ZCONTACTJID as jid,
+          c.ZPHONENUMBER as phone,
+          c.ZLID as lid,
+          
+          -- Names (priority: push > contact > partner)
+          pn.ZPUSHNAME as real_name,
+          c.ZFULLNAME as contact_name,
+          cs.ZPARTNERNAME as display_name,
+          
+          -- Rich data
+          c.ZABOUTTEXT as about,
+          c.ZUSERNAME as username,
+          pp.ZPATH as profile_photo
+          
+        FROM ZWACHATSESSION cs
+        LEFT JOIN contacts.ZWAADDRESSBOOKCONTACT c ON (
+          cs.ZCONTACTJID = c.ZWHATSAPPID OR 
+          cs.ZCONTACTJID = c.ZLID
+        )
+        LEFT JOIN ZWAPROFILEPUSHNAME pn ON cs.ZCONTACTJID = pn.ZJID
+        LEFT JOIN ZWAPROFILEPICTUREITEM pp ON cs.ZCONTACTJID = pp.ZJID
+        WHERE cs.ZSESSIONTYPE = 0 
+          AND cs.ZREMOVED = 0
+          AND cs.ZCONTACTJID IS NOT NULL
+        ORDER BY cs.ZLASTMESSAGEDATE DESC
+        LIMIT {{params.limit | default: 500}}
+      response:
+        root: "/"
 ---
 
 # WhatsApp
