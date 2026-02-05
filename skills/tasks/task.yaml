@@ -64,6 +64,17 @@ properties:
     type: string
     description: URL to view this task in the source application
 
+  assignee:
+    type: object
+    description: Who is assigned to this task
+    properties:
+      id:
+        type: string
+        description: Assignee user ID
+      name:
+        type: string
+        description: Assignee display name
+
 operations: [list, get, create, update, delete, complete, reopen]
 
 display:

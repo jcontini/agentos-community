@@ -238,6 +238,37 @@ describe('Linear Plugin', () => {
   });
 
   describe('utilities', () => {
+    it('setup returns organization, teams, and viewer info', async () => {
+      if (skipTests) return;
+      
+      const result = await aos().call('UsePlugin', {
+        ...baseParams,
+        tool: 'setup',
+        params: {},
+      });
+
+      expect(result).toBeDefined();
+      expect(result.organization).toBeDefined();
+      expect(result.organization.urlKey).toBeDefined();
+      expect(result.teams).toBeDefined();
+      expect(Array.isArray(result.teams)).toBe(true);
+      expect(result.viewer).toBeDefined();
+    });
+
+    it('get_organization returns org info', async () => {
+      if (skipTests) return;
+      
+      const org = await aos().call('UsePlugin', {
+        ...baseParams,
+        tool: 'get_organization',
+        params: {},
+      });
+
+      expect(org).toBeDefined();
+      expect(org.id).toBeDefined();
+      expect(org.urlKey).toBeDefined();
+    });
+
     it('whoami returns current user', async () => {
       if (skipTests) return;
       

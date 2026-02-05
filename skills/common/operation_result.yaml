@@ -1,0 +1,28 @@
+# Operation Result — standard return type for actions that succeed or fail
+
+id: operation_result
+plural: operation_results
+name: Operation Result
+description: Standard result for actions that succeed or fail
+
+properties:
+  success:
+    type: boolean
+    required: true
+    description: Whether the operation succeeded
+
+  message:
+    type: string
+    description: Human-readable result message
+
+  id:
+    type: string
+    description: ID of affected resource (if applicable)
+
+# No operations — this is a return shape, not a queryable entity
+operations: []
+
+display:
+  primary: message
+  icon: check-circle
+  show_as_app: false

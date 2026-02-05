@@ -43,14 +43,18 @@ function loadEntityIds() {
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views' && entry.name !== 'common') {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
         scanDir(fullPath);
       } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
           const content = readFileSync(fullPath, 'utf-8');
-          const data = parseYaml(content);
-          if (data && data.id) {
-            entityIds.add(data.id);
+          // Support multi-document YAML files (e.g., skills/common/base.yaml)
+          const docs = parseAllDocuments(content);
+          for (const doc of docs) {
+            const data = doc.toJSON();
+            if (data && data.id) {
+              entityIds.add(data.id);
+            }
           }
         } catch (err) {
           console.warn(`Warning: Failed to parse ${fullPath}: ${err.message}`);
@@ -75,14 +79,18 @@ function loadEntityProperties() {
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views' && entry.name !== 'common') {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
         scanDir(fullPath);
       } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
           const content = readFileSync(fullPath, 'utf-8');
-          const data = parseYaml(content);
-          if (data && data.id && data.properties) {
-            entityProps[data.id] = Object.keys(data.properties);
+          // Support multi-document YAML files
+          const docs = parseAllDocuments(content);
+          for (const doc of docs) {
+            const data = doc.toJSON();
+            if (data && data.id && data.properties) {
+              entityProps[data.id] = Object.keys(data.properties);
+            }
           }
         } catch (err) {
           // Skip parse errors

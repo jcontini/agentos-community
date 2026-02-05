@@ -61,8 +61,16 @@ adapters:
       url: .url
       created_at: .createdAt
       updated_at: .updatedAt
-      _assignee_id: .assignee.id
-      _assignee_name: .assignee.name
+      
+      # Assignee display fields (denormalized for views)
+      assignee.id: .assignee.id
+      assignee.name: .assignee.name
+      
+      # Typed reference: creates person entity + assigned_to relationship
+      assigned_to:
+        person:
+          id: .assignee.id
+          name: .assignee.name
       _project_id: .project.id
       _project_name: .project.name
       _team_id: .team.id
