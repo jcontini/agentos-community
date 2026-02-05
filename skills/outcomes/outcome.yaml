@@ -1,0 +1,115 @@
+# Outcome Entity - Universal Systems Primitive
+#
+# Everything is an outcome. An outcome is an input to something else.
+# Models: roadmaps, OKRs, theory of change, biological systems, chemical reactions.
+
+id: outcome
+plural: outcomes
+name: Outcome
+description: A state or result that can enable other outcomes
+
+references:
+  # Theory of Change / Results Frameworks
+  usaid: https://usaidlearninglab.org/lab-notes/what-results-framework
+  # System Dynamics
+  wikipedia: https://en.wikipedia.org/wiki/System_dynamics
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: What is this outcome?
+
+  description:
+    type: string
+    description: Detailed explanation (can be markdown)
+
+  # Current state (changes over time)
+  value:
+    type: number
+    description: Current measurement (for numeric outcomes)
+
+  unit:
+    type: string
+    description: Unit of measurement
+
+  # Target (fixed when outcome is created)
+  target:
+    type: object
+    description: The goal to hit
+    properties:
+      value:
+        type: number
+        description: The goal number to hit
+      date:
+        type: date
+        description: Deadline to hit it by
+
+  # Achievement (date, not boolean!)
+  achieved:
+    type: datetime
+    nullable: true
+    description: |
+      Date the outcome was achieved. Null = not yet achieved.
+      Allows computing: on_time, days_late, etc.
+
+  # What this outcome produces (for enabling others)
+  output:
+    type: object
+    description: What this outcome outputs for downstream dependencies
+    properties:
+      metric:
+        type: string
+        description: What is being output (completion, throughput, revenue...)
+      value:
+        type: number
+        description: Current output level
+      unit:
+        type: string
+
+  # How to measure this outcome
+  indicators:
+    type: array
+    items:
+      type: string
+    description: Observable indicators of progress
+
+  # Domain-specific extensions
+  data:
+    type: object
+    description: |
+      Additional properties per domain. Examples:
+      - Roadmap: { timing: "now", title: "Entity Graph" }
+      - OKR: { quarter: "Q1", team: "engineering" }
+      - Health: { biomarker: "glucose", reference_range: {...} }
+
+  created_at:
+    type: datetime
+    description: When outcome was created
+
+  updated_at:
+    type: datetime
+    description: When outcome was last updated
+
+# For cross-plugin deduplication
+# Outcomes dedupe by name within their context
+identifiers:
+  - name
+
+operations: [list, get, create, update, archive]
+
+display:
+  primary: name
+  secondary: achieved
+  icon: target
+  show_as_app: true
+  sort:
+    - field: achieved
+      null_last: true
+    - field: name
+      order: asc
