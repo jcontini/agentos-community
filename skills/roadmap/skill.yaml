@@ -1,0 +1,28 @@
+# Roadmap Skill
+# Extends outcomes to track goals and dependencies across projects
+
+id: roadmap
+name: Roadmap
+description: Track goals and dependencies across projects
+
+extends:
+  - entities/outcomes     # Uses outcome entity
+
+naming:
+  outcome: intention      # Domain terminology
+  outcomes: intentions    # Plural form
+
+relationships:
+  - type: belongs_to
+    from: intention
+    to: roadmap           # intentions belong to roadmaps
+
+# Data extensions (stored in outcome.data)
+data_properties:
+  timing:
+    type: string
+    enum: [now, soon, later, someday]
+    description: Priority bucket
+  title:
+    type: string
+    description: Human-readable title (from H1 in markdown)

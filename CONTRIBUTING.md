@@ -58,11 +58,14 @@ node scripts/generate-manifest.js --check # Validate only
 Plugins are adapters that map external APIs to these entity types. No hardcoded types anywhere.
 
 ```
-skills/            Entity type definitions (single source of truth)
+entities/          Entity type definitions (single source of truth)
   tasks/           task.yaml, project.yaml, label.yaml + icon.png + views/
   discussion/      post.yaml + icon.png + views/
   messaging/       message.yaml, conversation.yaml + views/
   people/          person.yaml + views/
+
+skills/            Workflow guides (how to use entities for specific domains)
+  roadmap/         skill.md, skill.yaml — extends outcomes for project planning
 
 plugins/           Adapters (how services map to entities)
   reddit/          Maps Reddit API → post entity
@@ -179,7 +182,7 @@ utilities:
 # Good: Model reference for shared concept
 utilities:
   dns_list:
-    returns: dns_record[]  # Defined in skills/common/
+    returns: dns_record[]  # Defined in entities/common/
 
 # Good: Inline for plugin-specific introspection
 utilities:
@@ -210,12 +213,20 @@ utilities:
 
 ### Quick Reference
 
-**Skill structure:**
+**Entity structure:**
 ```
-skills/{skill}/
+entities/{group}/
   {entity}.yaml   # Entity definition (one per file)
   icon.png        # Desktop icon (PNG preferred)
   views/          # TSX components + view configs
+```
+
+**Skill structure:**
+```
+skills/{skill}/
+  skill.md        # Workflow guide (how to use entities)
+  skill.yaml      # Metadata: extends, naming, relationships
+  icon.png        # Optional
 ```
 
 **Models can define:**
@@ -228,14 +239,14 @@ skills/{skill}/
 
 ## Components
 
-Entity components live in `skills/{skill}/views/`. They compose framework primitives — never custom CSS.
+Entity components live in `entities/{group}/views/`. They compose framework primitives — never custom CSS.
 
 **Key rules:**
 - Use `data-*` attributes: `data-component="text" data-variant="title"`
 - Proxy external images with `getProxiedSrc()`
 - Export default: `export default MyComponent`
 
-**See examples:** `skills/discussion/views/`, `skills/groups/views/`
+**See examples:** `entities/discussion/views/`, `entities/groups/views/`
 
 ---
 
