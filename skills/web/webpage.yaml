@@ -54,13 +54,12 @@ display:
   description: snippet
   icon: globe
   show_as_app: true
-  app_name: Browser
+  app_name: Webpages
 
 # Views for rendering webpage activities
-# Note: Browser provides padding and status bar automatically
 views:
   search:
-    title: Browser
+    title: Web Search
     tool_alias: search_web
     layout:
       - component: list

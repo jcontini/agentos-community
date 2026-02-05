@@ -1,0 +1,101 @@
+# Person entity - the unified social graph
+
+id: person
+plural: people
+name: Person
+description: Someone in your social graph, unified across platforms
+
+references:
+  schema_org: https://schema.org/Person
+  wikidata: Q5
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Display name (best known name for this person)
+
+  real_name:
+    type: string
+    description: Actual name (from push name, profile, etc.)
+
+  contact_name:
+    type: string
+    description: Name saved in contacts
+
+  email:
+    type: string
+    format: email
+    description: Email address
+
+  phone:
+    type: string
+    description: Phone number (E.164 format)
+
+  avatar:
+    type: string
+    format: url
+    description: Profile photo URL or path
+
+  about:
+    type: string
+    description: Bio or status text
+
+  username:
+    type: string
+    description: Username on a platform
+
+  url:
+    type: string
+    format: url
+    description: Profile URL
+
+  identities:
+    type: array
+    description: Cross-platform identities
+    items:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [phone, email, whatsapp, whatsapp_lid, imessage, twitter, github, linkedin]
+        identifier:
+          type: string
+          description: The identifier on that platform
+
+  sources:
+    type: array
+    description: Data sources that contribute to this entity
+    items:
+      type: object
+      properties:
+        plugin:
+          type: string
+        platform:
+          type: string
+        id:
+          type: string
+
+  created_at:
+    type: datetime
+    description: When first seen
+
+  updated_at:
+    type: datetime
+    description: When last updated
+
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: phone
+  icon: user
+  show_as_app: true
+  sort:
+    - field: name
+      order: asc
