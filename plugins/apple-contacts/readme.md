@@ -194,7 +194,8 @@ operations:
            FROM ZABCDSOCIALPROFILE sp WHERE sp.ZOWNER = r.Z_PK) as social_json
           
         FROM ZABCDRECORD r
-        WHERE r.ZUNIQUEID LIKE '%:ABPerson'
+        WHERE (r.ZUNIQUEID LIKE '%:ABPerson' OR r.ZUNIQUEID LIKE '%:ABInfo')
+          AND (r.ZFIRSTNAME IS NOT NULL OR r.ZLASTNAME IS NOT NULL OR r.ZORGANIZATION IS NOT NULL)
         ORDER BY r.ZMODIFICATIONDATE DESC
         LIMIT :limit
       params:
@@ -356,7 +357,8 @@ operations:
         FROM ZABCDRECORD r
         LEFT JOIN ZABCDPHONENUMBER p ON p.ZOWNER = r.Z_PK
         LEFT JOIN ZABCDEMAILADDRESS e ON e.ZOWNER = r.Z_PK
-        WHERE r.ZUNIQUEID LIKE '%:ABPerson'
+        WHERE (r.ZUNIQUEID LIKE '%:ABPerson' OR r.ZUNIQUEID LIKE '%:ABInfo')
+          AND (r.ZFIRSTNAME IS NOT NULL OR r.ZLASTNAME IS NOT NULL OR r.ZORGANIZATION IS NOT NULL)
           AND (
             r.ZFIRSTNAME LIKE '%' || :query || '%'
             OR r.ZLASTNAME LIKE '%' || :query || '%'

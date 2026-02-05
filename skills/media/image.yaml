@@ -25,7 +25,7 @@ properties:
   # Local storage (where we saved it)
   path:
     type: string
-    description: Local file path (A: drive or cache)
+    description: "Local file path (A: drive or cache)"
 
   # Content identity
   hash:

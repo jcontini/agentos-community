@@ -67,6 +67,7 @@ properties:
 
   # Organization
   album:
+    type: string
     references: album
     description: Photo album this belongs to
 
