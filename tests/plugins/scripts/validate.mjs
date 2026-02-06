@@ -180,6 +180,91 @@ function validateAdapterMappings(frontmatter) {
   return errors;
 }
 
+// Validate jaq expression syntax in adapter mappings
+//
+// Catches common jaq mistakes:
+// 1. Single-quoted strings — jaq only supports double quotes
+// 2. C-style ternary (? :) — jaq uses if/then/else/end
+// 3. Bare [] on nullable paths — .foo.nodes[].id crashes when .foo is null
+function validateJaqExpressions(frontmatter) {
+  const errors = [];
+  
+  if (!frontmatter.adapters) return errors;
+  
+  for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
+    if (!adapter.mapping) continue;
+    
+    // Collect all jaq expressions from mappings (including nested typed references)
+    const exprs = collectJaqExpressions(adapter.mapping, `adapters.${entityName}.mapping`);
+    
+    for (const { path, expr } of exprs) {
+      // 1. Single-quoted strings: detect 'word' patterns inside expressions
+      //    e.g., .type == 'completed' should be .type == "completed"
+      //    Match: quote + word chars + quote, but not at start/end (YAML wrappers)
+      const singleQuoteMatches = expr.match(/== *'[^']*'|'[^']*' *==|'[^']*' *\?|: *'[^']*'/g);
+      if (singleQuoteMatches) {
+        errors.push(
+          `${path}: Single-quoted string in jaq expression (jaq requires double quotes): ${singleQuoteMatches[0]}\n` +
+          `   Expression: ${expr}`
+        );
+      }
+      
+      // 2. C-style ternary: condition ? value : other
+      //    jaq uses: if condition then value else other end
+      //    Detect: ? "..." : or ? followed by string literal (not ?// which is jaq alternative operator)
+      if (/\?\s*["']/.test(expr) && !/\?\/\//.test(expr)) {
+        errors.push(
+          `${path}: C-style ternary syntax (jaq uses if/then/else/end, not ? :)\n` +
+          `   Expression: ${expr}`
+        );
+      }
+      
+      // 3. Bare [] on nullable paths: .foo.bar[].baz without null guards
+      //    Safe patterns: (.foo // [])[] or (.foo // {}).bar or []?
+      //    Unsafe: .foo.nodes[].id (nodes could be null from GraphQL)
+      //    Only flag .nodes[] and .items[] patterns (common GraphQL nullable fields)
+      const bareIterationMatch = expr.match(/\.(nodes|items|edges)\[\][^?]/);
+      if (bareIterationMatch) {
+        // Check it's not inside a null-guarded expression like ((.x // {}).nodes // [])[]
+        const guardPattern = /\(\s*\([^)]+\/\/\s*\{\s*\}\s*\)\s*\.\s*(nodes|items|edges)\s*\/\/\s*\[\s*\]\s*\)/;
+        if (!guardPattern.test(expr)) {
+          errors.push(
+            `${path}: Bare .${bareIterationMatch[1]}[] without null guard (crashes when parent is null)\n` +
+            `   Use: [((.parent // {}).${bareIterationMatch[1]} // [])[] | .field]\n` +
+            `   Expression: ${expr}`
+          );
+        }
+      }
+    }
+  }
+  
+  return errors;
+}
+
+// Recursively collect jaq expression strings from a mapping object
+function collectJaqExpressions(mapping, parentPath) {
+  const exprs = [];
+  
+  for (const [key, value] of Object.entries(mapping)) {
+    const path = `${parentPath}.${key}`;
+    
+    if (typeof value === 'string') {
+      // Only check expressions that look like jaq (contain dots, operators, or function calls)
+      // Skip simple field access like .id, .title (these rarely have issues)
+      if (value.includes('==') || value.includes('if ') || value.includes('[]') ||
+          value.includes('//') || value.includes('|') || value.includes('?') ||
+          value.includes("'")) {
+        exprs.push({ path, expr: value });
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Recurse into typed references
+      exprs.push(...collectJaqExpressions(value, path));
+    }
+  }
+  
+  return exprs;
+}
+
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
   if (!content.startsWith('---')) return null;
@@ -335,7 +420,20 @@ for (const plugin of plugins) {
           }
           failureReason = 'Invalid adapter mappings';
           failed = true;
-        } else {
+        }
+        
+        // Validate jaq expression syntax (even if adapter mapping check passed)
+        const jaqErrors = validateJaqExpressions(frontmatter);
+        if (jaqErrors.length > 0) {
+          console.error(`❌ plugins/${plugin.path}: Invalid jaq expressions`);
+          for (const err of jaqErrors) {
+            console.error(`   ${err}`);
+          }
+          failureReason = 'Invalid jaq expressions';
+          failed = true;
+        }
+        
+        if (!failed) {
           // Check icon exists (PNG or SVG)
           const hasIcon = existsSync(join(pluginDir, 'icon.svg')) || existsSync(join(pluginDir, 'icon.png'));
           if (!hasIcon) {
