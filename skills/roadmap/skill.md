@@ -1,105 +1,120 @@
+---
+id: roadmap
+name: Roadmap
+extends: outcome
+display:
+  show_as_app: true
+  icon: map
+---
+
 # Roadmap Skill
 
-Track goals and dependencies across projects using the outcome entity.
+Track goals and dependencies across projects.
 
-## What This Skill Does
+## Item Properties
 
-The roadmap skill extends the `outcome` entity for project planning:
+Items have these fields in `data`:
 
-- **Intentions** (outcomes) represent goals or specs to complete
-- **Timing** (now/soon/later/someday) buckets priorities
-- **Status** (ready/blocked/done) computed from dependencies
-- **Enables** relationships show what blocks what
+| Field | Type | Description |
+|-------|------|-------------|
+| `timing` | string | Priority bucket: now, soon, later, someday |
+| `title` | string | Display title |
+| `description` | string | Markdown content |
 
-## Querying the Roadmap
+Core fields (from outcome):
 
-### What's ready to work on?
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Unique identifier (slug) |
+| `achieved` | datetime | When completed (null = not done) |
 
-```http
-GET /api/outcomes?status=ready&data.timing=now
-```
-
-Returns unblocked items in the NOW bucket.
-
-### What's blocking something?
-
-```http
-GET /api/outcomes/:name
-```
-
-Response includes `enablers` (what must be done first) and `status`.
-
-### Recently completed
-
-```http
-GET /api/outcomes?status=done&include_archived=true
-```
-
-## Timing Values
-
-| Timing | Meaning |
-|--------|---------|
-| `now` | Current focus, actively working |
-| `soon` | Next up after current work |
-| `later` | Planned but not prioritized |
-| `someday` | Ideas, maybe never |
-
-## Status Computation
+## Status (computed)
 
 Status is derived from the enables graph:
 
-```
-status = 
-  if achieved != null → "done"
-  else if all enablers achieved → "ready"  
-  else → "blocked"
-```
+| Status | Meaning |
+|--------|---------|
+| `done` | `achieved` date is set |
+| `blocked` | Has unachieved dependencies |
+| `ready` | Not done and not blocked |
 
-**Block reason:** Names of enablers that aren't achieved yet.
+## API
 
-## Editing Workflow
-
-### With terminal access (Cursor, CLI)
-
-1. Fetch the intention as markdown:
-   ```http
-   GET /api/outcomes/:name?format=markdown
-   ```
-
-2. Save to temp file and edit with native tools
-
-3. Push back:
-   ```http
-   POST /api/outcomes/:name
-   { "description": "updated markdown content" }
-   ```
-
-### Without terminal access
-
-Edit the description field directly via API.
-
-## Archiving
-
-To mark an intention as done:
+### List items
 
 ```http
-POST /api/outcomes/:name/archive
+GET /api/skills/roadmap/items
+GET /api/skills/roadmap/items?timing=now
+GET /api/skills/roadmap/items?status=ready
+GET /api/skills/roadmap/items?timing=now&status=ready
 ```
 
-Sets `achieved` to current date. Done items don't appear in default queries.
-
-## Multiple Roadmaps
-
-Intentions can belong to different roadmaps:
-
-- AgentOS roadmap
-- Adavia roadmap  
-- Personal goals
-
-Use the `belongs_to` relationship to organize:
+### Create item
 
 ```http
-GET /api/outcomes?roadmap=agentos
+POST /api/skills/roadmap/items
+Content-Type: application/json
+
+{
+  "name": "entity-graph",
+  "data": {
+    "timing": "now",
+    "title": "Entity Graph Schema",
+    "description": "Build the entity graph..."
+  }
+}
+```
+
+### Get item
+
+```http
+GET /api/skills/roadmap/items/:name
+```
+
+Response includes computed status:
+
+```json
+{
+  "id": "...",
+  "name": "entity-graph",
+  "data": { "timing": "now", "title": "..." },
+  "status": "ready",
+  "blocked_by": [],
+  "enables": ["activity-backfill"]
+}
+```
+
+### Update item
+
+```http
+PATCH /api/skills/roadmap/items/:name
+Content-Type: application/json
+
+{
+  "data": {
+    "timing": "soon",
+    "description": "Updated content..."
+  }
+}
+```
+
+### Mark done
+
+```http
+PATCH /api/skills/roadmap/items/:name
+Content-Type: application/json
+
+{
+  "data": {
+    "achieved": "2026-02-05"
+  }
+}
+```
+
+### Delete item
+
+```http
+DELETE /api/skills/roadmap/items/:name
 ```
 
 ## Example Session
@@ -107,20 +122,20 @@ GET /api/outcomes?roadmap=agentos
 ```
 User: "What's ready to work on?"
 
-Agent: GET /api/outcomes?status=ready&data.timing=now
-       → [boot-skill, dynamic-skills, clear-history, ...]
+Agent: GET /api/skills/roadmap/items?status=ready&timing=now
+       → [boot-skill, dynamic-skills, ...]
 
 User: "What's blocking chronicle?"
 
-Agent: GET /api/outcomes/chronicle
-       → { status: "blocked", enablers: ["social-feed"] }
+Agent: GET /api/skills/roadmap/items/chronicle
+       → { status: "blocked", blocked_by: ["social-feed"] }
        
-       "Chronicle is blocked by social-feed, which needs to be done first."
+       "Chronicle is blocked by social-feed."
 
-User: "Archive entity-graph, it's done"
+User: "Mark entity-graph as done"
 
-Agent: POST /api/outcomes/entity-graph/archive
-       → { achieved: "2026-02-05" }
+Agent: PATCH /api/skills/roadmap/items/entity-graph
+       { "data": { "achieved": "2026-02-05" } }
        
-       "Done. entity-graph marked as complete."
+       "Done."
 ```
