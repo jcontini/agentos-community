@@ -75,6 +75,10 @@ properties:
         type: string
         description: Assignee display name
 
+  project_id:
+    type: string
+    description: ID of the project this task belongs to
+
   blocked_by:
     type: array
     items:

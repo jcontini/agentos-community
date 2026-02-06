@@ -71,7 +71,7 @@ adapters:
         person:
           id: .assignee.id
           name: .assignee.name
-      _project_id: .project.id
+      project_id: .project.id
       _project_name: .project.name
       _team_id: .team.id
       _team_name: .team.name
