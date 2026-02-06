@@ -1,74 +1,69 @@
 ---
 id: roadmap
 name: Roadmap
-extends: outcome
+description: Track project progress with tasks and dependencies
+icon: mdi:map
+extends: project
 display:
   show_as_app: true
-  icon: map
 ---
 
 # Roadmap Skill
 
-Track goals and dependencies across projects.
+Track project milestones as tasks with priorities and blocking relationships.
 
-## Item Properties
+## How It Works
 
-Items have these fields in `data`:
+A roadmap is a **project** with **tasks**. Each task has:
+- `priority` (1=highest, 4=lowest) — what to work on next
+- `blocked_by` — dependencies that must complete first
+- `status` — open, in_progress, done, cancelled
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `timing` | string | Priority bucket: now, soon, later, someday |
-| `title` | string | Display title |
-| `description` | string | Markdown content |
+## Priority Mapping
 
-Core fields (from outcome):
+| Priority | Meaning | Old "timing" |
+|----------|---------|--------------|
+| 1 | Now — active work | `now` |
+| 2 | Soon — next up | `soon` |
+| 3 | Later — future work | `later` |
+| 4 | Someday — backlog | `someday` |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Unique identifier (slug) |
-| `achieved` | datetime | When completed (null = not done) |
-
-## Status (computed)
-
-Status is derived from the enables graph:
+## Status (Computed)
 
 | Status | Meaning |
 |--------|---------|
-| `done` | `achieved` date is set |
-| `blocked` | Has unachieved dependencies |
-| `ready` | Not done and not blocked |
+| `ready` | Not blocked, not done |
+| `blocked` | Has incomplete blocking tasks |
+| `done` | Completed |
 
 ## API
 
-### List items
+### List roadmap tasks
 
 ```http
 GET /api/skills/roadmap/items
-GET /api/skills/roadmap/items?timing=now
+GET /api/skills/roadmap/items?priority=1
 GET /api/skills/roadmap/items?status=ready
-GET /api/skills/roadmap/items?timing=now&status=ready
+GET /api/skills/roadmap/items?priority=1&status=ready
 ```
 
-### Create item
+### Create task
 
 ```http
 POST /api/skills/roadmap/items
 Content-Type: application/json
 
 {
-  "name": "entity-graph",
-  "data": {
-    "timing": "now",
-    "title": "Entity Graph Schema",
-    "description": "Build the entity graph..."
-  }
+  "title": "Skill System",
+  "description": "Build the skill loading infrastructure",
+  "priority": 1
 }
 ```
 
-### Get item
+### Get task
 
 ```http
-GET /api/skills/roadmap/items/:name
+GET /api/skills/roadmap/items/:id
 ```
 
 Response includes computed status:
@@ -76,45 +71,47 @@ Response includes computed status:
 ```json
 {
   "id": "...",
-  "name": "entity-graph",
-  "data": { "timing": "now", "title": "..." },
+  "title": "Skill System",
+  "priority": 1,
   "status": "ready",
   "blocked_by": [],
-  "enables": ["activity-backfill"]
+  "blocks": ["boot-skill"]
 }
 ```
 
-### Update item
+### Update task
 
 ```http
-PATCH /api/skills/roadmap/items/:name
+PATCH /api/skills/roadmap/items/:id
 Content-Type: application/json
 
 {
-  "data": {
-    "timing": "soon",
-    "description": "Updated content..."
-  }
+  "priority": 2,
+  "description": "Updated content..."
 }
 ```
 
-### Mark done
+### Complete task
 
 ```http
-PATCH /api/skills/roadmap/items/:name
+POST /api/skills/roadmap/items/:id/complete
+```
+
+### Add blocking relationship
+
+```http
+POST /api/skills/roadmap/items/:id/blockers
 Content-Type: application/json
 
 {
-  "data": {
-    "achieved": "2026-02-05"
-  }
+  "blocker_id": "other-task-id"
 }
 ```
 
-### Delete item
+### Delete task
 
 ```http
-DELETE /api/skills/roadmap/items/:name
+DELETE /api/skills/roadmap/items/:id
 ```
 
 ## Example Session
@@ -122,20 +119,27 @@ DELETE /api/skills/roadmap/items/:name
 ```
 User: "What's ready to work on?"
 
-Agent: GET /api/skills/roadmap/items?status=ready&timing=now
-       → [boot-skill, dynamic-skills, ...]
+Agent: GET /api/skills/roadmap/items?status=ready&priority=1
+       → [{ "title": "Skill System", "status": "ready", "priority": 1 }]
 
-User: "What's blocking chronicle?"
+       "Skill System is ready — it's priority 1 with no blockers."
 
-Agent: GET /api/skills/roadmap/items/chronicle
-       → { status: "blocked", blocked_by: ["social-feed"] }
+User: "What's blocking boot-skill?"
+
+Agent: GET /api/skills/roadmap/items/boot-skill
+       → { "status": "blocked", "blocked_by": ["skill-system"] }
        
-       "Chronicle is blocked by social-feed."
+       "Boot Skill is blocked by Skill System."
 
-User: "Mark entity-graph as done"
+User: "Mark skill-system as done"
 
-Agent: PATCH /api/skills/roadmap/items/entity-graph
-       { "data": { "achieved": "2026-02-05" } }
+Agent: POST /api/skills/roadmap/items/skill-system/complete
        
-       "Done."
+       "Done. Boot Skill should now be unblocked."
 ```
+
+## Future
+
+- Link tasks to outcomes for higher-level goal tracking
+- Progress tracking across linked tasks
+- Multi-project roadmaps

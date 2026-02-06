@@ -75,6 +75,18 @@ properties:
         type: string
         description: Assignee display name
 
+  blocked_by:
+    type: array
+    items:
+      type: string
+    description: IDs of tasks that block this one (must complete first)
+
+  blocks:
+    type: array
+    items:
+      type: string
+    description: IDs of tasks this one blocks
+
 operations: [list, get, create, update, delete, complete, reopen]
 
 display:

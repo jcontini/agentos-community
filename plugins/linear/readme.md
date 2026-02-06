@@ -83,8 +83,8 @@ adapters:
       _parent_id: .parent.id
       _labels: ".labels.nodes[].name"
       _children: ".children.nodes[].id"
-      _blocked_by: ".inverseRelations.nodes[].issue.id"
-      _blocks: ".relations.nodes[].relatedIssue.id"
+      blocked_by: ".inverseRelations.nodes[].issue.id"
+      blocks: ".relations.nodes[].relatedIssue.id"
 
   project:
     terminology: Project
