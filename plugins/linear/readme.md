@@ -54,8 +54,8 @@ adapters:
       remote_id: .identifier
       title: .title
       description: .description
-      completed: ".state.type == 'completed'"
-      status: ".state.type == 'completed' ? 'done' : .state.type == 'canceled' ? 'cancelled' : .state.type == 'started' ? 'in_progress' : 'open'"
+      completed: '.state.type == "completed"'
+      status: 'if .state.type == "completed" then "done" elif .state.type == "canceled" then "cancelled" elif .state.type == "started" then "in_progress" else "open" end'
       priority: .priority
       due_date: .dueDate
       url: .url
@@ -63,28 +63,29 @@ adapters:
       updated_at: .updatedAt
       
       # Assignee display fields (denormalized for views)
-      assignee.id: .assignee.id
-      assignee.name: .assignee.name
+      # Note: assignee, cycle, parent can be null — use (.x // {}).field for null safety
+      assignee.id: '(.assignee // {}).id'
+      assignee.name: '(.assignee // {}).name'
       
       # Typed reference: creates person entity + assigned_to relationship
       assigned_to:
         person:
-          id: .assignee.id
-          name: .assignee.name
-      project_id: .project.id
-      _project_name: .project.name
-      _team_id: .team.id
-      _team_name: .team.name
-      _cycle_id: .cycle.id
-      _cycle_number: .cycle.number
-      _state_id: .state.id
-      _state_name: .state.name
-      _state_type: .state.type
-      _parent_id: .parent.id
-      _labels: ".labels.nodes[].name"
-      _children: ".children.nodes[].id"
-      blocked_by: ".inverseRelations.nodes[].issue.id"
-      blocks: ".relations.nodes[].relatedIssue.id"
+          id: '(.assignee // {}).id'
+          name: '(.assignee // {}).name'
+      project_id: '(.project // {}).id'
+      _project_name: '(.project // {}).name'
+      _team_id: '(.team // {}).id'
+      _team_name: '(.team // {}).name'
+      _cycle_id: '(.cycle // {}).id'
+      _cycle_number: '(.cycle // {}).number'
+      _state_id: '(.state // {}).id'
+      _state_name: '(.state // {}).name'
+      _state_type: '(.state // {}).type'
+      _parent_id: '(.parent // {}).id'
+      _labels: '[((.labels // {}).nodes // [])[] | .name]'
+      _children: '[((.children // {}).nodes // [])[] | .id]'
+      blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
+      blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
 
   project:
     terminology: Project

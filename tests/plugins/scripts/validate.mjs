@@ -22,7 +22,7 @@ import addFormats from 'ajv-formats';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');  // tests/plugins/scripts/ -> root
 const APPS_DIR = join(ROOT, 'plugins');
-const SKILLS_DIR = join(ROOT, 'skills');  // Renamed from models
+const ENTITIES_DIR = join(ROOT, 'entities');
 const NEEDS_WORK_DIR = join(APPS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'plugin.schema.json');
 
@@ -63,7 +63,7 @@ function loadEntityIds() {
     }
   }
   
-  scanDir(SKILLS_DIR);
+  scanDir(ENTITIES_DIR);
   return entityIds;
 }
 
@@ -99,7 +99,7 @@ function loadEntityProperties() {
     }
   }
   
-  scanDir(SKILLS_DIR);
+  scanDir(ENTITIES_DIR);
   return entityProps;
 }
 
