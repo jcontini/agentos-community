@@ -1,8 +1,9 @@
-# Tag — Universal Grouping Primitive
+# Tag — A Named Label
 #
-# A named label that can be applied to any entity. Tags are the universal
-# cross-cutting grouping mechanism — like albums, playlists, categories.
+# Extends collection. Inherits:
+#   From collection: id, name, description, item_count, ordered
 #
+# A tag is the simplest collection — just a label you apply to things.
 # Different systems call them different things:
 #   Todoist: labels
 #   Linear: labels
@@ -15,25 +16,14 @@
 
 id: tag
 plural: tags
+extends: collection
 name: Tag
 description: A named label that can be applied to any entity
 
 properties:
-  id:
-    type: string
-    required: true
-
-  name:
-    type: string
-    required: true
-    description: Tag name (e.g., "urgent", "travel", "review")
-
   color:
     type: string
     description: Display color (hex or named)
-
-  description:
-    type: string
 
   data:
     type: object

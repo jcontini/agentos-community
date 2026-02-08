@@ -1,8 +1,13 @@
 # Webpage Entity
 # A web page with URL, title, and content
+#
+# Extends document (which extends writing). Inherits:
+#   From writing: content, author (→ person)
+#   From document: title, url, published_at, fetched_at, data
 
 id: webpage
 plural: webpages
+extends: document
 name: Web Page
 description: A web page with URL, title, and content
 
@@ -11,19 +16,12 @@ references:
   wikidata: Q36774  # web page
 
 properties:
+  # Webpage overrides url as required (the primary identifier)
   url:
     type: string
     format: url
     required: true
     description: The page URL
-
-  title:
-    type: string
-    description: Page title
-
-  content:
-    type: string
-    description: Page content (markdown or text)
 
   snippet:
     type: string
@@ -32,14 +30,6 @@ properties:
   favicon:
     references: image
     description: Site favicon
-
-  published_at:
-    type: datetime
-    description: When the content was published
-
-  fetched_at:
-    type: datetime
-    description: When we retrieved this content
 
   content_type:
     type: string

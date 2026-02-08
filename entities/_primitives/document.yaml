@@ -1,0 +1,45 @@
+# Document — Titled Published Content
+#
+# Extends writing with title, URL, and publication metadata.
+# Posts and webpages are documents. Messages are NOT — they're
+# writings without titles or publication semantics.
+#
+# The `data` bag is the extension point for adapter-specific
+# properties. Community contributors building new entities that
+# extend document can use it for domain-specific fields without
+# polluting the base schema.
+
+id: document
+plural: documents
+extends: writing
+name: Document
+description: Titled content with a URL and publication date
+
+references:
+  schema_org: https://schema.org/CreativeWork
+  dublin_core: https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
+
+properties:
+  title:
+    type: string
+    description: Document title
+
+  url:
+    type: string
+    format: url
+    description: Canonical URL
+
+  published_at:
+    type: datetime
+    description: When this content was published
+
+  fetched_at:
+    type: datetime
+    description: When we retrieved this content
+
+  data:
+    type: object
+    description: Adapter-specific extensions
+
+display:
+  show_as_app: false

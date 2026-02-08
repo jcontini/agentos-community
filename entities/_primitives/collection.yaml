@@ -1,0 +1,45 @@
+# Collection — Organizational Grouping Primitive
+#
+# A named grouping of entities. Tags, albums, playlists, folders
+# are all collections. The `contains` relationship connects a
+# collection to its members.
+#
+# The `ordered` flag (from ActivityStreams 2.0's Collection vs
+# OrderedCollection distinction) tells the UI whether items have
+# a user-defined sequence. Tags are unordered. Playlists are ordered.
+#
+# "Container" is a pattern, not a primitive. Many things contain
+# other things (conversations contain messages, blogs contain posts).
+# Collection is specifically for organizational grouping.
+# Conversations are a different kind of container — they communicate,
+# they don't organize.
+
+id: collection
+plural: collections
+name: Collection
+description: A named grouping of entities — tags, albums, playlists, folders
+
+properties:
+  id:
+    type: string
+    required: true
+
+  name:
+    type: string
+    required: true
+    description: Collection name
+
+  description:
+    type: string
+
+  item_count:
+    type: integer
+    description: Number of items in this collection
+
+  ordered:
+    type: boolean
+    default: false
+    description: Whether items have a user-defined order (playlists yes, tags no)
+
+display:
+  show_as_app: false
