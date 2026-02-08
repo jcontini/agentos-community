@@ -38,6 +38,16 @@ properties:
     default: false
     description: Whether this is an all-day event
 
+  organizer:
+    references: person
+    description: Who organized this event
+
+  attendees:
+    type: array
+    description: People attending this event
+    items:
+      references: person
+
   location:
     type: string
     description: Event location

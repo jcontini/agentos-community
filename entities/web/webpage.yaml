@@ -30,9 +30,8 @@ properties:
     description: Short excerpt/description
 
   favicon:
-    type: string
-    format: url
-    description: Site favicon URL
+    references: image
+    description: Site favicon
 
   published_at:
     type: datetime

@@ -39,33 +39,12 @@ properties:
     description: External link target (the article being linked to, if any)
 
   author:
-    type: object
+    references: person
     description: Who wrote this post
-    properties:
-      name:
-        type: string
-        required: true
-        description: Username or display name
-      url:
-        type: string
-        format: url
-        description: Profile URL
-      avatar:
-        type: string
-        format: url
-        description: Profile image URL
 
   community:
-    type: object
+    references: community
     description: The community this was posted in
-    properties:
-      name:
-        type: string
-        description: Community name (e.g., "programming")
-      url:
-        type: string
-        format: url
-        description: Community URL
 
   engagement:
     type: object

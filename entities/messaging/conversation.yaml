@@ -32,10 +32,15 @@ properties:
     default: 0
     description: Number of unread messages
 
-  avatar_url:
-    type: string
-    format: url
+  avatar:
+    references: image
     description: Conversation avatar/photo
+
+  participants:
+    type: array
+    description: People in this conversation
+    items:
+      references: person
 
   is_group:
     type: boolean

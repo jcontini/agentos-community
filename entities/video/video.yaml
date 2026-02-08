@@ -37,18 +37,8 @@ properties:
 
   # Creator
   creator:
-    type: object
+    references: person
     description: Who made this video
-    properties:
-      name:
-        type: string
-        required: true
-      url:
-        type: string
-        format: url
-      avatar:
-        type: string
-        format: url
 
   # Content
   duration_ms:
@@ -56,9 +46,8 @@ properties:
     description: Duration in milliseconds
 
   thumbnail:
-    type: string
-    format: url
-    description: Thumbnail image URL
+    references: image
+    description: Thumbnail image
 
   transcript:
     type: string

@@ -36,9 +36,8 @@ properties:
     description: Group URL
 
   icon:
-    type: string
-    format: url
-    description: Group icon/avatar URL (subreddit icon, group image, etc.)
+    references: image
+    description: Group icon/avatar (subreddit icon, group image, etc.)
 
   member_count:
     type: string

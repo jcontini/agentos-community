@@ -27,9 +27,8 @@ properties:
     description: Message content
 
   sender:
-    type: string
-    required: true
-    description: Sender name
+    references: person
+    description: Who sent this message
 
   is_outgoing:
     type: boolean
