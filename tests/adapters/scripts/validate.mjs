@@ -77,6 +77,7 @@ function loadEntityIds() {
 
 function loadEntityProperties() {
   const props = {};
+  const vocabularies = {};
   function scan(dir) {
     if (!existsSync(dir)) return;
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -90,8 +91,14 @@ function loadEntityProperties() {
             const data = doc.toJSON();
             if (data?.id && data?.properties) {
               props[data.id] = Object.keys(data.properties);
+              if (data.vocabulary) vocabularies[data.id] = data.vocabulary;
               if (data.extends && props[data.extends]) {
-                const parentProps = props[data.extends];
+                const vocabulary = vocabularies[data.id] || {};
+                // Apply vocabulary overrides when inheriting parent props
+                // e.g., vocabulary: { author: sender } renames inherited `author` to `sender`
+                const parentProps = props[data.extends].map(
+                  prop => vocabulary[prop] || prop
+                );
                 props[data.id] = [...new Set([...parentProps, ...props[data.id]])];
               }
             }
@@ -103,6 +110,12 @@ function loadEntityProperties() {
   // Scan twice to resolve extends (parent might load after child)
   scan(ENTITIES_DIR);
   scan(ENTITIES_DIR);
+  // Inject system properties — every entity gets created_at/updated_at automatically.
+  // These are system-managed timestamps, not declared in individual YAMLs.
+  for (const id of Object.keys(props)) {
+    if (!props[id].includes('created_at')) props[id].push('created_at');
+    if (!props[id].includes('updated_at')) props[id].push('updated_at');
+  }
   return props;
 }
 

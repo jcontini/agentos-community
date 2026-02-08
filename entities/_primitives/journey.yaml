@@ -68,11 +68,6 @@ properties:
       - Trip: { origin: "Austin, TX", budget: 5000 }
       - Dream: { dreamt_on: "2026-02-07", recurring: true }
 
-  created_at:
-    type: datetime
-  updated_at:
-    type: datetime
-
 identifiers: [name]
 operations: [list, get, create, update, archive]
 

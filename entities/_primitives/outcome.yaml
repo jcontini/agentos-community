@@ -88,11 +88,6 @@ properties:
       - Trip: { location: { lat: 52.37, lng: 4.89 } }
       - Dream: { dreamt_on: "2026-02-07" }
 
-  created_at:
-    type: datetime
-  updated_at:
-    type: datetime
-
 identifiers: [name]
 operations: [list, get, create, update, archive, complete, reopen]
 

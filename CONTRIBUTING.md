@@ -237,6 +237,66 @@ skills/{skill}/
 
 ---
 
+## Entity Model Extension Mechanisms
+
+The entity model supports three extension mechanisms. Together they allow community contributors to build rich type hierarchies while keeping individual schemas clean.
+
+### `extends:` — Type Hierarchy
+
+Entities can inherit properties from a parent type. The Rust resolver handles multi-level inheritance (e.g., `writing → document → post`). Child entities get all parent properties plus their own.
+
+```yaml
+# post.yaml — inherits id, content, author, title, url, published_at from document
+id: post
+extends: document
+properties:
+  community:
+    references: community
+  # ... post-specific properties
+```
+
+### `vocabulary:` — Context-Appropriate Naming
+
+When inheriting a property, you can rename it for domain context. The graph still treats them as equivalent — querying "all writings" finds messages by sender, even though the field is renamed.
+
+```yaml
+# message.yaml — writing's `author` appears as `sender`
+id: message
+extends: writing
+vocabulary:
+  author: sender
+properties:
+  # No explicit `sender` needed — vocabulary override handles it
+  conversation_id:
+    type: string
+```
+
+Both the Rust resolver and JS validator resolve vocabulary overrides. Inherited identifiers are also renamed.
+
+### `data: {}` — Adapter-Specific Extensions
+
+An open object property for adapter-specific data that doesn't belong in the shared schema. Adapters can store extra fields here without modifying the entity definition.
+
+```yaml
+# In entity YAML
+data:
+  type: object
+  description: Domain-specific extensions
+
+# In adapter mapping — store adapter-specific fields
+adapters:
+  task:
+    mapping:
+      data.priority_label: .priority_label
+      data.section_id: .section_id
+```
+
+### System Properties
+
+Every entity automatically gets `created_at` and `updated_at` (datetime) as system-injected properties. These don't need to be declared in YAML — the resolver adds them. Adapters can map source timestamps into them.
+
+---
+
 ## Components
 
 Entity components live in `entities/{group}/views/`. They compose framework primitives — never custom CSS.

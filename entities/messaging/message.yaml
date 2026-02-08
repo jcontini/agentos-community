@@ -4,10 +4,12 @@
 # Extends writing. Inherits:
 #   From writing: id, content, author (→ person)
 #
-# Vocabulary override: writing's `author` appears as `sender` here.
+# Vocabulary override: writing's `author` resolves as `sender` here.
 # "Who wrote this" and "who sent this" are the same concept in
 # different contexts. The graph treats them as equivalent —
 # querying "all writings by person X" finds messages too.
+# The Rust resolver and JS validator both handle vocabulary
+# overrides, so no explicit `sender` declaration is needed.
 #
 # NOT a document. Messages don't have titles, URLs, or publication
 # semantics. They have delivery semantics (sent/delivered/read)
@@ -33,13 +35,6 @@ properties:
     type: string
     required: true
     description: Message content
-
-  # Vocabulary override of writing's `author` — same concept, messaging term.
-  # The `vocabulary: { author: sender }` above tells the Rust resolver these
-  # are the same field. This explicit declaration ensures JS validation works.
-  sender:
-    references: person
-    description: Who sent this message
 
   conversation_id:
     type: string

@@ -56,14 +56,6 @@ properties:
     type: string
     description: Recurrence rule (RRULE format)
 
-  created_at:
-    type: datetime
-    description: When event was created
-
-  updated_at:
-    type: datetime
-    description: When event was last updated
-
 operations: [list, get, create, update, delete]
 
 display:

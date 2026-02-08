@@ -54,14 +54,6 @@ properties:
     enum: [OPEN, CLOSED, SECRET]
     description: Privacy setting (OPEN = public, CLOSED = members only, SECRET = hidden)
 
-  created_at:
-    type: datetime
-    description: When group was created
-
-  updated_at:
-    type: datetime
-    description: Last activity timestamp
-
   # Nested posts (populated by get operation when available)
   posts:
     type: array

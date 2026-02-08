@@ -34,14 +34,6 @@ properties:
     default: false
     description: Whether this is a subscribed/read-only calendar
 
-  created_at:
-    type: datetime
-    description: When calendar was created
-
-  updated_at:
-    type: datetime
-    description: When calendar was last updated
-
 operations: [list, get, create, update, delete]
 
 display:

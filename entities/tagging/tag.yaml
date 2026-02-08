@@ -29,11 +29,6 @@ properties:
     type: object
     description: Domain-specific extensions
 
-  created_at:
-    type: datetime
-  updated_at:
-    type: datetime
-
 identifiers: [name]
 operations: [list, get, create, update, archive]
 

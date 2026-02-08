@@ -123,14 +123,6 @@ properties:
         id:
           type: string
 
-  created_at:
-    type: datetime
-    description: When first seen
-
-  updated_at:
-    type: datetime
-    description: When last updated
-
 # For cross-adapter deduplication
 # Ordered by strength - try each until a match is found
 identifiers:

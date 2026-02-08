@@ -60,14 +60,6 @@ properties:
     type: datetime
     description: When we downloaded/cached it
 
-  created_at:
-    type: datetime
-    description: When this entity was created
-
-  updated_at:
-    type: datetime
-    description: When this entity was last updated
-
 # For deduplication - same content = same image
 identifiers:
   - hash

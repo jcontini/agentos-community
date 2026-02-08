@@ -44,11 +44,6 @@ properties:
     type: string
     description: How we will know this question is resolved
 
-  created_at:
-    type: datetime
-  updated_at:
-    type: datetime
-
 identifiers: [name]
 operations: [list, get, create, update]
 

@@ -50,14 +50,6 @@ properties:
     type: integer
     description: Number of participants
 
-  created_at:
-    type: datetime
-    description: When conversation was created
-
-  updated_at:
-    type: datetime
-    description: When conversation was last updated
-
 operations: [list, get, create]
 
 display:
