@@ -124,7 +124,7 @@ Before committing a adapter:
 
 - [ ] `icon.svg` or `icon.png` exists
 - [ ] `npm run validate` passes
-- [ ] Mapping covers entity properties (check `entities/{group}/{entity}.yaml`)
+- [ ] Mapping covers entity properties (check `entities/{entity}.yaml`)
 - [ ] Functional tests pass (`npm test`)
 
 ## Expression Syntax
@@ -221,4 +221,4 @@ node scripts/generate-manifest.js --check  # Validate only
 | `CONTRIBUTING.md` | Complete technical reference — adapter structure, entities, components |
 | `tests/adapters/adapter.schema.json` | Schema source of truth for adapter YAML |
 | `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
-| `entities/{group}/{entity}.yaml` | Entity schema — what properties to map |
+| `entities/{entity}.yaml` | Entity schema — what properties to map |

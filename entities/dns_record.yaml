@@ -9,7 +9,7 @@ name: DNS Record
 description: A DNS record associated with a domain
 
 references:
-  wikidata: Q223307  # DNS resource record
+  wikidata: Q56098605  # resource record — "message stored using the Domain Name System"
 
 properties:
   id:

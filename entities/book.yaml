@@ -43,6 +43,11 @@ properties:
       type: string
     description: Genre tags
 
+  format:
+    type: string
+    enum: [paperback, hardcover, ebook, audiobook]
+    description: Physical or digital format (Schema.org BookFormatType)
+
 identifiers: [isbn]
 
 display:

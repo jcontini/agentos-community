@@ -59,10 +59,14 @@ Adapters are adapters that map external APIs to these entity types. No hardcoded
 
 ```
 entities/          Entity type definitions (single source of truth)
-  tasks/           task.yaml, project.yaml, label.yaml + icon.png + views/
-  discussion/      post.yaml + icon.png + views/
-  messaging/       message.yaml, conversation.yaml + views/
-  people/          person.yaml + views/
+  _primitives/     Abstract base types (document, collection, etc.)
+  _relationships/  Relationship types (contains, enables, etc.)
+  common/          operations.yaml (standard operation definitions)
+  post/            post.yaml + views/  (entities with views keep a folder)
+  community/       community.yaml + views/
+  task.yaml        Flat entity files (no views, no subfolder)
+  person.yaml
+  ...
 
 skills/            Workflow guides (how to use entities for specific domains)
   roadmap/         skill.md, skill.yaml — extends outcomes for project planning
@@ -182,7 +186,7 @@ utilities:
 # Good: Model reference for shared concept
 utilities:
   dns_list:
-    returns: dns_record[]  # Defined in entities/common/
+    returns: dns_record[]  # Defined in entities/dns_record.yaml
 
 # Good: Inline for adapter-specific introspection
 utilities:
@@ -213,12 +217,16 @@ utilities:
 
 ### Quick Reference
 
-**Entity structure:**
+**Entity structure (flat):**
 ```
-entities/{group}/
-  {entity}.yaml   # Entity definition (one per file)
-  icon.png        # Desktop icon (PNG preferred)
-  views/          # TSX components + view configs
+entities/
+  {entity}.yaml         # Most entities are flat files at root
+  {entity}/             # Entities with views get a folder
+    {entity}.yaml
+    views/              # TSX components + view configs
+  _primitives/          # Abstract base types
+  _relationships/       # Relationship types
+  common/operations.yaml # Standard operation definitions
 ```
 
 **Skill structure:**
@@ -299,14 +307,14 @@ Every entity automatically gets `created_at` and `updated_at` (datetime) as syst
 
 ## Components
 
-Entity components live in `entities/{group}/views/`. They compose framework primitives — never custom CSS.
+Entity components live in `entities/{entity}/views/`. They compose framework primitives — never custom CSS.
 
 **Key rules:**
 - Use `data-*` attributes: `data-component="text" data-variant="title"`
 - Proxy external images with `getProxiedSrc()`
 - Export default: `export default MyComponent`
 
-**See examples:** `entities/discussion/views/`, `entities/groups/views/`
+**See examples:** `entities/post/views/`, `entities/community/views/`
 
 ---
 
