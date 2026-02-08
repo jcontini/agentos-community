@@ -54,7 +54,7 @@ describe('Linear Adapter', () => {
       try {
         await aos().call('UseAdapter', {
           ...baseParams,
-          tool: 'outcome.delete',
+          tool: 'task.delete',
           params: { id: item.id },
           execute: true,
         });
@@ -64,13 +64,13 @@ describe('Linear Adapter', () => {
     }
   });
 
-  describe('outcome.list', () => {
+  describe('task.list', () => {
     it('returns an array of tasks', async () => {
       if (skipTests) return;
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { limit: 5 },
       });
 
@@ -82,7 +82,7 @@ describe('Linear Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { limit: 5 },
       });
 
@@ -96,18 +96,18 @@ describe('Linear Adapter', () => {
       }
     });
 
-    it('outcomes have data.completed boolean field', async () => {
+    it('tasks have data.completed boolean field', async () => {
       if (skipTests) return;
       
-      const outcomes = await aos().call('UseAdapter', {
+      const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { limit: 5 },
       });
 
       // The adapter mapping has: data.completed: '.state.type == "completed"'
-      for (const outcome of outcomes) {
-        expect(typeof outcome['data.completed']).toBe('boolean');
+      for (const task of tasks) {
+        expect(typeof task['data.completed']).toBe('boolean');
       }
     });
 
@@ -116,7 +116,7 @@ describe('Linear Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { limit: 3 },
       });
 
@@ -124,7 +124,7 @@ describe('Linear Adapter', () => {
     });
   });
 
-  describe('outcome CRUD: create → get → update → delete', () => {
+  describe('task CRUD: create → get → update → delete', () => {
     let createdTask: any;
 
     it('can create a task', async () => {
@@ -138,7 +138,7 @@ describe('Linear Adapter', () => {
       
       createdTask = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           title,
           description: 'Created by AgentOS integration test',
@@ -163,7 +163,7 @@ describe('Linear Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: createdTask.id },
       });
 
@@ -183,7 +183,7 @@ describe('Linear Adapter', () => {
       
       const updated = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: createdTask.id,
           name: newTitle,
@@ -203,7 +203,7 @@ describe('Linear Adapter', () => {
 
       const result = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -216,13 +216,13 @@ describe('Linear Adapter', () => {
     });
   });
 
-  describe('journey.list', () => {
+  describe('project.list', () => {
     it('can list projects', async () => {
       if (skipTests) return;
       
       const projects = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'journey.list',
+        tool: 'project.list',
         params: {},
       });
 
@@ -348,7 +348,7 @@ describe('Linear Adapter', () => {
       // Get relations for any existing task
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { limit: 1 },
       });
 
@@ -377,7 +377,7 @@ describe('Linear Adapter', () => {
 
       task1 = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('task1 for relations'),
           team_id: teamId,
@@ -388,7 +388,7 @@ describe('Linear Adapter', () => {
 
       task2 = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('task2 for relations'),
           team_id: teamId,
@@ -481,7 +481,7 @@ describe('Linear Adapter', () => {
           try {
             await aos().call('UseAdapter', {
               ...baseParams,
-              tool: 'outcome.delete',
+              tool: 'task.delete',
               params: { id: task.id },
               execute: true,
             });

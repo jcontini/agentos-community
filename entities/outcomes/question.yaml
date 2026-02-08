@@ -1,0 +1,64 @@
+# Question — A Frame Over a Space of Possible Outcomes
+#
+# Questions aren't outcomes — they're what GENERATES outcomes.
+# "What car should I buy?" frames a decision space.
+# "Why is the build failing?" starts an inquiry chain (five whys).
+#
+# Questions can raise other questions (decomposition, root cause analysis).
+# Decisions resolve questions.
+#
+# Inspired by IBIS (Issue-Based Information System) where issues
+# respond to any node in the discourse graph.
+
+id: question
+plural: questions
+name: Question
+description: A frame over a space of possible outcomes — what needs to be resolved
+
+references:
+  ibis: https://en.wikipedia.org/wiki/Issue-based_information_system
+  wikidata: Q189756
+  schema_org: https://schema.org/Question
+
+properties:
+  id:
+    type: string
+    required: true
+
+  name:
+    type: string
+    required: true
+    description: The question itself
+
+  context:
+    type: string
+    description: What prompted this question — situation, forces, constraints
+
+  status:
+    type: string
+    enum: [open, resolved, deferred]
+    default: open
+    description: Whether this question has been answered
+
+  resolution_criteria:
+    type: string
+    description: How we will know this question is resolved
+
+  created_at:
+    type: datetime
+  updated_at:
+    type: datetime
+
+identifiers: [name]
+operations: [list, get, create, update]
+
+display:
+  primary: name
+  secondary: status
+  icon: help-circle
+  show_as_app: true
+  sort:
+    - field: status
+      order: asc
+    - field: updated_at
+      order: desc

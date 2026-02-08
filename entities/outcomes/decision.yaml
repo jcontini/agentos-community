@@ -1,0 +1,54 @@
+# Decision — An Outcome That Resolves a Question
+#
+# A decision captures what was chosen, what was rejected, and why.
+# Extends outcome — inherits name, description, value, target,
+# achieved (= when the decision was made), ended, output, etc.
+#
+# Options are structured data, not separate entities.
+# The decision itself is the outcome; options are its analysis.
+
+id: decision
+plural: decisions
+name: Decision
+extends: outcome
+description: An outcome that resolves a question — captures what was chosen, what was rejected, and why
+
+properties:
+  # The options considered (structured list, not separate entities)
+  options:
+    type: array
+    description: Options that were considered
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Short label for the option
+        description:
+          type: string
+          description: Longer explanation of this option
+        selected:
+          type: boolean
+          default: false
+          description: Whether this option was chosen
+        rationale:
+          type: string
+          description: Why this option was chosen or rejected
+
+  # Who made the decision
+  decider:
+    type: string
+    description: Who made this decision (person name or agent ID)
+
+  # When to reconsider
+  revisit_when:
+    type: string
+    description: Conditions under which this decision should be revisited
+
+display:
+  primary: name
+  icon: gavel
+  show_as_app: true
+  sort:
+    - field: created_at
+      order: desc

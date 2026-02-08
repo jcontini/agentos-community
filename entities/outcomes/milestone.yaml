@@ -1,0 +1,20 @@
+# Milestone — A Significant Outcome on a Roadmap
+#
+# A milestone marks a meaningful point of progress.
+# Inherits all properties from outcome.
+
+id: milestone
+plural: milestones
+name: Milestone
+extends: outcome
+description: A significant outcome on a roadmap
+
+display:
+  primary: name
+  icon: flag
+  show_as_app: true
+  sort:
+    - field: data.priority
+      order: asc
+    - field: name
+      order: asc

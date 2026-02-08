@@ -5,15 +5,15 @@
  * Requires: TODOIST_API_KEY or configured credential in AgentOS.
  * 
  * Coverage:
- * - outcome.list (with filters: project_id, label, parent_id)
- * - outcome.filter (Todoist filter queries)
- * - outcome CRUD (create, get, update, complete, reopen, delete)
+ * - task.list (with filters: project_id, label, parent_id)
+ * - task.filter (Todoist filter queries)
+ * - task CRUD (create, get, update, complete, reopen, delete)
  * - Priority mapping (AgentOS 1-4 → Todoist 4-1)
  * - Due dates (natural language)
- * - Labels on outcomes
- * - Sub-outcomes (parent_id)
- * - Moving outcomes (mutation handler)
- * - journey.list, tag.list
+ * - Labels on tasks
+ * - Sub-tasks (parent_id)
+ * - Moving tasks (mutation handler)
+ * - project.list, tag.list
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -22,7 +22,7 @@ import { aos, testContent, TEST_PREFIX } from '../../../../tests/utils/fixtures'
 const adapter = 'todoist';
 
 // Track created items for cleanup
-const createdItems: Array<{ id: string; type: 'outcome' | 'journey' }> = [];
+const createdItems: Array<{ id: string; type: 'task' | 'project' }> = [];
 
 // Skip tests if no credentials configured
 let skipTests = false;
@@ -33,7 +33,7 @@ describe('Todoist Adapter', () => {
     try {
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: {},
       });
     } catch (e: any) {
@@ -49,11 +49,11 @@ describe('Todoist Adapter', () => {
   // Clean up after tests
   afterAll(async () => {
     // Delete tasks first (before projects)
-    for (const item of createdItems.filter(i => i.type === 'outcome')) {
+    for (const item of createdItems.filter(i => i.type === 'task')) {
       try {
         await aos().call('UseAdapter', {
           adapter,
-          tool: 'outcome.delete',
+          tool: 'task.delete',
           params: { id: item.id },
           execute: true,
         });
@@ -64,15 +64,15 @@ describe('Todoist Adapter', () => {
   });
 
   // ===========================================================================
-  // outcome.list
+  // task.list
   // ===========================================================================
-  describe('outcome.list', () => {
+  describe('task.list', () => {
     it('returns an array of tasks', async () => {
       if (skipTests) return;
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: {},
       });
 
@@ -84,7 +84,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: {},
       });
 
@@ -96,7 +96,7 @@ describe('Todoist Adapter', () => {
         expect(task.name).toBeDefined();
         expect(task.adapter).toBe(adapter);
         // Mapped fields (always present from Todoist v1 API)
-        expect(typeof outcome.completed).toBe('boolean');
+        expect(typeof task.completed).toBe('boolean');
         expect(typeof task.priority).toBe('number');
         expect(task._project_id).toBeDefined();
       }
@@ -107,14 +107,14 @@ describe('Todoist Adapter', () => {
       
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
       
       if (projects.length === 0) return;
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { project_id: projects[0].id },
       });
 
@@ -140,7 +140,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { label: labels[0].name },
       });
 
@@ -149,15 +149,15 @@ describe('Todoist Adapter', () => {
   });
 
   // ===========================================================================
-  // outcome.list_all (all tasks without smart defaults)
+  // task.list_all (all tasks without smart defaults)
   // ===========================================================================
-  describe('outcome.list_all', () => {
+  describe('task.list_all', () => {
     it('returns an array of tasks', async () => {
       if (skipTests) return;
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list_all',
+        tool: 'task.list_all',
         params: {},
       });
 
@@ -169,14 +169,14 @@ describe('Todoist Adapter', () => {
       
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
       
       if (projects.length === 0) return;
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list_all',
+        tool: 'task.list_all',
         params: { project_id: projects[0].id },
       });
 
@@ -189,15 +189,15 @@ describe('Todoist Adapter', () => {
   });
 
   // ===========================================================================
-  // outcome.filter (Todoist filter queries)
+  // task.filter (Todoist filter queries)
   // ===========================================================================
-  describe('outcome.filter', () => {
+  describe('task.filter', () => {
     it('can query tasks due today', async () => {
       if (skipTests) return;
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.filter',
+        tool: 'task.filter',
         params: { query: 'today' },
       });
 
@@ -209,7 +209,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.filter',
+        tool: 'task.filter',
         params: { query: 'overdue' },
       });
 
@@ -221,7 +221,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.filter',
+        tool: 'task.filter',
         params: { query: '7 days' },
       });
 
@@ -233,7 +233,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.filter',
+        tool: 'task.filter',
         params: { query: 'no date' },
       });
 
@@ -245,7 +245,7 @@ describe('Todoist Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.filter',
+        tool: 'task.filter',
         params: { query: 'p1' },
       });
 
@@ -259,14 +259,14 @@ describe('Todoist Adapter', () => {
   describe('task CRUD', () => {
     let createdTask: any;
 
-    it('outcome.create - creates task with title and description', async () => {
+    it('task.create - creates task with title and description', async () => {
       if (skipTests) return;
 
       const title = testContent('task');
       
       createdTask = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           title,
           description: 'Created by AgentOS integration test',
@@ -279,26 +279,26 @@ describe('Todoist Adapter', () => {
       expect(createdTask.name).toContain(TEST_PREFIX);
       expect(createdTask.description).toBe('Created by AgentOS integration test');
       
-      createdItems.push({ id: createdTask.id, type: 'outcome' });
+      createdItems.push({ id: createdTask.id, type: 'task' });
     });
 
-    it('outcome.get - retrieves task with all fields', async () => {
+    it('task.get - retrieves task with all fields', async () => {
       if (skipTests || !createdTask?.id) return;
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: createdTask.id },
       });
 
       expect(task).toBeDefined();
       expect(task.id).toBe(createdTask.id);
       expect(task.name).toContain(TEST_PREFIX);
-      expect(outcome.completed).toBe(false);
+      expect(task.completed).toBe(false);
       expect(task.adapter).toBe(adapter);
     });
 
-    it('outcome.update - updates title and description', async () => {
+    it('task.update - updates title and description', async () => {
       if (skipTests || !createdTask?.id) return;
 
       const newTitle = testContent('updated task');
@@ -306,7 +306,7 @@ describe('Todoist Adapter', () => {
       
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: createdTask.id,
           name: newTitle,
@@ -320,7 +320,7 @@ describe('Todoist Adapter', () => {
       // Verify the update
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: createdTask.id },
       });
       
@@ -328,12 +328,12 @@ describe('Todoist Adapter', () => {
       expect(task.description).toBe(newDesc);
     });
 
-    it('outcome.complete - marks task as completed', async () => {
+    it('task.complete - marks task as completed', async () => {
       if (skipTests || !createdTask?.id) return;
 
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.complete',
+        tool: 'task.complete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -341,19 +341,19 @@ describe('Todoist Adapter', () => {
       // Verify task is now completed
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: createdTask.id },
       });
       
-      expect(outcome.completed).toBe(true);
+      expect(task.completed).toBe(true);
     });
 
-    it('outcome.reopen - reopens completed task', async () => {
+    it('task.reopen - reopens completed task', async () => {
       if (skipTests || !createdTask?.id) return;
 
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.reopen',
+        tool: 'task.reopen',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -361,19 +361,19 @@ describe('Todoist Adapter', () => {
       // Verify task is now not completed
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: createdTask.id },
       });
       
-      expect(outcome.completed).toBe(false);
+      expect(task.completed).toBe(false);
     });
 
-    it('outcome.delete - removes the task', async () => {
+    it('task.delete - removes the task', async () => {
       if (skipTests || !createdTask?.id) return;
 
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -396,7 +396,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('urgent priority'),
           priority: 1,  // AgentOS 1 = highest = Todoist 4 (urgent)
@@ -404,12 +404,12 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
-      // Verify via outcome.get since create response mapping may differ
+      // Verify via task.get since create response mapping may differ
       const fetched = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       expect(fetched.priority).toBe(1);
@@ -417,7 +417,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -429,7 +429,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('normal priority'),
           priority: 4,  // AgentOS 4 = lowest = Todoist 1 (normal)
@@ -437,12 +437,12 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
-      // Verify via outcome.get since create response mapping may differ
+      // Verify via task.get since create response mapping may differ
       const fetched = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       expect(fetched.priority).toBe(4);
@@ -450,7 +450,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -462,14 +462,14 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('default priority'),
         },
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Todoist default is 1 (normal), which maps to AgentOS 4 (lowest) via invert:5
       // Todoist: 1=normal, 2=high, 3=higher, 4=urgent
@@ -479,7 +479,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -491,7 +491,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('priority update'),
           priority: 1,
@@ -499,12 +499,12 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Update to urgent priority (need to include title to satisfy API)
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           name: testContent('priority updated'),
@@ -515,7 +515,7 @@ describe('Todoist Adapter', () => {
 
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       
@@ -524,7 +524,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -541,7 +541,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('due tomorrow'),
           due: 'tomorrow',
@@ -549,7 +549,7 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Should have a due_date set
       expect(task.due_date).toBeDefined();
@@ -557,7 +557,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -569,7 +569,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('specific date'),
           due: 'Jan 31',
@@ -577,14 +577,14 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       expect(task.due_date).toBeDefined();
       
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -596,14 +596,14 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('update due'),
         },
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Initially no due date
       expect(task.due_date).toBeUndefined();
@@ -611,7 +611,7 @@ describe('Todoist Adapter', () => {
       // Add due date
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           due: 'next friday',
@@ -621,7 +621,7 @@ describe('Todoist Adapter', () => {
 
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       
@@ -630,7 +630,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -647,7 +647,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('with labels'),
           labels: ['test-label'],
@@ -655,7 +655,7 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Should have labels
       expect(task._labels).toBeDefined();
@@ -665,7 +665,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -677,19 +677,19 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('update labels'),
         },
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       
       // Add labels
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           labels: ['new-label', 'another-label'],
@@ -699,7 +699,7 @@ describe('Todoist Adapter', () => {
 
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       
@@ -709,7 +709,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -727,19 +727,19 @@ describe('Todoist Adapter', () => {
       // Create parent task
       const parent = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('parent task'),
         },
         execute: true,
       });
 
-      createdItems.push({ id: parent.id, type: 'outcome' });
+      createdItems.push({ id: parent.id, type: 'task' });
 
       // Create subtask
       const subtask = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('subtask'),
           parent_id: parent.id,
@@ -747,14 +747,14 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: subtask.id, type: 'outcome' });
+      createdItems.push({ id: subtask.id, type: 'task' });
       
       expect(subtask._parent_id).toBe(parent.id);
       
       // Clean up (subtask first, then parent)
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: subtask.id },
         execute: true,
       });
@@ -762,7 +762,7 @@ describe('Todoist Adapter', () => {
       
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: parent.id },
         execute: true,
       });
@@ -775,42 +775,42 @@ describe('Todoist Adapter', () => {
       // Create parent task
       const parent = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('filter parent'),
         },
         execute: true,
       });
 
-      createdItems.push({ id: parent.id, type: 'outcome' });
+      createdItems.push({ id: parent.id, type: 'task' });
 
       // Create two subtasks
       const sub1 = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('subtask 1'),
           parent_id: parent.id,
         },
         execute: true,
       });
-      createdItems.push({ id: sub1.id, type: 'outcome' });
+      createdItems.push({ id: sub1.id, type: 'task' });
 
       const sub2 = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('subtask 2'),
           parent_id: parent.id,
         },
         execute: true,
       });
-      createdItems.push({ id: sub2.id, type: 'outcome' });
+      createdItems.push({ id: sub2.id, type: 'task' });
 
       // Filter by parent_id
       const subtasks = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.list',
+        tool: 'task.list',
         params: { parent_id: parent.id },
       });
 
@@ -820,7 +820,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: sub2.id },
         execute: true,
       });
@@ -828,7 +828,7 @@ describe('Todoist Adapter', () => {
       
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: sub1.id },
         execute: true,
       });
@@ -836,7 +836,7 @@ describe('Todoist Adapter', () => {
       
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: parent.id },
         execute: true,
       });
@@ -847,14 +847,14 @@ describe('Todoist Adapter', () => {
   // ===========================================================================
   // Moving tasks (mutation handler)
   // ===========================================================================
-  describe('move task via outcome.update', () => {
-    it('can move task to different project via outcome.update', async () => {
+  describe('move task via task.update', () => {
+    it('can move task to different project via task.update', async () => {
       if (skipTests) return;
 
       // Get projects to find a target
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
 
       if (projects.length < 2) {
@@ -865,7 +865,7 @@ describe('Todoist Adapter', () => {
       // Create task in first project
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('task to move'),
           project_id: projects[0].id,
@@ -873,14 +873,14 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
       expect(task._project_id).toBe(projects[0].id);
 
-      // Move task by calling outcome.update with project_id
+      // Move task by calling task.update with project_id
       // This routes through the move_task mutation handler
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           project_id: projects[1].id,
@@ -891,7 +891,7 @@ describe('Todoist Adapter', () => {
       // Verify the task moved
       const movedTask = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
 
@@ -900,7 +900,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -912,7 +912,7 @@ describe('Todoist Adapter', () => {
 
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
 
       if (projects.length < 2) {
@@ -922,7 +922,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('move and update'),
           project_id: projects[0].id,
@@ -930,13 +930,13 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
 
       // Move AND update title in one call
       const newTitle = testContent('moved and updated');
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           project_id: projects[1].id,
@@ -947,7 +947,7 @@ describe('Todoist Adapter', () => {
 
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
 
@@ -957,7 +957,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -974,7 +974,7 @@ describe('Todoist Adapter', () => {
 
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
 
       if (projects.length < 2) {
@@ -984,7 +984,7 @@ describe('Todoist Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('direct move'),
           project_id: projects[0].id,
@@ -992,7 +992,7 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
 
       // Call move_task utility directly
       await aos().call('UseAdapter', {
@@ -1007,7 +1007,7 @@ describe('Todoist Adapter', () => {
 
       const moved = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
 
@@ -1016,7 +1016,7 @@ describe('Todoist Adapter', () => {
       // Clean up
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });
@@ -1025,15 +1025,15 @@ describe('Todoist Adapter', () => {
   });
 
   // ===========================================================================
-  // journey.list
+  // project.list
   // ===========================================================================
-  describe('journey.list', () => {
+  describe('project.list', () => {
     it('returns an array of projects with all fields', async () => {
       if (skipTests) return;
       
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
 
       expect(Array.isArray(projects)).toBe(true);
@@ -1082,13 +1082,13 @@ describe('Todoist Adapter', () => {
 
       const projects = await aos().call('UseAdapter', {
         adapter,
-        tool: 'journey.list',
+        tool: 'project.list',
       });
 
       // Create task with all fields (priority 3 = medium/orange)
       const task = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.create',
+        tool: 'task.create',
         params: {
           name: testContent('full lifecycle'),
           description: 'Test all features',
@@ -1100,12 +1100,12 @@ describe('Todoist Adapter', () => {
         execute: true,
       });
 
-      createdItems.push({ id: task.id, type: 'outcome' });
+      createdItems.push({ id: task.id, type: 'task' });
 
-      // Verify all fields set correctly via outcome.get (create response mapping may differ)
+      // Verify all fields set correctly via task.get (create response mapping may differ)
       const created = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
       expect(created.name).toContain(TEST_PREFIX);
@@ -1118,7 +1118,7 @@ describe('Todoist Adapter', () => {
       // Update multiple fields (priority 4 = urgent/red)
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.update',
+        tool: 'task.update',
         params: {
           id: task.id,
           name: testContent('updated lifecycle'),
@@ -1130,7 +1130,7 @@ describe('Todoist Adapter', () => {
 
       const updated = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
 
@@ -1140,7 +1140,7 @@ describe('Todoist Adapter', () => {
       // Complete
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.complete',
+        tool: 'task.complete',
         params: { id: task.id },
         execute: true,
       });
@@ -1148,14 +1148,14 @@ describe('Todoist Adapter', () => {
       // Reopen
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.reopen',
+        tool: 'task.reopen',
         params: { id: task.id },
         execute: true,
       });
 
       const reopened = await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.get',
+        tool: 'task.get',
         params: { id: task.id },
       });
 
@@ -1164,7 +1164,7 @@ describe('Todoist Adapter', () => {
       // Delete
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'outcome.delete',
+        tool: 'task.delete',
         params: { id: task.id },
         execute: true,
       });

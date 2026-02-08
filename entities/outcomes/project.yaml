@@ -1,0 +1,16 @@
+# Project — A Collection of Tasks
+#
+# The most common subtype of journey. What task managers use to group tasks.
+# Inherits all properties from journey (name, description, goal,
+# horizon, started_at, completed_at, abandoned_at, data, etc.)
+
+id: project
+plural: projects
+name: Project
+extends: journey
+description: A collection of tasks working toward a goal
+
+display:
+  primary: name
+  icon: folder
+  show_as_app: false  # shows as grouping within Tasks app
