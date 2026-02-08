@@ -29,6 +29,49 @@
       "format": "uri",
       "description": "URL to the service's website"
     },
+    "color": {
+      "type": "string",
+      "description": "Brand color as hex (e.g., '#FF4500')",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "privacy_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the service's privacy policy"
+    },
+    "terms_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the service's terms of service"
+    },
+    "docs_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the service's documentation"
+    },
+    "display": {
+      "type": "string",
+      "enum": ["browser"],
+      "description": "Rendering mode — 'browser' opens results in embedded browser instead of native views"
+    },
+    "platform": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["macos", "linux", "windows", "all"],
+          "description": "Single platform restriction"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["macos", "linux", "windows"]
+          },
+          "description": "Multiple platform restrictions"
+        }
+      ],
+      "description": "OS platform(s) this adapter requires"
+    },
     "tags": {
       "not": {},
       "description": "DEPRECATED: Tags are no longer used. Entity types provide discoverability."
@@ -111,6 +154,7 @@
       "$ref": "#/definitions/adapterSources"
     }
   },
+  "additionalProperties": false,
   "definitions": {
     "dependency": {
       "type": "object",
@@ -167,40 +211,11 @@
       "type": "object",
       "description": "Entity adapter that transforms API data into universal entity format",
       "required": ["mapping"],
+      "additionalProperties": false,
       "properties": {
         "terminology": {
           "type": "string",
           "description": "What this service calls this entity (e.g., 'Issue' for Linear's tasks)"
-        },
-        "relationships": {
-          "type": "object",
-          "description": "Which graph relationships are supported for this entity. Supports shorthand ('full') or extended ({ support, mutation }) format.",
-          "additionalProperties": {
-            "oneOf": [
-              {
-                "type": "string",
-                "enum": ["full", "read_only", "write_only", "none"],
-                "description": "Shorthand: just the support level"
-              },
-              {
-                "type": "object",
-                "description": "Extended: support level + optional mutation handler",
-                "required": ["support"],
-                "properties": {
-                  "support": {
-                    "type": "string",
-                    "enum": ["full", "read_only", "write_only", "none"],
-                    "description": "Level of support: full (read+write), read_only, write_only, none"
-                  },
-                  "mutation": {
-                    "type": "string",
-                    "description": "Utility to call when this relationship changes during updates (e.g., 'move_task')"
-                  }
-                },
-                "additionalProperties": false
-              }
-            ]
-          }
         },
         "mapping": {
           "type": "object",
