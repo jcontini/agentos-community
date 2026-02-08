@@ -1,0 +1,63 @@
+# References — The Universal Graph Edge
+#
+# Any entity can reference any other entity, with a role
+# describing the nature of the connection. This is the
+# general-purpose relationship type for building a knowledge graph.
+#
+# Unlike typed relationships (enables, contains), references is
+# open-ended. The `role` property carries the semantics:
+#
+#   about       — primary subject ("this doc is about X")
+#   mentions    — referenced in passing ("this doc mentions Y")
+#   cites       — formal attribution ("this paper cites Z")
+#   inspired_by — creative influence ("this project was inspired by W")
+#   derived_from — adaptation, fork, remix
+#   responds_to — reply, reaction, rebuttal
+#   related_to  — general association (weakest link)
+#
+# Roles are open strings, not an enum. New roles emerge as the
+# graph grows. Adapters, agents, and users can introduce roles
+# without schema changes.
+#
+# Research lineage:
+#   - Dublin Core "relation" element (15 core elements for documents)
+#   - Schema.org mentions/about (CreativeWork properties)
+#   - NEPOMUK NIE ontology (content relationships)
+#   - Open Graph Protocol (structured web references)
+#
+# Examples:
+#   vision (document) ──references (about)──→ symbiosis (concept)
+#   vision (document) ──references (cites)──→ Licklider (person)
+#   video  ──references (mentions)──→ SQLite (project)
+#   person ──references (inspired_by)──→ another person
+
+id: references
+name: References
+description: A general-purpose link between entities, with a role describing the nature of the connection
+
+is_relationship: true
+
+# Universal — any entity can reference any entity.
+# Omitting from_type/to_type means unconstrained (wildcard).
+# The Rust resolver treats empty constraints as "match all."
+
+properties:
+  role:
+    type: string
+    description: |
+      The nature of the reference. Common roles:
+        about — primary subject
+        mentions — referenced in passing
+        cites — formal attribution
+        inspired_by — creative influence
+        derived_from — adaptation or fork
+        responds_to — reply or reaction
+        related_to — general association
+
+  context:
+    type: string
+    description: Why this reference exists — a human-readable explanation
+
+  source:
+    type: string
+    description: Where this reference was discovered (e.g., "extracted from document content", "manually added", "adapter:youtube")
