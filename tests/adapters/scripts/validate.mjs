@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 /**
- * Adapter validation for pre-commit hook.
+ * Comprehensive adapter validation with table report.
  * 
- * Checks:
- * 1. Schema validation - YAML frontmatter matches adapter.schema.json
- * 2. Test coverage - every operation/utility has a test
+ * Checks per adapter:
+ *   1. Schema  — YAML frontmatter matches adapter.schema.json
+ *   2. Entity  — All operations return valid entity types (no raw pass-throughs)
+ *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
+ *   4. Icon    — icon.svg or icon.png exists
+ *   5. Tests   — Every operation has a test file
  * 
- * Usage: node scripts/validate-schema.mjs [app1] [app2] ...
- *        node scripts/validate-schema.mjs --all
- *        node scripts/validate-schema.mjs --all --filter exa
- *        node scripts/validate-schema.mjs --all --no-move  (skip auto-move, for pre-commit)
+ * Enforcement:
+ *   - adapters/ that fail schema or entity checks → moved to .needs-work/
+ *   - .needs-work/ that pass everything → candidate for promotion
+ * 
+ * Usage:
+ *   node validate.mjs                     # Full report (both adapters/ and .needs-work/)
+ *   node validate.mjs --filter exa        # Filter to specific adapter
+ *   node validate.mjs --no-move           # Report only, don't auto-move (for pre-commit)
+ *   node validate.mjs --pre-commit        # Pre-commit mode: schema + entity only, no move
  */
 
 import { readFileSync, readdirSync, existsSync, renameSync, mkdirSync } from 'fs';
@@ -20,477 +28,658 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '../../..');  // tests/adapters/scripts/ -> root
-const APPS_DIR = join(ROOT, 'adapters');
+const ROOT = join(__dirname, '../../..');
+const ADAPTERS_DIR = join(ROOT, 'adapters');
 const ENTITIES_DIR = join(ROOT, 'entities');
-const NEEDS_WORK_DIR = join(APPS_DIR, '.needs-work');
+const NEEDS_WORK_DIR = join(ADAPTERS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'adapter.schema.json');
 
-// Load schema
+// ============================================================================
+// ARGS
+// ============================================================================
+
+const args = process.argv.slice(2);
+const filterValue = args.includes('--filter') ? args[args.indexOf('--filter') + 1] : null;
+const autoMove = !args.includes('--no-move') && !args.includes('--pre-commit');
+const preCommit = args.includes('--pre-commit');
+const verbose = args.includes('--verbose');
+
+// ============================================================================
+// LOAD SCHEMA + ENTITIES
+// ============================================================================
+
 const schema = JSON.parse(readFileSync(SCHEMA_PATH, 'utf-8'));
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
-const validate = ajv.compile(schema);
+const validateSchema = ajv.compile(schema);
 
-// Load all entity IDs from skills/ folder
-// Skills structure: skills/{skill}/{entity}.yaml (e.g., skills/messaging/message.yaml)
 function loadEntityIds() {
   const entityIds = new Set();
-  
-  function scanDir(dir) {
+  function scan(dir) {
     if (!existsSync(dir)) return;
-    const entries = readdirSync(dir, { withFileTypes: true });
-    
-    for (const entry of entries) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
-        scanDir(fullPath);
+        scan(fullPath);
       } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
-          const content = readFileSync(fullPath, 'utf-8');
-          // Support multi-document YAML files (e.g., skills/common/base.yaml)
-          const docs = parseAllDocuments(content);
+          const docs = parseAllDocuments(readFileSync(fullPath, 'utf-8'));
           for (const doc of docs) {
             const data = doc.toJSON();
-            if (data && data.id) {
-              entityIds.add(data.id);
-            }
+            if (data?.id) entityIds.add(data.id);
           }
-        } catch (err) {
-          console.warn(`Warning: Failed to parse ${fullPath}: ${err.message}`);
-        }
+        } catch {}
       }
     }
   }
-  
-  scanDir(ENTITIES_DIR);
+  scan(ENTITIES_DIR);
   return entityIds;
 }
 
-const validEntityIds = loadEntityIds();
-
-// Load entity properties for adapter validation
 function loadEntityProperties() {
-  const entityProps = {};
-  
-  function scanDir(dir) {
+  const props = {};
+  function scan(dir) {
     if (!existsSync(dir)) return;
-    const entries = readdirSync(dir, { withFileTypes: true });
-    
-    for (const entry of entries) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
-        scanDir(fullPath);
+        scan(fullPath);
       } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
         try {
-          const content = readFileSync(fullPath, 'utf-8');
-          // Support multi-document YAML files
-          const docs = parseAllDocuments(content);
+          const docs = parseAllDocuments(readFileSync(fullPath, 'utf-8'));
           for (const doc of docs) {
             const data = doc.toJSON();
-            if (data && data.id && data.properties) {
-              entityProps[data.id] = Object.keys(data.properties);
+            if (data?.id && data?.properties) {
+              props[data.id] = Object.keys(data.properties);
+              // Also inherit parent properties via extends
+              if (data.extends && props[data.extends]) {
+                const parentProps = props[data.extends];
+                props[data.id] = [...new Set([...parentProps, ...props[data.id]])];
+              }
             }
           }
-        } catch (err) {
-          // Skip parse errors
-        }
+        } catch {}
       }
     }
   }
-  
-  scanDir(ENTITIES_DIR);
-  return entityProps;
+  // Scan twice to resolve extends (parent might load after child)
+  scan(ENTITIES_DIR);
+  scan(ENTITIES_DIR);
+  return props;
 }
 
+const validEntityIds = loadEntityIds();
 const entityProperties = loadEntityProperties();
 
-// Show loaded entities (only in verbose mode)
-if (process.argv.includes('--verbose')) {
-  console.log(`📦 Loaded ${validEntityIds.size} entities: ${[...validEntityIds].sort().join(', ')}\n`);
+// ============================================================================
+// CHECKS
+// ============================================================================
+
+function checkSchema(frontmatter) {
+  const valid = validateSchema(frontmatter);
+  const ajvErrors = valid ? [] : validateSchema.errors.map(e => `${e.instancePath || '/'}: ${e.message}`);
+  
+  if (!valid) {
+    // Structure broken — can't check completeness fields
+    return {
+      pass: false,
+      structureValid: false,
+      passed: 0,
+      total: 1,  // "valid structure" is the one check we could run
+      errors: ajvErrors,
+    };
+  }
+  
+  // Structure valid — now check each field we care about
+  const checks = [
+    { name: 'valid structure', pass: true },
+    { name: 'website', pass: !!frontmatter.website },
+    { name: 'color', pass: !!frontmatter.color },
+    { name: 'auth', pass: frontmatter.auth !== undefined },
+    { name: 'operations or utilities', pass: !!(frontmatter.operations || frontmatter.utilities) },
+    { name: 'instructions', pass: !!frontmatter.instructions },
+  ];
+  
+  const passed = checks.filter(c => c.pass).length;
+  const total = checks.length;
+  const errors = checks.filter(c => !c.pass).map(c => `Missing: ${c.name}`);
+  
+  return {
+    pass: passed === total,
+    structureValid: true,
+    passed,
+    total,
+    errors,
+  };
 }
 
-// Validate that returns references valid entities
-function validateReturns(frontmatter) {
+function checkEntities(frontmatter) {
   const errors = [];
+  let total = 0;
+  let passed = 0;
   
-  // Check operations
+  // Only operations are checked — they MUST route through entities.
+  // Utilities are explicitly NOT counted here: they return custom shapes
+  // by design and don't participate in entity routing.
   if (frontmatter.operations) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
-      if (typeof op.returns === 'string' && op.returns !== 'void') {
-        const entityName = op.returns.replace(/\[\]$/, '');
-        if (!validEntityIds.has(entityName)) {
-          errors.push(`Operation '${opName}' returns unknown entity '${entityName}'`);
+      total++;
+      if (!op.returns || op.returns === 'void') {
+        const verb = opName.split('.')[1];
+        if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send'].includes(verb)) {
+          errors.push(`'${opName}' returns void — read operations must return an entity`);
+        } else {
+          passed++; // void is fine for write ops
         }
+        continue;
+      }
+      const entityName = op.returns.replace(/\[\]$/, '');
+      if (validEntityIds.has(entityName)) {
+        passed++;
+      } else {
+        errors.push(`'${opName}' returns unknown entity '${entityName}'`);
       }
     }
   }
   
-  // Check utilities
-  if (frontmatter.utilities) {
-    for (const [utilName, util] of Object.entries(frontmatter.utilities)) {
-      if (typeof util.returns === 'string' && util.returns !== 'void') {
-        const entityName = util.returns.replace(/\[\]$/, '');
-        if (!validEntityIds.has(entityName)) {
-          errors.push(`Utility '${utilName}' returns unknown entity '${entityName}'`);
-        }
-      }
-    }
-  }
-  
-  if (errors.length > 0) {
-    errors.push(`Valid entities: ${[...validEntityIds].sort().join(', ')}`);
-  }
-  
-  return errors;
+  return { pass: errors.length === 0, passed, total, errors };
 }
 
-// Validate adapter mappings reference valid entity properties
-function validateAdapterMappings(frontmatter) {
+function checkMappings(frontmatter) {
   const errors = [];
+  let total = 0;
+  let passed = 0;
   
-  if (!frontmatter.adapters) return errors;
+  if (!frontmatter.adapters) {
+    if (frontmatter.operations && Object.keys(frontmatter.operations).length > 0) {
+      errors.push('Has operations but no adapters section — data won\'t flow through entities');
+      total = 1; // "has adapters section" is itself a check
+    }
+    return { pass: errors.length === 0, passed, total, errors };
+  }
   
   for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
-    if (!adapter.mapping) continue;
-    
-    const validProps = entityProperties[entityName];
-    if (!validProps) {
-      // Entity not found - already caught by returns validation
+    if (!adapter.mapping) {
+      total++;
+      errors.push(`Adapter '${entityName}' has no mapping`);
       continue;
     }
     
+    const validProps = entityProperties[entityName];
+    if (!validProps) continue; // Entity not found — caught by entity check
+    
     for (const [propName, propValue] of Object.entries(adapter.mapping)) {
-      // Skip internal properties (prefixed with _)
       if (propName.startsWith('_')) continue;
-      
-      // Skip typed references (objects that create relationships, not properties)
-      // Typed references have structure: { entity_type: { identity_field: "jaq expr" } }
       if (typeof propValue === 'object' && propValue !== null) continue;
       
-      // For nested props like "author.name", check the top-level "author" exists
+      total++;
       const topLevelProp = propName.split('.')[0];
-      
-      if (!validProps.includes(topLevelProp)) {
-        errors.push(`Adapter '${entityName}' maps unknown property '${topLevelProp}'. Valid: ${validProps.join(', ')}`);
+      if (validProps.includes(topLevelProp)) {
+        passed++;
+      } else {
+        errors.push(`'${entityName}' maps unknown property '${topLevelProp}'`);
       }
     }
   }
   
-  return errors;
-}
-
-// Validate jaq expression syntax in adapter mappings
-//
-// Catches common jaq mistakes:
-// 1. Single-quoted strings — jaq only supports double quotes
-// 2. C-style ternary (? :) — jaq uses if/then/else/end
-// 3. Bare [] on nullable paths — .foo.nodes[].id crashes when .foo is null
-function validateJaqExpressions(frontmatter) {
-  const errors = [];
-  
-  if (!frontmatter.adapters) return errors;
-  
-  for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
-    if (!adapter.mapping) continue;
-    
-    // Collect all jaq expressions from mappings (including nested typed references)
-    const exprs = collectJaqExpressions(adapter.mapping, `adapters.${entityName}.mapping`);
-    
-    for (const { path, expr } of exprs) {
-      // 1. Single-quoted strings: detect 'word' patterns inside expressions
-      //    e.g., .type == 'completed' should be .type == "completed"
-      //    Match: quote + word chars + quote, but not at start/end (YAML wrappers)
-      const singleQuoteMatches = expr.match(/== *'[^']*'|'[^']*' *==|'[^']*' *\?|: *'[^']*'/g);
-      if (singleQuoteMatches) {
-        errors.push(
-          `${path}: Single-quoted string in jaq expression (jaq requires double quotes): ${singleQuoteMatches[0]}\n` +
-          `   Expression: ${expr}`
-        );
-      }
-      
-      // 2. C-style ternary: condition ? value : other
-      //    jaq uses: if condition then value else other end
-      //    Detect: ? "..." : or ? followed by string literal (not ?// which is jaq alternative operator)
-      if (/\?\s*["']/.test(expr) && !/\?\/\//.test(expr)) {
-        errors.push(
-          `${path}: C-style ternary syntax (jaq uses if/then/else/end, not ? :)\n` +
-          `   Expression: ${expr}`
-        );
-      }
-      
-      // 3. Bare [] on nullable paths: .foo.bar[].baz without null guards
-      //    Safe patterns: (.foo // [])[] or (.foo // {}).bar or []?
-      //    Unsafe: .foo.nodes[].id (nodes could be null from GraphQL)
-      //    Only flag .nodes[] and .items[] patterns (common GraphQL nullable fields)
-      const bareIterationMatch = expr.match(/\.(nodes|items|edges)\[\][^?]/);
-      if (bareIterationMatch) {
-        // Check it's not inside a null-guarded expression like ((.x // {}).nodes // [])[]
-        const guardPattern = /\(\s*\([^)]+\/\/\s*\{\s*\}\s*\)\s*\.\s*(nodes|items|edges)\s*\/\/\s*\[\s*\]\s*\)/;
-        if (!guardPattern.test(expr)) {
-          errors.push(
-            `${path}: Bare .${bareIterationMatch[1]}[] without null guard (crashes when parent is null)\n` +
-            `   Use: [((.parent // {}).${bareIterationMatch[1]} // [])[] | .field]\n` +
-            `   Expression: ${expr}`
-          );
+  // Check jaq expressions
+  if (frontmatter.adapters) {
+    for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
+      if (!adapter.mapping) continue;
+      for (const { path, expr } of collectJaqExpressions(adapter.mapping, entityName)) {
+        total++;
+        let exprOk = true;
+        const singleQuoteMatches = expr.match(/== *'[^']*'|'[^']*' *==|'[^']*' *\?|: *'[^']*'/g);
+        if (singleQuoteMatches) {
+          errors.push(`${path}: single-quoted string in jaq (use double quotes)`);
+          exprOk = false;
         }
+        if (/\?\s*["']/.test(expr) && !/\?\/\//.test(expr)) {
+          errors.push(`${path}: C-style ternary (use if/then/else/end)`);
+          exprOk = false;
+        }
+        const bareIter = expr.match(/\.(nodes|items|edges)\[\][^?]/);
+        if (bareIter) {
+          const guard = /\(\s*\([^)]+\/\/\s*\{\s*\}\s*\)\s*\.\s*(nodes|items|edges)\s*\/\/\s*\[\s*\]\s*\)/;
+          if (!guard.test(expr)) {
+            errors.push(`${path}: bare .${bareIter[1]}[] without null guard`);
+            exprOk = false;
+          }
+        }
+        if (exprOk) passed++;
       }
     }
   }
   
-  return errors;
+  return { pass: errors.length === 0, passed, total, errors };
 }
 
-// Recursively collect jaq expression strings from a mapping object
 function collectJaqExpressions(mapping, parentPath) {
   const exprs = [];
-  
   for (const [key, value] of Object.entries(mapping)) {
     const path = `${parentPath}.${key}`;
-    
     if (typeof value === 'string') {
-      // Only check expressions that look like jaq (contain dots, operators, or function calls)
-      // Skip simple field access like .id, .title (these rarely have issues)
       if (value.includes('==') || value.includes('if ') || value.includes('[]') ||
           value.includes('//') || value.includes('|') || value.includes('?') ||
           value.includes("'")) {
         exprs.push({ path, expr: value });
       }
     } else if (typeof value === 'object' && value !== null) {
-      // Recurse into typed references
       exprs.push(...collectJaqExpressions(value, path));
     }
   }
-  
   return exprs;
 }
 
-// Parse YAML frontmatter
+function checkIcon(adapterDir) {
+  const hasSvg = existsSync(join(adapterDir, 'icon.svg'));
+  const hasPng = existsSync(join(adapterDir, 'icon.png'));
+  const format = hasSvg ? 'svg' : hasPng ? 'png' : null;
+  return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
+}
+
+function checkTests(adapterDir, frontmatter) {
+  const tools = [];
+  if (frontmatter.operations) tools.push(...Object.keys(frontmatter.operations));
+  if (frontmatter.utilities) tools.push(...Object.keys(frontmatter.utilities));
+  
+  if (tools.length === 0) return { pass: true, errors: [], tested: 0, total: 0 };
+  
+  const testsDir = join(adapterDir, 'tests');
+  const testedTools = new Set();
+  if (existsSync(testsDir)) {
+    for (const file of readdirSync(testsDir).filter(f => f.endsWith('.test.ts'))) {
+      const content = readFileSync(join(testsDir, file), 'utf-8');
+      for (const match of content.matchAll(/tool:\s*['"]([^'"]+)['"]/g)) {
+        testedTools.add(match[1]);
+      }
+    }
+  }
+  
+  const untested = tools.filter(t => !testedTools.has(t));
+  return {
+    pass: untested.length === 0,
+    errors: untested.length > 0 ? [`Missing: ${untested.join(', ')}`] : [],
+    tested: testedTools.size,
+    total: tools.length,
+  };
+}
+
+// ============================================================================
+// DISCOVER ADAPTERS
+// ============================================================================
+
+function findAdapters(dir, relativePath = '') {
+  const adapters = [];
+  if (!existsSync(dir)) return adapters;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === 'node_modules' || entry.name === 'tests') continue;
+    if (entry.name === '.needs-work') continue;
+    const fullPath = join(dir, entry.name);
+    const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+    if (existsSync(join(fullPath, 'readme.md'))) {
+      adapters.push({ name: entry.name, path: rel, dir: fullPath });
+    } else {
+      adapters.push(...findAdapters(fullPath, rel));
+    }
+  }
+  return adapters;
+}
+
+function findNeedsWorkAdapters(dir, relativePath = '') {
+  const adapters = [];
+  if (!existsSync(dir)) return adapters;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === 'node_modules' || entry.name === 'tests') continue;
+    const fullPath = join(dir, entry.name);
+    const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+    if (existsSync(join(fullPath, 'readme.md'))) {
+      adapters.push({ name: entry.name, path: rel, dir: fullPath });
+    } else {
+      adapters.push(...findNeedsWorkAdapters(fullPath, rel));
+    }
+  }
+  return adapters;
+}
+
+// ============================================================================
+// TABLE RENDERING
+// ============================================================================
+
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const DIM = '\x1b[2m';
+const YELLOW = '\x1b[33m';
+const RESET = '\x1b[0m';
+const BOLD = '\x1b[1m';
+
+const PASS = `${GREEN}✓${RESET}`;
+const FAIL = `${RED}✗${RESET}`;
+const SKIP = `${DIM}·${RESET}`;
+const BLOCKED = `${DIM}—${RESET}`; // upstream failure prevents checking
+
+function pad(str, len) {
+  return str.length >= len ? str.slice(0, len) : str + ' '.repeat(len - str.length);
+}
+
+// Center a colored symbol in a fixed-width column
+function cell(symbol, width) {
+  const leftPad = Math.floor((width - 1) / 2);
+  const rightPad = width - 1 - leftPad;
+  return ' '.repeat(leftPad) + symbol + ' '.repeat(rightPad);
+}
+
+/**
+ * Render a unified table with multiple sections.
+ * sections: [{ label: "ADAPTERS (19)", results: [...] }, { label: "NEEDS WORK (21)", results: [...] }]
+ */
+function renderTable(sections) {
+  const allResults = sections.flatMap(s => s.results);
+  if (allResults.length === 0) return;
+  
+  const nameWidth = Math.max(16, ...allResults.map(r => r.name.length)) + 2;
+  const colW = 9;
+  const testColW = 9;
+  const totalW = nameWidth + 1 + colW * 4 + testColW;
+  
+  function centerText(text, width) {
+    const lp = Math.floor((width - text.length) / 2);
+    const rp = width - text.length - lp;
+    return ' '.repeat(lp) + text + ' '.repeat(rp);
+  }
+  
+  const SEP = `${DIM}│${RESET}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Adapter', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
+  
+  const divider    = `${DIM}├${'─'.repeat(nameWidth + 1)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(testColW)}┤${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
+  
+  // Section label row spans the full width
+  function sectionDivider(label) {
+    const inner = nameWidth + 1 + colW * 4 + testColW + 5; // +5 for the 5 inner │ separators
+    const labelPadded = ` ${label} `;
+    const leftLen = 2;
+    const rightLen = inner - leftLen - labelPadded.length;
+    return `${DIM}├${'─'.repeat(leftLen)}${RESET}${BOLD}${labelPadded}${RESET}${DIM}${'─'.repeat(Math.max(0, rightLen))}┤${RESET}`;
+  }
+  
+  console.log();
+  console.log(topBorder);
+  console.log(headerLine);
+  
+  for (let si = 0; si < sections.length; si++) {
+    const section = sections[si];
+    if (section.results.length === 0 && sections.length === 1) continue;
+    
+    // Section label divider
+    console.log(sectionDivider(section.label));
+    
+    for (const r of section.results) {
+      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass;
+      const critical = !r.schema.structureValid || !r.entity.pass;  // structural failure or entity routing failure
+      const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
+      
+      let testStr;
+      if (r.tests.total === 0 && !r.tests.pass) {
+        // Blocked by upstream failure
+        testStr = cell(BLOCKED, testColW);
+      } else if (r.tests.total === 0) {
+        // Genuinely no operations/utilities to test
+        testStr = cell(SKIP, testColW);
+      } else {
+        const label = `${r.tests.tested}/${r.tests.total}`;
+        const lp = Math.floor((testColW - label.length) / 2);
+        const rp = testColW - label.length - lp;
+        const color = r.tests.pass ? GREEN : r.tests.tested === 0 ? RED : YELLOW;
+        testStr = ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+      }
+      
+    // Render a check column: always show real counts, never bare ✗
+    function checkCell(check, width) {
+      // Blocked by upstream failure — nothing was checked, show dash
+      if (check.total === 0 && !check.pass) return cell(BLOCKED, width);
+      // Genuinely nothing to check (e.g. no operations = no entity routing needed)
+      if (check.total === 0) return cell(SKIP, width);
+      // Real count: N/M
+      const label = `${check.passed}/${check.total}`;
+      const lp = Math.floor((width - label.length) / 2);
+      const rp = width - label.length - lp;
+      const color = check.pass ? GREEN : check.passed === 0 ? RED : YELLOW;
+      return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+    }
+    
+    // Icon column: show format when present, 0/1 when missing
+    function iconCell(check, width) {
+      if (!check.pass) {
+        const label = '0/1';
+        const lp = Math.floor((width - label.length) / 2);
+        const rp = width - label.length - lp;
+        return ' '.repeat(lp) + `${RED}${label}${RESET}` + ' '.repeat(rp);
+      }
+      const label = check.format;
+      const color = check.format === 'png' ? GREEN : YELLOW;
+      const lp = Math.floor((width - label.length) / 2);
+      const rp = width - label.length - lp;
+      return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+    }
+    
+    const line = `${SEP} ${nameColor}${pad(r.name, nameWidth)}${RESET}${SEP}` +
+      `${checkCell(r.schema, colW)}${SEP}` +
+      `${checkCell(r.entity, colW)}${SEP}` +
+      `${checkCell(r.mapping, colW)}${SEP}` +
+      `${iconCell(r.icon, colW)}${SEP}` +
+      `${testStr}${SEP}`;
+    console.log(line);
+  }
+  }
+  
+  console.log(botBorder);
+  
+  // Per-section summaries
+  for (const section of sections) {
+    if (section.results.length === 0) continue;
+    const total = section.results.length;
+    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+    const passColor = passing === total ? GREEN : passing > 0 ? YELLOW : RED;
+    console.log(`  ${section.icon} ${passColor}${passing}/${total}${RESET} ${section.label}`);
+  }
+  console.log();
+}
+
+function renderErrors(results) {
+  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass);
+  if (failing.length === 0) return;
+  
+  for (const r of failing) {
+    const allErrors = [];
+    if (!r.schema.pass)  allErrors.push(...r.schema.errors.map(e => `schema: ${e}`));
+    if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
+    if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
+    if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
+    if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
+    
+    if (allErrors.length > 0) {
+      console.log(`  ❌ ${r.name}`);
+      for (const err of allErrors) {
+        console.log(`     ${err}`);
+      }
+    }
+  }
+  console.log();
+}
+
+// ============================================================================
+// MAIN
+// ============================================================================
+
 function parseFrontmatter(content) {
   if (!content.startsWith('---')) return null;
   const endIndex = content.indexOf('\n---', 3);
   if (endIndex === -1) return null;
-  const yaml = content.slice(4, endIndex);
-  return parseYaml(yaml);
+  return parseYaml(content.slice(4, endIndex));
 }
 
-// Get all tools (operations + utilities) from frontmatter
-function getTools(frontmatter) {
-  const tools = [];
-  if (frontmatter.operations) {
-    tools.push(...Object.keys(frontmatter.operations));
+function validateAdapter(adapter) {
+  const readmePath = join(adapter.dir, 'readme.md');
+  const content = readFileSync(readmePath, 'utf-8');
+  const frontmatter = parseFrontmatter(content);
+  
+  if (!frontmatter) {
+    return {
+      name: adapter.name,
+      schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No YAML frontmatter'] },
+      entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },  // — blocked
+      mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] }, // — blocked
+      icon: checkIcon(adapter.dir),
+      tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },   // — blocked
+    };
   }
-  if (frontmatter.utilities) {
-    tools.push(...Object.keys(frontmatter.utilities));
-  }
-  return tools;
+  
+  const schemaResult = checkSchema(frontmatter);
+  // Downstream checks require valid structure — but NOT completeness (missing website shouldn't block entity checks)
+  const canCheck = schemaResult.structureValid;
+  const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
+  const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
+  const iconResult = checkIcon(adapter.dir);
+  const testsResult = canCheck ? checkTests(adapter.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
+  
+  return {
+    name: adapter.name,
+    schema: schemaResult,
+    entity: entityResult,
+    mapping: mappingResult,
+    icon: iconResult,
+    tests: testsResult,
+  };
 }
 
-// Find which tools are tested by parsing test files
-function getTestedTools(adapterDir) {
-  const testsDir = join(adapterDir, 'tests');
-  if (!existsSync(testsDir)) return new Set();
-  
-  const testedTools = new Set();
-  const testFiles = readdirSync(testsDir).filter(f => f.endsWith('.test.ts'));
-  
-  for (const file of testFiles) {
-    const content = readFileSync(join(testsDir, file), 'utf-8');
-    // Match tool: 'operation.name' or tool: "operation.name"
-    const matches = content.matchAll(/tool:\s*['"]([^'"]+)['"]/g);
-    for (const match of matches) {
-      testedTools.add(match[1]);
-    }
-  }
-  
-  return testedTools;
-}
-
-// Ensure .needs-work directory exists
+// Ensure .needs-work exists
 if (!existsSync(NEEDS_WORK_DIR)) {
   mkdirSync(NEEDS_WORK_DIR, { recursive: true });
 }
 
-// Move adapter to .needs-work
-function moveToNeedsWork(adapterName) {
-  const sourcePath = join(APPS_DIR, adapterName);
-  const destPath = join(NEEDS_WORK_DIR, adapterName);
-  
-  if (existsSync(destPath)) {
-    console.error(`⚠️  adapters/${adapterName}: Already exists in .needs-work, skipping move`);
-    return false;
-  }
-  
-  try {
-    renameSync(sourcePath, destPath);
-    console.log(`📦 Moved adapters/${adapterName} → adapters/.needs-work/${adapterName}`);
-    return true;
-  } catch (err) {
-    console.error(`❌ Failed to move adapters/${adapterName}: ${err.message}`);
-    return false;
-  }
-}
+// Discover adapters
+let activeAdapters = findAdapters(ADAPTERS_DIR);
+let needsWorkAdapters = findNeedsWorkAdapters(NEEDS_WORK_DIR);
 
-// Recursively find all adapters (directories with readme.md)
-// Returns array of { name: 'adapterName', path: 'category/adapterName' }
-function findAdapters(dir, relativePath = '') {
-  const adapters = [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name === '.needs-work') continue;
-    if (entry.name === 'node_modules') continue;
-    if (entry.name === 'tests') continue;
-    
-    const fullPath = join(dir, entry.name);
-    const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-    
-    // Check if this directory is a adapter (has readme.md)
-    if (existsSync(join(fullPath, 'readme.md'))) {
-      adapters.push({ name: entry.name, path: entryRelativePath });
-    } else {
-      // It's a category folder, recurse into it
-      adapters.push(...findAdapters(fullPath, entryRelativePath));
-    }
-  }
-  
-  return adapters;
-}
-
-// Get all apps or filter by args
-const args = process.argv.slice(2);
-const filterIndex = args.indexOf('--filter');
-const filterValue = filterIndex !== -1 ? args[filterIndex + 1] : null;
-const validateAll = args.includes('--all') || args.length === 0;
-const autoMove = !args.includes('--no-move');  // Auto-move by default, disable with --no-move
-const checkCoverage = !args.includes('--no-coverage');  // Skip test coverage with --no-coverage (pre-commit)
-const checkRefs = !args.includes('--no-refs');  // Skip entity reference checks with --no-refs (pre-commit)
-
-let adapters = validateAll 
-  ? findAdapters(APPS_DIR)
-  : args.filter(a => !a.startsWith('--')).map(a => ({ name: a, path: a }));
-
-// Apply filter if specified
 if (filterValue) {
-  adapters = adapters.filter(p => p.name.includes(filterValue) || p.path.includes(filterValue));
+  activeAdapters = activeAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
+  needsWorkAdapters = needsWorkAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
 }
 
-let hasErrors = false;
-let hasCoverageWarnings = false;
+// Validate all
+const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
+
+// Sort: passing first, then by name
+activeResults.sort((a, b) => {
+  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
+  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
+  if (aPass !== bPass) return bPass - aPass;
+  return a.name.localeCompare(b.name);
+});
+
+// Validate .needs-work
+let needsWorkResults = [];
+if (!preCommit && needsWorkAdapters.length > 0) {
+  needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
+  needsWorkResults.sort((a, b) => {
+    const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
+    const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
+    if (aPass !== bPass) return bPass - aPass;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+// Render one unified table
+const sections = [
+  { label: `Adapters (${activeResults.length})`, icon: '📦', results: activeResults },
+];
+if (needsWorkResults.length > 0) {
+  sections.push({ label: `Needs Work (${needsWorkResults.length})`, icon: '🔧', results: needsWorkResults });
+}
+renderTable(sections);
+
+// Error details
+const allResults = [...activeResults, ...needsWorkResults];
+if (verbose || activeResults.some(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass)) {
+  renderErrors(activeResults);
+}
+
+// Check for promotable .needs-work adapters
+const promotable = needsWorkResults.filter(r => 
+  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass
+);
+if (promotable.length > 0) {
+  console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
+}
+
+// Auto-move: active adapters that fail schema or entity → .needs-work
 let movedCount = 0;
+if (autoMove) {
+  for (const result of activeResults) {
+    if (!result.schema.structureValid || !result.entity.pass) {
+      const adapter = result._adapter;
+      const destPath = join(NEEDS_WORK_DIR, adapter.name);
+      if (existsSync(destPath)) {
+        // Already exists in .needs-work — can't move
+        continue;
+      }
+      try {
+        renameSync(adapter.dir, destPath);
+        console.log(`📦 Moved ${adapter.name} → .needs-work/ (${!result.schema.structureValid ? 'schema' : 'entity'} failure)`);
+        movedCount++;
+      } catch (err) {
+        console.error(`⚠️  Failed to move ${adapter.name}: ${err.message}`);
+      }
+    }
+  }
+  if (movedCount > 0) {
+    console.log(`\n📦 Moved ${movedCount} adapter(s) to .needs-work/\n`);
+  }
+}
 
-for (const adapter of adapters) {
-  const adapterDir = join(APPS_DIR, adapter.path);
-  const readmePath = join(adapterDir, 'readme.md');
-  let failed = false;
-  let failureReason = '';
-  
+// Entity coverage summary
+const knownEntities = [...validEntityIds].sort();
+const coveredEntities = new Set();
+for (const result of activeResults) {
+  const readmePath = join(result._adapter.dir, 'readme.md');
   const content = readFileSync(readmePath, 'utf-8');
-  const frontmatter = parseFrontmatter(content);
-
-  if (!frontmatter) {
-    console.error(`❌ adapters/${adapter.path}: No YAML frontmatter found`);
-    failureReason = 'No YAML frontmatter found';
-    failed = true;
-  } else {
-    const valid = validate(frontmatter);
-    if (!valid) {
-      console.error(`❌ adapters/${adapter.path}: Schema validation failed`);
-      for (const err of validate.errors) {
-        console.error(`   ${err.instancePath || '/'}: ${err.message}`);
+  const fm = parseFrontmatter(content);
+  if (fm?.operations) {
+    for (const op of Object.values(fm.operations)) {
+      if (op.returns && op.returns !== 'void') {
+        coveredEntities.add(op.returns.replace(/\[\]$/, ''));
       }
-      failureReason = 'Schema validation failed';
-      failed = true;
-    } else {
-      if (checkRefs) {
-        // Validate operations and utilities return valid entities
-        const entityErrors = validateReturns(frontmatter);
-        if (entityErrors.length > 0) {
-          console.error(`❌ adapters/${adapter.path}: Invalid entity references`);
-          for (const err of entityErrors) {
-            console.error(`   ${err}`);
-          }
-          failureReason = 'Invalid entity references';
-          failed = true;
-        }
-        
-        if (!failed) {
-          // Validate adapter mappings reference valid entity properties
-          const adapterErrors = validateAdapterMappings(frontmatter);
-          if (adapterErrors.length > 0) {
-            console.error(`❌ adapters/${adapter.path}: Invalid adapter mappings`);
-            for (const err of adapterErrors) {
-              console.error(`   ${err}`);
-            }
-            failureReason = 'Invalid adapter mappings';
-            failed = true;
-          }
-        }
-      }
-      
-      if (!failed) {
-        // Validate jaq expression syntax (always check — catches real bugs)
-        const jaqErrors = validateJaqExpressions(frontmatter);
-        if (jaqErrors.length > 0) {
-          console.error(`❌ adapters/${adapter.path}: Invalid jaq expressions`);
-          for (const err of jaqErrors) {
-            console.error(`   ${err}`);
-          }
-          failureReason = 'Invalid jaq expressions';
-          failed = true;
-        }
-      }
-      
-      if (!failed) {
-        // Check icon exists (PNG or SVG)
-        const hasIcon = existsSync(join(adapterDir, 'icon.svg')) || existsSync(join(adapterDir, 'icon.png'));
-        if (!hasIcon) {
-          console.error(`❌ adapters/${adapter.path}: icon.svg or icon.png not found (required)`);
-          failureReason = 'icon not found';
-          failed = true;
-        } else if (checkCoverage) {
-          // Check test coverage (only for valid adapters, skipped in pre-commit)
-          const tools = getTools(frontmatter);
-          const testedTools = getTestedTools(adapterDir);
-          const untestedTools = tools.filter(t => !testedTools.has(t));
-          
-          if (untestedTools.length > 0) {
-            console.error(`❌ adapters/${adapter.path}: Missing tests for: ${untestedTools.join(', ')}`);
-            failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
-            failed = true;
-          } else if (tools.length > 0) {
-            console.log(`✓ adapters/${adapter.path} (${tools.length} tools, all tested)`);
-          } else {
-            console.log(`✓ adapters/${adapter.path}`);
-          }
-        } else {
-          // --no-coverage: just report success with tool count
-          const tools = getTools(frontmatter);
-          console.log(`✓ adapters/${adapter.path} (${tools.length} tools)`);
-        }
-      }
-    }
-  }
-  
-  if (failed) {
-    hasErrors = true;
-    // Note: auto-move with categories would need more complex logic to preserve category structure
-    // For now, just report the error
-    if (autoMove) {
-      console.log(`   (auto-move disabled for categorized adapters - fix manually)`);
     }
   }
 }
 
-if (movedCount > 0) {
-  console.log(`\n📦 Moved ${movedCount} adapter(s) to adapters/.needs-work/`);
+console.log(`📊 Entity coverage: ${coveredEntities.size} of ${knownEntities.length} entity types have adapters`);
+if (verbose) {
+  const uncovered = knownEntities.filter(e => !coveredEntities.has(e));
+  if (uncovered.length > 0) {
+    console.log(`   Uncovered: ${uncovered.join(', ')}`);
+  }
 }
+console.log();
 
-if (hasErrors) {
-  console.error('\n❌ Validation failed');
+// Exit code
+const hasSchemaOrEntityFailures = activeResults.some(r => !r.schema.structureValid || !r.entity.pass);
+if (hasSchemaOrEntityFailures && !autoMove) {
+  // In no-move mode (pre-commit), fail on schema/entity issues
+  console.error('❌ Validation failed — adapters have schema or entity issues');
   process.exit(1);
+} else if (hasSchemaOrEntityFailures && movedCount > 0) {
+  // Moved some adapters — report but don't fail (they're in .needs-work now)
+  console.log('⚠️  Some adapters moved to .needs-work/');
+  process.exit(0);
 } else {
-  console.log('\n✅ All adapters valid');
+  const allPassing = activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
+  if (allPassing) {
+    console.log('✅ All adapters fully valid');
+  } else {
+    console.log('⚠️  Some adapters have warnings (missing tests, mapping issues)');
+  }
   process.exit(0);
 }

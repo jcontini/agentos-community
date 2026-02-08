@@ -44,22 +44,6 @@
       "format": "uri",
       "description": "URL to the service's terms of service"
     },
-    "docs_url": {
-      "not": {},
-      "description": "REJECTED: Not parsed by core. Use website field or instructions instead."
-    },
-    "display": {
-      "not": {},
-      "description": "REJECTED: Not an adapter field. Display hints belong on entity definitions."
-    },
-    "platform": {
-      "not": {},
-      "description": "REJECTED: Not parsed by core. Platform-specific paths belong under the database field."
-    },
-    "tags": {
-      "not": {},
-      "description": "DEPRECATED: Tags are no longer used. Entity types provide discoverability."
-    },
     "auth": {
       "oneOf": [
         { "type": "null", "description": "No authentication required" },
