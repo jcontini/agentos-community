@@ -1,0 +1,83 @@
+# Journey — The Narrative
+#
+# A curated path through outcomes. Most positions are inferred from
+# the enables graph via a goal outcome. Explicit 'includes' relationships
+# add outcomes the graph can't infer.
+#
+# What used to be separate concepts:
+#   Life plan, OKR cycle, sprint, project, roadmap, trip,
+#   story arc, bucket list, dream, campaign — all journeys.
+
+id: journey
+plural: journeys
+name: Journey
+description: A path through outcomes — a narrative with intention
+
+properties:
+  id:
+    type: string
+    required: true
+
+  name:
+    type: string
+    required: true
+    description: |
+      "Geographic Freedom", "Build AgentOS", "Spring Europe Trip",
+      "Q1 OKR Cycle", "Harry's Quest", "Last Night's Dream"
+
+  description:
+    type: string
+    description: The vision/intention behind this journey.
+
+  # The destination — everything enabling this is on the journey
+  goal:
+    type: string
+    nullable: true
+    references: outcome
+    description: |
+      The destination outcome. The enables graph is walked backward
+      from here to compute all positions on the journey.
+      Explicit 'includes' relationships add to this computed set.
+      If null, the journey is purely curated (bucket list, dream, playlist).
+      Skills rename: trip="destination", roadmap="target", okr="objective".
+
+  horizon:
+    type: string
+    description: |
+      Timescale. Not an enum — any string.
+      Common: life, decade, year, quarter, month, week, sprint, trip, story, dream.
+
+  started_at:
+    type: datetime
+    nullable: true
+
+  completed_at:
+    type: datetime
+    nullable: true
+
+  abandoned_at:
+    type: datetime
+    nullable: true
+
+  # Domain-specific extensions (skills define what goes here)
+  data:
+    type: object
+    description: |
+      Domain-specific extensions.
+      - Roadmap: { product: "AgentOS" }
+      - Trip: { origin: "Austin, TX", budget: 5000 }
+      - Dream: { dreamt_on: "2026-02-07", recurring: true }
+
+  created_at:
+    type: datetime
+  updated_at:
+    type: datetime
+
+identifiers: [name]
+operations: [list, get, create, update, archive]
+
+display:
+  primary: name
+  secondary: horizon
+  icon: map
+  show_as_app: true

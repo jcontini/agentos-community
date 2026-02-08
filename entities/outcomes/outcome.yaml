@@ -1,24 +1,25 @@
-# Outcome Entity - Universal Systems Primitive
+# Outcome — The Universal Atom
 #
-# Everything is an outcome. An outcome is an input to something else.
-# Models: roadmaps, OKRs, theory of change, biological systems, chemical reactions.
+# A state of the world that either exists or doesn't. At any scale.
+# Past or future. Intended or unintended.
+#
+# There are no tasks, milestones, goals, or destinations as separate concepts.
+# Only outcomes at different scales.
 
 id: outcome
 plural: outcomes
 name: Outcome
-description: A state or result that can enable other outcomes
+description: A state of the world — the universal planning primitive
 
 references:
-  # Theory of Change / Results Frameworks
   usaid: https://usaidlearninglab.org/lab-notes/what-results-framework
-  # System Dynamics
-  wikipedia: https://en.wikipedia.org/wiki/System_dynamics
+  system_dynamics: https://en.wikipedia.org/wiki/System_dynamics
+  theory_of_change: https://en.wikipedia.org/wiki/Theory_of_change
 
 properties:
   id:
     type: string
     required: true
-    description: Unique identifier
 
   name:
     type: string
@@ -27,7 +28,6 @@ properties:
 
   description:
     type: string
-    description: Detailed explanation (can be markdown)
 
   # Current state (changes over time)
   value:
@@ -36,7 +36,6 @@ properties:
 
   unit:
     type: string
-    description: Unit of measurement
 
   # Target (fixed when outcome is created)
   target:
@@ -48,27 +47,28 @@ properties:
         description: The goal number to hit
       date:
         type: date
-        description: Deadline to hit it by
+        description: When you want this state to exist by
 
-  # Achievement (date, not boolean!)
+  # Achievement and ending (dates, not booleans!)
   achieved:
     type: datetime
     nullable: true
-    description: |
-      Date the outcome was achieved. Null = not yet achieved.
-      Allows computing: on_time, days_late, etc.
+    description: When this outcome was achieved. Null = not yet.
 
-  # What this outcome produces (for enabling others)
+  ended:
+    type: datetime
+    nullable: true
+    description: When this outcome ceased to be true. Null = still active or N/A.
+
+  # What this outcome produces (for downstream dependencies)
   output:
     type: object
-    description: What this outcome outputs for downstream dependencies
+    description: What this outcome produces for downstream dependencies
     properties:
       metric:
         type: string
-        description: What is being output (completion, throughput, revenue...)
       value:
         type: number
-        description: Current output level
       unit:
         type: string
 
@@ -77,30 +77,23 @@ properties:
     type: array
     items:
       type: string
-    description: Observable indicators of progress
 
-  # Domain-specific extensions
+  # Domain-specific extensions (skills define what goes here)
   data:
     type: object
     description: |
-      Additional properties per domain. Examples:
-      - Roadmap: { timing: "now", title: "Entity Graph" }
-      - OKR: { quarter: "Q1", team: "engineering" }
-      - Health: { biomarker: "glucose", reference_range: {...} }
+      Domain-specific extensions. Skills define what goes here.
+      - Roadmap: { timing: "now" }
+      - Health: { biomarker: "glucose" }
+      - Trip: { location: { lat: 52.37, lng: 4.89 } }
+      - Dream: { dreamt_on: "2026-02-07" }
 
   created_at:
     type: datetime
-    description: When outcome was created
-
   updated_at:
     type: datetime
-    description: When outcome was last updated
 
-# For cross-adapter deduplication
-# Outcomes dedupe by name within their context
-identifiers:
-  - name
-
+identifiers: [name]
 operations: [list, get, create, update, archive]
 
 display:
