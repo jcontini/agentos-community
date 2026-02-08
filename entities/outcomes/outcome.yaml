@@ -94,13 +94,13 @@ properties:
     type: datetime
 
 identifiers: [name]
-operations: [list, get, create, update, archive]
+operations: [list, get, create, update, archive, complete, reopen]
 
 display:
   primary: name
   secondary: achieved
   icon: target
-  show_as_app: true
+  show_as_app: false  # subtypes (task, milestone) show as apps instead
   sort:
     - field: achieved
       null_last: true

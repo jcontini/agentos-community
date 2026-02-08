@@ -54,7 +54,7 @@ describe('Linear Adapter', () => {
       try {
         await aos().call('UseAdapter', {
           ...baseParams,
-          tool: 'task.delete',
+          tool: 'outcome.delete',
           params: { id: item.id },
           execute: true,
         });
@@ -64,13 +64,13 @@ describe('Linear Adapter', () => {
     }
   });
 
-  describe('task.list', () => {
+  describe('outcome.list', () => {
     it('returns an array of tasks', async () => {
       if (skipTests) return;
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.list',
+        tool: 'outcome.list',
         params: { limit: 5 },
       });
 
@@ -82,13 +82,13 @@ describe('Linear Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.list',
+        tool: 'outcome.list',
         params: { limit: 5 },
       });
 
       for (const task of tasks) {
         expect(task.id).toBeDefined();
-        expect(task.title).toBeDefined();
+        expect(task.name).toBeDefined();
         expect(task.adapter).toBe(adapter);
         
         // Linear-specific: should have source_id (e.g., "AGE-123")
@@ -96,20 +96,18 @@ describe('Linear Adapter', () => {
       }
     });
 
-    it('tasks have completed boolean field (entity schema compliance)', async () => {
+    it('outcomes have data.completed boolean field', async () => {
       if (skipTests) return;
       
-      const tasks = await aos().call('UseAdapter', {
+      const outcomes = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.list',
+        tool: 'outcome.list',
         params: { limit: 5 },
       });
 
-      // TODO: Fix transform layer to support ternary/comparison expressions
-      // The adapter mapping has: completed: ".state.type == 'completed'"
-      // but the server's evaluate_mapping_expression doesn't support this yet
-      for (const task of tasks) {
-        expect(typeof task.completed).toBe('boolean');
+      // The adapter mapping has: data.completed: '.state.type == "completed"'
+      for (const outcome of outcomes) {
+        expect(typeof outcome['data.completed']).toBe('boolean');
       }
     });
 
@@ -118,7 +116,7 @@ describe('Linear Adapter', () => {
       
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.list',
+        tool: 'outcome.list',
         params: { limit: 3 },
       });
 
@@ -126,7 +124,7 @@ describe('Linear Adapter', () => {
     });
   });
 
-  describe('task.create → task.get → task.update → task.delete', () => {
+  describe('outcome CRUD: create → get → update → delete', () => {
     let createdTask: any;
 
     it('can create a task', async () => {
@@ -140,7 +138,7 @@ describe('Linear Adapter', () => {
       
       createdTask = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.create',
+        tool: 'outcome.create',
         params: {
           title,
           description: 'Created by AgentOS integration test',
@@ -165,13 +163,13 @@ describe('Linear Adapter', () => {
 
       const task = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.get',
+        tool: 'outcome.get',
         params: { id: createdTask.id },
       });
 
       expect(task).toBeDefined();
       expect(task.id).toBe(createdTask.id);
-      expect(task.title).toContain(TEST_PREFIX);
+      expect(task.name).toContain(TEST_PREFIX);
     });
 
     it('can update the task', async () => {
@@ -185,10 +183,10 @@ describe('Linear Adapter', () => {
       
       const updated = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.update',
+        tool: 'outcome.update',
         params: {
           id: createdTask.id,
-          title: newTitle,
+          name: newTitle,
         },
         execute: true,
       });
@@ -205,7 +203,7 @@ describe('Linear Adapter', () => {
 
       const result = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.delete',
+        tool: 'outcome.delete',
         params: { id: createdTask.id },
         execute: true,
       });
@@ -218,13 +216,13 @@ describe('Linear Adapter', () => {
     });
   });
 
-  describe('project.list', () => {
+  describe('journey.list', () => {
     it('can list projects', async () => {
       if (skipTests) return;
       
       const projects = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'project.list',
+        tool: 'journey.list',
         params: {},
       });
 
@@ -350,7 +348,7 @@ describe('Linear Adapter', () => {
       // Get relations for any existing task
       const tasks = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.list',
+        tool: 'outcome.list',
         params: { limit: 1 },
       });
 
@@ -379,9 +377,9 @@ describe('Linear Adapter', () => {
 
       task1 = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.create',
+        tool: 'outcome.create',
         params: {
-          title: testContent('task1 for relations'),
+          name: testContent('task1 for relations'),
           team_id: teamId,
         },
         execute: true,
@@ -390,9 +388,9 @@ describe('Linear Adapter', () => {
 
       task2 = await aos().call('UseAdapter', {
         ...baseParams,
-        tool: 'task.create',
+        tool: 'outcome.create',
         params: {
-          title: testContent('task2 for relations'),
+          name: testContent('task2 for relations'),
           team_id: teamId,
         },
         execute: true,
@@ -483,7 +481,7 @@ describe('Linear Adapter', () => {
           try {
             await aos().call('UseAdapter', {
               ...baseParams,
-              tool: 'task.delete',
+              tool: 'outcome.delete',
               params: { id: task.id },
               execute: true,
             });

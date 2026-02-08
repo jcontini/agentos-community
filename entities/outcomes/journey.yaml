@@ -80,4 +80,4 @@ display:
   primary: name
   secondary: horizon
   icon: map
-  show_as_app: true
+  show_as_app: false  # subtypes (project, roadmap) show as apps instead

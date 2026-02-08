@@ -1,0 +1,56 @@
+# Tag — Universal Grouping Primitive
+#
+# A named label that can be applied to any entity. Tags are the universal
+# cross-cutting grouping mechanism — like albums, playlists, categories.
+#
+# Different systems call them different things:
+#   Todoist: labels
+#   Linear: labels
+#   GitHub: labels
+#   Gmail: labels
+#   Photos: tags/albums
+#   Bookmarks: tags
+#
+# All map to the same concept: a named collection you assign to things.
+
+id: tag
+plural: tags
+name: Tag
+description: A named label that can be applied to any entity
+
+properties:
+  id:
+    type: string
+    required: true
+
+  name:
+    type: string
+    required: true
+    description: Tag name (e.g., "urgent", "travel", "review")
+
+  color:
+    type: string
+    description: Display color (hex or named)
+
+  description:
+    type: string
+
+  data:
+    type: object
+    description: Domain-specific extensions
+
+  created_at:
+    type: datetime
+  updated_at:
+    type: datetime
+
+identifiers: [name]
+operations: [list, get, create, update, archive]
+
+display:
+  primary: name
+  icon: tag
+  show_as_app: true
+  sort:
+    - field: name
+      order: asc

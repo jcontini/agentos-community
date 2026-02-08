@@ -26,42 +26,45 @@ auth:
 # Mapping defined ONCE per entity — applied automatically to all operations.
 
 adapters:
-  task:
+  outcome:
     terminology: Task
     relationships:
-      task_project:
+      includes:
         support: full
         mutation: move_task  # Update can't change project — route through move endpoint
-      task_parent: full
-      task_labels: full
+      outcome_parent: full
+      outcome_labels: full
     mapping:
       id: .id
-      title: .content
+      name: .content
       description: .description
-      completed: .checked
-      priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
-      due_date: .due.date?
+      data.completed: .checked
+      data.priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
+      target.date: .due.date?
       created_at: .added_at
-      _project_id: .project_id
+      project_id:
+        ref: journey
+        value: .project_id
       _parent_id: .parent_id
       _labels: .labels
 
-  project:
+  journey:
     terminology: Project
     relationships:
-      project_parent: full
+      journey_parent: full
     mapping:
       id: .id
       name: .name
-      color: .color
+      data.color: .color
       _parent_id: .parent_id
 
-  label:
+  tag:
     terminology: Label
     mapping:
       id: .id
       name: .name
       color: .color
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -71,9 +74,9 @@ adapters:
 # Naming convention: {entity}.{operation}
 
 operations:
-  task.list:
-    description: List actionable tasks (due today, overdue, or in inbox)
-    returns: task[]
+  outcome.list:
+    description: List actionable outcomes (due today, overdue, or in inbox)
+    returns: outcome[]
     web_url: https://app.todoist.com/app/today
     params:
       query: { type: string, default: "today | overdue | #Inbox", description: "Todoist filter query" }
@@ -85,14 +88,14 @@ operations:
       response:
         root: /results
 
-  task.list_all:
-    description: List all tasks with optional filters (no smart defaults)
-    returns: task[]
+  outcome.list_all:
+    description: List all outcomes with optional filters (no smart defaults)
+    returns: outcome[]
     web_url: https://app.todoist.com/app/upcoming
     params:
-      project_id: { type: string, description: "Filter by project ID" }
+      project_id: { type: string, description: "Filter by journey (project) ID" }
       section_id: { type: string, description: "Filter by section ID" }
-      parent_id: { type: string, description: "Filter by parent task ID" }
+      parent_id: { type: string, description: "Filter by parent outcome ID" }
       label: { type: string, description: "Filter by label name" }
     rest:
       method: GET
@@ -105,9 +108,9 @@ operations:
       response:
         root: /results
 
-  task.filter:
-    description: Get tasks matching a Todoist filter query
-    returns: task[]
+  outcome.filter:
+    description: Get outcomes matching a Todoist filter query
+    returns: outcome[]
     web_url: https://app.todoist.com/app/today
     params:
       query: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
@@ -119,32 +122,32 @@ operations:
       response:
         root: /results
 
-  task.get:
-    description: Get a specific task by ID
-    returns: task
+  outcome.get:
+    description: Get a specific outcome by ID
+    returns: outcome
     web_url: '"https://app.todoist.com/app/task/" + .params.id'
     params:
-      id: { type: string, required: true, description: "Task ID" }
+      id: { type: string, required: true, description: "Outcome ID" }
     rest:
       method: GET
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
-  task.create:
-    description: Create a new task
-    returns: task
+  outcome.create:
+    description: Create a new outcome
+    returns: outcome
     params:
-      title: { type: string, required: true, description: "Task title" }
-      description: { type: string, description: "Task description" }
+      name: { type: string, required: true, description: "Outcome name" }
+      description: { type: string, description: "Outcome description" }
       due: { type: string, description: "Due date (natural language like 'tomorrow')" }
       priority: { type: integer, description: "Priority 1 (highest) to 4 (lowest)" }
-      project_id: { type: string, description: "Project ID" }
-      parent_id: { type: string, description: "Parent task ID (for subtasks)" }
+      project_id: { type: string, description: "Journey (project) ID" }
+      parent_id: { type: string, description: "Parent outcome ID (for sub-outcomes)" }
       labels: { type: array, description: "Label names" }
     rest:
       method: POST
       url: https://api.todoist.com/api/v1/tasks
       body:
-        content: .params.title
+        content: .params.name
         description: .params.description
         due_string: .params.due
         priority: 5 - .params.priority  # Invert: AgentOS 1=highest → Todoist 4=urgent
@@ -152,57 +155,57 @@ operations:
         parent_id: .params.parent_id
         labels: .params.labels
 
-  task.update:
-    description: Update an existing task (including moving to different project)
-    returns: task
+  outcome.update:
+    description: Update an existing outcome (including moving to different journey)
+    returns: outcome
     params:
-      id: { type: string, required: true, description: "Task ID" }
-      title: { type: string, description: "New title" }
+      id: { type: string, required: true, description: "Outcome ID" }
+      name: { type: string, description: "New name" }
       description: { type: string, description: "New description" }
       due: { type: string, description: "New due date" }
       priority: { type: integer, description: "New priority 1 (highest) to 4 (lowest)" }
       labels: { type: array, description: "New labels" }
-      project_id: { type: string, description: "Move to different project" }
+      project_id: { type: string, description: "Move to different journey (project)" }
     rest:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
       body:
-        content: .params.title
+        content: .params.name
         description: .params.description
         due_string: .params.due
         priority: 5 - .params.priority  # Invert: AgentOS 1=highest → Todoist 4=urgent
         labels: .params.labels
 
-  task.complete:
-    description: Mark a task as complete
+  outcome.complete:
+    description: Mark an outcome as achieved
     returns: void
     params:
-      id: { type: string, required: true, description: "Task ID" }
+      id: { type: string, required: true, description: "Outcome ID" }
     rest:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/close"'
 
-  task.reopen:
-    description: Reopen a completed task
+  outcome.reopen:
+    description: Reopen an achieved outcome
     returns: void
     params:
-      id: { type: string, required: true, description: "Task ID" }
+      id: { type: string, required: true, description: "Outcome ID" }
     rest:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/reopen"'
 
-  task.delete:
-    description: Delete a task
+  outcome.delete:
+    description: Delete an outcome
     returns: void
     params:
-      id: { type: string, required: true, description: "Task ID" }
+      id: { type: string, required: true, description: "Outcome ID" }
     rest:
       method: DELETE
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
-  project.list:
-    description: List all projects
-    returns: project[]
+  journey.list:
+    description: List all journeys (projects)
+    returns: journey[]
     web_url: https://app.todoist.com/app/projects/active
     rest:
       method: GET
@@ -210,9 +213,9 @@ operations:
       response:
         root: /results
 
-  label.list:
-    description: List all labels
-    returns: label[]
+  tag.list:
+    description: List all tags (labels)
+    returns: tag[]
     web_url: https://app.todoist.com/app/labels
     rest:
       method: GET
@@ -229,13 +232,13 @@ operations:
 
 utilities:
   move_task:
-    description: Move task to a different project, section, or parent
+    description: Move outcome to a different journey (project), section, or parent
     params:
-      id: { type: string, required: true, description: "Task ID to move" }
-      project_id: { type: string, description: "Target project ID" }
+      id: { type: string, required: true, description: "Outcome ID to move" }
+      project_id: { type: string, description: "Target journey (project) ID" }
       section_id: { type: string, description: "Target section ID" }
-      parent_id: { type: string, description: "Target parent task ID" }
-    returns: task
+      parent_id: { type: string, description: "Target parent outcome ID" }
+    returns: outcome
     rest:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/move"'
@@ -249,6 +252,8 @@ utilities:
 
 Personal task management integration using [Todoist API v1](https://developer.todoist.com/api/v1/).
 
+Todoist tasks map to **outcomes** and projects map to **journeys** in the AgentOS entity graph.
+
 ## Setup
 
 1. Get your API token from https://todoist.com/app/settings/integrations/developer
@@ -256,13 +261,13 @@ Personal task management integration using [Todoist API v1](https://developer.to
 
 ## Features
 
-- Full CRUD for tasks
-- Project and label support
-- Subtasks via parent_id
-- **Smart defaults**: `task.list` returns actionable tasks (today, overdue, inbox)
+- Full CRUD for outcomes (tasks)
+- Journeys (projects) and tags (labels)
+- Sub-outcomes via parent_id
+- **Smart defaults**: `outcome.list` returns actionable outcomes (today, overdue, inbox)
 - Rich filters via `query` param: `today`, `overdue`, `7 days`, `#ProjectName`, `@label`
-- Move tasks between projects, sections, or parents
-- `task.list_all` for raw list when you need everything
+- Move outcomes between journeys, sections, or parents
+- `outcome.list_all` for raw list when you need everything
 
 ## Priority Scale
 
@@ -278,6 +283,7 @@ AgentOS uses a universal priority scale (1=highest, 4=lowest). This adapter maps
 ## Technical Notes
 
 - Uses Todoist Unified API v1 (REST v2 and Sync v9 are deprecated)
-- Moving tasks is handled via dedicated `/move` endpoint
-- Include `project_id` in `task.update` to move — routed to move endpoint automatically
-- Recurring task due dates preserve the recurrence pattern
+- Moving outcomes is handled via dedicated `/move` endpoint
+- Include `project_id` in `outcome.update` to move — routed to move endpoint automatically
+- Recurring due dates preserve the recurrence pattern
+- `project_id` in the mapping creates an `includes` relationship (journey → outcome) via the ref system

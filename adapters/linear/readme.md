@@ -43,36 +43,40 @@ auth:
 # Mapping defined ONCE per entity — applied automatically to all operations.
 
 adapters:
-  task:
+  outcome:
     terminology: Issue
     relationships:
-      task_project: full
-      task_parent: full
-      task_labels: read_only
+      includes: full
+      outcome_parent: full
+      outcome_labels: read_only
     mapping:
       id: .id
-      remote_id: .identifier
-      title: .title
+      name: .title
       description: .description
-      completed: '.state.type == "completed"'
-      status: 'if .state.type == "completed" then "done" elif .state.type == "canceled" then "cancelled" elif .state.type == "started" then "in_progress" else "open" end'
-      priority: .priority
-      due_date: .dueDate
-      url: .url
+      data.remote_id: .identifier
+      data.completed: '.state.type == "completed"'
+      data.status: 'if .state.type == "completed" then "done" elif .state.type == "canceled" then "cancelled" elif .state.type == "started" then "in_progress" else "open" end'
+      data.priority: .priority
+      target.date: .dueDate
+      data.url: .url
       created_at: .createdAt
       updated_at: .updatedAt
       
       # Assignee display fields (denormalized for views)
       # Note: assignee, cycle, parent can be null — use (.x // {}).field for null safety
-      assignee.id: '(.assignee // {}).id'
-      assignee.name: '(.assignee // {}).name'
+      data.assignee.id: '(.assignee // {}).id'
+      data.assignee.name: '(.assignee // {}).name'
       
       # Typed reference: creates person entity + assigned_to relationship
       assigned_to:
         person:
           id: '(.assignee // {}).id'
           name: '(.assignee // {}).name'
-      project_id: '(.project // {}).id'
+
+      # Relationship ref: look up journey entity by project service_id
+      project_id:
+        ref: journey
+        value: '(.project // {}).id'
       _project_name: '(.project // {}).name'
       _team_id: '(.team // {}).id'
       _team_name: '(.team // {}).name'
@@ -84,15 +88,17 @@ adapters:
       _parent_id: '(.parent // {}).id'
       _labels: '[((.labels // {}).nodes // [])[] | .name]'
       _children: '[((.children // {}).nodes // [])[] | .id]'
-      blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
-      blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
 
-  project:
+      # Phase 2: these will become ref: outcome, rel: enables (needs array support)
+      _blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
+      _blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
+
+  journey:
     terminology: Project
     mapping:
       id: .id
       name: .name
-      state: .state
+      data.state: .state
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -102,9 +108,9 @@ adapters:
 # Naming convention: {entity}.{operation}
 
 operations:
-  task.list:
+  outcome.list:
     description: List issues with optional filters
-    returns: task[]
+    returns: outcome[]
     web_url: '"https://linear.app/" + .params.workspace_slug'
     params:
       limit: { type: integer, default: 50, description: "Max issues to return" }
@@ -143,9 +149,9 @@ operations:
       response:
         root: /data/issues/nodes
 
-  task.get:
+  outcome.get:
     description: Get a specific issue by ID
-    returns: task
+    returns: outcome
     params:
       id: { type: string, required: true, description: "Issue ID" }
     graphql:
@@ -172,16 +178,16 @@ operations:
       response:
         root: /data/issue
 
-  task.create:
+  outcome.create:
     description: Create a new issue
-    returns: task
+    returns: outcome
     params:
       team_id: { type: string, required: true, description: "Team ID (use get_teams to find)" }
-      title: { type: string, required: true, description: "Issue title" }
+      name: { type: string, required: true, description: "Issue title" }
       description: { type: string, description: "Issue description (markdown)" }
       priority: { type: integer, description: "Priority 0-4 (0=none, 1=urgent, 4=low)" }
-      project_id: { type: string, description: "Project ID" }
-      parent_id: { type: string, description: "Parent issue ID (for sub-issues)" }
+      project_id: { type: string, description: "Journey (project) ID" }
+      parent_id: { type: string, description: "Parent outcome ID (for sub-outcomes)" }
       due: { type: string, description: "Due date (ISO format)" }
     graphql:
       query: |
@@ -202,7 +208,7 @@ operations:
       variables:
         input:
           teamId: .params.team_id
-          title: .params.title
+          title: .params.name
           description: .params.description
           priority: .params.priority
           projectId: .params.project_id
@@ -211,12 +217,12 @@ operations:
       response:
         root: /data/issueCreate/issue
 
-  task.update:
+  outcome.update:
     description: Update an existing issue
-    returns: task
+    returns: outcome
     params:
       id: { type: string, required: true, description: "Issue ID" }
-      title: { type: string, description: "New title" }
+      name: { type: string, description: "New title" }
       description: { type: string, description: "New description" }
       priority: { type: integer, description: "New priority 0-4" }
       state_id: { type: string, description: "New workflow state ID" }
@@ -240,7 +246,7 @@ operations:
       variables:
         id: .params.id
         input:
-          title: .params.title
+          title: .params.name
           description: .params.description
           priority: .params.priority
           stateId: .params.state_id
@@ -248,7 +254,7 @@ operations:
       response:
         root: /data/issueUpdate/issue
 
-  task.delete:
+  outcome.delete:
     description: Delete an issue
     returns: void
     params:
@@ -261,9 +267,9 @@ operations:
       variables:
         id: .params.id
 
-  project.list:
-    description: List all projects
-    returns: project[]
+  journey.list:
+    description: List all journeys (projects)
+    returns: journey[]
     web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
     graphql:
       query: "{ projects { nodes { id name state } } }"
@@ -500,10 +506,10 @@ instructions: |
   - Requires team_id — if not set in account params, call get_teams first
   
   Completing/reopening issues:
-  1. Get the issue's team_id (from task.get or task.list)
+  1. Get the issue's team_id (from outcome.get or outcome.list)
   2. Call get_workflow_states with team_id
   3. Find state with type "completed" (for complete) or "backlog" (for reopen)
-  4. Call task.update with state_id
+  4. Call outcome.update with state_id
   
   Managing relationships:
   - add_blocker/add_related return operation_result with relation ID in `id` field
@@ -511,7 +517,7 @@ instructions: |
   - remove_relation takes relation_id param, returns operation_result
   
   Other notes:
-  - Issues have human-readable IDs like "AGE-123" (in remote_id field)
+  - Issues have human-readable IDs like "AGE-123" (in data.remote_id)
   - Priority: 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low
   - Web URLs: https://linear.app/{workspace_slug}/issue/{identifier}
 ---
@@ -519,6 +525,8 @@ instructions: |
 # Linear
 
 Project management integration for engineering teams.
+
+Linear issues map to **outcomes** and projects map to **journeys** in the AgentOS entity graph.
 
 ## Setup
 
@@ -529,10 +537,10 @@ Project management integration for engineering teams.
 
 ## Features
 
-- Full CRUD for issues (tasks)
-- Projects and cycles
+- Full CRUD for outcomes (issues)
+- Journeys (projects) and cycles
 - Workflow states (customizable per team)
-- Sub-issues via parent_id
+- Sub-outcomes via parent_id
 - Issue relationships (blocking, related)
 
 ## Workflow
@@ -547,7 +555,7 @@ Linear uses customizable workflow states per team. Common patterns:
 | completed | Done | done |
 | canceled | Canceled | cancelled |
 
-To change an issue's state, use `task.update` with `state_id` from `get_workflow_states`.
+To change an issue's state, use `outcome.update` with `state_id` from `get_workflow_states`.
 
 ## Priority Scale
 
@@ -564,6 +572,4 @@ To change an issue's state, use `task.update` with `state_id` from `get_workflow
 To mark an issue complete:
 1. Call `get_workflow_states` with the issue's team_id
 2. Find the state with `type: "completed"`
-3. Call `complete_task` with the issue id and state_id
-
-Or use `task.update` directly with `state_id`.
+3. Call `outcome.update` with the issue id and state_id
