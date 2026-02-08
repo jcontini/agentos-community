@@ -274,9 +274,9 @@ export class AgentOS {
     return this.mcp.call(tool, args);
   }
 
-  // Convenience method for UsePlugin
-  usePlugin(plugin: string, tool: string, params?: object, execute?: boolean) {
-    return this.call('UsePlugin', { plugin, tool, params, execute });
+  // Convenience method for UseAdapter
+  useAdapter(adapter: string, tool: string, params?: object, execute?: boolean) {
+    return this.call('UseAdapter', { adapter, tool, params, execute });
   }
 }
 

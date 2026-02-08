@@ -7,7 +7,7 @@
  * Using HTTP instead of MCP:
  * - Simpler (no JSON-RPC or stdio overhead)
  * - Same results (HTTP returns plain data, like MCP after unwrapping)
- * - Transport-agnostic (plugin tests should work regardless of interface)
+ * - Transport-agnostic (adapter tests should work regardless of interface)
  */
 
 import { beforeAll, afterAll } from 'vitest';

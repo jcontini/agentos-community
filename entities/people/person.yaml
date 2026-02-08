@@ -116,7 +116,7 @@ properties:
     items:
       type: object
       properties:
-        plugin:
+        adapter:
           type: string
         platform:
           type: string
@@ -131,7 +131,7 @@ properties:
     type: datetime
     description: When last updated
 
-# For cross-plugin deduplication
+# For cross-adapter deduplication
 # Ordered by strength - try each until a match is found
 identifiers:
   - phone

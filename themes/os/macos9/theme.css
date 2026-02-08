@@ -2548,18 +2548,18 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* =============================================================================
-   Plugin List Component
-   List of installed plugins with enable/disable toggles
+   Adapter List Component
+   List of installed adapters with enable/disable toggles
    ============================================================================= */
 
-.plugin-list {
+.adapter-list {
   display: flex;
   flex-direction: column;
 }
 
-.plugin-list--loading,
-.plugin-list--error,
-.plugin-list--empty {
+.adapter-list--loading,
+.adapter-list--error,
+.adapter-list--empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2567,45 +2567,45 @@ progress:not([value])::-webkit-progress-value {
   min-height: 150px;
 }
 
-.plugin-list-loading,
-.plugin-list-error,
-.plugin-list-empty {
+.adapter-list-loading,
+.adapter-list-error,
+.adapter-list-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 
-.plugin-list-loading .progress-bar {
+.adapter-list-loading .progress-bar {
   width: 200px;
 }
 
-.plugin-list-loading-text,
-.plugin-list-empty-text {
+.adapter-list-loading-text,
+.adapter-list-empty-text {
   font-size: 12px;
   color: var(--content-fg-secondary);
 }
 
-.plugin-list-error {
+.adapter-list-error {
   flex-direction: row;
   gap: 8px;
 }
 
-.plugin-list-error-icon {
+.adapter-list-error-icon {
   font-size: 16px;
 }
 
-.plugin-list-error-text {
+.adapter-list-error-text {
   font-size: 12px;
   color: #c00;
 }
 
 /* =============================================================================
-   Plugin List - Master/Detail Layout
+   Adapter List - Master/Detail Layout
    ============================================================================= */
 
 /* Master-detail container - override base flex-direction */
-.plugin-list--master-detail {
+.adapter-list--master-detail {
   display: flex;
   flex-direction: row;
   gap: 0;
@@ -2614,32 +2614,32 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Left pane: table list */
-.plugin-list-master {
+.adapter-list-master {
   flex: 0 0 55%;
   overflow: auto;
   border-right: 1px solid #000;
   box-shadow: 1px 0 0 #fff;
 }
 
-.plugin-list-master .detailed {
+.adapter-list-master .detailed {
   min-width: 100%;
 }
 
-.plugin-list-master .detailed tbody tr {
+.adapter-list-master .detailed tbody tr {
   cursor: pointer;
 }
 
-.plugin-list-master .detailed tbody tr:hover:not([aria-selected="true"]) {
+.adapter-list-master .detailed tbody tr:hover:not([aria-selected="true"]) {
   background: var(--content-bg-muted);
 }
 
-/* Disabled plugin text */
-.plugin-disabled {
+/* Disabled adapter text */
+.adapter-disabled {
   color: var(--content-fg-muted);
 }
 
 /* Right pane: details */
-.plugin-list-detail {
+.adapter-list-detail {
   flex: 1;
   overflow: auto;
   background: var(--content-bg-muted);
@@ -2647,13 +2647,13 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Detail panel - matches .store layout structure */
-.plugin-detail {
+.adapter-detail {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.plugin-detail--empty {
+.adapter-detail--empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2662,25 +2662,25 @@ progress:not([value])::-webkit-progress-value {
   font-size: 12px;
 }
 
-.plugin-detail-empty-text {
+.adapter-detail-empty-text {
   text-align: center;
 }
 
-.plugin-detail-header {
+.adapter-detail-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
 }
 
-.plugin-detail-name {
+.adapter-detail-name {
   margin: 0;
   font-size: 16px;
   font-weight: bold;
   color: var(--content-fg);
 }
 
-.plugin-detail-toggle {
+.adapter-detail-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2690,28 +2690,28 @@ progress:not([value])::-webkit-progress-value {
   white-space: nowrap;
 }
 
-.plugin-detail-toggle input {
+.adapter-detail-toggle input {
   cursor: pointer;
 }
 
-.plugin-detail-description {
+.adapter-detail-description {
   margin: 0;
   font-size: 12px;
   color: var(--content-fg);
   line-height: 1.5;
 }
 
-.plugin-detail-section {
+.adapter-detail-section {
   margin: 0;
   padding: 8px 10px;
 }
 
-.plugin-detail-section legend {
+.adapter-detail-section legend {
   font-weight: bold;
   font-size: 11px;
 }
 
-.plugin-detail-list {
+.adapter-detail-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2720,19 +2720,19 @@ progress:not([value])::-webkit-progress-value {
   gap: 2px;
 }
 
-.plugin-detail-list-item {
+.adapter-detail-list-item {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
   color: var(--content-fg);
   padding: 2px 0;
 }
 
-.plugin-detail-list-item::before {
+.adapter-detail-list-item::before {
   content: "• ";
   color: var(--content-fg-muted);
 }
 
-.plugin-detail-no-tools {
+.adapter-detail-no-tools {
   margin: 0;
   font-size: 11px;
   color: var(--content-fg-muted);
@@ -2896,7 +2896,7 @@ progress:not([value])::-webkit-progress-value {
 
 /* =============================================================================
    Credential List Component
-   Displays credential accounts grouped by plugin
+   Displays credential accounts grouped by adapter
    ============================================================================= */
 
 .credential-list {
@@ -2961,7 +2961,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Credential table columns */
-.credential-plugin {
+.credential-adapter {
   font-weight: 500;
   text-transform: capitalize;
 }
@@ -3355,7 +3355,7 @@ progress:not([value])::-webkit-progress-value {
   color: var(--url-color);
 }
 
-/* URL/File handlers display - grouped by plugin */
+/* URL/File handlers display - grouped by adapter */
 .setting-handlers {
   display: flex;
   flex-direction: column;
@@ -3380,7 +3380,7 @@ progress:not([value])::-webkit-progress-value {
   font-size: 12px;
 }
 
-.setting-handler-plugin {
+.setting-handler-adapter {
   font-weight: bold;
   font-size: 12px;
   color: var(--content-fg);
@@ -3423,7 +3423,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Rank number for ordered items */
-.setting-handler-pattern .plugin-rank {
+.setting-handler-pattern .adapter-rank {
   color: var(--content-fg-secondary);
   font-weight: 500;
 }
@@ -3779,17 +3779,17 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* =============================================================================
-   Plugin Grid Component
+   Adapter Grid Component
    ============================================================================= */
 
-.plugin-grid {
+.adapter-grid {
   width: 100%;
   outline: none;
 }
 
-.plugin-grid--loading,
-.plugin-grid--error,
-.plugin-grid--empty {
+.adapter-grid--loading,
+.adapter-grid--error,
+.adapter-grid--empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3797,39 +3797,39 @@ progress:not([value])::-webkit-progress-value {
   min-height: 200px;
 }
 
-.plugin-grid-loading,
-.plugin-grid-error,
-.plugin-grid-empty {
+.adapter-grid-loading,
+.adapter-grid-error,
+.adapter-grid-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 
-.plugin-grid-loading .progress-bar {
+.adapter-grid-loading .progress-bar {
   width: 200px;
 }
 
-.plugin-grid-loading-text,
-.plugin-grid-empty-text {
+.adapter-grid-loading-text,
+.adapter-grid-empty-text {
   font-size: 11px;
   color: #666;
 }
 
-.plugin-grid-error {
+.adapter-grid-error {
   color: #c00;
 }
 
-.plugin-grid-error-icon {
+.adapter-grid-error-icon {
   font-size: 24px;
 }
 
-.plugin-grid-error-text {
+.adapter-grid-error-text {
   font-size: 11px;
 }
 
 /* Grid item (icon + label) */
-.plugin-grid-item {
+.adapter-grid-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3840,23 +3840,23 @@ progress:not([value])::-webkit-progress-value {
   transition: background-color 0.1s;
 }
 
-.plugin-grid-item:hover {
+.adapter-grid-item:hover {
   background: rgba(0, 0, 0, 0.05);
 }
 
-.plugin-grid-item--selected {
+.adapter-grid-item--selected {
   background: var(--selection-bg, #3399ff);
 }
 
-.plugin-grid-item--selected .plugin-grid-item-name {
+.adapter-grid-item--selected .adapter-grid-item-name {
   color: var(--selection-fg, #fff);
 }
 
-.plugin-grid-item--disabled {
+.adapter-grid-item--disabled {
   opacity: 0.5;
 }
 
-.plugin-grid-item-icon {
+.adapter-grid-item-icon {
   width: 48px;
   height: 48px;
   display: flex;
@@ -3865,14 +3865,14 @@ progress:not([value])::-webkit-progress-value {
   margin-bottom: 4px;
 }
 
-.plugin-grid-item-icon img {
+.adapter-grid-item-icon img {
   width: 48px;
   height: 48px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.plugin-grid-item-fallback {
+.adapter-grid-item-fallback {
   width: 48px;
   height: 48px;
   display: flex;
@@ -3887,7 +3887,7 @@ progress:not([value])::-webkit-progress-value {
   color: #666;
 }
 
-.plugin-grid-item-name {
+.adapter-grid-item-name {
   font-size: 11px;
   color: #000;
   word-break: break-word;
@@ -3896,10 +3896,10 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* =============================================================================
-   Plugin Browser Component
+   Adapter Browser Component
    ============================================================================= */
 
-.plugin-browser {
+.adapter-browser {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -3907,9 +3907,9 @@ progress:not([value])::-webkit-progress-value {
   outline: none;
 }
 
-.plugin-browser--loading,
-.plugin-browser--error,
-.plugin-browser--empty {
+.adapter-browser--loading,
+.adapter-browser--error,
+.adapter-browser--empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3917,9 +3917,9 @@ progress:not([value])::-webkit-progress-value {
   min-height: 200px;
 }
 
-.plugin-browser-loading,
-.plugin-browser-error,
-.plugin-browser-empty {
+.adapter-browser-loading,
+.adapter-browser-error,
+.adapter-browser-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3928,20 +3928,20 @@ progress:not([value])::-webkit-progress-value {
   color: #666;
 }
 
-.plugin-browser-loading .progress-bar {
+.adapter-browser-loading .progress-bar {
   width: 200px;
 }
 
-.plugin-browser-error {
+.adapter-browser-error {
   color: #c00;
 }
 
-.plugin-browser-error-icon {
+.adapter-browser-error-icon {
   font-size: 24px;
 }
 
 /* Toolbar */
-.plugin-browser-toolbar {
+.adapter-browser-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3951,24 +3951,24 @@ progress:not([value])::-webkit-progress-value {
   flex-shrink: 0;
 }
 
-.plugin-browser-toolbar-left {
+.adapter-browser-toolbar-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.plugin-browser-toolbar-right {
+.adapter-browser-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.plugin-browser-count {
+.adapter-browser-count {
   font-size: 11px;
   color: #666;
 }
 
-.plugin-browser-view-switcher {
+.adapter-browser-view-switcher {
   display: flex;
   gap: 2px;
   background: var(--chrome-bg-inactive);
@@ -3977,7 +3977,7 @@ progress:not([value])::-webkit-progress-value {
   padding: 2px;
 }
 
-.plugin-browser-view-switcher button {
+.adapter-browser-view-switcher button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3991,12 +3991,12 @@ progress:not([value])::-webkit-progress-value {
   color: var(--chrome-fg-inactive);
 }
 
-.plugin-browser-view-switcher button:hover {
+.adapter-browser-view-switcher button:hover {
   background: var(--button-shadow-light);
   border-color: var(--tab-bg);
 }
 
-.plugin-browser-view-switcher button.active {
+.adapter-browser-view-switcher button.active {
   background: var(--chrome-border-light);
   border-color: var(--chrome-border-dark);
   color: var(--chrome-fg);
@@ -4004,25 +4004,25 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Content area */
-.plugin-browser-content {
+.adapter-browser-content {
   flex: 1;
   display: flex;
   overflow: hidden;
   min-height: 0;
 }
 
-.plugin-browser-content--with-detail {
+.adapter-browser-content--with-detail {
   /* When detail panel is shown, split view */
 }
 
-.plugin-browser-main {
+.adapter-browser-main {
   flex: 1;
   overflow: auto;
   min-width: 0;
 }
 
 /* Icon Grid View (using classic-stylesheets .icon-grid pattern) */
-.plugin-browser-icons {
+.adapter-browser-icons {
   display: grid;
   grid-template-columns: repeat(6, 80px);
   gap: 8px;
@@ -4030,7 +4030,7 @@ progress:not([value])::-webkit-progress-value {
   justify-content: start;
 }
 
-.plugin-browser-icons .icon {
+.adapter-browser-icons .icon {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4041,14 +4041,14 @@ progress:not([value])::-webkit-progress-value {
   width: 80px;
 }
 
-.plugin-browser-icons .icon img {
+.adapter-browser-icons .icon img {
   width: 32px;
   height: 32px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.plugin-browser-icons .icon .icon-label {
+.adapter-browser-icons .icon .icon-label {
   margin-top: 2px;
   font-size: 11px;
   color: #000;
@@ -4057,17 +4057,17 @@ progress:not([value])::-webkit-progress-value {
   line-height: 1.2;
 }
 
-.plugin-browser-icons .icon--selected .icon-label {
+.adapter-browser-icons .icon--selected .icon-label {
   background: var(--selection-bg, #000080);
   color: var(--selection-fg, #fff);
   padding: 0 2px;
 }
 
-.plugin-browser-icons .icon--disabled {
+.adapter-browser-icons .icon--disabled {
   opacity: 0.5;
 }
 
-.plugin-browser-icons .icon-fallback {
+.adapter-browser-icons .icon-fallback {
   width: 32px;
   height: 32px;
   display: flex;
@@ -4081,12 +4081,12 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* List View */
-.plugin-browser-list {
+.adapter-browser-list {
   margin: 0;
   padding: 0;
 }
 
-.plugin-browser-list li {
+.adapter-browser-list li {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4095,16 +4095,16 @@ progress:not([value])::-webkit-progress-value {
   font-size: 11px;
 }
 
-.plugin-browser-list li img {
+.adapter-browser-list li img {
   flex-shrink: 0;
 }
 
-.plugin-browser-list li[aria-selected="true"] {
+.adapter-browser-list li[aria-selected="true"] {
   background: var(--selection-bg, #000080);
   color: var(--selection-fg, #fff);
 }
 
-.plugin-browser-list .list-icon-fallback {
+.adapter-browser-list .list-icon-fallback {
   width: 16px;
   height: 16px;
   display: inline-flex;
@@ -4116,16 +4116,16 @@ progress:not([value])::-webkit-progress-value {
   font-weight: bold;
 }
 
-.plugin-browser-list .list-item--disabled {
+.adapter-browser-list .list-item--disabled {
   opacity: 0.6;
 }
 
 /* Details View (table) */
-.plugin-browser-details {
+.adapter-browser-details {
   width: 100%;
 }
 
-.plugin-browser-details .details-icon-fallback {
+.adapter-browser-details .details-icon-fallback {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4158,7 +4158,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Detail Panel */
-.plugin-detail-panel {
+.adapter-detail-panel {
   width: 280px;
   flex-shrink: 0;
   border-left: 1px solid var(--chrome-border-dark);
@@ -4168,7 +4168,7 @@ progress:not([value])::-webkit-progress-value {
   flex-direction: column;
 }
 
-.plugin-detail-panel-header {
+.adapter-detail-panel-header {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -4177,29 +4177,29 @@ progress:not([value])::-webkit-progress-value {
   border-bottom: 1px solid var(--tab-bg);
 }
 
-.plugin-detail-panel-header img {
+.adapter-detail-panel-header img {
   flex-shrink: 0;
 }
 
-.plugin-detail-panel-title {
+.adapter-detail-panel-title {
   flex: 1;
   min-width: 0;
 }
 
-.plugin-detail-panel-title h2 {
+.adapter-detail-panel-title h2 {
   margin: 0 0 4px 0;
   font-size: 14px;
   font-weight: bold;
 }
 
-.plugin-detail-panel-close {
+.adapter-detail-panel-close {
   flex-shrink: 0;
   padding: 2px 8px;
   font-size: 10px;
   cursor: pointer;
 }
 
-.plugin-detail-panel-description {
+.adapter-detail-panel-description {
   margin: 0;
   padding: 12px 16px;
   font-size: 11px;
@@ -4207,49 +4207,49 @@ progress:not([value])::-webkit-progress-value {
   border-bottom: 1px solid #ddd;
 }
 
-.plugin-detail-panel-actions {
+.adapter-detail-panel-actions {
   padding: 12px 16px;
   border-bottom: 1px solid #ddd;
 }
 
-.plugin-detail-panel-actions button {
+.adapter-detail-panel-actions button {
   width: 100%;
   padding: 6px 12px;
   font-size: 11px;
 }
 
-.plugin-detail-panel-section {
+.adapter-detail-panel-section {
   margin: 12px 16px;
   padding: 8px;
   border: 1px solid #ccc;
   background: #fff;
 }
 
-.plugin-detail-panel-section legend {
+.adapter-detail-panel-section legend {
   font-size: 11px;
   font-weight: bold;
   padding: 0 4px;
 }
 
-.plugin-detail-panel-list {
+.adapter-detail-panel-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.plugin-detail-panel-list li {
+.adapter-detail-panel-list li {
   padding: 2px 0;
   font-size: 11px;
   font-family: "Monaco", "Menlo", monospace;
 }
 
-.plugin-detail-panel-list li::before {
+.adapter-detail-panel-list li::before {
   content: "• ";
   color: #888;
 }
 
 /* Status bar */
-.plugin-browser-status {
+.adapter-browser-status {
   padding: 4px 8px;
   background: var(--tab-bg-active);
   border-top: 1px solid var(--chrome-border-dark);
@@ -4261,21 +4261,21 @@ progress:not([value])::-webkit-progress-value {
   text-overflow: ellipsis;
 }
 
-.plugin-browser-status-desc {
+.adapter-browser-status-desc {
   color: var(--chrome-fg-inactive);
 }
 
 /* =============================================================================
-   Plugin Detail View (full page)
+   Adapter Detail View (full page)
    ============================================================================= */
 
-.plugin-detail-view {
+.adapter-detail-view {
   padding: 24px;
   max-width: 600px;
 }
 
-.plugin-detail-view--loading,
-.plugin-detail-view--error {
+.adapter-detail-view--loading,
+.adapter-detail-view--error {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4283,8 +4283,8 @@ progress:not([value])::-webkit-progress-value {
   min-height: 200px;
 }
 
-.plugin-detail-view-loading,
-.plugin-detail-view-error {
+.adapter-detail-view-loading,
+.adapter-detail-view-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4293,20 +4293,20 @@ progress:not([value])::-webkit-progress-value {
   color: #666;
 }
 
-.plugin-detail-view-loading .progress-bar {
+.adapter-detail-view-loading .progress-bar {
   width: 200px;
 }
 
-.plugin-detail-view-error {
+.adapter-detail-view-error {
   color: #c00;
 }
 
-.plugin-detail-view-error-icon {
+.adapter-detail-view-error-icon {
   font-size: 24px;
 }
 
 /* Header */
-.plugin-detail-view-header {
+.adapter-detail-view-header {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
@@ -4314,17 +4314,17 @@ progress:not([value])::-webkit-progress-value {
   border-bottom: 1px solid #ccc;
 }
 
-.plugin-detail-view-icon {
+.adapter-detail-view-icon {
   flex-shrink: 0;
 }
 
-.plugin-detail-view-icon img {
+.adapter-detail-view-icon img {
   width: 64px;
   height: 64px;
   object-fit: contain;
 }
 
-.plugin-detail-view-icon-fallback {
+.adapter-detail-view-icon-fallback {
   width: 64px;
   height: 64px;
   display: flex;
@@ -4337,80 +4337,80 @@ progress:not([value])::-webkit-progress-value {
   color: #666;
 }
 
-.plugin-detail-view-info {
+.adapter-detail-view-info {
   flex: 1;
   min-width: 0;
 }
 
-.plugin-detail-view-name {
+.adapter-detail-view-name {
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: bold;
 }
 
-.plugin-detail-view-meta {
+.adapter-detail-view-meta {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.plugin-detail-view-id {
+.adapter-detail-view-id {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
   color: #666;
 }
 
 /* Sections */
-.plugin-detail-view-section {
+.adapter-detail-view-section {
   margin-bottom: 16px;
 }
 
-.plugin-detail-view-description {
+.adapter-detail-view-description {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: #333;
 }
 
-.plugin-detail-view-actions {
+.adapter-detail-view-actions {
   padding: 16px 0;
 }
 
-.plugin-detail-view-actions button {
+.adapter-detail-view-actions button {
   padding: 8px 20px;
 }
 
-.plugin-detail-view-section fieldset {
+.adapter-detail-view-section fieldset {
   margin: 0;
   padding: 12px;
   border: 1px solid #ccc;
   background: #fff;
 }
 
-.plugin-detail-view-section legend {
+.adapter-detail-view-section legend {
   font-size: 12px;
   font-weight: bold;
   padding: 0 6px;
 }
 
-.plugin-detail-view-list {
+.adapter-detail-view-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.plugin-detail-view-list-item {
+.adapter-detail-view-list-item {
   padding: 4px 8px;
   background: var(--content-bg-muted);
   border-radius: 3px;
 }
 
-.plugin-detail-view-list-item code {
+.adapter-detail-view-list-item code {
   font-family: "Monaco", "Menlo", monospace;
   font-size: 11px;
 }
 
-.plugin-detail-view-no-tools {
+.adapter-detail-view-no-tools {
   margin: 0;
   font-size: 11px;
   color: #666;
@@ -4869,7 +4869,7 @@ progress:not([value])::-webkit-progress-value {
 
 /* =============================================================================
  * Account List (Accounts app)
- * Master-detail view for managing plugin accounts and credentials
+ * Master-detail view for managing adapter accounts and credentials
  * ============================================================================= */
 
 .account-list {
@@ -4917,8 +4917,8 @@ progress:not([value])::-webkit-progress-value {
   font-size: 12px;
 }
 
-/* Plugin Items */
-.account-list-plugin-item {
+/* Adapter Items */
+.account-list-adapter-item {
   padding: 8px 12px;
   cursor: pointer;
   background: transparent;
@@ -4928,21 +4928,21 @@ progress:not([value])::-webkit-progress-value {
   gap: 8px;
 }
 
-.account-list-plugin-item:hover {
+.account-list-adapter-item:hover {
   background: var(--content-bg-subtle);
 }
 
-.account-list-plugin-item--selected {
+.account-list-adapter-item--selected {
   background: var(--content-bg);
 }
 
-.account-list-plugin-icon {
+.account-list-adapter-icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
 }
 
-.account-list-plugin-name {
+.account-list-adapter-name {
   flex: 1;
   font-size: 13px;
   font-weight: 400;
@@ -4952,7 +4952,7 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.account-list-plugin-name--selected {
+.account-list-adapter-name--selected {
   font-weight: 600;
 }
 
@@ -5000,27 +5000,27 @@ progress:not([value])::-webkit-progress-value {
   font-size: 11px;
 }
 
-/* Plugin Header in content */
-.account-list-plugin-header {
+/* Adapter Header in content */
+.account-list-adapter-header {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 20px;
 }
 
-.account-list-plugin-header-icon {
+.account-list-adapter-header-icon {
   width: 28px;
   height: 28px;
 }
 
-.account-list-plugin-title {
+.account-list-adapter-title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--content-fg);
 }
 
-.account-list-plugin-entities {
+.account-list-adapter-entities {
   font-size: 12px;
   color: var(--content-fg-secondary);
 }
@@ -5949,10 +5949,10 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* ==========================================================================
-   Plugin Detail View (Full Plugin Page with Navigation)
+   Adapter Detail View (Full Adapter Page with Navigation)
    ========================================================================== */
 
-.plugin-detail {
+.adapter-detail {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -5960,7 +5960,7 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-detail-back-btn {
+.adapter-detail-back-btn {
   padding: 5px 10px;
   border: 1px solid var(--content-border);
   background: var(--content-bg);
@@ -5970,11 +5970,11 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-detail-back-btn:hover {
+.adapter-detail-back-btn:hover {
   background: var(--content-bg-subtle);
 }
 
-.plugin-detail-badge {
+.adapter-detail-badge {
   padding: 3px 8px;
   background: var(--content-bg-muted);
   border-radius: 4px;
@@ -5983,21 +5983,21 @@ progress:not([value])::-webkit-progress-value {
   font-weight: 500;
 }
 
-.plugin-detail-source-link {
+.adapter-detail-source-link {
   color: var(--accent, #0066cc);
   font-size: 12px;
   text-decoration: none;
 }
 
-.plugin-detail-source-link:hover {
+.adapter-detail-source-link:hover {
   text-decoration: underline;
 }
 
-.plugin-detail-spacer {
+.adapter-detail-spacer {
   flex: 1;
 }
 
-.plugin-detail-install-btn {
+.adapter-detail-install-btn {
   padding: 6px 16px;
   background: var(--accent, #0066cc);
   color: #fff;
@@ -6008,16 +6008,16 @@ progress:not([value])::-webkit-progress-value {
   cursor: pointer;
 }
 
-.plugin-detail-install-btn:hover {
+.adapter-detail-install-btn:hover {
   filter: brightness(1.1);
 }
 
-.plugin-detail-install-btn:disabled {
+.adapter-detail-install-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.plugin-detail-uninstall-btn {
+.adapter-detail-uninstall-btn {
   padding: 6px 16px;
   background: var(--content-bg);
   color: var(--status-urgent, #cc0000);
@@ -6028,37 +6028,37 @@ progress:not([value])::-webkit-progress-value {
   cursor: pointer;
 }
 
-.plugin-detail-uninstall-btn:hover {
+.adapter-detail-uninstall-btn:hover {
   background: var(--content-bg-subtle);
 }
 
-.plugin-detail-uninstall-btn:disabled {
+.adapter-detail-uninstall-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.plugin-detail-error {
+.adapter-detail-error {
   padding: 12px 16px;
   background: var(--status-error-bg, #ffeaea);
   color: var(--status-urgent, #cc0000);
   font-size: 14px;
 }
 
-.plugin-detail-success {
+.adapter-detail-success {
   padding: 12px 16px;
   background: var(--status-success-bg, #e7f5e7);
   color: var(--status-success, #2d8a2d);
   font-size: 14px;
 }
 
-.plugin-detail-body {
+.adapter-detail-body {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
 /* Navigation sidebar - matches .store-sidebar structure */
-.plugin-detail-nav {
+.adapter-detail-nav {
   width: 200px;
   border-right: 1px solid var(--content-border);
   background: var(--content-bg-muted);
@@ -6067,7 +6067,7 @@ progress:not([value])::-webkit-progress-value {
   flex-direction: column;
 }
 
-.plugin-detail-nav-header {
+.adapter-detail-nav-header {
   padding: 10px 12px;
   border-bottom: 1px solid var(--content-border);
   font-weight: 600;
@@ -6078,12 +6078,12 @@ progress:not([value])::-webkit-progress-value {
   background: var(--content-bg-subtle);
 }
 
-.plugin-detail-nav-inner {
+.adapter-detail-nav-inner {
   flex: 1;
   overflow-y: auto;
 }
 
-.plugin-detail-nav-item {
+.adapter-detail-nav-item {
   padding: 8px 12px;
   cursor: pointer;
   display: flex;
@@ -6094,17 +6094,17 @@ progress:not([value])::-webkit-progress-value {
   background: transparent;
 }
 
-.plugin-detail-nav-item:hover:not(.plugin-detail-nav-item--active) {
+.adapter-detail-nav-item:hover:not(.adapter-detail-nav-item--active) {
   background: var(--content-bg-subtle);
 }
 
-.plugin-detail-nav-item--active {
+.adapter-detail-nav-item--active {
   background: var(--content-bg);
   font-weight: 600;
 }
 
 /* Content wrapper (holds brand bar + scrollable content) */
-.plugin-detail-content-wrapper {
+.adapter-detail-content-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -6112,8 +6112,8 @@ progress:not([value])::-webkit-progress-value {
   overflow: hidden;
 }
 
-/* Plugin brand bar (like Browser's connector bar) */
-.plugin-brand-bar {
+/* Adapter brand bar (like Browser's connector bar) */
+.adapter-brand-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6124,24 +6124,24 @@ progress:not([value])::-webkit-progress-value {
   flex-shrink: 0;
 }
 
-.plugin-brand-bar-left {
+.adapter-brand-bar-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.plugin-brand-bar-icon {
+.adapter-brand-bar-icon {
   width: 24px;
   height: 24px;
   object-fit: contain;
   border-radius: 4px;
 }
 
-.plugin-brand-bar-name {
+.adapter-brand-bar-name {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.plugin-brand-bar-source {
+.adapter-brand-bar-source {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -6153,17 +6153,17 @@ progress:not([value])::-webkit-progress-value {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.plugin-brand-bar-source:hover {
+.adapter-brand-bar-source:hover {
   opacity: 1;
 }
 
-.plugin-brand-bar-github {
+.adapter-brand-bar-github {
   width: 16px;
   height: 16px;
 }
 
 /* Content area */
-.plugin-detail-content {
+.adapter-detail-content {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
@@ -6171,39 +6171,39 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Overview description */
-.plugin-detail-overview-desc {
+.adapter-detail-overview-desc {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
   color: var(--content-fg);
 }
 
-.plugin-detail-loading {
+.adapter-detail-loading {
   text-align: center;
   padding: 40px;
   color: var(--content-fg-secondary);
 }
 
 /* Cards */
-.plugin-detail-card {
+.adapter-detail-card {
   background: var(--content-bg);
   border: 1px solid var(--content-border);
   border-radius: 8px;
   padding: 20px;
 }
 
-.plugin-detail-card--spaced {
+.adapter-detail-card--spaced {
   margin-top: 16px;
 }
 
 /* Header layout */
-.plugin-detail-header {
+.adapter-detail-header {
   display: flex;
   gap: 20px;
   align-items: flex-start;
 }
 
-.plugin-detail-icon {
+.adapter-detail-icon {
   width: 80px;
   height: 80px;
   background: var(--content-bg-subtle);
@@ -6215,65 +6215,65 @@ progress:not([value])::-webkit-progress-value {
   border: 1px solid var(--content-border);
 }
 
-.plugin-detail-icon img {
+.adapter-detail-icon img {
   width: 64px;
   height: 64px;
   object-fit: contain;
 }
 
-.plugin-detail-icon-fallback {
+.adapter-detail-icon-fallback {
   font-size: 48px;
 }
 
-.plugin-detail-info {
+.adapter-detail-info {
   flex: 1;
 }
 
-.plugin-detail-name {
+.adapter-detail-name {
   margin: 0 0 8px 0;
   font-size: 24px;
   color: var(--content-fg);
 }
 
-.plugin-detail-desc {
+.adapter-detail-desc {
   margin: 0 0 8px 0;
   color: var(--content-fg-secondary);
 }
 
-.plugin-detail-date {
+.adapter-detail-date {
   font-size: 13px;
   color: var(--content-fg-muted);
 }
 
 /* Section titles */
-.plugin-detail-section-title {
+.adapter-detail-section-title {
   margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--content-fg);
 }
 
-.plugin-detail-subsection-title {
+.adapter-detail-subsection-title {
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--content-fg);
 }
 
-.plugin-detail-section-desc {
+.adapter-detail-section-desc {
   color: var(--content-fg-secondary);
   font-size: 14px;
   margin-bottom: 16px;
 }
 
 /* Tags */
-.plugin-detail-tags {
+.adapter-detail-tags {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.plugin-detail-tag {
+.adapter-detail-tag {
   padding: 4px 10px;
   background: var(--accent-light, #e6f0ff);
   color: var(--accent, #0066cc);
@@ -6283,58 +6283,58 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Meta grid (Version, Author, etc.) */
-.plugin-detail-meta-grid {
+.adapter-detail-meta-grid {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 8px 16px;
   font-size: 14px;
 }
 
-.plugin-detail-meta-label {
+.adapter-detail-meta-label {
   color: var(--content-fg-secondary);
 }
 
-.plugin-detail-meta-value {
+.adapter-detail-meta-value {
   color: var(--content-fg);
 }
 
-.plugin-detail-meta-value--success {
+.adapter-detail-meta-value--success {
   color: var(--status-success, #2d8a2d);
 }
 
 /* Auth status */
-.plugin-detail-auth-status {
+.adapter-detail-auth-status {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.plugin-detail-auth-status--ok {
+.adapter-detail-auth-status--ok {
   color: var(--status-success, #2d8a2d);
   margin-bottom: 0;
 }
 
 /* Simplified auth section */
-.plugin-detail-auth-simple {
+.adapter-detail-auth-simple {
   font-size: 14px;
   color: var(--content-fg);
 }
 
-.plugin-detail-auth-simple p {
+.adapter-detail-auth-simple p {
   margin: 0 0 12px 0;
 }
 
-.plugin-detail-auth-count {
+.adapter-detail-auth-count {
   color: var(--status-success, #2d8a2d);
   font-weight: 500;
 }
 
-.plugin-detail-auth-warning {
+.adapter-detail-auth-warning {
   color: var(--status-warning, #b45309);
 }
 
-.plugin-detail-manage-btn {
+.adapter-detail-manage-btn {
   padding: 8px 16px;
   font-size: 13px;
   background: var(--accent, #0066cc);
@@ -6345,29 +6345,29 @@ progress:not([value])::-webkit-progress-value {
   font-weight: 500;
 }
 
-.plugin-detail-manage-btn:hover {
+.adapter-detail-manage-btn:hover {
   background: var(--accent-dark, #0052a3);
 }
 
-.plugin-detail-auth-label {
+.adapter-detail-auth-label {
   font-weight: 500;
 }
 
-.plugin-detail-help {
+.adapter-detail-help {
   margin-top: 16px;
 }
 
-.plugin-detail-help-label {
+.adapter-detail-help-label {
   color: var(--content-fg-secondary);
   font-size: 14px;
 }
 
 /* Code styles */
-.plugin-detail-mono {
+.adapter-detail-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.plugin-detail-code {
+.adapter-detail-code {
   background: var(--content-bg-muted);
   padding: 2px 6px;
   border-radius: 4px;
@@ -6377,7 +6377,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Entity cards */
-.plugin-detail-entity-card {
+.adapter-detail-entity-card {
   background: var(--content-bg-subtle);
   border: 1px solid var(--content-border);
   border-radius: 8px;
@@ -6385,35 +6385,35 @@ progress:not([value])::-webkit-progress-value {
   margin-bottom: 12px;
 }
 
-.plugin-detail-entity-card:last-child {
+.adapter-detail-entity-card:last-child {
   margin-bottom: 0;
 }
 
-.plugin-detail-entity-name {
+.adapter-detail-entity-name {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--content-fg);
 }
 
-.plugin-detail-entity-term {
+.adapter-detail-entity-term {
   font-size: 13px;
   color: var(--content-fg-secondary);
   margin-bottom: 8px;
 }
 
-.plugin-detail-entity-section {
+.adapter-detail-entity-section {
   margin-top: 12px;
 }
 
-.plugin-detail-entity-label {
+.adapter-detail-entity-label {
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 4px;
   color: var(--content-fg);
 }
 
-.plugin-detail-mapping-code {
+.adapter-detail-mapping-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   background: var(--content-bg);
@@ -6423,31 +6423,31 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Lists */
-.plugin-detail-list {
+.adapter-detail-list {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
   color: var(--content-fg);
 }
 
-.plugin-detail-list li {
+.adapter-detail-list li {
   margin-bottom: 4px;
 }
 
 /* Operations/Utilities */
-.plugin-detail-operation {
+.adapter-detail-operation {
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--content-border);
 }
 
-.plugin-detail-operation:last-child {
+.adapter-detail-operation:last-child {
   margin-bottom: 0;
   padding-bottom: 0;
   border-bottom: none;
 }
 
-.plugin-detail-operation-name {
+.adapter-detail-operation-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 15px;
   font-weight: 600;
@@ -6455,29 +6455,29 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-detail-operation-desc {
+.adapter-detail-operation-desc {
   font-size: 14px;
   color: var(--content-fg-secondary);
   margin-bottom: 8px;
 }
 
-.plugin-detail-operation-returns {
+.adapter-detail-operation-returns {
   font-size: 13px;
   margin-bottom: 8px;
   color: var(--content-fg);
 }
 
 /* Security section */
-.plugin-detail-security-section {
+.adapter-detail-security-section {
   margin-bottom: 20px;
 }
 
-.plugin-detail-security-group {
+.adapter-detail-security-group {
   margin-bottom: 8px;
 }
 
 /* Legal section */
-.plugin-detail-disclaimer {
+.adapter-detail-disclaimer {
   background: var(--status-warning-bg, #fffbeb);
   border: 1px solid var(--status-warning-border, #fde68a);
   border-radius: 6px;
@@ -6485,81 +6485,81 @@ progress:not([value])::-webkit-progress-value {
   margin-bottom: 20px;
 }
 
-.plugin-detail-disclaimer-content {
+.adapter-detail-disclaimer-content {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.plugin-detail-disclaimer-text {
+.adapter-detail-disclaimer-text {
   font-size: 13px;
   color: var(--content-fg);
 }
 
-.plugin-detail-disclaimer-text p {
+.adapter-detail-disclaimer-text p {
   margin: 4px 0 0 0;
 }
 
-.plugin-detail-links {
+.adapter-detail-links {
   margin: 0;
   padding-left: 20px;
   font-size: 14px;
   list-style: disc;
 }
 
-.plugin-detail-links li {
+.adapter-detail-links li {
   margin-bottom: 6px;
 }
 
-.plugin-detail-link {
+.adapter-detail-link {
   color: var(--accent, #0066cc);
   text-decoration: none;
 }
 
-.plugin-detail-link:hover {
+.adapter-detail-link:hover {
   text-decoration: underline;
 }
 
-/* Dark mode overrides for Plugin Detail */
-[data-mode="dark"] .plugin-detail-nav-item--active {
+/* Dark mode overrides for Adapter Detail */
+[data-mode="dark"] .adapter-detail-nav-item--active {
   background: rgba(var(--accent-rgb, 0, 102, 204), 0.2);
 }
 
-[data-mode="dark"] .plugin-detail-tag {
+[data-mode="dark"] .adapter-detail-tag {
   background: rgba(var(--accent-rgb, 0, 102, 204), 0.2);
 }
 
-[data-mode="dark"] .plugin-detail-error {
+[data-mode="dark"] .adapter-detail-error {
   background: rgba(204, 0, 0, 0.15);
 }
 
-[data-mode="dark"] .plugin-detail-success {
+[data-mode="dark"] .adapter-detail-success {
   background: rgba(45, 138, 45, 0.15);
 }
 
-[data-mode="dark"] .plugin-detail-disclaimer {
+[data-mode="dark"] .adapter-detail-disclaimer {
   background: rgba(255, 193, 7, 0.15);
   border-color: rgba(255, 193, 7, 0.3);
 }
 
 /* =============================================================================
-   Plugin Credentials Component (Shared)
+   Adapter Credentials Component (Shared)
    Used in Accounts app and Library Authentication tab
    ============================================================================= */
 
-.plugin-credentials {
+.adapter-credentials {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.plugin-credentials-header {
+.adapter-credentials-header {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-.plugin-credentials-icon {
+.adapter-credentials-icon {
   width: 48px;
   height: 48px;
   border-radius: 8px;
@@ -6569,24 +6569,24 @@ progress:not([value])::-webkit-progress-value {
   border: 1px solid var(--content-border);
 }
 
-.plugin-credentials-info {
+.adapter-credentials-info {
   flex: 1;
   min-width: 0;
 }
 
-.plugin-credentials-name {
+.adapter-credentials-name {
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: bold;
   color: var(--content-fg);
 }
 
-.plugin-credentials-entities {
+.adapter-credentials-entities {
   font-size: 12px;
   color: var(--content-fg-secondary);
 }
 
-.plugin-credentials-empty {
+.adapter-credentials-empty {
   padding: 20px;
   text-align: center;
   color: var(--content-fg-secondary);
@@ -6594,42 +6594,42 @@ progress:not([value])::-webkit-progress-value {
   border-radius: 6px;
 }
 
-.plugin-credentials-empty p {
+.adapter-credentials-empty p {
   margin: 0 0 8px 0;
 }
 
-.plugin-credentials-list {
+.adapter-credentials-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.plugin-credentials-card {
+.adapter-credentials-card {
   border: 1px solid var(--content-border);
   border-radius: 6px;
   padding: 12px;
   background: var(--content-bg-muted);
 }
 
-.plugin-credentials-card-header {
+.adapter-credentials-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.plugin-credentials-card-label {
+.adapter-credentials-card-label {
   font-weight: 600;
   font-size: 14px;
   color: var(--content-fg);
 }
 
-.plugin-credentials-card-preview {
+.adapter-credentials-card-preview {
   font-size: 12px;
   color: var(--content-fg-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.plugin-credentials-remove-btn {
+.adapter-credentials-remove-btn {
   padding: 4px 8px;
   font-size: 11px;
   color: var(--status-urgent, #c00);
@@ -6639,22 +6639,22 @@ progress:not([value])::-webkit-progress-value {
   cursor: pointer;
 }
 
-.plugin-credentials-remove-btn:hover {
+.adapter-credentials-remove-btn:hover {
   background: var(--status-urgent, #c00);
   color: #fff;
 }
 
-.plugin-credentials-params {
+.adapter-credentials-params {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--content-border);
 }
 
-.plugin-credentials-params--readonly {
+.adapter-credentials-params--readonly {
   background: transparent;
 }
 
-.plugin-credentials-params-header {
+.adapter-credentials-params-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -6666,7 +6666,7 @@ progress:not([value])::-webkit-progress-value {
   letter-spacing: 0.5px;
 }
 
-.plugin-credentials-edit-btn {
+.adapter-credentials-edit-btn {
   padding: 2px 8px;
   font-size: 11px;
   background: var(--content-bg);
@@ -6676,26 +6676,26 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-credentials-params-empty {
+.adapter-credentials-params-empty {
   font-size: 12px;
   color: var(--content-fg-muted);
   font-style: italic;
 }
 
-.plugin-credentials-params-list {
+.adapter-credentials-params-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.plugin-credentials-param-row {
+.adapter-credentials-param-row {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
 }
 
-.plugin-credentials-param-key {
+.adapter-credentials-param-key {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   background: var(--content-bg);
   padding: 2px 6px;
@@ -6704,11 +6704,11 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-credentials-param-value {
+.adapter-credentials-param-value {
   color: var(--content-fg-secondary);
 }
 
-.plugin-credentials-param-remove {
+.adapter-credentials-param-remove {
   padding: 0 4px;
   font-size: 14px;
   background: transparent;
@@ -6718,13 +6718,13 @@ progress:not([value])::-webkit-progress-value {
   line-height: 1;
 }
 
-.plugin-credentials-param-form {
+.adapter-credentials-param-form {
   display: flex;
   gap: 6px;
   margin-top: 8px;
 }
 
-.plugin-credentials-param-input {
+.adapter-credentials-param-input {
   padding: 4px 8px;
   font-size: 12px;
   border: 1px solid var(--content-border);
@@ -6733,16 +6733,16 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-credentials-param-input--key {
+.adapter-credentials-param-input--key {
   width: 100px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.plugin-credentials-param-input--value {
+.adapter-credentials-param-input--value {
   flex: 1;
 }
 
-.plugin-credentials-param-add-btn {
+.adapter-credentials-param-add-btn {
   padding: 4px 10px;
   font-size: 11px;
   background: var(--accent, #0066cc);
@@ -6752,17 +6752,17 @@ progress:not([value])::-webkit-progress-value {
   cursor: pointer;
 }
 
-.plugin-credentials-param-add-btn:disabled {
+.adapter-credentials-param-add-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.plugin-credentials-params-actions {
+.adapter-credentials-params-actions {
   margin-top: 8px;
   text-align: right;
 }
 
-.plugin-credentials-done-btn {
+.adapter-credentials-done-btn {
   padding: 4px 12px;
   font-size: 11px;
   background: var(--content-bg);
@@ -6772,16 +6772,16 @@ progress:not([value])::-webkit-progress-value {
   color: var(--content-fg);
 }
 
-.plugin-credentials-help {
+.adapter-credentials-help {
   margin-top: 8px;
 }
 
-.plugin-credentials-help-link {
+.adapter-credentials-help-link {
   font-size: 13px;
   color: var(--accent, #0066cc);
   text-decoration: none;
 }
 
-.plugin-credentials-help-link:hover {
+.adapter-credentials-help-link:hover {
   text-decoration: underline;
 }

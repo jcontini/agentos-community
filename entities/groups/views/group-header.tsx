@@ -23,8 +23,8 @@ export interface GroupHeaderProps {
   privacy?: string;
   /** Group URL */
   url?: string;
-  /** Plugin that provided this data (for platform-specific display) */
-  plugin?: string;
+  /** Adapter that provided this data (for platform-specific display) */
+  adapter?: string;
 }
 
 /**
@@ -47,10 +47,10 @@ function formatPrivacy(privacy?: string): string {
  * Get platform-specific display name
  * e.g., "r/programming" for Reddit, "Group Name" for Facebook
  */
-function getPlatformDisplayName(name?: string, plugin?: string): string | undefined {
+function getPlatformDisplayName(name?: string, adapter?: string): string | undefined {
   if (!name) return undefined;
   
-  switch (plugin) {
+  switch (adapter) {
     case 'reddit':
       return `r/${name}`;
     case 'facebook':
@@ -112,11 +112,11 @@ export function GroupHeader({
   memberCountNumeric,
   privacy,
   url,
-  plugin,
+  adapter,
 }: GroupHeaderProps) {
   const [imageError, setImageError] = useState(false);
   
-  const displayName = getPlatformDisplayName(name, plugin);
+  const displayName = getPlatformDisplayName(name, adapter);
   const displayMemberCount = formatMemberCount(memberCountNumeric || memberCount);
   const privacyLabel = formatPrivacy(privacy);
   

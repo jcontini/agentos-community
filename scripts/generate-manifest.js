@@ -71,10 +71,10 @@ function walkDirectory(dir, depth = 0, maxDepth = 3) {
 }
 
 /**
- * Extract metadata from a plugin directory
+ * Extract metadata from a adapter directory
  */
-function extractPluginMetadata(pluginDir) {
-  const readmePath = join(pluginDir, 'readme.md');
+function extractAdapterMetadata(adapterDir) {
+  const readmePath = join(adapterDir, 'readme.md');
   
   if (!existsSync(readmePath)) return null;
   
@@ -91,21 +91,21 @@ function extractPluginMetadata(pluginDir) {
   
   const metadata = yaml.load(frontMatterMatch[1]);
   
-  // Get relative path from plugins/ directory (e.g., "tasks/todoist")
-  const pluginsRoot = join(REPO_ROOT, 'plugins');
-  const relativePath = pluginDir.replace(pluginsRoot + '/', '');
+  // Get relative path from adapters/ directory (e.g., "tasks/todoist")
+  const adaptersRoot = join(REPO_ROOT, 'adapters');
+  const relativePath = adapterDir.replace(adaptersRoot + '/', '');
   
-  // Get the most recent file modification time in this plugin's folder
-  const updatedAt = getLatestModTime(pluginDir);
+  // Get the most recent file modification time in this adapter's folder
+  const updatedAt = getLatestModTime(adapterDir);
   
   // Extract entities from adapters keys (e.g., { post: {...}, group: {...} } → ["post", "group"])
   const entities = metadata.adapters ? Object.keys(metadata.adapters) : [];
   
   return {
-    id: metadata.id || basename(pluginDir),
-    name: metadata.name || basename(pluginDir),
+    id: metadata.id || basename(adapterDir),
+    name: metadata.name || basename(adapterDir),
     description: metadata.description || '',
-    icon: `plugins/${relativePath}/icon.svg`,
+    icon: `adapters/${relativePath}/icon.svg`,
     color: metadata.color || null,
     entities,
     version: metadata.version || '1.0.0',
@@ -213,16 +213,16 @@ function generateManifest() {
   const manifest = {
     version: '1.0.0',
     updated_at: new Date().toISOString(),
-    plugins: [],
+    adapters: [],
     apps: [],
     themes: [],
     components: [],
   };
   
-  // Scan plugins recursively (handles both flat and nested structures)
-  const pluginsDir = join(REPO_ROOT, 'plugins');
+  // Scan adapters recursively (handles both flat and nested structures)
+  const adaptersDir = join(REPO_ROOT, 'adapters');
   
-  function scanPluginsRecursive(dir, depth = 0, maxDepth = 3) {
+  function scanAdaptersRecursive(dir, depth = 0, maxDepth = 3) {
     if (depth > maxDepth) return;
     
     try {
@@ -234,14 +234,14 @@ function generateManifest() {
         const entryPath = join(dir, entry.name);
         
         if (entry.isDirectory()) {
-          // Check if this directory is a plugin (has readme.md)
+          // Check if this directory is a adapter (has readme.md)
           const readmePath = join(entryPath, 'readme.md');
           if (existsSync(readmePath)) {
-            const metadata = extractPluginMetadata(entryPath);
-            if (metadata) manifest.plugins.push(metadata);
+            const metadata = extractAdapterMetadata(entryPath);
+            if (metadata) manifest.adapters.push(metadata);
           } else {
             // It's a category folder, recurse into it
-            scanPluginsRecursive(entryPath, depth + 1, maxDepth);
+            scanAdaptersRecursive(entryPath, depth + 1, maxDepth);
           }
         }
       }
@@ -251,9 +251,9 @@ function generateManifest() {
   }
   
   try {
-    scanPluginsRecursive(pluginsDir);
+    scanAdaptersRecursive(adaptersDir);
   } catch (err) {
-    console.warn(`No plugins directory: ${err.message}`);
+    console.warn(`No adapters directory: ${err.message}`);
   }
   
   // Scan models (apps are spawned from models at runtime)
@@ -309,7 +309,7 @@ function generateManifest() {
   }
   
   // Sort each category by id
-  manifest.plugins.sort((a, b) => a.id.localeCompare(b.id));
+  manifest.adapters.sort((a, b) => a.id.localeCompare(b.id));
   manifest.apps.sort((a, b) => a.id.localeCompare(b.id));
   manifest.themes.sort((a, b) => a.id.localeCompare(b.id));
   manifest.components.sort((a, b) => a.id.localeCompare(b.id));
@@ -327,7 +327,7 @@ function main() {
   const manifest = generateManifest();
   
   console.log(`Found:`);
-  console.log(`  - ${manifest.plugins.length} plugins`);
+  console.log(`  - ${manifest.adapters.length} adapters`);
   console.log(`  - ${manifest.apps.length} apps`);
   console.log(`  - ${manifest.themes.length} themes`);
   console.log(`  - ${manifest.components.length} components`);

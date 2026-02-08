@@ -1,8 +1,8 @@
 # Contributing to the AgentOS Community
 
-Declarative YAML for entities, plugins, components, apps, and themes.
+Declarative YAML for entities, adapters, components, apps, and themes.
 
-**Schema reference:** `tests/plugins/plugin.schema.json` — the source of truth for plugin structure.
+**Schema reference:** `tests/adapters/adapter.schema.json` — the source of truth for adapter structure.
 
 **Using an AI agent?** Have it read `AGENTS.md` for operational guidance and workflow patterns.
 
@@ -14,20 +14,20 @@ Declarative YAML for entities, plugins, components, apps, and themes.
 
 ```bash
 # 1. Edit directly in installed folder (fast iteration)
-vim ~/.agentos/installed/plugins/reddit/readme.md
+vim ~/.agentos/installed/adapters/reddit/readme.md
 
 # 2. Restart server and test
 cd ~/dev/agentos && ./restart.sh
-curl -X POST http://localhost:3456/api/plugins/reddit/post.list \
+curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
 # 3. When working, copy to community repo
-cp -r ~/.agentos/installed/plugins/reddit ~/dev/agentos-community/plugins/
+cp -r ~/.agentos/installed/adapters/reddit ~/dev/agentos-community/adapters/
 
 # 4. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
-git add -A && git commit -m "Update Reddit plugin"
+git add -A && git commit -m "Update Reddit adapter"
 ```
 
 ---
@@ -55,7 +55,7 @@ node scripts/generate-manifest.js --check # Validate only
 - **Display** — how it appears in UI, whether it shows as an app
 - **Views** — TSX components for rendering
 
-Plugins are adapters that map external APIs to these entity types. No hardcoded types anywhere.
+Adapters are adapters that map external APIs to these entity types. No hardcoded types anywhere.
 
 ```
 entities/          Entity type definitions (single source of truth)
@@ -67,7 +67,7 @@ entities/          Entity type definitions (single source of truth)
 skills/            Workflow guides (how to use entities for specific domains)
   roadmap/         skill.md, skill.yaml — extends outcomes for project planning
 
-plugins/           Adapters (how services map to entities)
+adapters/           Adapters (how services map to entities)
   reddit/          Maps Reddit API → post entity
   todoist/         Maps Todoist API → task entity
   whatsapp/        Maps WhatsApp DB → message, conversation, person entities
@@ -77,17 +77,17 @@ themes/            Visual styling (CSS)
 
 **The flow:** 
 1. Skills define entity types (schema, display, views)
-2. Plugins declare which entities they provide (via `adapters:` section)
-3. Entities with `show_as_app: true` appear on the desktop when plugins support them
+2. Adapters declare which entities they provide (via `adapters:` section)
+3. Entities with `show_as_app: true` appear on the desktop when adapters support them
 
 ---
 
-## Writing Plugins
+## Writing Adapters
 
-**For detailed plugin writing guidance, read the skill:**
+**For detailed adapter writing guidance, read the skill:**
 
 ```bash
-~/.agentos/drive/skills/write-plugin.md
+~/.agentos/drive/skills/write-adapter.md
 ```
 
 This covers:
@@ -99,9 +99,9 @@ This covers:
 
 ### Quick Reference
 
-**Plugin structure:**
+**Adapter structure:**
 ```
-plugins/{name}/
+adapters/{name}/
   readme.md     # YAML front matter + docs
   icon.svg      # Required
   tests/        # Functional tests
@@ -123,8 +123,8 @@ Utilities are operations that don't fit standard CRUD patterns. Unlike operation
 |-------------|-------------|---------|
 | `void` | Side-effect only, raw response | `logo_url` (returns image) |
 | `operation_result` | Action success/fail | `remove_relation`, `dns_delete` |
-| Model reference | Structured data shared across plugins | `dns_list` → `dns_record[]` |
-| Inline schema | Plugin-specific introspection | `get_workflow_states` (Linear-only) |
+| Model reference | Structured data shared across adapters | `dns_list` → `dns_record[]` |
+| Inline schema | Adapter-specific introspection | `get_workflow_states` (Linear-only) |
 
 ### Standard Result Models
 
@@ -158,13 +158,13 @@ utilities:
 - An ID of an affected/created resource is the only meaningful output
 
 **Use a model reference when:**
-- Multiple plugins return the same shape (e.g., `dns_record` across Gandi, Porkbun)
+- Multiple adapters return the same shape (e.g., `dns_record` across Gandi, Porkbun)
 - The UI needs to render the result consistently
 - AI agents need a predictable contract for downstream actions
 
 **Use inline schema when:**
-- The data is plugin-specific introspection (`get_workflow_states`, `get_cycles`)
-- The shape is unlikely to be reused across plugins
+- The data is adapter-specific introspection (`get_workflow_states`, `get_cycles`)
+- The shape is unlikely to be reused across adapters
 - It's configuration/setup data, not domain data
 
 **Use `void` when:**
@@ -184,7 +184,7 @@ utilities:
   dns_list:
     returns: dns_record[]  # Defined in entities/common/
 
-# Good: Inline for plugin-specific introspection
+# Good: Inline for adapter-specific introspection
 utilities:
   get_workflow_states:
     returns:
@@ -255,12 +255,12 @@ Entity components live in `entities/{group}/views/`. They compose framework prim
 ```bash
 npm run validate              # Schema + test coverage (run first!)
 npm test                      # Functional tests
-npm test plugins/exa/tests    # Single plugin
+npm test adapters/exa/tests    # Single adapter
 ```
 
 **Validation checks:** Schema structure, test coverage, required files (icon).
 
-**`.needs-work/`** — Plugins that fail validation are auto-moved here.
+**`.needs-work/`** — Adapters that fail validation are auto-moved here.
 
 **Every operation needs at least one test.** Include `tool: "operation.name"` references even in skipped tests.
 
@@ -269,7 +269,7 @@ npm test plugins/exa/tests    # Single plugin
 ## Commands
 
 ```bash
-npm run new-plugin <name>    # Create plugin scaffold
+npm run new-adapter <name>    # Create adapter scaffold
 npm run validate             # Schema validation (run first!)
 npm test                     # Functional tests
 ```

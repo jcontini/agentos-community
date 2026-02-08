@@ -5,7 +5,7 @@
  * Lighter weight than MCP client - no JSON-RPC or stdio overhead.
  * 
  * Use for testing:
- * - Plugin execution (operations, utilities)
+ * - Adapter execution (operations, utilities)
  * - Activity logging
  * 
  * HTTP API returns plain data (not MCP-wrapped).
@@ -193,9 +193,9 @@ export class HttpTestClient extends EventEmitter {
   }
 
   /**
-   * Call a plugin tool via HTTP API
+   * Call a adapter tool via HTTP API
    * 
-   * For UsePlugin calls, uses /api/plugins/{plugin}/{tool}
+   * For UseAdapter calls, uses /api/adapters/{adapter}/{tool}
    * Other tools are not supported via HTTP (use MCP)
    */
   async call(tool: string, args: Record<string, unknown> = {}): Promise<unknown> {
@@ -203,17 +203,17 @@ export class HttpTestClient extends EventEmitter {
       throw new Error('Not connected');
     }
 
-    // UsePlugin is the standard way to call plugins
-    if (tool === 'UsePlugin') {
-      const { plugin, tool: pluginTool, params = {} } = args as {
-        plugin: string;
+    // UseAdapter is the standard way to call adapters
+    if (tool === 'UseAdapter') {
+      const { adapter, tool: adapterTool, params = {} } = args as {
+        adapter: string;
         tool: string;
         params?: Record<string, unknown>;
       };
       
-      this.log(`Calling ${plugin}/${pluginTool}:`, JSON.stringify(params).slice(0, 200));
+      this.log(`Calling ${adapter}/${adapterTool}:`, JSON.stringify(params).slice(0, 200));
 
-      const response = await fetch(`${BASE_URL}/api/plugins/${plugin}/${pluginTool}`, {
+      const response = await fetch(`${BASE_URL}/api/adapters/${adapter}/${adapterTool}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -235,15 +235,15 @@ export class HttpTestClient extends EventEmitter {
       return response.json();
     }
 
-    // Non-UsePlugin tools not supported via HTTP
-    throw new Error(`Tool "${tool}" not supported via HTTP API. Use MCP for non-plugin tools.`);
+    // Non-UseAdapter tools not supported via HTTP
+    throw new Error(`Tool "${tool}" not supported via HTTP API. Use MCP for non-adapter tools.`);
   }
 
   /**
-   * Call UsePlugin tool (convenience method)
+   * Call UseAdapter tool (convenience method)
    */
-  usePlugin(plugin: string, tool: string, params?: object, execute?: boolean): Promise<unknown> {
-    return this.call('UsePlugin', { plugin, tool, params, execute });
+  useAdapter(adapter: string, tool: string, params?: object, execute?: boolean): Promise<unknown> {
+    return this.call('UseAdapter', { adapter, tool, params, execute });
   }
 
   isConnected(): boolean {
@@ -281,10 +281,10 @@ export class AgentOS {
   }
 
   /**
-   * Call UsePlugin tool (convenience method)
+   * Call UseAdapter tool (convenience method)
    */
-  usePlugin(plugin: string, tool: string, params?: object, execute?: boolean): Promise<unknown> {
-    return this.http.usePlugin(plugin, tool, params, execute);
+  useAdapter(adapter: string, tool: string, params?: object, execute?: boolean): Promise<unknown> {
+    return this.http.useAdapter(adapter, tool, params, execute);
   }
 }
 

@@ -129,7 +129,7 @@ views:
           memberCountNumeric: "{{activity.response.member_count_numeric}}"
           privacy: "{{activity.response.privacy}}"
           url: "{{activity.response.url}}"
-          plugin: "{{activity.response.plugin}}"
+          adapter: "{{activity.response.adapter}}"
       - component: list
         data:
           source: activity

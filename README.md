@@ -1,6 +1,6 @@
 # AgentOS Community
 
-This repository is the hub of the AgentOS community—open-source plugins, components, apps, and agent configs for [AgentOS](https://github.com/jcontini/agentOS-core).
+This repository is the hub of the AgentOS community—open-source adapters, components, apps, and agent configs for [AgentOS](https://github.com/jcontini/agentOS-core).
 
 ---
 
@@ -16,7 +16,7 @@ Your tasks are in Todoist. Your calendar is in Google. Your messages are split a
 
 **You should own your digital life.** Not rent it. Not have it held hostage. Own it.
 
-AgentOS creates a universal entity model—tasks, events, contacts, messages, files—that works across all services. A Todoist plugin maps Todoist's API to the universal `task` entity. A Linear plugin does the same. From your AI's perspective, they're identical: `task.list()`, `task.create()`, `task.complete()`.
+AgentOS creates a universal entity model—tasks, events, contacts, messages, files—that works across all services. A Todoist adapter maps Todoist's API to the universal `task` entity. A Linear adapter does the same. From your AI's perspective, they're identical: `task.list()`, `task.create()`, `task.complete()`.
 
 This means:
 - **Migration is trivial** — Switch from Todoist to Linear? Same entity, different backend
@@ -30,20 +30,20 @@ This means:
 %%{init: {'theme': 'dark', 'themeVariables': { 'fontSize': '16px', 'fontFamily': 'ui-monospace, monospace', 'lineColor': '#6b7280', 'primaryTextColor': '#f3f4f6' }}}%%
 flowchart LR
     Entity(["📋 Entity<br/><small>schema + views + components</small>"])
-    Plugin(["⚡ Plugin<br/><small>reddit · youtube · todoist</small>"])
+    Adapter(["⚡ Adapter<br/><small>reddit · youtube · todoist</small>"])
     Cloud(["☁️ Cloud Services<br/><small>Reddit · YouTube · Todoist</small>"])
     Local(["💻 Your Computer<br/><small>Calendar · Contacts · iMessage</small>"])
     Framework(["🧩 Framework<br/><small>list · text · layout</small>"])
     Theme(["🎨 Theme<br/><small>Mac OS 9 · Windows 98</small>"])
     
-    Plugin -->|"provides"| Entity
-    Plugin -->|"connects to"| Cloud
-    Plugin -->|"connects to"| Local
+    Adapter -->|"provides"| Entity
+    Adapter -->|"connects to"| Cloud
+    Adapter -->|"connects to"| Local
     Entity -->|"uses"| Framework
     Theme -->|"styles"| Entity
     
     style Entity fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
-    style Plugin fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
+    style Adapter fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#d1fae5
     style Cloud fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
     style Local fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
     style Framework fill:#374151,stroke:#9ca3af,stroke-width:2px,color:#f3f4f6
@@ -65,9 +65,9 @@ flowchart LR
 
 ### For Everyone
 
-**You don't need to be technical to use AgentOS.** Enable plugins, connect your services, and your AI assistants can use them. The community builds the plugins—you just use them.
+**You don't need to be technical to use AgentOS.** Enable adapters, connect your services, and your AI assistants can use them. The community builds the adapters—you just use them.
 
-**You don't need to code to contribute.** Found a bug? Want a new plugin? Have an idea? Open an issue. The community is here to help.
+**You don't need to code to contribute.** Found a bug? Want a new adapter? Have an idea? Open an issue. The community is here to help.
 
 ---
 
@@ -77,7 +77,7 @@ This repository contains everything the AgentOS community builds:
 
 ```
 entities/          Self-contained packages (schema + views + components)
-plugins/           Service adapters (Reddit → post, YouTube → video, etc.)
+adapters/           Service adapters (Reddit → post, YouTube → video, etc.)
 themes/            Visual styling (CSS)
 agents/            Setup instructions for AI clients (Cursor, Claude, etc.)
 ```
@@ -89,7 +89,7 @@ agents/            Setup instructions for AI clients (Cursor, Claude, etc.)
 - **Views** — how to render each operation
 - **Components** — the UI pieces
 
-When you install a plugin that uses `post`, you effectively get a "Posts" app.
+When you install a adapter that uses `post`, you effectively get a "Posts" app.
 
 ```
 entities/
@@ -105,12 +105,12 @@ entities/
   webpages.yaml
 ```
 
-### Plugins
+### Adapters
 
 Service adapters that transform API responses into entities.
 
 ```
-plugins/
+adapters/
   reddit/
     readme.md       # YAML config + markdown docs
     icon.png        # Square icon
@@ -120,7 +120,7 @@ plugins/
   ...
 ```
 
-| Plugin | Entity | What it provides |
+| Adapter | Entity | What it provides |
 |--------|--------|------------------|
 | reddit | post | Posts and comments from Reddit |
 | youtube | video | Video metadata and transcripts |
@@ -153,9 +153,9 @@ agents/
 
 ## Contributing
 
-**Anyone can contribute.** You don't need to code. Found a bug? Want a new plugin? Have an idea? [Open an issue](https://github.com/jcontini/agentos-community/issues) or see [CONTRIBUTING.md](CONTRIBUTING.md) for how to build plugins.
+**Anyone can contribute.** You don't need to code. Found a bug? Want a new adapter? Have an idea? [Open an issue](https://github.com/jcontini/agentos-community/issues) or see [CONTRIBUTING.md](CONTRIBUTING.md) for how to build adapters.
 
-**The community builds everything.** Plugins, components, apps, themes—all open source, all MIT licensed, all yours forever.
+**The community builds everything.** Adapters, components, apps, themes—all open source, all MIT licensed, all yours forever.
 
 ---
 
@@ -171,7 +171,7 @@ By contributing, you grant AgentOS the right to use your contributions in offici
 
 **The AgentOS App Store fetches items directly from this repository.** No backend servers, no infrastructure costs—GitHub IS the backend.
 
-When you add or modify plugins/models/themes/components, a GitHub Action automatically:
+When you add or modify adapters/models/themes/components, a GitHub Action automatically:
 1. Scans the repository structure
 2. Reads metadata from YAML front matter
 3. Generates an updated `manifest.json`
@@ -182,17 +182,17 @@ When you add or modify plugins/models/themes/components, a GitHub Action automat
 ### Installing Items
 
 From the AgentOS UI (coming soon):
-- Browse plugins, apps, themes, components
+- Browse adapters, apps, themes, components
 - Click "Install" → downloads to `~/.agentos/installed/`
 - Status checking detects missing files
 - Uninstall always works (even if files deleted)
 
 From the API:
 ```bash
-# Install a plugin
+# Install a adapter
 curl -X POST http://localhost:3456/api/store/install \
   -H "Content-Type: application/json" \
-  -d '{"type":"plugin","id":"todoist"}'
+  -d '{"type":"adapter","id":"todoist"}'
 
 # List installed
 curl http://localhost:3456/api/store/installed
@@ -201,7 +201,7 @@ curl http://localhost:3456/api/store/installed
 ### Available Items
 
 Current manifest includes:
-- **14+ plugins** — todoist, linear, exa, firecrawl, youtube, reddit, and more
+- **14+ adapters** — todoist, linear, exa, firecrawl, youtube, reddit, and more
 - **10+ entities** — post, video, task, event, message, webpage, and more
 - **1 theme** — macos9 (more coming)
 
@@ -215,4 +215,4 @@ cd agentos-community
 npm install    # Sets up pre-commit hooks
 ```
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for plugin development, testing, and contribution guidelines.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for adapter development, testing, and contribution guidelines.

@@ -16,13 +16,13 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 
 | Skill | When to Use |
 |-------|-------------|
-| `write-plugin.md` | Creating or modifying plugins |
+| `write-adapter.md` | Creating or modifying adapters |
 
 ---
 
 ## Second: Read CONTRIBUTING.md
 
-**CONTRIBUTING.md is the source of truth** for plugin structure, entity schemas, component rules, and testing. Read it before making changes.
+**CONTRIBUTING.md is the source of truth** for adapter structure, entity schemas, component rules, and testing. Read it before making changes.
 
 This file (AGENTS.md) adds agent-specific workflow guidance.
 
@@ -30,7 +30,7 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 
 ## What This Repo Is
 
-**Community content for AgentOS** — plugins, entities, themes, and components that users install via the App Store.
+**Community content for AgentOS** — adapters, entities, themes, and components that users install via the App Store.
 
 - **Core repo** (`agentos`) — the Rust/React app itself
 - **This repo** (`agentos-community`) — installable content
@@ -43,7 +43,7 @@ When users click "Install" in the AgentOS App Store, it downloads from this repo
 
 | Path | Purpose |
 |------|---------|
-| `plugins/` | Service adapters (Reddit → post, YouTube → video, etc.) |
+| `adapters/` | Service adapters (Reddit → post, YouTube → video, etc.) |
 | `entities/` | Entity schemas + views + components (apps spawn from entities at runtime) |
 | `skills/` | Workflow guides (how to use entities for specific domains) |
 | `themes/` | Visual styling (CSS) |
@@ -51,17 +51,17 @@ When users click "Install" in the AgentOS App Store, it downloads from this repo
 | `tests/` | Test utilities and fixtures |
 | `scripts/` | Manifest generation, setup scripts |
 
-### Plugin Organization
+### Adapter Organization
 
-Plugins are organized by category:
+Adapters are organized by category:
 
 ```
-plugins/
-  todoist/           # Top-level for common plugins
+adapters/
+  todoist/           # Top-level for common adapters
   linear/
   exa/
   apple-calendar/    # Native macOS integrations
-  .needs-work/       # Plugins that need completion
+  .needs-work/       # Adapters that need completion
     communication/
     databases/
     government/
@@ -75,20 +75,20 @@ plugins/
 
 ```bash
 # 1. Edit directly in installed folder (fast iteration)
-vim ~/.agentos/installed/plugins/reddit/readme.md
+vim ~/.agentos/installed/adapters/reddit/readme.md
 
 # 2. Restart AgentOS server and test
 cd ~/dev/agentos && ./restart.sh
-curl -X POST http://localhost:3456/api/plugins/reddit/post.list \
+curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
 # 3. When working, copy to community repo
-cp -r ~/.agentos/installed/plugins/reddit ~/dev/agentos-community/plugins/
+cp -r ~/.agentos/installed/adapters/reddit ~/dev/agentos-community/adapters/
 
 # 4. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
-git add -A && git commit -m "Update Reddit plugin"
+git add -A && git commit -m "Update Reddit adapter"
 ```
 
 **Why this workflow:**
@@ -103,8 +103,8 @@ git add -A && git commit -m "Update Reddit plugin"
 ```bash
 npm run validate              # Schema validation + test coverage (run first!)
 npm test                      # Functional tests (excludes .needs-work)
-npm run test:needs-work       # Test plugins in .needs-work
-npm test plugins/exa/tests    # Test specific plugin
+npm run test:needs-work       # Test adapters in .needs-work
+npm test adapters/exa/tests    # Test specific adapter
 ```
 
 ### Validation vs Tests
@@ -118,9 +118,9 @@ npm test plugins/exa/tests    # Test specific plugin
 
 ---
 
-## Plugin Checklist
+## Adapter Checklist
 
-Before committing a plugin:
+Before committing a adapter:
 
 - [ ] `icon.svg` or `icon.png` exists
 - [ ] `npm run validate` passes
@@ -129,7 +129,7 @@ Before committing a plugin:
 
 ## Expression Syntax
 
-Plugins use **jaq expressions** (jq syntax), not template strings:
+Adapters use **jaq expressions** (jq syntax), not template strings:
 
 ```yaml
 # Correct — jaq expressions
@@ -150,7 +150,7 @@ url: "https://api.example.com/tasks/{{params.id}}"
 - Optional: `.due.date?`
 - Conditional: `'if .params.x == "y" then "a" else "b" end'`
 
-See CONTRIBUTING.md for detailed plugin structure, adapters, executors, and transforms.
+See CONTRIBUTING.md for detailed adapter structure, adapters, executors, and transforms.
 
 ---
 
@@ -188,16 +188,16 @@ See CONTRIBUTING.md for full component guidelines.
 
 ## The `.needs-work` Folder
 
-Plugins that fail validation are moved to `plugins/.needs-work/`:
+Adapters that fail validation are moved to `adapters/.needs-work/`:
 
 - Missing `icon.svg`
 - Schema validation errors
 - Missing tests for operations
 
-**To fix a plugin:**
+**To fix a adapter:**
 1. Fix the issues
 2. Run `npm run validate`
-3. Move to working folder: `mv plugins/.needs-work/my-plugin plugins/my-plugin`
+3. Move to working folder: `mv adapters/.needs-work/my-adapter adapters/my-adapter`
 
 ---
 
@@ -218,7 +218,7 @@ node scripts/generate-manifest.js --check  # Validate only
 
 | File | Purpose |
 |------|---------|
-| `CONTRIBUTING.md` | Complete technical reference — plugin structure, entities, components |
-| `tests/plugins/plugin.schema.json` | Schema source of truth for plugin YAML |
+| `CONTRIBUTING.md` | Complete technical reference — adapter structure, entities, components |
+| `tests/adapters/adapter.schema.json` | Schema source of truth for adapter YAML |
 | `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
 | `entities/{group}/{entity}.yaml` | Entity schema — what properties to map |

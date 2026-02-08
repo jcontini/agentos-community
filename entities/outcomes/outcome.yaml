@@ -96,7 +96,7 @@ properties:
     type: datetime
     description: When outcome was last updated
 
-# For cross-plugin deduplication
+# For cross-adapter deduplication
 # Outcomes dedupe by name within their context
 identifiers:
   - name

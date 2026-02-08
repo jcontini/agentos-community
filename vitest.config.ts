@@ -2,16 +2,16 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Look for tests in plugins and tests directories
+    // Look for tests in adapters and tests directories
     include: [
-      'plugins/**/tests/**/*.test.ts',
+      'adapters/**/tests/**/*.test.ts',
       'tests/**/*.test.ts',
-      'tests/plugins/**/*.test.ts',
+      'tests/adapters/**/*.test.ts',
       'tests/entities/**/*.test.ts',
     ],
-    // Exclude plugins in .needs-work folder
+    // Exclude adapters in .needs-work folder
     exclude: [
-      'plugins/.needs-work/**',
+      'adapters/.needs-work/**',
       'node_modules/**',
     ],
     

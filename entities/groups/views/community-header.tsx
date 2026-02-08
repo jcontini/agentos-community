@@ -13,18 +13,18 @@ export interface CommunityHeaderProps {
   name?: string;
   /** Community URL */
   url?: string;
-  /** Plugin that provided this data (for platform-specific display) */
-  plugin?: string;
+  /** Adapter that provided this data (for platform-specific display) */
+  adapter?: string;
 }
 
 /**
  * Get platform-specific community display name
  * e.g., "r/programming" for Reddit
  */
-function formatCommunity(name?: string, plugin?: string): string | undefined {
+function formatCommunity(name?: string, adapter?: string): string | undefined {
   if (!name) return undefined;
   
-  switch (plugin) {
+  switch (adapter) {
     case 'reddit':
       return `r/${name}`;
     default:
@@ -35,11 +35,11 @@ function formatCommunity(name?: string, plugin?: string): string | undefined {
 /**
  * Get platform-specific community URL
  */
-function getCommunityUrl(name?: string, plugin?: string, providedUrl?: string): string | undefined {
+function getCommunityUrl(name?: string, adapter?: string, providedUrl?: string): string | undefined {
   if (providedUrl) return providedUrl;
   if (!name) return undefined;
   
-  switch (plugin) {
+  switch (adapter) {
     case 'reddit':
       return `https://reddit.com/r/${name}`;
     default:
@@ -50,10 +50,10 @@ function getCommunityUrl(name?: string, plugin?: string, providedUrl?: string): 
 export function CommunityHeader({
   name,
   url,
-  plugin,
+  adapter,
 }: CommunityHeaderProps) {
-  const displayName = formatCommunity(name, plugin);
-  const communityUrl = getCommunityUrl(name, plugin, url);
+  const displayName = formatCommunity(name, adapter);
+  const communityUrl = getCommunityUrl(name, adapter, url);
   
   if (!displayName) return null;
   

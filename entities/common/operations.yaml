@@ -1,7 +1,7 @@
 # Standard Operations
 #
 # These define the contract for common entity operations.
-# Plugins implementing {entity}.{operation} must conform to these schemas.
+# Adapters implementing {entity}.{operation} must conform to these schemas.
 #
 # Return types use "entity" as placeholder - replaced by actual entity at runtime:
 #   - webpage.search returns webpage[]

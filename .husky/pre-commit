@@ -5,8 +5,8 @@
 # - Graph validation (catches broken entity references)
 # Full integration tests run on pre-push
 
-STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^plugins/[^/]+/readme\.md$' || true)
-STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^plugins/[^/]+/tests/.*\.test\.ts$' || true)
+STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^adapters/[^/]+/readme\.md$' || true)
+STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^adapters/[^/]+/tests/.*\.test\.ts$' || true)
 STAGED_ENTITIES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^entities/.*\.yaml$' || true)
 
 # Nothing to check
@@ -19,8 +19,8 @@ ERRORS=0
 # === Schema Validation (for readme changes) ===
 if [ -n "$STAGED_READMES" ]; then
   echo "📋 Schema validation..."
-  APPS=$(echo "$STAGED_READMES" | sed 's|plugins/||' | sed 's|/readme.md||' | tr '\n' ' ')
-  node tests/plugins/scripts/validate.mjs $APPS --no-move || ERRORS=$((ERRORS + 1))
+  APPS=$(echo "$STAGED_READMES" | sed 's|adapters/||' | sed 's|/readme.md||' | tr '\n' ' ')
+  node tests/adapters/scripts/validate.mjs $APPS --no-move || ERRORS=$((ERRORS + 1))
   echo ""
 fi
 
@@ -51,17 +51,17 @@ fi
 if [ -n "$STAGED_TESTS" ] || [ -n "$STAGED_READMES" ]; then
   echo "🧪 Test linting..."
   
-  # Get unique plugin names from both staged tests and readmes
-  PLUGINS=""
+  # Get unique adapter names from both staged tests and readmes
+  ADAPTERS=""
   if [ -n "$STAGED_TESTS" ]; then
-    PLUGINS="$PLUGINS $(echo "$STAGED_TESTS" | sed 's|plugins/||' | sed 's|/tests/.*||' | sort -u | tr '\n' ' ')"
+    ADAPTERS="$ADAPTERS $(echo "$STAGED_TESTS" | sed 's|adapters/||' | sed 's|/tests/.*||' | sort -u | tr '\n' ' ')"
   fi
   if [ -n "$STAGED_READMES" ]; then
-    PLUGINS="$PLUGINS $(echo "$STAGED_READMES" | sed 's|plugins/||' | sed 's|/readme.md||' | sort -u | tr '\n' ' ')"
+    ADAPTERS="$ADAPTERS $(echo "$STAGED_READMES" | sed 's|adapters/||' | sed 's|/readme.md||' | sort -u | tr '\n' ' ')"
   fi
-  PLUGINS=$(echo "$PLUGINS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+  ADAPTERS=$(echo "$ADAPTERS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
   
-  npx tsx tests/plugins/scripts/lint-tests.ts $PLUGINS || ERRORS=$((ERRORS + 1))
+  npx tsx tests/adapters/scripts/lint-tests.ts $ADAPTERS || ERRORS=$((ERRORS + 1))
   echo ""
 fi
 
@@ -69,7 +69,7 @@ fi
 # Checks: typed references, display fields, adapter best practices
 if [ -n "$STAGED_READMES" ]; then
   echo "🔗 Pattern validation..."
-  node tests/plugins/scripts/validate-patterns.mjs --filter $APPS || ERRORS=$((ERRORS + 1))
+  node tests/adapters/scripts/validate-patterns.mjs --filter $APPS || ERRORS=$((ERRORS + 1))
   echo ""
 fi
 

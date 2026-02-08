@@ -40,41 +40,41 @@ if [ -z "$CHANGED_FILES" ]; then
   exit 0
 fi
 
-# Extract unique plugins from changed files (plugins/{plugin}/...)
-AFFECTED_APPS=$(echo "$CHANGED_FILES" | grep -oE '^plugins/[^/]+' | sort -u | cut -d/ -f2 || true)
+# Extract unique adapters from changed files (adapters/{adapter}/...)
+AFFECTED_APPS=$(echo "$CHANGED_FILES" | grep -oE '^adapters/[^/]+' | sort -u | cut -d/ -f2 || true)
 
 if [ -z "$AFFECTED_APPS" ]; then
-  echo "✅ No plugin files changed"
+  echo "✅ No adapter files changed"
   exit 0
 fi
 
-echo "📦 Testing plugins: $AFFECTED_APPS"
+echo "📦 Testing adapters: $AFFECTED_APPS"
 echo ""
 
 # First, run schema validation
 echo "📋 Schema validation..."
-node tests/plugins/scripts/validate.mjs $AFFECTED_APPS || exit 1
+node tests/adapters/scripts/validate.mjs $AFFECTED_APPS || exit 1
 echo ""
 
 TESTED=0
 SKIPPED=0
 
-# Run tests for each affected plugin that has tests
+# Run tests for each affected adapter that has tests
 for app in $AFFECTED_APPS; do
-  APP_TEST_DIR="plugins/$app/tests"
+  APP_TEST_DIR="adapters/$app/tests"
   
   if [ -d "$APP_TEST_DIR" ]; then
     TEST_COUNT=$(find "$APP_TEST_DIR" -name "*.test.ts" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$TEST_COUNT" -gt 0 ]; then
-      echo "🧪 Testing plugins/$app..."
+      echo "🧪 Testing adapters/$app..."
       npm test -- "$APP_TEST_DIR" --run || exit 1
       TESTED=$((TESTED + 1))
     else
-      echo "⏭️  plugins/$app: no test files"
+      echo "⏭️  adapters/$app: no test files"
       SKIPPED=$((SKIPPED + 1))
     fi
   else
-    echo "⏭️  plugins/$app: no tests/ directory"
+    echo "⏭️  adapters/$app: no tests/ directory"
     SKIPPED=$((SKIPPED + 1))
   fi
 done

@@ -1,0 +1,630 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agentos.dev/schemas/adapter.schema.json",
+  "title": "AgentOS Adapter",
+  "description": "Schema for AgentOS adapter readme.md frontmatter",
+  "type": "object",
+  "required": ["id", "name", "description"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier (lowercase, hyphenated)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line description of what this adapter does"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon filename (icon.svg or icon.png)",
+      "default": "icon.png"
+    },
+    "website": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the service's website"
+    },
+    "tags": {
+      "not": {},
+      "description": "DEPRECATED: Tags are no longer used. Entity types provide discoverability."
+    },
+    "auth": {
+      "oneOf": [
+        { "type": "null", "description": "No authentication required" },
+        { "$ref": "#/definitions/auth" }
+      ]
+    },
+    "api": {
+      "$ref": "#/definitions/api"
+    },
+    "database": {
+      "oneOf": [
+        { "type": "string", "description": "Path to SQLite database (supports ~ and globs)" },
+        {
+          "type": "object",
+          "description": "Platform-specific database paths",
+          "properties": {
+            "macos": { "type": "string" },
+            "windows": { "type": "string" },
+            "linux": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "adapters": {
+      "type": "object",
+      "description": "Entity adapters that transform API data into universal entity format. Each key is an entity type.",
+      "additionalProperties": {
+        "$ref": "#/definitions/adapter"
+      }
+    },
+    "operations": {
+      "type": "object",
+      "description": "Entity operations (e.g., task.list, message.send). Naming: {entity}.{operation}",
+      "propertyNames": {
+        "pattern": "^[a-z_]+\\.[a-z_]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/operation"
+      }
+    },
+    "utilities": {
+      "type": "object",
+      "description": "Helper operations that return custom shapes (not entities). Naming: verb_noun",
+      "propertyNames": {
+        "pattern": "^[a-z_]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/utility"
+      }
+    },
+    "instructions": {
+      "type": "string",
+      "description": "Free-form instructions for AI about how to use this adapter"
+    },
+    "requires": {
+      "type": "array",
+      "description": "System dependencies that must be installed",
+      "items": {
+        "$ref": "#/definitions/dependency"
+      }
+    },
+    "handles": {
+      "type": "object",
+      "description": "URL patterns this adapter handles for routing",
+      "properties": {
+        "urls": {
+          "type": "array",
+          "description": "URL patterns (e.g., 'youtube.com/*', 'github.com/*/issues/*')",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sources": {
+      "$ref": "#/definitions/adapterSources"
+    }
+  },
+  "definitions": {
+    "dependency": {
+      "type": "object",
+      "description": "System dependency requirement",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Dependency name (e.g., 'yt-dlp', 'ffmpeg')"
+        },
+        "install": {
+          "type": "object",
+          "description": "Platform-specific install commands",
+          "properties": {
+            "macos": { "type": "string", "description": "macOS install command" },
+            "linux": { "type": "string", "description": "Linux install command" },
+            "windows": { "type": "string", "description": "Windows install command" }
+          }
+        }
+      }
+    },
+    "adapterSources": {
+      "type": "object",
+      "description": "External sources for Content Security Policy",
+      "properties": {
+        "images": {
+          "type": "array",
+          "description": "Image sources (thumbnails, avatars) → CSP img-src",
+          "items": { "type": "string" }
+        },
+        "api": {
+          "type": "array",
+          "description": "API endpoints → CSP connect-src",
+          "items": { "type": "string" }
+        },
+        "scripts": {
+          "type": "array",
+          "description": "External scripts → CSP script-src (use sparingly)",
+          "items": { "type": "string" }
+        },
+        "styles": {
+          "type": "array",
+          "description": "External stylesheets → CSP style-src",
+          "items": { "type": "string" }
+        },
+        "fonts": {
+          "type": "array",
+          "description": "Web fonts → CSP font-src",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "description": "Entity adapter that transforms API data into universal entity format",
+      "required": ["mapping"],
+      "properties": {
+        "terminology": {
+          "type": "string",
+          "description": "What this service calls this entity (e.g., 'Issue' for Linear's tasks)"
+        },
+        "relationships": {
+          "type": "object",
+          "description": "Which graph relationships are supported for this entity. Supports shorthand ('full') or extended ({ support, mutation }) format.",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["full", "read_only", "write_only", "none"],
+                "description": "Shorthand: just the support level"
+              },
+              {
+                "type": "object",
+                "description": "Extended: support level + optional mutation handler",
+                "required": ["support"],
+                "properties": {
+                  "support": {
+                    "type": "string",
+                    "enum": ["full", "read_only", "write_only", "none"],
+                    "description": "Level of support: full (read+write), read_only, write_only, none"
+                  },
+                  "mutation": {
+                    "type": "string",
+                    "description": "Utility to call when this relationship changes during updates (e.g., 'move_task')"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "mapping": {
+          "type": "object",
+          "description": "API response → entity property mappings. Defined once, applied to all operations returning this entity.",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string", "description": "jaq expression (e.g., '.id', '.content', '5 - .priority')" },
+              { "type": "null", "description": "Not provided by this API" },
+              {
+                "type": "object",
+                "description": "Typed reference: creates linked entity and relationship. Key is entity type, value is identity fields.",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                  "type": "object",
+                  "description": "Identity fields for the linked entity (e.g., { phone: '.sender_jid | ...', name: '.sender_name' })",
+                  "additionalProperties": {
+                    "type": "string",
+                    "description": "jaq expression for identity field"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "description": "Entity operation that returns typed entities",
+      "required": ["returns"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this operation does"
+        },
+        "returns": {
+          "type": "string",
+          "description": "Return type: entity name, entity[], or void",
+          "pattern": "^([a-z_]+(\\[\\])?|void)$"
+        },
+        "params": {
+          "type": "object",
+          "description": "Operation parameters",
+          "additionalProperties": {
+            "$ref": "#/definitions/paramDef"
+          }
+        },
+        "rest": {
+          "$ref": "#/definitions/restExecutor"
+        },
+        "graphql": {
+          "$ref": "#/definitions/graphqlExecutor"
+        },
+        "sql": {
+          "$ref": "#/definitions/sqlExecutor"
+        },
+        "command": {
+          "$ref": "#/definitions/commandExecutor"
+        },
+        "swift": {
+          "$ref": "#/definitions/swiftExecutor"
+        },
+        "csv": {
+          "$ref": "#/definitions/csvExecutor"
+        },
+        "download": {
+          "$ref": "#/definitions/downloadExecutor"
+        }
+      }
+    },
+    "utility": {
+      "type": "object",
+      "description": "Helper operation that returns a custom shape, model reference, or entity",
+      "required": ["returns"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this utility does"
+        },
+        "params": {
+          "type": "object",
+          "description": "Utility parameters (inputs)",
+          "additionalProperties": {
+            "$ref": "#/definitions/paramDef"
+          }
+        },
+        "returns": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Model/entity reference (e.g., 'operation_result', 'file', 'dns_record[]') or void",
+              "pattern": "^([a-z_]+(\\[\\])?|void)$"
+            },
+            {
+              "type": "object",
+              "description": "Inline schema for adapter-specific return shapes",
+              "additionalProperties": {
+                "oneOf": [
+                  { "type": "string", "description": "Property type (string, boolean, integer, array, etc.)" },
+                  {
+                    "type": "object",
+                    "description": "Detailed property definition",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "description": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "rest": {
+          "$ref": "#/definitions/restExecutor"
+        },
+        "graphql": {
+          "$ref": "#/definitions/graphqlExecutor"
+        },
+        "sql": {
+          "$ref": "#/definitions/sqlExecutor"
+        },
+        "command": {
+          "$ref": "#/definitions/commandExecutor"
+        },
+        "swift": {
+          "$ref": "#/definitions/swiftExecutor"
+        },
+        "csv": {
+          "$ref": "#/definitions/csvExecutor"
+        },
+        "download": {
+          "$ref": "#/definitions/downloadExecutor"
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication configuration",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["api_key", "oauth", "cookies", "local_path", "connection_string", "none"],
+          "description": "Authentication type"
+        },
+        "domain": {
+          "type": "string",
+          "description": "Cookie domain (for cookies auth)"
+        },
+        "cookies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required cookie names (for cookies auth)"
+        },
+        "header": {
+          "type": "string",
+          "description": "HTTP header name (e.g., Authorization)"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Value prefix (e.g., 'Bearer ')"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable label for the credential input"
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Example value shown in input field"
+        },
+        "help_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to documentation on how to get credentials"
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "description": "API configuration",
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for REST endpoints"
+        },
+        "graphql": {
+          "type": "string",
+          "format": "uri",
+          "description": "GraphQL endpoint URL"
+        }
+      }
+    },
+    "paramDef": {
+      "type": "object",
+      "description": "Parameter definition",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Parameter type"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether parameter is required"
+        },
+        "default": {
+          "description": "Default value if not provided"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description"
+        },
+        "example": {
+          "description": "Example value"
+        },
+        "enum": {
+          "type": "array",
+          "description": "Allowed values"
+        }
+      }
+    },
+    "restExecutor": {
+      "type": "object",
+      "description": "REST API call",
+      "required": ["url"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          "default": "GET"
+        },
+        "url": {
+          "type": "string",
+          "description": "Request URL (supports {{params.x}} templates)"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "query": {
+          "type": "object",
+          "description": "Query string parameters",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": {
+          "description": "Request body (for POST/PUT/PATCH)"
+        },
+        "encoding": {
+          "type": "string",
+          "enum": ["json", "form"],
+          "description": "Body encoding (default: json)"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "graphqlExecutor": {
+      "type": "object",
+      "description": "GraphQL query/mutation",
+      "required": ["query"],
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "GraphQL endpoint (overrides api.graphql)"
+        },
+        "query": {
+          "type": "string",
+          "description": "GraphQL query or mutation"
+        },
+        "variables": {
+          "type": "object",
+          "description": "Query variables (supports {{params.x}} templates)"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "sqlExecutor": {
+      "type": "object",
+      "description": "SQL query",
+      "required": ["query"],
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "SQL query (supports {{params.x}} templates)"
+        },
+        "database": {
+          "type": "string",
+          "description": "Database path (overrides adapter-level)"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "commandExecutor": {
+      "type": "object",
+      "description": "Shell command",
+      "required": ["binary"],
+      "properties": {
+        "binary": {
+          "type": "string",
+          "description": "Binary to execute"
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Arguments (supports {{params.x}} templates)"
+        },
+        "args_string": {
+          "type": "string",
+          "description": "Arguments as single string (split on whitespace)"
+        },
+        "stdin": {
+          "type": "string",
+          "description": "Content to pass via stdin"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Timeout in seconds (default: 60)"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "swiftExecutor": {
+      "type": "object",
+      "description": "Swift script (macOS only)",
+      "required": ["script"],
+      "properties": {
+        "script": {
+          "type": "string",
+          "description": "Swift code to execute"
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Arguments to pass to compiled binary"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "csvExecutor": {
+      "type": "object",
+      "description": "CSV file reader",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to CSV file (supports ~ expansion, {{params.x}} templates)"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "downloadExecutor": {
+      "type": "object",
+      "description": "Download file to A: drive",
+      "required": ["url", "path"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to download (jaq expression, supports .params and .auth.key)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Destination path in A: drive (jaq expression)"
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers (values are jaq expressions)",
+          "additionalProperties": { "type": "string" }
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to overwrite existing files"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 60,
+          "description": "Download timeout in seconds"
+        }
+      }
+    },
+    "responseMapping": {
+      "type": "object",
+      "description": "Response transformation",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "JSON Pointer (RFC 6901) to extract data. Must start with '/'. Examples: '/data', '/results/0', '/data/items'",
+          "pattern": "^/.*$"
+        },
+        "context": {
+          "type": "object",
+          "description": "Capture values from response for use in mapping (e.g., viewer_id: thread.viewer_id)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "mapping": {
+          "type": "object",
+          "description": "Field mappings for utilities (operations use adapters.{entity}.mapping instead)",
+          "additionalProperties": true
+        },
+        "static": {
+          "type": "object",
+          "description": "Static response for operations that don't return data (e.g., complete returns { id, completed: true })",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

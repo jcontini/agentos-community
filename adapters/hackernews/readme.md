@@ -1,0 +1,208 @@
+---
+id: hackernews
+name: Hacker News
+description: Read Hacker News stories, comments, and discussions
+icon: icon.png
+color: "#FF6600"
+display: browser
+
+website: https://news.ycombinator.com
+privacy_url: https://www.ycombinator.com/legal#privacy
+terms_url: https://www.ycombinator.com/legal
+
+instructions: |
+  Hacker News notes:
+  - Uses Algolia HN Search API (faster than official Firebase API)
+  - No authentication required
+  - Generous rate limits
+  - Returns nested comments in single request
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+adapters:
+  post:
+    terminology: Story
+    mapping:
+      # Search results use objectID, item endpoint uses id
+      id: .objectID
+      title: .title
+      content: .text
+      url: '"https://news.ycombinator.com/item?id=" + .objectID'
+      external_url: .url
+      replies: .replies
+      
+      # Display fields for views (denormalized on post entity)
+      author.name: .author
+      author.url: '"https://news.ycombinator.com/user?id=" + .author'
+      
+      # Engagement metrics
+      engagement.score: .points
+      engagement.comment_count: .num_comments
+      published_at: .created_at
+      
+      # Typed reference: creates person entity and posted_by relationship
+      posted_by:
+        person:
+          id: .author
+          name: .author
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+operations:
+  post.list:
+    description: List Hacker News stories by feed type
+    returns: post[]
+    web_url: '"https://news.ycombinator.com/" + (if .params.feed == "front" then "" else .params.feed end)'
+    params:
+      feed:
+        type: string
+        default: "front"
+        description: "Feed type: front, new, ask, show"
+      limit:
+        type: integer
+        default: 30
+        description: "Number of stories (max 100)"
+    rest:
+      method: GET
+      url: '"https://hn.algolia.com/api/v1/" + (if .params.feed == "new" then "search_by_date" else "search" end)'
+      query:
+        tags: '.params.feed | if . == "new" then "story" elif . == "ask" then "ask_hn" elif . == "show" then "show_hn" else "front_page" end'
+        hitsPerPage: .params.limit | tostring
+      response:
+        root: "/hits"
+
+  post.search:
+    description: Search Hacker News stories
+    returns: post[]
+    web_url: '"https://hn.algolia.com/?query=" + (.params.query | @uri)'
+    params:
+      query:
+        type: string
+        required: true
+        description: "Search query"
+      limit:
+        type: integer
+        default: 20
+        description: "Number of results (max 100)"
+    rest:
+      method: GET
+      url: https://hn.algolia.com/api/v1/search
+      query:
+        query: .params.query
+        tags: '"story"'
+        hitsPerPage: .params.limit | tostring
+      response:
+        root: "/hits"
+
+  post.get:
+    description: Get a Hacker News story with comments
+    returns: post
+    web_url: '"https://news.ycombinator.com/item?id=" + .params.id'
+    params:
+      id:
+        type: string
+        required: true
+        description: "Story ID"
+    rest:
+      method: GET
+      url: '"https://hn.algolia.com/api/v1/items/" + .params.id'
+      response:
+        # Transform reshapes to match adapter expectations
+        # Adapter expects .objectID, but items endpoint returns .id
+        # Output shape: fields adapter can map + pre-mapped replies
+        transform: |
+          def map_comment:
+            {
+              id: (.id | tostring),
+              content: .text,
+              author: { name: .author, url: ("https://news.ycombinator.com/user?id=" + .author) },
+              published_at: .created_at,
+              replies: [.children[]? | map_comment]
+            };
+          {
+            objectID: (.id | tostring),
+            title: .title,
+            text: .text,
+            url: .url,
+            author: .author,
+            points: .points,
+            num_comments: (.children | length),
+            created_at: .created_at,
+            replies: [.children[]? | map_comment]
+          }
+---
+
+# Hacker News
+
+Read Hacker News stories, comments, and discussions using the Algolia HN Search API.
+
+## No Setup Required
+
+This adapter uses the public Algolia HN Search API — no authentication needed.
+
+## Why Algolia?
+
+The official HN Firebase API requires multiple requests to fetch a story with comments (one per comment). Algolia returns the entire comment tree in a single request, making it much faster.
+
+## Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `post.list` | List stories by feed type (front, new, ask, show) |
+| `post.search` | Search stories by keyword |
+| `post.get` | Get a single story with all comments |
+
+## Feeds
+
+The `post.list` operation supports different feeds via the `feed` param:
+
+| Feed | Description | HN URL |
+|------|-------------|--------|
+| `front` (default) | Front page / top stories | news.ycombinator.com |
+| `new` | Newest submissions | news.ycombinator.com/newest |
+| `ask` | Ask HN posts | news.ycombinator.com/ask |
+| `show` | Show HN posts | news.ycombinator.com/show |
+
+## Examples
+
+```bash
+# Front page stories (default)
+POST /api/adapters/hackernews/post.list
+{"limit": 30}
+
+# Newest stories
+POST /api/adapters/hackernews/post.list
+{"feed": "new"}
+
+# Ask HN posts
+POST /api/adapters/hackernews/post.list
+{"feed": "ask", "limit": 20}
+
+# Show HN posts
+POST /api/adapters/hackernews/post.list
+{"feed": "show"}
+
+# Search stories
+POST /api/adapters/hackernews/post.search
+{"query": "rust programming"}
+
+# Get story with comments
+POST /api/adapters/hackernews/post.get
+{"id": "46826597"}
+```
+
+## Entity Aggregation
+
+Stories also appear in aggregated endpoints:
+
+```bash
+# All posts from all sources
+GET /api/posts
+
+# Search across all sources
+GET /api/posts/search?query=typescript
+```
