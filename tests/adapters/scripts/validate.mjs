@@ -19,9 +19,10 @@
  *   node validate.mjs --pre-commit        # Quick structural check only (no table, no move)
  */
 
-import { readFileSync, readdirSync, existsSync, renameSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import { parse as parseYaml, parseAllDocuments } from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
@@ -579,7 +580,7 @@ for (const result of activeResults) {
     const destPath = join(NEEDS_WORK_DIR, adapter.name);
     if (existsSync(destPath)) continue; // already exists there
     try {
-      renameSync(adapter.dir, destPath);
+      execSync(`git mv "${adapter.dir}" "${destPath}"`, { cwd: ROOT, stdio: 'ignore' });
       result._moved = true;
       movedCount++;
     } catch (err) {
