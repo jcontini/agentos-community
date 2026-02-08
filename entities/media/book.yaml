@@ -1,0 +1,53 @@
+# Book — Published written work
+#
+# Extends document. Inherits:
+#   From writing: id, content, author (→ person)
+#   From document: title, url, published_at, fetched_at, data
+#
+# For book tracking services (Hardcover, Goodreads, OpenLibrary).
+
+id: book
+plural: books
+extends: document
+name: Book
+description: A published book
+
+references:
+  schema_org: https://schema.org/Book
+  wikidata: Q571
+
+properties:
+  isbn:
+    type: string
+    description: ISBN identifier
+
+  cover:
+    references: image
+    description: Book cover image
+
+  publisher:
+    type: string
+    description: Publisher name
+
+  published_year:
+    type: integer
+    description: Year of publication
+
+  page_count:
+    type: integer
+    description: Number of pages
+
+  genre:
+    type: array
+    items:
+      type: string
+    description: Genre tags
+
+identifiers: [isbn]
+
+display:
+  primary: title
+  secondary: author.name
+  image: cover
+  icon: book-open
+  show_as_app: true

@@ -1,0 +1,56 @@
+# DNS Record — A single DNS record for a domain
+#
+# Linked to a domain via references. Supports standard record types.
+# Values is an array because records like MX can have multiple values.
+
+id: dns_record
+plural: dns_records
+name: DNS Record
+description: A DNS record associated with a domain
+
+references:
+  wikidata: Q223307  # DNS resource record
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  domain:
+    references: domain
+    description: Which domain this record belongs to
+
+  type:
+    type: string
+    required: true
+    enum: [A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, ALIAS]
+    description: DNS record type
+
+  name:
+    type: string
+    required: true
+    description: Record name (@ for apex, subdomain otherwise)
+
+  values:
+    type: array
+    required: true
+    items:
+      type: string
+    description: Record values (array — MX, TXT etc. can have multiple)
+
+  ttl:
+    type: integer
+    description: Time to live in seconds
+
+  priority:
+    type: integer
+    description: Priority (for MX, SRV records)
+
+operations: [list, get, create, update, delete]
+
+display:
+  primary: name
+  secondary: type
+  icon: server
+  show_as_app: false
