@@ -55,7 +55,7 @@ adapters:
           id: .data.author
           name: .data.author
   
-  group:
+  community:
     terminology: Subreddit
     mapping:
       id: .name
@@ -147,9 +147,9 @@ operations:
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
 
-  group.get:
+  community.get:
     description: Get a subreddit with its top posts
-    returns: group
+    returns: community
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
@@ -188,9 +188,9 @@ operations:
           '
       timeout: 30
 
-  group.search:
+  community.search:
     description: Search for subreddits (communities)
-    returns: group[]
+    returns: community[]
     web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
@@ -240,8 +240,8 @@ No authentication required, just a custom User-Agent header to avoid rate limiti
 | `post.search` | Search posts across all of Reddit |
 | `post.list` | List posts from a specific subreddit |
 | `post.get` | Get a single post with comments |
-| `group.search` | Search for subreddits (communities) |
-| `group.get` | Get metadata for a specific subreddit |
+| `community.search` | Search for subreddits (communities) |
+| `community.get` | Get metadata for a specific subreddit |
 
 ## Examples
 

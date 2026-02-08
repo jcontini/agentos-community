@@ -1,13 +1,14 @@
-# Group Entity
-# A social community or group (Facebook Groups, Reddit subreddits, Discord servers)
+# Community Entity
+# A social community (Facebook Groups, Reddit subreddits, Discord servers)
 #
-# Design principle: Groups are communities where people gather around shared interests.
-# Distinct from organizations (companies/institutions) - groups are social communities.
+# Design principle: Communities are where people gather around shared interests.
+# Distinct from organizations (companies/institutions) and from tags (labeling).
+# Renamed from "group" to avoid ambiguity with generic grouping concepts.
 
-id: group
-plural: groups
-name: Group
-description: A social community or group
+id: community
+plural: communities
+name: Community
+description: A social community where people gather around shared interests
 
 references:
   schema_org: https://schema.org/Organization  # Closest match

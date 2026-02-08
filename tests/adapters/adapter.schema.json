@@ -211,12 +211,13 @@
               { "type": "null", "description": "Not provided by this API" },
               {
                 "type": "object",
-                "description": "Relationship ref: looks up existing entity by service_id and creates a typed relationship. Direction inferred from relationship schemas.",
+                "description": "Relationship ref: looks up existing entity and creates a typed relationship. Value can evaluate to scalar or array (creates one relationship per element). Direction inferred from relationship schemas.",
                 "required": ["ref", "value"],
                 "properties": {
                   "ref": { "type": "string", "description": "Entity type to look up (e.g., 'journey', 'outcome')" },
-                  "value": { "type": "string", "description": "jaq expression for the service_id value" },
-                  "rel": { "type": "string", "description": "Explicit relationship type (optional — inferred from schemas if unambiguous)" }
+                  "value": { "type": "string", "description": "jaq expression for the lookup value (scalar or array)" },
+                  "rel": { "type": "string", "description": "Explicit relationship type (optional — inferred from schemas if unambiguous)" },
+                  "lookup": { "type": "string", "enum": ["service_id", "name"], "description": "How to find the referenced entity: by service_id (default) or by name" }
                 },
                 "additionalProperties": false
               },

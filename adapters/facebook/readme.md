@@ -30,7 +30,7 @@ instructions: |
 # ═══════════════════════════════════════════════════════════════════════════════
 
 adapters:
-  group:
+  community:
     terminology: Group
     mapping:
       id: .id
@@ -47,9 +47,9 @@ adapters:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  group.get:
+  community.get:
     description: Get metadata for a public Facebook group
-    returns: group
+    returns: community
     params:
       group:
         type: string

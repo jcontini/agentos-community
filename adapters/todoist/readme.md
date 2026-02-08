@@ -46,7 +46,10 @@ adapters:
         ref: journey
         value: .project_id
       _parent_id: .parent_id
-      _labels: .labels
+      _labels:
+        ref: tag
+        value: .labels
+        lookup: name
 
   journey:
     terminology: Project
