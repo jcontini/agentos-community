@@ -61,7 +61,7 @@ Adapters are adapters that map external APIs to these entity types. No hardcoded
 entities/          Entity type definitions (single source of truth)
   _primitives/     Abstract base types (document, collection, etc.)
   _relationships/  Relationship types (contains, enables, etc.)
-  common/          operations.yaml (standard operation definitions)
+  _system/         operations.yaml (standard operation definitions)
   post/            post.yaml + views/  (entities with views keep a folder)
   community/       community.yaml + views/
   task.yaml        Flat entity files (no views, no subfolder)
@@ -193,7 +193,7 @@ entities/
     views/              # TSX components + view configs
   _primitives/          # Abstract base types
   _relationships/       # Relationship types
-  common/operations.yaml # Standard operation definitions
+  _system/operations.yaml # Standard operation definitions
 ```
 
 **Skill structure:**
