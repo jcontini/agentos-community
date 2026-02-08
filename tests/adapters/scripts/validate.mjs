@@ -1,23 +1,22 @@
 #!/usr/bin/env node
 /**
- * Comprehensive adapter validation with table report.
+ * Adapter validation — validate, report, enforce.
  * 
  * Checks per adapter:
  *   1. Schema  — YAML frontmatter matches adapter.schema.json
- *   2. Entity  — All operations return valid entity types (no raw pass-throughs)
+ *   2. Entity  — All operations return valid entity types
  *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
  *   4. Icon    — icon.svg or icon.png exists
  *   5. Tests   — Every operation has a test file
  * 
- * Enforcement:
- *   - adapters/ that fail schema or entity checks → moved to .needs-work/
- *   - .needs-work/ that pass everything → candidate for promotion
+ * Adapters that fail schema structure or entity checks get moved to .needs-work/.
+ * Run again after fixing — when they pass, they stay in adapters/.
  * 
  * Usage:
- *   node validate.mjs                     # Full report (both adapters/ and .needs-work/)
+ *   node validate.mjs                     # Full validation + enforce
  *   node validate.mjs --filter exa        # Filter to specific adapter
- *   node validate.mjs --no-move           # Report only, don't auto-move (for pre-commit)
- *   node validate.mjs --pre-commit        # Pre-commit mode: schema + entity only, no move
+ *   node validate.mjs --verbose           # Show uncovered entities
+ *   node validate.mjs --pre-commit        # Quick structural check only (no table, no move)
  */
 
 import { readFileSync, readdirSync, existsSync, renameSync, mkdirSync } from 'fs';
@@ -40,7 +39,6 @@ const SCHEMA_PATH = join(__dirname, '..', 'adapter.schema.json');
 
 const args = process.argv.slice(2);
 const filterValue = args.includes('--filter') ? args[args.indexOf('--filter') + 1] : null;
-const autoMove = !args.includes('--no-move') && !args.includes('--pre-commit');
 const preCommit = args.includes('--pre-commit');
 const verbose = args.includes('--verbose');
 
@@ -91,7 +89,6 @@ function loadEntityProperties() {
             const data = doc.toJSON();
             if (data?.id && data?.properties) {
               props[data.id] = Object.keys(data.properties);
-              // Also inherit parent properties via extends
               if (data.extends && props[data.extends]) {
                 const parentProps = props[data.extends];
                 props[data.id] = [...new Set([...parentProps, ...props[data.id]])];
@@ -120,17 +117,15 @@ function checkSchema(frontmatter) {
   const ajvErrors = valid ? [] : validateSchema.errors.map(e => `${e.instancePath || '/'}: ${e.message}`);
   
   if (!valid) {
-    // Structure broken — can't check completeness fields
     return {
       pass: false,
       structureValid: false,
       passed: 0,
-      total: 1,  // "valid structure" is the one check we could run
+      total: 1,
       errors: ajvErrors,
     };
   }
   
-  // Structure valid — now check each field we care about
   const checks = [
     { name: 'valid structure', pass: true },
     { name: 'website', pass: !!frontmatter.website },
@@ -144,13 +139,7 @@ function checkSchema(frontmatter) {
   const total = checks.length;
   const errors = checks.filter(c => !c.pass).map(c => `Missing: ${c.name}`);
   
-  return {
-    pass: passed === total,
-    structureValid: true,
-    passed,
-    total,
-    errors,
-  };
+  return { pass: passed === total, structureValid: true, passed, total, errors };
 }
 
 function checkEntities(frontmatter) {
@@ -158,9 +147,6 @@ function checkEntities(frontmatter) {
   let total = 0;
   let passed = 0;
   
-  // Only operations are checked — they MUST route through entities.
-  // Utilities are explicitly NOT counted here: they return custom shapes
-  // by design and don't participate in entity routing.
   if (frontmatter.operations) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
       total++;
@@ -169,7 +155,7 @@ function checkEntities(frontmatter) {
         if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send'].includes(verb)) {
           errors.push(`'${opName}' returns void — read operations must return an entity`);
         } else {
-          passed++; // void is fine for write ops
+          passed++;
         }
         continue;
       }
@@ -193,7 +179,7 @@ function checkMappings(frontmatter) {
   if (!frontmatter.adapters) {
     if (frontmatter.operations && Object.keys(frontmatter.operations).length > 0) {
       errors.push('Has operations but no adapters section — data won\'t flow through entities');
-      total = 1; // "has adapters section" is itself a check
+      total = 1;
     }
     return { pass: errors.length === 0, passed, total, errors };
   }
@@ -206,7 +192,7 @@ function checkMappings(frontmatter) {
     }
     
     const validProps = entityProperties[entityName];
-    if (!validProps) continue; // Entity not found — caught by entity check
+    if (!validProps) continue;
     
     for (const [propName, propValue] of Object.entries(adapter.mapping)) {
       if (propName.startsWith('_')) continue;
@@ -314,29 +300,13 @@ function findAdapters(dir, relativePath = '') {
   if (!existsSync(dir)) return adapters;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === 'node_modules' || entry.name === 'tests') continue;
-    if (entry.name === '.needs-work') continue;
+    if (entry.name.startsWith('.')) continue;
     const fullPath = join(dir, entry.name);
     const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
     if (existsSync(join(fullPath, 'readme.md'))) {
       adapters.push({ name: entry.name, path: rel, dir: fullPath });
     } else {
       adapters.push(...findAdapters(fullPath, rel));
-    }
-  }
-  return adapters;
-}
-
-function findNeedsWorkAdapters(dir, relativePath = '') {
-  const adapters = [];
-  if (!existsSync(dir)) return adapters;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === 'node_modules' || entry.name === 'tests') continue;
-    const fullPath = join(dir, entry.name);
-    const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-    if (existsSync(join(fullPath, 'readme.md'))) {
-      adapters.push({ name: entry.name, path: rel, dir: fullPath });
-    } else {
-      adapters.push(...findNeedsWorkAdapters(fullPath, rel));
     }
   }
   return adapters;
@@ -353,26 +323,19 @@ const YELLOW = '\x1b[33m';
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
 
-const PASS = `${GREEN}✓${RESET}`;
-const FAIL = `${RED}✗${RESET}`;
 const SKIP = `${DIM}·${RESET}`;
-const BLOCKED = `${DIM}—${RESET}`; // upstream failure prevents checking
+const BLOCKED = `${DIM}—${RESET}`;
 
 function pad(str, len) {
   return str.length >= len ? str.slice(0, len) : str + ' '.repeat(len - str.length);
 }
 
-// Center a colored symbol in a fixed-width column
 function cell(symbol, width) {
   const leftPad = Math.floor((width - 1) / 2);
   const rightPad = width - 1 - leftPad;
   return ' '.repeat(leftPad) + symbol + ' '.repeat(rightPad);
 }
 
-/**
- * Render a unified table with multiple sections.
- * sections: [{ label: "ADAPTERS (19)", results: [...] }, { label: "NEEDS WORK (21)", results: [...] }]
- */
 function renderTable(sections) {
   const allResults = sections.flatMap(s => s.results);
   if (allResults.length === 0) return;
@@ -380,7 +343,6 @@ function renderTable(sections) {
   const nameWidth = Math.max(16, ...allResults.map(r => r.name.length)) + 2;
   const colW = 9;
   const testColW = 9;
-  const totalW = nameWidth + 1 + colW * 4 + testColW;
   
   function centerText(text, width) {
     const lp = Math.floor((width - text.length) / 2);
@@ -391,92 +353,76 @@ function renderTable(sections) {
   const SEP = `${DIM}│${RESET}`;
   const headerLine = `${SEP} ${BOLD}${pad('Adapter', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
   
-  const divider    = `${DIM}├${'─'.repeat(nameWidth + 1)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(colW)}┼${'─'.repeat(testColW)}┤${RESET}`;
   const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
   const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
   
-  // Section label row spans the full width
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 4 + testColW + 5; // +5 for the 5 inner │ separators
+    const inner = nameWidth + 1 + colW * 4 + testColW + 5;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
     return `${DIM}├${'─'.repeat(leftLen)}${RESET}${BOLD}${labelPadded}${RESET}${DIM}${'─'.repeat(Math.max(0, rightLen))}┤${RESET}`;
   }
   
+  function checkCell(check, width) {
+    if (check.total === 0 && !check.pass) return cell(BLOCKED, width);
+    if (check.total === 0) return cell(SKIP, width);
+    const label = `${check.passed}/${check.total}`;
+    const lp = Math.floor((width - label.length) / 2);
+    const rp = width - label.length - lp;
+    const color = check.pass ? GREEN : check.passed === 0 ? RED : YELLOW;
+    return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+  }
+  
+  function iconCell(check, width) {
+    if (!check.pass) {
+      const label = '0/1';
+      const lp = Math.floor((width - label.length) / 2);
+      const rp = width - label.length - lp;
+      return ' '.repeat(lp) + `${RED}${label}${RESET}` + ' '.repeat(rp);
+    }
+    const label = check.format;
+    const color = check.format === 'png' ? GREEN : YELLOW;
+    const lp = Math.floor((width - label.length) / 2);
+    const rp = width - label.length - lp;
+    return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+  }
+  
+  function testCell(r, width) {
+    if (r.tests.total === 0 && !r.tests.pass) return cell(BLOCKED, width);
+    if (r.tests.total === 0) return cell(SKIP, width);
+    const label = `${r.tests.tested}/${r.tests.total}`;
+    const lp = Math.floor((width - label.length) / 2);
+    const rp = width - label.length - lp;
+    const color = r.tests.pass ? GREEN : r.tests.tested === 0 ? RED : YELLOW;
+    return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+  }
+  
   console.log();
   console.log(topBorder);
   console.log(headerLine);
   
-  for (let si = 0; si < sections.length; si++) {
-    const section = sections[si];
-    if (section.results.length === 0 && sections.length === 1) continue;
-    
-    // Section label divider
+  for (const section of sections) {
+    if (section.results.length === 0) continue;
     console.log(sectionDivider(section.label));
     
     for (const r of section.results) {
       const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass;
-      const critical = !r.schema.structureValid || !r.entity.pass;  // structural failure or entity routing failure
+      const critical = !r.schema.structureValid || !r.entity.pass;
       const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
       
-      let testStr;
-      if (r.tests.total === 0 && !r.tests.pass) {
-        // Blocked by upstream failure
-        testStr = cell(BLOCKED, testColW);
-      } else if (r.tests.total === 0) {
-        // Genuinely no operations/utilities to test
-        testStr = cell(SKIP, testColW);
-      } else {
-        const label = `${r.tests.tested}/${r.tests.total}`;
-        const lp = Math.floor((testColW - label.length) / 2);
-        const rp = testColW - label.length - lp;
-        const color = r.tests.pass ? GREEN : r.tests.tested === 0 ? RED : YELLOW;
-        testStr = ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
-      }
-      
-    // Render a check column: always show real counts, never bare ✗
-    function checkCell(check, width) {
-      // Blocked by upstream failure — nothing was checked, show dash
-      if (check.total === 0 && !check.pass) return cell(BLOCKED, width);
-      // Genuinely nothing to check (e.g. no operations = no entity routing needed)
-      if (check.total === 0) return cell(SKIP, width);
-      // Real count: N/M
-      const label = `${check.passed}/${check.total}`;
-      const lp = Math.floor((width - label.length) / 2);
-      const rp = width - label.length - lp;
-      const color = check.pass ? GREEN : check.passed === 0 ? RED : YELLOW;
-      return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
+      const line = `${SEP} ${nameColor}${pad(r.name, nameWidth)}${RESET}${SEP}` +
+        `${checkCell(r.schema, colW)}${SEP}` +
+        `${checkCell(r.entity, colW)}${SEP}` +
+        `${checkCell(r.mapping, colW)}${SEP}` +
+        `${iconCell(r.icon, colW)}${SEP}` +
+        `${testCell(r, testColW)}${SEP}`;
+      console.log(line);
     }
-    
-    // Icon column: show format when present, 0/1 when missing
-    function iconCell(check, width) {
-      if (!check.pass) {
-        const label = '0/1';
-        const lp = Math.floor((width - label.length) / 2);
-        const rp = width - label.length - lp;
-        return ' '.repeat(lp) + `${RED}${label}${RESET}` + ' '.repeat(rp);
-      }
-      const label = check.format;
-      const color = check.format === 'png' ? GREEN : YELLOW;
-      const lp = Math.floor((width - label.length) / 2);
-      const rp = width - label.length - lp;
-      return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
-    }
-    
-    const line = `${SEP} ${nameColor}${pad(r.name, nameWidth)}${RESET}${SEP}` +
-      `${checkCell(r.schema, colW)}${SEP}` +
-      `${checkCell(r.entity, colW)}${SEP}` +
-      `${checkCell(r.mapping, colW)}${SEP}` +
-      `${iconCell(r.icon, colW)}${SEP}` +
-      `${testStr}${SEP}`;
-    console.log(line);
-  }
   }
   
   console.log(botBorder);
   
-  // Per-section summaries
   for (const section of sections) {
     if (section.results.length === 0) continue;
     const total = section.results.length;
@@ -500,7 +446,7 @@ function renderErrors(results) {
     if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
     
     if (allErrors.length > 0) {
-      console.log(`  ❌ ${r.name}`);
+      console.log(`  ${r._moved ? '📦' : '❌'} ${r.name}${r._moved ? ' → .needs-work/' : ''}`);
       for (const err of allErrors) {
         console.log(`     ${err}`);
       }
@@ -529,15 +475,14 @@ function validateAdapter(adapter) {
     return {
       name: adapter.name,
       schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No YAML frontmatter'] },
-      entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },  // — blocked
-      mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] }, // — blocked
+      entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
+      mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       icon: checkIcon(adapter.dir),
-      tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },   // — blocked
+      tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },
     };
   }
   
   const schemaResult = checkSchema(frontmatter);
-  // Downstream checks require valid structure — but NOT completeness (missing website shouldn't block entity checks)
   const canCheck = schemaResult.structureValid;
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
@@ -559,39 +504,65 @@ if (!existsSync(NEEDS_WORK_DIR)) {
   mkdirSync(NEEDS_WORK_DIR, { recursive: true });
 }
 
-// Discover adapters
+// --- Pre-commit mode: quick structural check, no table, no move ---
+if (preCommit) {
+  const adapters = findAdapters(ADAPTERS_DIR);
+  const filtered = filterValue ? adapters.filter(a => a.name.includes(filterValue)) : adapters;
+  const results = filtered.map(a => validateAdapter(a));
+  const failures = results.filter(r => !r.schema.structureValid || !r.entity.pass);
+  if (failures.length > 0) {
+    for (const r of failures) {
+      const errs = [...r.schema.errors, ...r.entity.errors];
+      console.error(`❌ ${r.name}: ${errs.join('; ')}`);
+    }
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+// --- Full validation ---
+
+// 1. Discover
 let activeAdapters = findAdapters(ADAPTERS_DIR);
-let needsWorkAdapters = findNeedsWorkAdapters(NEEDS_WORK_DIR);
+let needsWorkAdapters = findAdapters(NEEDS_WORK_DIR);
 
 if (filterValue) {
   activeAdapters = activeAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
   needsWorkAdapters = needsWorkAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
 }
 
-// Validate all
-const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
+// 2. Validate
+const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a, _moved: false }));
+const needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a, _moved: false }));
 
 // Sort: passing first, then by name
-activeResults.sort((a, b) => {
+const sortResults = (arr) => arr.sort((a, b) => {
   const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
   const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
   if (aPass !== bPass) return bPass - aPass;
   return a.name.localeCompare(b.name);
 });
+sortResults(activeResults);
+sortResults(needsWorkResults);
 
-// Validate .needs-work
-let needsWorkResults = [];
-if (!preCommit && needsWorkAdapters.length > 0) {
-  needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
-  needsWorkResults.sort((a, b) => {
-    const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
-    const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
-    if (aPass !== bPass) return bPass - aPass;
-    return a.name.localeCompare(b.name);
-  });
+// 3. Collect entity coverage (before moves)
+const knownEntities = [...validEntityIds].sort();
+const coveredEntities = new Set();
+for (const result of activeResults) {
+  try {
+    const content = readFileSync(join(result._adapter.dir, 'readme.md'), 'utf-8');
+    const fm = parseFrontmatter(content);
+    if (fm?.operations) {
+      for (const op of Object.values(fm.operations)) {
+        if (op.returns && op.returns !== 'void') {
+          coveredEntities.add(op.returns.replace(/\[\]$/, ''));
+        }
+      }
+    }
+  } catch {}
 }
 
-// Render one unified table
+// 4. Render table
 const sections = [
   { label: `Adapters (${activeResults.length})`, icon: '📦', results: activeResults },
 ];
@@ -600,62 +571,41 @@ if (needsWorkResults.length > 0) {
 }
 renderTable(sections);
 
-// Error details
-const allResults = [...activeResults, ...needsWorkResults];
-if (verbose || activeResults.some(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass)) {
-  renderErrors(activeResults);
+// 5. Move failures from adapters/ → .needs-work/
+let movedCount = 0;
+for (const result of activeResults) {
+  if (!result.schema.structureValid || !result.entity.pass) {
+    const adapter = result._adapter;
+    const destPath = join(NEEDS_WORK_DIR, adapter.name);
+    if (existsSync(destPath)) continue; // already exists there
+    try {
+      renameSync(adapter.dir, destPath);
+      result._moved = true;
+      movedCount++;
+    } catch (err) {
+      console.error(`  Failed to move ${adapter.name}: ${err.message}`);
+    }
+  }
 }
 
-// Check for promotable .needs-work adapters
-const promotable = needsWorkResults.filter(r => 
+// 6. Error details (always show for active adapters)
+renderErrors(activeResults);
+if (verbose) renderErrors(needsWorkResults);
+
+// 7. Check for promotable .needs-work adapters
+const promotable = needsWorkResults.filter(r =>
   r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass
 );
 if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
 }
 
-// Auto-move: active adapters that fail schema or entity → .needs-work
-let movedCount = 0;
-if (autoMove) {
-  for (const result of activeResults) {
-    if (!result.schema.structureValid || !result.entity.pass) {
-      const adapter = result._adapter;
-      const destPath = join(NEEDS_WORK_DIR, adapter.name);
-      if (existsSync(destPath)) {
-        // Already exists in .needs-work — can't move
-        continue;
-      }
-      try {
-        renameSync(adapter.dir, destPath);
-        console.log(`📦 Moved ${adapter.name} → .needs-work/ (${!result.schema.structureValid ? 'schema' : 'entity'} failure)`);
-        movedCount++;
-      } catch (err) {
-        console.error(`⚠️  Failed to move ${adapter.name}: ${err.message}`);
-      }
-    }
-  }
-  if (movedCount > 0) {
-    console.log(`\n📦 Moved ${movedCount} adapter(s) to .needs-work/\n`);
-  }
+// 8. Summary
+if (movedCount > 0) {
+  console.log(`📦 Moved ${movedCount} adapter(s) to .needs-work/`);
 }
 
-// Entity coverage summary
-const knownEntities = [...validEntityIds].sort();
-const coveredEntities = new Set();
-for (const result of activeResults) {
-  const readmePath = join(result._adapter.dir, 'readme.md');
-  const content = readFileSync(readmePath, 'utf-8');
-  const fm = parseFrontmatter(content);
-  if (fm?.operations) {
-    for (const op of Object.values(fm.operations)) {
-      if (op.returns && op.returns !== 'void') {
-        coveredEntities.add(op.returns.replace(/\[\]$/, ''));
-      }
-    }
-  }
-}
-
-console.log(`📊 Entity coverage: ${coveredEntities.size} of ${knownEntities.length} entity types have adapters`);
+console.log(`📊 Entity coverage: ${coveredEntities.size}/${knownEntities.length} entity types have adapters`);
 if (verbose) {
   const uncovered = knownEntities.filter(e => !coveredEntities.has(e));
   if (uncovered.length > 0) {
@@ -664,22 +614,14 @@ if (verbose) {
 }
 console.log();
 
-// Exit code
-const hasSchemaOrEntityFailures = activeResults.some(r => !r.schema.structureValid || !r.entity.pass);
-if (hasSchemaOrEntityFailures && !autoMove) {
-  // In no-move mode (pre-commit), fail on schema/entity issues
-  console.error('❌ Validation failed — adapters have schema or entity issues');
-  process.exit(1);
-} else if (hasSchemaOrEntityFailures && movedCount > 0) {
-  // Moved some adapters — report but don't fail (they're in .needs-work now)
-  console.log('⚠️  Some adapters moved to .needs-work/');
-  process.exit(0);
+const remaining = activeResults.filter(r => !r._moved);
+const allPassing = remaining.length > 0 && remaining.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
+if (allPassing) {
+  console.log('✅ All adapters fully valid');
+} else if (remaining.length === 0) {
+  console.log('📭 No adapters in adapters/ — everything moved to .needs-work/');
 } else {
-  const allPassing = activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
-  if (allPassing) {
-    console.log('✅ All adapters fully valid');
-  } else {
-    console.log('⚠️  Some adapters have warnings (missing tests, mapping issues)');
-  }
-  process.exit(0);
+  const passing = remaining.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+  console.log(`⚠️  ${passing}/${remaining.length} adapters fully valid — run again after fixing`);
 }
+process.exit(0);

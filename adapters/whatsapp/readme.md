@@ -7,7 +7,7 @@ color: "#2CD46B"
 
 website: https://www.whatsapp.com/
 
-# No auth block = no credentials needed (local database)
+auth: none
 
 database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
 

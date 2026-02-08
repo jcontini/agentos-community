@@ -6,6 +6,15 @@ icon: icon.png
 color: "#FF0808"
 website: https://youtube.com
 
+auth: none
+
+instructions: |
+  YouTube adapter powered by yt-dlp.
+  - No API key needed — uses yt-dlp for metadata and transcripts
+  - Search uses yt-dlp's ytsearch (returns up to 50 results)
+  - Transcripts extracted from auto-captions when available
+  - Channel info extracted as person entities via relationships
+
 requires:
   - name: yt-dlp
     install:

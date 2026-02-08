@@ -7,6 +7,8 @@ color: "#000000"
 
 website: https://www.apple.com/macos/
 
+auth: none
+
 instructions: |
   Apple Calendar accesses local macOS Calendar via EventKit.
   

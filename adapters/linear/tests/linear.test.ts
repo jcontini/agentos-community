@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { aos, testContent, TEST_PREFIX } from '../../../../tests/utils/fixtures';
+import { aos, testContent, TEST_PREFIX } from '@test/fixtures';
 
 const adapter = 'linear';
 const account = 'AgentOS';

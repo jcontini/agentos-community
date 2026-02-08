@@ -9,6 +9,8 @@ website: https://news.ycombinator.com
 privacy_url: https://www.ycombinator.com/legal#privacy
 terms_url: https://www.ycombinator.com/legal
 
+auth: none
+
 instructions: |
   Hacker News notes:
   - Uses Algolia HN Search API (faster than official Firebase API)

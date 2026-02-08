@@ -6,7 +6,7 @@ icon: icon.png
 website: https://goodreads.com
 
 # No auth needed - CSV file import only
-auth: null
+auth: none
 
 # Action implementations (merged from mapping.yaml)
 actions:

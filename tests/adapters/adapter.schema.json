@@ -46,7 +46,7 @@
     },
     "auth": {
       "oneOf": [
-        { "type": "null", "description": "No authentication required" },
+        { "const": "none", "description": "No authentication required" },
         { "$ref": "#/definitions/auth" }
       ]
     },

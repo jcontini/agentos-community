@@ -9,6 +9,8 @@ website: https://reddit.com
 privacy_url: https://www.reddit.com/policies/privacy-policy
 terms_url: https://www.redditinc.com/policies/user-agreement
 
+auth: none
+
 sources:
   images:
     - styles.redditmedia.com

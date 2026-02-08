@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { aos } from '../../../../../tests/utils/fixtures';
+import { aos } from '@test/fixtures';
 
 describe('Hardcover Adapter', () => {
   describe('Configuration', () => {

@@ -3,6 +3,7 @@ id: logo-dev
 name: Logo.dev
 description: Company logos via CDN - lookup by domain, ticker, or name
 icon: icon.svg
+color: "#635BFF"
 
 website: https://www.logo.dev
 privacy_url: https://www.logo.dev/privacy
@@ -18,12 +19,10 @@ adapters:
     terminology: Logo
     mapping:
       id: .path
-      name: .name
-      src: .url
+      url: .url
+      alt: .name
       size: .size
-      mime_type: .mime_type
-      source: '"logo-dev"'
-      source_url: .source_url
+      format: '.mime_type | split("/") | .[1]'
 
 instructions: |
   Logo.dev returns company logos as images via CDN URLs.

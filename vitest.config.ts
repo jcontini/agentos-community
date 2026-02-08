@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@test': resolve(__dirname, 'tests/utils'),
+    },
+  },
   test: {
     // Look for tests in adapters and tests directories
     include: [

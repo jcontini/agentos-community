@@ -5,6 +5,9 @@ description: Simple URL fetching using curl (no API key needed)
 icon: icon.svg
 color: "#333333"
 
+website: https://curl.se
+auth: none
+
 instructions: |
   Curl is a simple fallback for fetching URLs.
   - No API key required

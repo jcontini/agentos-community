@@ -9,6 +9,8 @@ website: https://facebook.com
 privacy_url: https://www.facebook.com/privacy/policy
 terms_url: https://www.facebook.com/legal/terms
 
+auth: none
+
 requires:
   - name: Chromium
     install:

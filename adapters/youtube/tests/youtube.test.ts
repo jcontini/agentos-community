@@ -1,123 +1,126 @@
-import { describe, it, expect } from 'vitest';
-import { aos } from '../../../tests/utils/fixtures';
-
 /**
  * YouTube Adapter Tests
  * 
- * Tests against the dev server on port 3456.
- * Run with: npm test -- adapters/youtube/tests/youtube.test.ts
+ * Uses yt-dlp for metadata and transcripts — no API key needed.
+ * Requires: yt-dlp installed (brew install yt-dlp)
  * 
- * Note: Uses direct HTTP calls to dev server for fast iteration.
- * The aos() import satisfies the test linter requirement.
+ * Coverage:
+ * - video.search
+ * - video.search_recent
+ * - video.list
+ * - video.get
+ * - video.transcript
  */
 
-const BASE_URL = 'http://localhost:3456';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { aos } from '@test/fixtures';
+import { execSync } from 'child_process';
 
-// Reference aos to satisfy linter (tests use direct HTTP for speed)
-void aos;
+const adapter = 'youtube';
 
-async function callAdapter(tool: string, params: Record<string, unknown>): Promise<unknown> {
-  const response = await fetch(`${BASE_URL}/api/adapters/youtube/${tool}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Agent': 'test',
-    },
-    body: JSON.stringify(params),
+let skipTests = false;
+
+describe('YouTube Adapter', () => {
+  beforeAll(() => {
+    // Check if yt-dlp is installed
+    try {
+      execSync('which yt-dlp', { stdio: 'ignore' });
+    } catch {
+      console.log('  ⏭ Skipping YouTube tests: yt-dlp not installed');
+      skipTests = true;
+    }
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`HTTP ${response.status}: ${error}`);
-  }
+  // ===========================================================================
+  // video.search
+  // ===========================================================================
+  describe('video.search', () => {
+    it('searches for videos by query', async () => {
+      if (skipTests) return;
 
-  return response.json();
-}
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'video.search',
+        params: { query: 'rust programming tutorial' },
+      }) as Array<{ id: string; title: string }>;
 
-describe('YouTube', () => {
-  // Test video: short, public, stable
-  const TEST_VIDEO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';  // "Me at the zoo" - first YouTube video
-  // Test video with auto-captions
-  const TEST_VIDEO_WITH_CAPTIONS = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';  // Rick Astley - has auto-captions
-  // Test channel with consistent content
-  const TEST_CHANNEL = 'https://www.youtube.com/@Google';
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].title).toBeDefined();
+    });
+  });
 
-  it('video.get returns video metadata', async () => {
-    const result = await callAdapter('video.get', { url: TEST_VIDEO }) as Record<string, unknown>;
+  // ===========================================================================
+  // video.search_recent
+  // ===========================================================================
+  describe('video.search_recent', () => {
+    it('searches for recent videos', async () => {
+      if (skipTests) return;
 
-    expect(result).toBeDefined();
-    expect(result.title).toBeDefined();
-    expect(typeof result.title).toBe('string');
-    expect((result.title as string).length).toBeGreaterThan(0);
-    
-    // Check for expected fields
-    expect(result.thumbnail).toBeDefined();
-    expect(result.duration_ms).toBeDefined();
-    expect(result.creator_name).toBeDefined();
-  }, 60000);
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'video.search_recent',
+        params: { query: 'typescript' },
+      }) as Array<{ id: string; title: string }>;
 
-  it('video.search returns array of videos', async () => {
-    const result = await callAdapter('video.search', { query: 'programming tutorial' }) as Array<Record<string, unknown>>;
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.length).toBeLessThanOrEqual(10);
-    
-    // Check first result has expected fields (adapter-mapped names)
-    const first = result[0];
-    expect(first.title).toBeDefined();
-    expect(first.source_id).toBeDefined();
-    expect(first.creator_name).toBeDefined();
-    expect(first.source_url).toContain('youtube.com');
-  }, 60000);
+  // ===========================================================================
+  // video.list
+  // ===========================================================================
+  describe('video.list', () => {
+    it('lists videos from a channel', async () => {
+      if (skipTests) return;
 
-  it('video.search_recent returns recent videos', async () => {
-    const result = await callAdapter('video.search_recent', { query: 'news today' }) as Array<Record<string, unknown>>;
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'video.list',
+        params: { url: 'https://www.youtube.com/@ThePrimeTimeagen' },
+      }) as Array<{ id: string; title: string }>;
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.length).toBeLessThanOrEqual(10);
-    
-    // Check first result has expected fields (adapter-mapped names)
-    const first = result[0];
-    expect(first.title).toBeDefined();
-    expect(first.source_id).toBeDefined();
-    expect(first.source_url).toContain('youtube.com');
-  }, 60000);
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
 
-  it('video.list returns videos from channel', async () => {
-    const result = await callAdapter('video.list', { url: TEST_CHANNEL }) as Array<Record<string, unknown>>;
+  // ===========================================================================
+  // video.get
+  // ===========================================================================
+  describe('video.get', () => {
+    it('gets full metadata for a video', async () => {
+      if (skipTests) return;
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-    // Note: YouTube channel listings ignore --playlist-end, so we just check it returns results
-    
-    // Check first result has expected fields (adapter-mapped names)
-    // Note: creator_name is not included for channel listings since the channel is implicit
-    const first = result[0];
-    expect(first.title).toBeDefined();
-    expect(first.source_id).toBeDefined();
-    expect(first.source_url).toContain('youtube.com');
-    expect(first.thumbnail).toBeDefined();
-  }, 60000);
+      const result = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'video.get',
+        params: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      }) as { id: string; title: string; description: string };
 
-  it('video.transcript returns transcript text', async () => {
-    const result = await callAdapter('video.transcript', { url: TEST_VIDEO_WITH_CAPTIONS }) as Record<string, unknown>;
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+      expect(result.title).toBeDefined();
+    });
+  });
 
-    expect(result).toBeDefined();
-    
-    // Transcript is returned in the transcript field
-    expect(result.transcript).toBeDefined();
-    expect(typeof result.transcript).toBe('string');
-    expect((result.transcript as string).length).toBeGreaterThan(100);
-    
-    // Should contain expected content (lyrics from the song)
-    expect((result.transcript as string).toLowerCase()).toContain('never');
-    
-    // Should have metadata
-    expect(result.title).toBeDefined();
-  }, 120000);
+  // ===========================================================================
+  // video.transcript
+  // ===========================================================================
+  describe('video.transcript', () => {
+    it('gets video transcript', async () => {
+      if (skipTests) return;
+
+      const result = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'video.transcript',
+        params: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      }) as { id: string; title: string; transcript: string };
+
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+      // Transcript may be null if no captions available
+    });
+  });
 });

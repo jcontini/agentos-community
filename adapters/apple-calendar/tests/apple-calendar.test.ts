@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { aos, TEST_PREFIX } from '../../../../tests/utils/fixtures';
+import { aos, TEST_PREFIX } from '@test/fixtures';
 
 const adapter = 'apple-calendar';
 

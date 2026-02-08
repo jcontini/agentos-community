@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { aos } from '../../../../../../tests/utils/fixtures';
+import { aos } from '@test/fixtures';
 import { join } from 'path';
 
 const fixturesDir = join(__dirname, 'fixtures');

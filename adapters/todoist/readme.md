@@ -19,6 +19,13 @@ auth:
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 
+instructions: |
+  Todoist task management via the Unified API v1.
+  - Priority is inverted: Todoist 4=urgent → AgentOS 1=highest
+  - Labels map to tags, sections map to milestones
+  - Due dates can be natural language when creating ("tomorrow", "every monday")
+  - Comments support markdown and file attachments
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════

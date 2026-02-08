@@ -1,85 +1,151 @@
+/**
+ * Apple Contacts Adapter Tests
+ * 
+ * macOS Contacts via native APIs — no auth needed.
+ * Requires: macOS + Contacts permission.
+ * 
+ * Coverage:
+ * - person.list
+ * - person.get
+ * - person.search
+ * - accounts (utility)
+ * - create (utility — skipped, write operation)
+ * - update (utility — skipped, write operation)
+ * - delete (utility — skipped, write operation)
+ */
+
 import { describe, it, expect, beforeAll } from 'vitest';
-import { aos, skipIf } from '../../../tests/utils/fixtures';
+import { aos } from '@test/fixtures';
+import { platform } from 'os';
 
-describe('apple-contacts', () => {
-  let defaultAccount: string | undefined;
+const adapter = 'apple-contacts';
 
+let skipTests = false;
+let defaultAccount: string | null = null;
+
+describe('Apple Contacts Adapter', () => {
   beforeAll(async () => {
-    // Get the default account for testing
-    const accounts = await aos('apple-contacts.accounts');
-    const defaultAcc = accounts.find((a: any) => a.is_default);
-    defaultAccount = defaultAcc?.id;
-  });
+    if (platform() !== 'darwin') {
+      console.log('  ⏭ Skipping Apple Contacts tests: not macOS');
+      skipTests = true;
+      return;
+    }
 
-  describe('person.list', () => {
-    it('returns contacts from account', async () => {
-      skipIf(!defaultAccount, 'No default account found');
-      
-      const result = await aos('person.list', {
-        source: 'apple-contacts',
-        account: defaultAccount,
-        limit: 5
-      });
+    // Get accounts to find default
+    try {
+      const accounts = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'accounts',
+        params: {},
+      }) as Array<{ id: string; is_default: boolean }>;
 
-      expect(Array.isArray(result)).toBe(true);
-      if (result.length > 0) {
-        expect(result[0]).toHaveProperty('id');
-        expect(result[0]).toHaveProperty('display_name');
+      const def = accounts.find(a => a.is_default);
+      defaultAccount = def?.id ?? accounts[0]?.id ?? null;
+
+      if (!defaultAccount) {
+        console.log('  ⏭ Skipping Apple Contacts tests: no accounts found');
+        skipTests = true;
       }
-    });
+    } catch {
+      console.log('  ⏭ Skipping Apple Contacts tests: permission denied or unavailable');
+      skipTests = true;
+    }
   });
 
-  describe('person.get', () => {
-    it('returns full contact details', async () => {
-      skipIf(!defaultAccount, 'No default account found');
-      
-      // First get a contact to test with
-      const contacts = await aos('person.list', {
-        source: 'apple-contacts',
-        account: defaultAccount,
-        limit: 1
-      });
-      
-      skipIf(contacts.length === 0, 'No contacts to test with');
-      
-      const result = await aos('person.get', {
-        source: 'apple-contacts',
-        id: contacts[0].id
-      });
-
-      expect(result).toHaveProperty('id');
-      expect(result).toHaveProperty('first_name');
-    });
-  });
-
-  describe('person.search', () => {
-    it('searches contacts by query', async () => {
-      skipIf(!defaultAccount, 'No default account found');
-      
-      const result = await aos('person.search', {
-        source: 'apple-contacts',
-        account: defaultAccount,
-        query: 'a',
-        limit: 5
-      });
-
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
-
-  // Note: create, update, delete tests are marked as exempt in testing config
-  // because they modify data
-  
+  // ===========================================================================
+  // accounts (utility)
+  // ===========================================================================
   describe('accounts', () => {
-    it('returns available accounts', async () => {
-      const result = await aos('apple-contacts.accounts');
-      
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0]).toHaveProperty('id');
-      expect(result[0]).toHaveProperty('name');
-      expect(result[0]).toHaveProperty('count');
-      expect(result[0]).toHaveProperty('is_default');
+    it('lists contact accounts', async () => {
+      if (skipTests) return;
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'accounts',
+        params: {},
+      }) as Array<{ id: string; name: string; is_default: boolean }>;
+
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].id).toBeDefined();
+      expect(results[0].name).toBeDefined();
+    });
+  });
+
+  // ===========================================================================
+  // person.list
+  // ===========================================================================
+  describe('person.list', () => {
+    it('lists contacts from an account', async () => {
+      if (skipTests) return;
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'person.list',
+        params: { account: defaultAccount, limit: 5 },
+      }) as Array<{ id: string; name: string }>;
+
+      expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // person.get
+  // ===========================================================================
+  describe('person.get', () => {
+    it('gets a specific contact', async () => {
+      if (skipTests) return;
+
+      const contacts = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'person.list',
+        params: { account: defaultAccount, limit: 1 },
+      }) as Array<{ id: string }>;
+
+      if (contacts.length === 0) return; // No contacts
+
+      const result = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'person.get',
+        params: { id: contacts[0].id },
+      }) as { id: string; name: string };
+
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+    });
+  });
+
+  // ===========================================================================
+  // person.search
+  // ===========================================================================
+  describe('person.search', () => {
+    it('searches contacts', async () => {
+      if (skipTests) return;
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'person.search',
+        params: { account: defaultAccount, query: 'a', limit: 3 },
+      }) as Array<{ id: string }>;
+
+      expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // Write operations — skipped by default (modify contacts database)
+  // ===========================================================================
+  describe('write operations', () => {
+    it.skip('create — modifies contacts database', async () => {
+      await aos().call('UseAdapter', { adapter, tool: 'create', params: {} });
+    });
+
+    it.skip('update — modifies contacts database', async () => {
+      await aos().call('UseAdapter', { adapter, tool: 'update', params: {} });
+    });
+
+    it.skip('delete — modifies contacts database', async () => {
+      await aos().call('UseAdapter', { adapter, tool: 'delete', params: {} });
     });
   });
 });

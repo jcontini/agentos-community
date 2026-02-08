@@ -9,10 +9,13 @@
     "resolveJsonModule": true,
     "declaration": false,
     "outDir": "./dist",
-    "rootDir": ".."
+    "rootDir": "..",
+    "paths": {
+      "@test/*": ["./utils/*"]
+    }
   },
   "include": [
-    "../connectors/**/tests/**/*.ts",
+    "../adapters/**/tests/**/*.ts",
     "./utils/**/*.ts",
     "./setup.ts"
   ]

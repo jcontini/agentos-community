@@ -3,11 +3,11 @@ id: apple-contacts
 name: Apple Contacts
 description: Access macOS Contacts as Person entities with multi-account support
 icon: icon.png
+color: "#333333"
 
 website: https://www.apple.com/macos/
 
-# No auth block = no credentials needed (local system access)
-# Uses macOS permissions: Contacts
+auth: none
 
 testing:
   exempt:

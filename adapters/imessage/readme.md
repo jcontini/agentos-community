@@ -7,6 +7,8 @@ color: "#34C759"
 
 website: https://support.apple.com/messages
 
+auth: none
+
 database: "~/Library/Messages/chat.db"
 
 instructions: |

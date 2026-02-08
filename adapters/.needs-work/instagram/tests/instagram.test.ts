@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { aos, testContent, TEST_PREFIX } from '../../../../tests/utils/fixtures';
+import { aos, testContent, TEST_PREFIX } from '@test/fixtures';
 
 describe('Instagram Adapter', () => {
   // These tests are skipped until the Playwright executor and cookie auth are implemented

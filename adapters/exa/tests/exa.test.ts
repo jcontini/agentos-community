@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { aos } from '../../../../tests/utils/fixtures';
+import { aos } from '@test/fixtures';
 
 const adapter = 'exa';
 
