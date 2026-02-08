@@ -4,7 +4,6 @@ name: Curl
 description: Simple URL fetching using curl (no API key needed)
 icon: icon.svg
 color: "#333333"
-display: browser
 
 instructions: |
   Curl is a simple fallback for fetching URLs.

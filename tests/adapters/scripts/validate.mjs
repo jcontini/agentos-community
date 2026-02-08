@@ -364,6 +364,8 @@ const filterIndex = args.indexOf('--filter');
 const filterValue = filterIndex !== -1 ? args[filterIndex + 1] : null;
 const validateAll = args.includes('--all') || args.length === 0;
 const autoMove = !args.includes('--no-move');  // Auto-move by default, disable with --no-move
+const checkCoverage = !args.includes('--no-coverage');  // Skip test coverage with --no-coverage (pre-commit)
+const checkRefs = !args.includes('--no-refs');  // Skip entity reference checks with --no-refs (pre-commit)
 
 let adapters = validateAll 
   ? findAdapters(APPS_DIR)
@@ -401,28 +403,34 @@ for (const adapter of adapters) {
       failureReason = 'Schema validation failed';
       failed = true;
     } else {
-      // Validate operations and utilities return valid entities
-      const entityErrors = validateReturns(frontmatter);
-      if (entityErrors.length > 0) {
-        console.error(`❌ adapters/${adapter.path}: Invalid entity references`);
-        for (const err of entityErrors) {
-          console.error(`   ${err}`);
-        }
-        failureReason = 'Invalid entity references';
-        failed = true;
-      } else {
-        // Validate adapter mappings reference valid entity properties
-        const adapterErrors = validateAdapterMappings(frontmatter);
-        if (adapterErrors.length > 0) {
-          console.error(`❌ adapters/${adapter.path}: Invalid adapter mappings`);
-          for (const err of adapterErrors) {
+      if (checkRefs) {
+        // Validate operations and utilities return valid entities
+        const entityErrors = validateReturns(frontmatter);
+        if (entityErrors.length > 0) {
+          console.error(`❌ adapters/${adapter.path}: Invalid entity references`);
+          for (const err of entityErrors) {
             console.error(`   ${err}`);
           }
-          failureReason = 'Invalid adapter mappings';
+          failureReason = 'Invalid entity references';
           failed = true;
         }
         
-        // Validate jaq expression syntax (even if adapter mapping check passed)
+        if (!failed) {
+          // Validate adapter mappings reference valid entity properties
+          const adapterErrors = validateAdapterMappings(frontmatter);
+          if (adapterErrors.length > 0) {
+            console.error(`❌ adapters/${adapter.path}: Invalid adapter mappings`);
+            for (const err of adapterErrors) {
+              console.error(`   ${err}`);
+            }
+            failureReason = 'Invalid adapter mappings';
+            failed = true;
+          }
+        }
+      }
+      
+      if (!failed) {
+        // Validate jaq expression syntax (always check — catches real bugs)
         const jaqErrors = validateJaqExpressions(frontmatter);
         if (jaqErrors.length > 0) {
           console.error(`❌ adapters/${adapter.path}: Invalid jaq expressions`);
@@ -432,30 +440,34 @@ for (const adapter of adapters) {
           failureReason = 'Invalid jaq expressions';
           failed = true;
         }
-        
-        if (!failed) {
-          // Check icon exists (PNG or SVG)
-          const hasIcon = existsSync(join(adapterDir, 'icon.svg')) || existsSync(join(adapterDir, 'icon.png'));
-          if (!hasIcon) {
-            console.error(`❌ adapters/${adapter.path}: icon.svg or icon.png not found (required)`);
-            failureReason = 'icon not found';
+      }
+      
+      if (!failed) {
+        // Check icon exists (PNG or SVG)
+        const hasIcon = existsSync(join(adapterDir, 'icon.svg')) || existsSync(join(adapterDir, 'icon.png'));
+        if (!hasIcon) {
+          console.error(`❌ adapters/${adapter.path}: icon.svg or icon.png not found (required)`);
+          failureReason = 'icon not found';
+          failed = true;
+        } else if (checkCoverage) {
+          // Check test coverage (only for valid adapters, skipped in pre-commit)
+          const tools = getTools(frontmatter);
+          const testedTools = getTestedTools(adapterDir);
+          const untestedTools = tools.filter(t => !testedTools.has(t));
+          
+          if (untestedTools.length > 0) {
+            console.error(`❌ adapters/${adapter.path}: Missing tests for: ${untestedTools.join(', ')}`);
+            failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
             failed = true;
+          } else if (tools.length > 0) {
+            console.log(`✓ adapters/${adapter.path} (${tools.length} tools, all tested)`);
           } else {
-            // Check test coverage (only for valid adapters)
-            const tools = getTools(frontmatter);
-            const testedTools = getTestedTools(adapterDir);
-            const untestedTools = tools.filter(t => !testedTools.has(t));
-            
-            if (untestedTools.length > 0) {
-              console.error(`❌ adapters/${adapter.path}: Missing tests for: ${untestedTools.join(', ')}`);
-              failureReason = `Missing tests for: ${untestedTools.join(', ')}`;
-              failed = true;
-            } else if (tools.length > 0) {
-              console.log(`✓ adapters/${adapter.path} (${tools.length} tools, all tested)`);
-            } else {
-              console.log(`✓ adapters/${adapter.path}`);
-            }
+            console.log(`✓ adapters/${adapter.path}`);
           }
+        } else {
+          // --no-coverage: just report success with tool count
+          const tools = getTools(frontmatter);
+          console.log(`✓ adapters/${adapter.path} (${tools.length} tools)`);
         }
       }
     }

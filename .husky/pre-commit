@@ -1,81 +1,48 @@
-# Pre-commit: Fast validation (~1s)
-# - Schema validation (catches malformed YAML)
-# - Security checks (catches credential exposure)
-# - Test linting (catches missing patterns)
-# - Graph validation (catches broken entity references)
-# Full integration tests run on pre-push
+# Pre-commit: Fast structural validation (~1s), scoped to staged files only
+#
+# Checks (blocking):
+# - Schema validation — is the YAML structurally valid?
+# - Security checks — no credential exposure patterns
+#
+# NOT checked here (belong in `npm run validate` / CI / pre-push):
+# - Test coverage (are all operations tested?)
+# - Test linting (do test files follow patterns?)
+# - Entity references (do operations return known entities?)
+# - Pattern validation (typed references, best practices)
 
 STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^adapters/[^/]+/readme\.md$' || true)
-STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^adapters/[^/]+/tests/.*\.test\.ts$' || true)
-STAGED_ENTITIES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^entities/.*\.yaml$' || true)
 
 # Nothing to check
-if [ -z "$STAGED_READMES" ] && [ -z "$STAGED_TESTS" ] && [ -z "$STAGED_ENTITIES" ]; then
+if [ -z "$STAGED_READMES" ]; then
   exit 0
 fi
 
 ERRORS=0
+APPS=$(echo "$STAGED_READMES" | sed 's|adapters/||' | sed 's|/readme.md||' | tr '\n' ' ')
 
-# === Schema Validation (for readme changes) ===
-if [ -n "$STAGED_READMES" ]; then
-  echo "📋 Schema validation..."
-  APPS=$(echo "$STAGED_READMES" | sed 's|adapters/||' | sed 's|/readme.md||' | tr '\n' ' ')
-  node tests/adapters/scripts/validate.mjs $APPS --no-move || ERRORS=$((ERRORS + 1))
-  echo ""
+# === Schema Validation ===
+echo "📋 Schema validation..."
+node tests/adapters/scripts/validate.mjs $APPS --no-move --no-coverage --no-refs || ERRORS=$((ERRORS + 1))
+echo ""
+
+# === Security Checks ===
+echo "🔒 Security checks..."
+
+if echo "$STAGED_READMES" | xargs grep -l '\$AUTH_TOKEN\|\${AUTH_TOKEN}' 2>/dev/null; then
+  echo "❌ BLOCKED: \$AUTH_TOKEN found - use rest: or graphql: blocks instead"
+  ERRORS=$((ERRORS + 1))
 fi
 
-# === Security Checks (for readme changes) ===
-if [ -n "$STAGED_READMES" ]; then
-  echo "🔒 Security checks..."
-
-  # Check for credential exposure patterns
-  if echo "$STAGED_READMES" | xargs grep -l '\$AUTH_TOKEN\|\${AUTH_TOKEN}' 2>/dev/null; then
-    echo "❌ BLOCKED: \$AUTH_TOKEN found - use rest: or graphql: blocks instead"
-    ERRORS=$((ERRORS + 1))
-  fi
-
-  if echo "$STAGED_READMES" | xargs grep -l 'curl.*[Aa]uthorization\|wget' 2>/dev/null; then
-    echo "❌ BLOCKED: curl/wget with auth - use AgentOS executors (rest:, graphql:, sql:)"
-    ERRORS=$((ERRORS + 1))
-  fi
-
-  if echo "$STAGED_READMES" | xargs grep -l 'Bearer \$' 2>/dev/null; then
-    echo "❌ BLOCKED: Bearer token interpolation - AgentOS handles auth automatically"
-    ERRORS=$((ERRORS + 1))
-  fi
-  echo ""
+if echo "$STAGED_READMES" | xargs grep -l 'curl.*[Aa]uthorization\|wget' 2>/dev/null; then
+  echo "❌ BLOCKED: curl/wget with auth - use AgentOS executors (rest:, graphql:, sql:)"
+  ERRORS=$((ERRORS + 1))
 fi
 
-# === Test Linting (for test file or readme changes) ===
-# Lint tests when either test files or readmes change (readmes affect test requirements)
-if [ -n "$STAGED_TESTS" ] || [ -n "$STAGED_READMES" ]; then
-  echo "🧪 Test linting..."
-  
-  # Get unique adapter names from both staged tests and readmes
-  ADAPTERS=""
-  if [ -n "$STAGED_TESTS" ]; then
-    ADAPTERS="$ADAPTERS $(echo "$STAGED_TESTS" | sed 's|adapters/||' | sed 's|/tests/.*||' | sort -u | tr '\n' ' ')"
-  fi
-  if [ -n "$STAGED_READMES" ]; then
-    ADAPTERS="$ADAPTERS $(echo "$STAGED_READMES" | sed 's|adapters/||' | sed 's|/readme.md||' | sort -u | tr '\n' ' ')"
-  fi
-  ADAPTERS=$(echo "$ADAPTERS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-  
-  npx tsx tests/adapters/scripts/lint-tests.ts $ADAPTERS || ERRORS=$((ERRORS + 1))
-  echo ""
+if echo "$STAGED_READMES" | xargs grep -l 'Bearer \$' 2>/dev/null; then
+  echo "❌ BLOCKED: Bearer token interpolation - AgentOS handles auth automatically"
+  ERRORS=$((ERRORS + 1))
 fi
-
-# === Pattern Validation (for readme changes) ===
-# Checks: typed references, display fields, adapter best practices
-if [ -n "$STAGED_READMES" ]; then
-  echo "🔗 Pattern validation..."
-  node tests/adapters/scripts/validate-patterns.mjs --filter $APPS || ERRORS=$((ERRORS + 1))
-  echo ""
-fi
-
-# === Entity Validation (for entity changes) ===
-# Note: graph.yaml removed - relationships now in domain files
-# Entity schema validation happens via vitest tests
+echo ""
 
 if [ $ERRORS -eq 0 ]; then
   echo "✅ All checks passed"

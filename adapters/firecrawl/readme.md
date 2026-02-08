@@ -4,7 +4,6 @@ name: Firecrawl
 description: Read webpages with browser rendering for JS-heavy sites
 icon: icon.png
 color: "#FF5308"
-display: browser
 
 website: https://firecrawl.dev
 privacy_url: https://www.firecrawl.dev/privacy

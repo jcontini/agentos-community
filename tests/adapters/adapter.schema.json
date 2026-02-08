@@ -45,32 +45,16 @@
       "description": "URL to the service's terms of service"
     },
     "docs_url": {
-      "type": "string",
-      "format": "uri",
-      "description": "URL to the service's documentation"
+      "not": {},
+      "description": "REJECTED: Not parsed by core. Use website field or instructions instead."
     },
     "display": {
-      "type": "string",
-      "enum": ["browser"],
-      "description": "Rendering mode — 'browser' opens results in embedded browser instead of native views"
+      "not": {},
+      "description": "REJECTED: Not an adapter field. Display hints belong on entity definitions."
     },
     "platform": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": ["macos", "linux", "windows", "all"],
-          "description": "Single platform restriction"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["macos", "linux", "windows"]
-          },
-          "description": "Multiple platform restrictions"
-        }
-      ],
-      "description": "OS platform(s) this adapter requires"
+      "not": {},
+      "description": "REJECTED: Not parsed by core. Platform-specific paths belong under the database field."
     },
     "tags": {
       "not": {},
@@ -152,6 +136,21 @@
     },
     "sources": {
       "$ref": "#/definitions/adapterSources"
+    },
+    "testing": {
+      "type": "object",
+      "description": "Test configuration — exemptions for test linting requirements",
+      "properties": {
+        "exempt": {
+          "type": "object",
+          "description": "Test exemptions — keys are check names, values are reasons",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Reason for exemption"
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

@@ -4,7 +4,6 @@ name: Reddit
 description: Read public Reddit communities, posts, and comments
 icon: icon.png
 color: "#FF4500"
-display: browser
 
 website: https://reddit.com
 privacy_url: https://www.reddit.com/policies/privacy-policy

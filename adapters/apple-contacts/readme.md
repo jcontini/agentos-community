@@ -5,7 +5,6 @@ description: Access macOS Contacts as Person entities with multi-account support
 icon: icon.png
 
 website: https://www.apple.com/macos/
-platform: macos
 
 # No auth block = no credentials needed (local system access)
 # Uses macOS permissions: Contacts

@@ -4,7 +4,6 @@ name: Facebook
 description: Query public Facebook group information without login
 icon: icon.png
 color: "#106BFF"
-display: browser
 
 website: https://facebook.com
 privacy_url: https://www.facebook.com/privacy/policy

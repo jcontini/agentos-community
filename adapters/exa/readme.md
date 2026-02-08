@@ -4,7 +4,6 @@ name: Exa
 description: Semantic web search and content extraction
 icon: icon.png
 color: "#1F40ED"
-display: browser
 
 website: https://exa.ai
 privacy_url: https://exa.ai/privacy

@@ -6,7 +6,6 @@ icon: icon.svg
 color: "#2CD46B"
 
 website: https://www.whatsapp.com/
-platform: macos
 
 # No auth block = no credentials needed (local database)
 

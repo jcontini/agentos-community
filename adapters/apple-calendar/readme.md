@@ -6,7 +6,6 @@ icon: icon.png
 color: "#000000"
 
 website: https://www.apple.com/macos/
-platform: macos
 
 instructions: |
   Apple Calendar accesses local macOS Calendar via EventKit.

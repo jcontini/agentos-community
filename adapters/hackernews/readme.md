@@ -4,7 +4,6 @@ name: Hacker News
 description: Read Hacker News stories, comments, and discussions
 icon: icon.png
 color: "#FF6600"
-display: browser
 
 website: https://news.ycombinator.com
 privacy_url: https://www.ycombinator.com/legal#privacy

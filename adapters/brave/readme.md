@@ -4,7 +4,6 @@ name: Brave Search
 description: Privacy-focused web search with independent index
 icon: icon.svg
 color: "#F83B1D"
-display: browser
 
 website: https://brave.com/search
 privacy_url: https://search.brave.com/help/privacy-policy

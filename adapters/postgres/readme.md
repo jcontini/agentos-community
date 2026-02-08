@@ -6,7 +6,6 @@ icon: icon.svg
 color: "#336791"
 
 website: https://www.postgresql.org
-docs_url: https://www.postgresql.org/docs/current/
 
 auth:
   type: connection_string

@@ -6,7 +6,6 @@ icon: icon.svg
 color: "#34C759"
 
 website: https://support.apple.com/messages
-platform: macos
 
 database: "~/Library/Messages/chat.db"
 
