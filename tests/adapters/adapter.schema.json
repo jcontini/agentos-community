@@ -302,7 +302,7 @@
           "oneOf": [
             {
               "type": "string",
-              "description": "Model/entity reference (e.g., 'operation_result', 'file', 'dns_record[]') or void",
+              "description": "Model/entity reference (e.g., 'dns_record', 'dns_record[]') or void",
               "pattern": "^([a-z_]+(\\[\\])?|void)$"
             },
             {

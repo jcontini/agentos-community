@@ -121,45 +121,11 @@ adapters/{name}/
 
 Utilities are operations that don't fit standard CRUD patterns. Unlike operations (which return entities), utilities can return various shapes.
 
-### When to Use Each Return Type
-
 | Return Type | When to Use | Example |
 |-------------|-------------|---------|
-| `void` | Side-effect only, raw response | `logo_url` (returns image) |
-| `operation_result` | Action success/fail | `remove_relation`, `dns_delete` |
+| `void` | Side-effect only, or action confirmation | `delete`, `archive`, `add_blocker` |
 | Model reference | Structured data shared across adapters | `dns_list` → `dns_record[]` |
 | Inline schema | Adapter-specific introspection | `get_workflow_states` (Linear-only) |
-
-### Standard Result Models
-
-**`operation_result`** — Use for actions that succeed or fail:
-```yaml
-# Returns: { success: boolean, message?: string, id?: string }
-utilities:
-  remove_relation:
-    returns: operation_result
-    # ...
-  
-  add_blocker:
-    returns: operation_result  # relation ID goes in `id` field
-    # ...
-```
-
-**`batch_result`** — Use for bulk operations:
-```yaml
-# Returns: { succeeded: int, failed: int, total: int, errors?: string[] }
-utilities:
-  bulk_archive:
-    returns: batch_result
-    # ...
-```
-
-### Heuristics: Choosing the Right Return Type
-
-**Use `operation_result` when:**
-- The action succeeds or fails (previously you'd return `{ success: boolean }`)
-- The caller only needs confirmation
-- An ID of an affected/created resource is the only meaningful output
 
 **Use a model reference when:**
 - Multiple adapters return the same shape (e.g., `dns_record` across Gandi, Porkbun)
@@ -172,16 +138,17 @@ utilities:
 - It's configuration/setup data, not domain data
 
 **Use `void` when:**
+- The action is a side-effect (delete, archive, add relationship)
 - The response is raw (image, file, redirect)
-- The action has no meaningful return data
+- The caller only needs confirmation that it worked
 
 ### Examples
 
 ```yaml
-# Good: Standard result for success/fail action
+# Good: Void for side-effect actions
 utilities:
   dns_delete:
-    returns: operation_result
+    returns: void
 
 # Good: Model reference for shared concept
 utilities:

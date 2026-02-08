@@ -401,7 +401,7 @@ describe('Linear Adapter', () => {
       expect(task2.id).toBeDefined();
     });
 
-    it('add_blocker creates blocking relationship and returns operation_result', async () => {
+    it('add_blocker creates blocking relationship', async () => {
       if (skipTests) return;
       if (!task1?.id || !task2?.id) {
         console.log('  Skipping: tasks not created');
@@ -437,7 +437,7 @@ describe('Linear Adapter', () => {
       expect(result.success).toBe(true);
     });
 
-    it('add_related links two issues and returns operation_result', async () => {
+    it('add_related links two issues', async () => {
       if (skipTests) return;
       if (!task1?.id || !task2?.id) {
         console.log('  Skipping: tasks not created');

@@ -419,7 +419,7 @@ utilities:
     params:
       id: { type: string, required: true, description: "Issue being blocked" }
       blocker_id: { type: string, required: true, description: "Issue that is blocking" }
-    returns: operation_result
+    returns: void
     graphql:
       query: |
         mutation($input: IssueRelationCreateInput!) {
@@ -443,7 +443,7 @@ utilities:
     description: Remove a relationship by its ID (get ID from add_blocker/add_related response or issue query)
     params:
       relation_id: { type: string, required: true, description: "Relation ID to delete" }
-    returns: operation_result
+    returns: void
     graphql:
       query: |
         mutation($id: String!) {
@@ -463,7 +463,7 @@ utilities:
     params:
       id: { type: string, required: true, description: "First issue ID" }
       related_id: { type: string, required: true, description: "Second issue ID" }
-    returns: operation_result
+    returns: void
     graphql:
       query: |
         mutation($input: IssueRelationCreateInput!) {
@@ -508,9 +508,9 @@ instructions: |
   4. Call task.update with state_id
   
   Managing relationships:
-  - add_blocker/add_related return operation_result with relation ID in `id` field
+  - add_blocker/add_related return relation ID in response
   - get_relations returns all relationships with their IDs
-  - remove_relation takes relation_id param, returns operation_result
+  - remove_relation takes relation_id param
   
   Other notes:
   - Issues have human-readable IDs like "AGE-123" (in data.remote_id)
