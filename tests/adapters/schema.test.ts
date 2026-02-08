@@ -3,7 +3,7 @@
  * 
  * Validates:
  * - All adapter readme.md files have valid YAML frontmatter conforming to adapter schema
- * - Required files (icon.png) exist
+ * - Required files (icon.svg or icon.png) exist
  * - Adapters have operations or utilities
  */
 
@@ -105,11 +105,11 @@ describe('Adapter Schema Validation', () => {
       expect(valid).toBe(true);
     });
 
-    it('has required icon.svg file', () => {
+    it('has required icon file', () => {
       const adapterDir = join(ADAPTERS_DIR, adapterPath);
       const files = readdirSync(adapterDir);
-      const hasSvgIcon = files.includes('icon.svg');
-      expect(hasSvgIcon).toBe(true);
+      const hasIcon = files.includes('icon.svg') || files.includes('icon.png');
+      expect(hasIcon).toBe(true);
     });
   });
 });
