@@ -148,6 +148,24 @@ roles:
     inverse_name: Embedded in
     description: Content contains/presents media (container → contained)
 
+  # --- Infrastructure roles ---
+  runs_on:
+    name: Runs on
+    inverse_name: Powers
+    description: Service/site is built on this software/platform (fosstodon.org runs on Mastodon, myblog.com runs on WordPress)
+  made_by:
+    name: Made by
+    inverse_name: Makes
+    description: Product/service created by this organization
+  founded_by:
+    name: Founded by
+    inverse_name: Founded
+    description: Organization founded by this person
+  acquired_by:
+    name: Acquired by
+    inverse_name: Acquired
+    description: Entity was acquired by this organization (temporal — use started_at)
+
   # --- Credits roles ---
   # Used with person → media/document for rich credits.
   # The `creator` property on media handles the primary creator;

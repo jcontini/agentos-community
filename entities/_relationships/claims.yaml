@@ -1,0 +1,74 @@
+# Claims — Person-Account Identity Relationship
+#
+# The foundational link between a person and their accounts/identifiers.
+# A person "claims" an account — meaning they assert ownership or control.
+#
+# This is the universal identity graph edge:
+#   Person → claims → Account (phone, email, social handle, etc.)
+#
+# Every way of identifying or reaching a person is an account entity.
+# Phone numbers, email addresses, Twitter handles, WhatsApp JIDs —
+# they're all accounts on different platforms. The claims relationship
+# connects them to the person with epistemic provenance.
+#
+# Key design principles:
+#   - Epistemic rigor: we don't assert "this IS the same person" —
+#     we say "here's evidence this person controls this account"
+#   - Temporal: claims have started_at/ended_at. Old phone numbers
+#     aren't deleted — they're historical claims that preserve
+#     continuity with old messages and data.
+#   - Confidence: import from contacts = high confidence.
+#     Same handle heuristic = low confidence.
+#   - Bidirectional possible: brand accounts can be claimed by
+#     multiple persons. An account can exist with no known person.
+#
+# Examples (forward: person → account):
+#   Sarah Chen ──claims──→ +62-812-345-6789 (phone)
+#   Sarah Chen ──claims──→ sarah@example.com (email)
+#   Sarah Chen ──claims──→ @sarahchen (twitter)
+#   Joe ──claims──→ @jcontini (github)
+#
+# Same edges read in reverse (account → person):
+#   +62-812-345-6789 is **claimed by** Sarah Chen
+#   @sarahchen (twitter) is **claimed by** Sarah Chen
+#
+# See also: .ROADMAP/account-entity.md for full design rationale
+
+id: claims
+name: Claims
+inverse_name: Claimed by
+description: A person claims ownership or control of an account/identifier
+
+is_relationship: true
+
+from_type: person
+to_type: account
+
+properties:
+  confidence:
+    type: number
+    description: |
+      How sure are we that this person controls this account? 0.0 to 1.0.
+      High (0.9+): contact_import, self_claimed, rel_me verification.
+      Medium (0.7-0.9): bio_extraction, message_history.
+      Low (0.5-0.7): same_handle heuristic, inferred.
+
+  method:
+    type: string
+    description: |
+      How we learned about this person-account link.
+      Values: contact_import, self_claimed, rel_me, bio_extraction,
+      same_handle, manual_assertion, message_history, inferred
+
+  context:
+    type: string
+    description: |
+      Free-text usage context for this account. Not a rigid category
+      like "work" or "home" — more like "Colombian WhatsApp number",
+      "old college email", "US work phone".
+
+  primary:
+    type: boolean
+    description: |
+      Is this the person's main/preferred account for this platform?
+      Only one claims relationship per platform should have primary: true.

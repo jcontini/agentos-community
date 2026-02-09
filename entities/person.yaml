@@ -1,10 +1,25 @@
-# Person Entity - unified social graph node
-# Unified across all platforms via the accounts array
+# Person Entity — the human in the graph
+#
+# A person is the human being. NOT their phone number, email, or
+# social handle — those are account entities linked via `claims`.
+#
+# The "contact card" is a VIEW computed from graph traversals:
+#   person → claims → accounts (phone, email, social, etc.)
+#   person → lives_at → place (address/location)
+#   person → works_at → organization (employer)
+#
+# Phone, email, and accounts array below are TRANSITIONAL —
+# they exist for backward compatibility while adapters migrate
+# to producing account entities + claims relationships.
+# Target state: person has only identity fields (name, birthday,
+# notes, avatar). Everything else is graph traversal.
+#
+# See: .ROADMAP/account-entity.md for the full design.
 
 id: person
 plural: people
 name: Person
-description: Someone in your social graph, unified across platforms
+description: Someone in your social graph — the human, not their identifiers
 
 references:
   schema_org: https://schema.org/Person
@@ -36,14 +51,16 @@ properties:
     type: string
     description: Nickname or alias
 
-  # Primary contact info (quick access)
+  # Primary contact info — TRANSITIONAL
+  # These become graph traversals: person → claims → account WHERE platform="phone"/"email"
+  # Kept for backward compatibility until all adapters produce account entities
   phone:
     type: string
-    description: Primary phone (E.164 format)
+    description: "[TRANSITIONAL] Primary phone — will become claims → account traversal"
   email:
     type: string
     format: email
-    description: Primary email
+    description: "[TRANSITIONAL] Primary email — will become claims → account traversal"
 
   # Avatar references image entity
   avatar:
@@ -69,11 +86,16 @@ properties:
     type: string
     description: User notes about this person
 
-  # Unified accounts array - the key innovation
-  # All contact methods in one extensible array
+  # Unified accounts array — TRANSITIONAL
+  # Moving to first-class account entities + claims relationships.
+  # Each item here will become:
+  #   1. An account entity (platform=type, handle=value)
+  #   2. A claims relationship (person → account, with label as context)
+  # Kept for backward compatibility until all adapters migrate.
+  # See: .ROADMAP/account-entity.md
   accounts:
     type: array
-    description: All ways to reach or identify this person
+    description: "[TRANSITIONAL] All ways to reach or identify this person — migrating to account entities + claims relationships"
     items:
       type: object
       required: [type, value]
@@ -81,7 +103,7 @@ properties:
         type:
           type: string
           description: |
-            Account type. Core: phone, email.
+            Account type / platform. Core: phone, email.
             Social: twitter, github, linkedin, instagram, facebook.
             Messaging: whatsapp, imessage, telegram, signal, slack.
             Any string allowed for extensibility.

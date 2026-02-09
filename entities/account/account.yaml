@@ -1,27 +1,42 @@
-# Account Entity — Platform Identity
+# Account Entity — Universal Platform Identifier
 #
-# A social media account, handle, or profile on a specific platform.
+# ANY way of identifying or reaching a person on ANY platform.
+# A phone number is no different from a Twitter handle in the graph.
+#
 # NOT a person — an account is a platform identity that a person
 # claims. One person can have many accounts. One account can be
-# claimed by multiple people (brand accounts). An account can exist
-# with no known person (anonymous commenter).
+# claimed by multiple people (brand accounts, family phone lines).
+# An account can exist with no known person (anonymous commenter).
 #
 # The person ↔ account link is a `claims` relationship with
-# epistemic provenance (confidence, method). We don't assert
-# "this IS the same person" — we say "here's evidence this
-# person controls this account."
+# epistemic provenance (confidence, method, context, temporal bounds).
+# We don't assert "this IS the same person" — we say "here's evidence
+# this person controls this account."
 #
-# This is the universal social graph pivot:
-#   Person → claims → Account → owns/moderates → Community
+# This is the universal identity graph:
+#   Person → claims → Account (phone, email, twitter, youtube, ...)
+#                       └── owns/moderates → Community (channel/sub/server)
 #
-# Standards basis: FOAF foaf:OnlineAccount
+# A "contact card" is a VIEW computed from graph traversals over
+# a person's claimed accounts — not a stored flat record.
+#
+# Platform examples:
+#   phone    — +62-812-345-6789 (the phone network is the platform)
+#   email    — sarah@example.com (email is the platform)
+#   twitter  — @sarahchen
+#   youtube  — @3blue1brown (channel handle)
+#   whatsapp — 6281234567890@s.whatsapp.net (JID format)
+#   github   — jcontini
+#   aol      — surferdude92 (historical — preserves old message links)
+#
+# Standards basis: FOAF foaf:OnlineAccount (expanded beyond social)
 #
 # See also: .ROADMAP/account-entity.md for full design rationale
 
 id: account
 plural: accounts
 name: Account
-description: A social media account or profile on a specific platform
+description: A platform identity — phone number, email address, social handle, or any identifier on any platform
 
 references:
   foaf: http://xmlns.com/foaf/0.1/OnlineAccount
@@ -37,29 +52,46 @@ properties:
     type: string
     required: true
     description: |
-      Platform this account belongs to.
-      Examples: youtube, reddit, twitter, github, instagram, linkedin,
-      twitch, tiktok, mastodon, discord, facebook
+      Which platform/network this account belongs to. Open string.
+      Core: phone, email.
+      Social: twitter, github, linkedin, instagram, facebook, youtube,
+      reddit, mastodon, tiktok, twitch, discord.
+      Messaging: whatsapp, imessage, telegram, signal, slack.
+      Historical: aol, icq, msn, google-plus.
+      Any string allowed — new platforms emerge, old ones die.
 
   handle:
     type: string
-    description: Username or @ name on the platform
+    description: |
+      The human-readable identifier on this platform. Universal field:
+      - Phone: "+62-812-345-6789" or "+1-555-867-5309"
+      - Email: "sarah@example.com"
+      - Twitter: "sarahchen" (without @)
+      - YouTube: "@3blue1brown"
+      - WhatsApp: "6281234567890@s.whatsapp.net"
+      This is what humans see and use to find each other.
 
   display_name:
     type: string
-    description: Human-readable display name (may differ from handle)
+    description: Human-readable display name on the platform (may differ from handle)
 
   url:
     type: string
     format: url
-    description: Canonical profile URL
+    description: |
+      Canonical profile URL. Applies to social platforms (twitter.com/sarahchen),
+      websites, blogs. Not applicable to phone/email.
 
   platform_id:
     type: string
     description: |
       Platform's internal stable ID (survives handle changes).
-      YouTube: channel ID (UCxxxx). Reddit: user ID (t2_xxxx).
-      Twitter: numeric user ID. Not always available.
+      Phone: E.164 normalized number (+6281234567890).
+      Email: lowercase normalized (sarah@example.com).
+      YouTube: channel ID (UCxxxx).
+      Twitter: numeric user ID.
+      Reddit: user ID (t2_xxxx).
+      Not always available — handle is the fallback.
 
   avatar:
     references: image
@@ -71,11 +103,11 @@ properties:
 
   follower_count:
     type: integer
-    description: Number of followers/subscribers
+    description: Number of followers/subscribers (social platforms)
 
   following_count:
     type: integer
-    description: Number of accounts this account follows
+    description: Number of accounts this account follows (social platforms)
 
   verified:
     type: boolean
@@ -96,7 +128,7 @@ identifiers:
 operations: [get, search]
 
 display:
-  primary: display_name
+  primary: handle
   secondary: platform
   icon: at-sign
   show_as_app: true
