@@ -1,24 +1,20 @@
 # Message Entity
 # A chat message — text sent from one person to another
 #
-# Extends writing. Inherits:
-#   From writing: id, content, author (→ person)
+# Independent root — not a document. Messages don't have titles,
+# URLs, or publication semantics. They have delivery semantics
+# (sent/delivered/read) and exist within conversations.
 #
-# Vocabulary override: writing's `author` resolves as `sender` here.
-# "Who wrote this" and "who sent this" are the same concept in
-# different contexts. The graph treats them as equivalent —
-# querying "all writings by person X" finds messages too.
-# The Rust resolver and JS validator both handle vocabulary
-# overrides, so no explicit `sender` declaration is needed.
+# Formerly extended `writing` with vocabulary override (author → sender).
+# Now standalone with `sender` declared natively. "Show me everything
+# by person X" works via graph traversal (follow sender/author/creator
+# references), not type inheritance.
 #
-# NOT a document. Messages don't have titles, URLs, or publication
-# semantics. They have delivery semantics (sent/delivered/read)
-# and exist within conversations. Research: NEPOMUK and ActivityStreams
-# both model messages as siblings of documents, not children.
+# Research: NEPOMUK and ActivityStreams both model messages as
+# siblings of documents, not children.
 
 id: message
 plural: messages
-extends: writing
 name: Message
 description: A chat message
 
@@ -26,15 +22,20 @@ references:
   schema_org: https://schema.org/Message
   wikidata: Q628523
 
-vocabulary:
-  author: sender
-
 properties:
-  # Override content as required (messages must have content)
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
   content:
     type: string
     required: true
     description: Message content
+
+  sender:
+    references: person
+    description: Who sent this message
 
   conversation_id:
     type: string

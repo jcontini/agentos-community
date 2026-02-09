@@ -16,7 +16,7 @@ interface VideoSearchResultProps {
   /** Video title */
   title: string;
   /** Video URL */
-  source_url?: string;
+  url?: string;
   /** Thumbnail image URL */
   thumbnail?: string;
   /** Creator/channel name */
@@ -105,7 +105,7 @@ function getColorFromTitle(title: string): string {
 
 export function VideoSearchResult({
   title,
-  source_url,
+  url,
   thumbnail,
   creator_name,
   creator_url,
@@ -168,12 +168,12 @@ export function VideoSearchResult({
         data-flex="1"
       >
         {/* Title */}
-        {source_url ? (
+        {url ? (
           <a
             data-component="text"
             data-variant="title"
             data-overflow="ellipsis"
-            href={source_url}
+            href={url}
             target="_blank"
             rel="noopener noreferrer"
           >

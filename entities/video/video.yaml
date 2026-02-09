@@ -1,8 +1,12 @@
 # Video Entity
 # Video content from YouTube, Vimeo, or local files
+#
+# Extends media. Inherits:
+#   From media: id, title, description, creator, url, published_at, duration_ms, thumbnail
 
 id: video
 plural: videos
+extends: media
 name: Video
 description: Video content with metadata and optional transcript
 
@@ -12,43 +16,11 @@ references:
 
 properties:
   # Identity
-  id:
-    type: string
-    required: true
-    description: Unique identifier (often the platform's video ID)
-
   remote_id:
     type: string
     description: ID from the remote service (e.g., YouTube video ID "dQw4w9WgXcQ")
 
-  source_url:
-    type: string
-    format: url
-    description: URL to view video on original platform
-
-  title:
-    type: string
-    required: true
-    description: Video title
-
-  description:
-    type: string
-    description: Video description
-
-  # Creator
-  creator:
-    references: person
-    description: Who made this video
-
   # Content
-  duration_ms:
-    type: integer
-    description: Duration in milliseconds
-
-  thumbnail:
-    references: image
-    description: Thumbnail image
-
   transcript:
     type: string
     description: Full transcript text (the key artifact for AI)
@@ -91,10 +63,6 @@ properties:
     description: Number of views (if available from source)
 
   # Metadata
-  published_at:
-    type: datetime
-    description: When the video was published
-
   fetched_at:
     type: datetime
     description: When we retrieved this data
@@ -121,7 +89,7 @@ views:
         item_component: video-search-result
         item_props:
           title: "{{title}}"
-          source_url: "{{source_url}}"
+          url: "{{url}}"
           thumbnail: "{{thumbnail}}"
           creator_name: "{{creator_name}}"
           creator_url: "{{creator_url}}"
@@ -138,7 +106,7 @@ views:
         item_component: video-search-result
         item_props:
           title: "{{title}}"
-          source_url: "{{source_url}}"
+          url: "{{url}}"
           thumbnail: "{{thumbnail}}"
           creator_name: "{{creator_name}}"
           creator_url: "{{creator_url}}"
@@ -155,7 +123,7 @@ views:
         item_component: video-search-result
         item_props:
           title: "{{title}}"
-          source_url: "{{source_url}}"
+          url: "{{url}}"
           thumbnail: "{{thumbnail}}"
           creator_name: "{{creator_name}}"
           creator_url: "{{creator_url}}"
@@ -177,7 +145,7 @@ views:
             props:
               thumbnail: "{{activity.response.thumbnail}}"
               title: "{{activity.response.title}}"
-              url: "{{activity.response.source_url}}"
+              url: "{{activity.response.url}}"
               creator: "{{activity.response.creator.name}}"
               creatorUrl: "{{activity.response.creator.url}}"
               duration: "{{activity.response.duration_ms}}"
@@ -199,7 +167,7 @@ views:
             props:
               thumbnail: "{{activity.response.thumbnail}}"
               title: "{{activity.response.title}}"
-              url: "{{activity.response.source_url}}"
+              url: "{{activity.response.url}}"
               creator: "{{activity.response.creator.name}}"
               creatorUrl: "{{activity.response.creator.url}}"
               duration: "{{activity.response.duration_ms}}"

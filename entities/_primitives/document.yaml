@@ -1,8 +1,13 @@
-# Document — Titled Published Content
+# Document — Text-Centric Published Content
 #
-# Extends writing with title, URL, and publication metadata.
-# Posts and webpages are documents. Messages are NOT — they're
-# writings without titles or publication semantics.
+# Independent root for titled, published text content.
+# Posts and webpages are documents. Messages are NOT — they have
+# delivery semantics, not publication semantics.
+#
+# Formerly extended `writing` — now standalone. The `content` and
+# `author` properties that writing provided are declared directly.
+# "Show me everything by person X" works via graph traversal
+# (follow author/creator/sender references), not type inheritance.
 #
 # The `data` bag is the extension point for adapter-specific
 # properties. Community contributors building new entities that
@@ -11,15 +16,27 @@
 
 id: document
 plural: documents
-extends: writing
 name: Document
-description: Titled content with a URL and publication date
+description: Text-centric published content with title and URL
 
 references:
   schema_org: https://schema.org/CreativeWork
   dublin_core: https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
 
 properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  content:
+    type: string
+    description: The text content
+
+  author:
+    references: person
+    description: Who wrote this
+
   title:
     type: string
     description: Document title

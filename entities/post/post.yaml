@@ -1,9 +1,8 @@
 # Post Entity
 # A social media post, comment, or reply (Reddit, Twitter, HN, etc.)
 #
-# Extends document (which extends writing). Inherits:
-#   From writing: content, author (→ person)
-#   From document: title, url, published_at, fetched_at, data
+# Extends document. Inherits:
+#   From document: id, content, author, title, url, published_at, fetched_at, data
 #
 # Design principle: Comments ARE posts - just posts with a parent_id.
 # This unifies the model across platforms while preserving tree structure.

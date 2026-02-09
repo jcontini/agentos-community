@@ -1,0 +1,35 @@
+# Audio — Podcasts, Music, Sound
+#
+# Extends media. Inherits:
+#   From media: id, title, description, creator, url, published_at, duration_ms, thumbnail
+#
+# For podcast episodes, music tracks, sound effects, and any
+# audio-only content. Voice notes and calls use `recording` instead.
+
+id: audio
+plural: audio
+extends: media
+name: Audio
+description: Audio content — podcasts, music, sound
+
+references:
+  schema_org: https://schema.org/AudioObject
+
+properties:
+  bitrate:
+    type: integer
+    description: Audio bitrate in kbps
+
+  transcript:
+    type: string
+    description: Full transcript text
+
+identifiers: [url]
+
+operations: [list, get, search]
+
+display:
+  primary: title
+  secondary: creator.name
+  icon: headphones
+  show_as_app: true

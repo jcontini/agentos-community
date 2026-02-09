@@ -1,8 +1,7 @@
 # Book — Published written work
 #
 # Extends document. Inherits:
-#   From writing: id, content, author (→ person)
-#   From document: title, url, published_at, fetched_at, data
+#   From document: id, content, author, title, url, published_at, fetched_at, data
 #
 # For book tracking services (Hardcover, Goodreads, OpenLibrary).
 

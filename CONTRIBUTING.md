@@ -218,7 +218,7 @@ The entity model supports three extension mechanisms. Together they allow commun
 
 ### `extends:` — Type Hierarchy
 
-Entities can inherit properties from a parent type. The Rust resolver handles multi-level inheritance (e.g., `writing → document → post`). Child entities get all parent properties plus their own.
+Entities can inherit properties from a parent type. The Rust resolver handles multi-level inheritance (e.g., `document → post`, `media → video`). Child entities get all parent properties plus their own.
 
 ```yaml
 # post.yaml — inherits id, content, author, title, url, published_at from document
@@ -232,17 +232,17 @@ properties:
 
 ### `vocabulary:` — Context-Appropriate Naming
 
-When inheriting a property, you can rename it for domain context. The graph still treats them as equivalent — querying "all writings" finds messages by sender, even though the field is renamed.
+When inheriting a property, you can rename it for domain context. The graph still treats them as equivalent — querying by the renamed field works transparently.
 
 ```yaml
-# message.yaml — writing's `author` appears as `sender`
-id: message
-extends: writing
+# Example: if an entity inherits `url` but wants it called `source_url`
+id: my-entity
+extends: parent
 vocabulary:
-  author: sender
+  url: source_url
 properties:
-  # No explicit `sender` needed — vocabulary override handles it
-  conversation_id:
+  # No explicit `source_url` needed — vocabulary override handles it
+  some_field:
     type: string
 ```
 

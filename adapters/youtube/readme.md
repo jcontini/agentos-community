@@ -35,7 +35,7 @@ adapters:
     mapping:
       id: .id
       remote_id: .id
-      source_url: .webpage_url
+      url: .webpage_url
       title: .title
       description: .description
       transcript: .transcript
@@ -340,7 +340,7 @@ All operations return videos with these fields:
   "thumbnail": "https://i.ytimg.com/vi/...",
   "creator": { "name": "Channel Name", "url": "https://youtube.com/channel/..." },
   "remote_id": "dQw4w9WgXcQ",
-  "source_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+  "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
   "view_count": 12345,
   "published_at": "20210101"
 }

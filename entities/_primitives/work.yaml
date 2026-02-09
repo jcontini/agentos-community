@@ -1,0 +1,56 @@
+# Work — Abstract Intellectual or Artistic Creation (FRBR)
+#
+# The FRBR Work level: the abstract concept that unifies all its
+# expressions, manifestations, and items. "Hamlet", "The Bible",
+# "The Nike Swoosh" — the idea itself, independent of any specific
+# realization.
+#
+# Most entities don't need a work. A YouTube video is just a video.
+# Works appear when you actually have multiple representations:
+# - A book as text + audiobook + Kindle edition
+# - A logo in SVG + PNG + print
+# - A birth certificate with multiple certified copies
+#
+# FRBR levels connect via `references` relationship roles:
+#   expression_of    — concrete content → abstract work
+#   manifestation_of — format/edition → expression
+#   item_of          — specific copy → manifestation
+#
+# Research: FRBR (Functional Requirements for Bibliographic Records),
+# BIBFRAME (Library of Congress) validated collapsing to fewer levels.
+# We keep all four but make them opt-in via `references` roles.
+
+id: work
+plural: works
+name: Work
+description: An abstract intellectual or artistic creation — the concept that unifies all its expressions, manifestations, and items
+
+references:
+  frbr: https://www.ifla.org/publications/functional-requirements-for-bibliographic-records
+  bibframe: https://www.loc.gov/bibframe/
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  title:
+    type: string
+    required: true
+    description: The name of the work
+
+  description:
+    type: string
+    description: What this work is
+
+  original_creator:
+    references: person
+    description: Who originally created this work
+
+  created_date:
+    type: string
+    description: When the work was originally created (can be approximate, e.g., "1600" for Hamlet)
+
+display:
+  show_as_app: false

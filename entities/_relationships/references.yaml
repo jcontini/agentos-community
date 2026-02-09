@@ -5,7 +5,13 @@
 # general-purpose relationship type for building a knowledge graph.
 #
 # Unlike typed relationships (enables, contains), references is
-# open-ended. The `role` property carries the semantics:
+# open-ended. The `role` property carries the semantics.
+#
+# Roles are open strings, not an enum. New roles emerge as the
+# graph grows. Adapters, agents, and users can introduce roles
+# without schema changes.
+#
+# --- Common roles ---
 #
 #   about       — primary subject ("this doc is about X")
 #   mentions    — referenced in passing ("this doc mentions Y")
@@ -15,21 +21,41 @@
 #   responds_to — reply, reaction, rebuttal
 #   related_to  — general association (weakest link)
 #
-# Roles are open strings, not an enum. New roles emerge as the
-# graph grows. Adapters, agents, and users can introduce roles
-# without schema changes.
+# --- FRBR roles (content relationships) ---
+#
+#   expression_of    — concrete content → abstract work (English Hamlet text → "Hamlet" work)
+#   manifestation_of — format/edition → expression (Kindle edition → English text)
+#   item_of          — specific copy → manifestation (my signed copy → first-edition hardcover)
+#   variant_of       — same content, different format (logo SVG ↔ logo PNG)
+#   translation_of   — same content, different language (NIV Bible → original Hebrew/Greek)
+#   adaptation_of    — derived creative work (LOTR film → LOTR novel)
+#   transcript_of    — text version of audio/video (YouTube transcript → video)
+#   version_of       — same thing, updated (Linux 6.1 → Linux 6.0)
+#   performance_of   — performed realization (live recording → sheet music)
+#   part_of          — component of larger work (chapter → book, episode → series)
+#
+# --- Credits roles ---
+#
+#   director, actor, editor, producer, composer, narrator, etc.
+#   Used with person → media/document references for rich credits.
+#   The `creator` property on media handles the primary creator;
+#   credits roles handle the full cast/crew graph.
 #
 # Research lineage:
 #   - Dublin Core "relation" element (15 core elements for documents)
 #   - Schema.org mentions/about (CreativeWork properties)
 #   - NEPOMUK NIE ontology (content relationships)
 #   - Open Graph Protocol (structured web references)
+#   - FRBR (Functional Requirements for Bibliographic Records)
+#   - BIBFRAME (Library of Congress linked data model)
 #
 # Examples:
 #   vision (document) ──references (about)──→ symbiosis (concept)
 #   vision (document) ──references (cites)──→ Licklider (person)
-#   video  ──references (mentions)──→ SQLite (project)
-#   person ──references (inspired_by)──→ another person
+#   video  ──references (transcript_of)──→ transcript (document)
+#   hamlet-text ──references (expression_of)──→ hamlet (work)
+#   audiobook ──references (manifestation_of)──→ hamlet-text (expression)
+#   person ──references (director)──→ video (media)
 
 id: references
 name: References
@@ -53,6 +79,17 @@ properties:
         derived_from — adaptation or fork
         responds_to — reply or reaction
         related_to — general association
+      FRBR roles:
+        expression_of — concrete content → abstract work
+        manifestation_of — format/edition → expression
+        item_of — specific copy → manifestation
+        variant_of — same content, different format
+        translation_of — same content, different language
+        adaptation_of — derived creative work
+        transcript_of — text version of audio/video
+        version_of — same thing, updated
+        performance_of — performed realization
+        part_of — component of larger work
 
   context:
     type: string

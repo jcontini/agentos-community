@@ -1,0 +1,31 @@
+# Recording — Voice Notes, Calls, Personal Audio
+#
+# Extends media. Inherits:
+#   From media: id, title, description, creator, url, published_at, duration_ms, thumbnail
+#
+# For personal recordings: voice memos, phone calls, meeting recordings.
+# Distinguished from `audio` by intent — recordings are captured moments,
+# not published content.
+
+id: recording
+plural: recordings
+extends: media
+name: Recording
+description: Voice notes, calls, and personal audio recordings
+
+properties:
+  call_participants:
+    type: array
+    items:
+      references: person
+    description: People involved in this recording (for calls/meetings)
+
+identifiers: [url]
+
+operations: [list, get]
+
+display:
+  primary: title
+  secondary: creator.name
+  icon: mic
+  show_as_app: false
