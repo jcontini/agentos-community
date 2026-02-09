@@ -35,7 +35,7 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 - **Core repo** (`agentos`) — the Rust/React app itself
 - **This repo** (`agentos-community`) — installable content
 
-When users click "Install" in the AgentOS App Store, it downloads from this repo to `~/.agentos/installed/`.
+**In development, the server points directly at this repo** (`~/dev/agentos-community`). There is no `~/.agentos/installed/` folder. Edits here are live after a server restart. In production, the App Store will download from this repo to the user's machine.
 
 ---
 
@@ -71,30 +71,27 @@ adapters/
 
 ## Development Workflow
 
-**Recommended:** Edit in `~/.agentos/installed/`, test with running server, copy here when ready.
+**Edit directly in this repo.** The server's `sources` setting points here (`~/dev/agentos-community`). There is no separate `~/.agentos/installed/` folder — do NOT create one.
 
 ```bash
-# 1. Edit directly in installed folder (fast iteration)
-vim ~/.agentos/installed/adapters/reddit/readme.md
+# 1. Edit directly in the community repo (this is the live source)
+vim ~/dev/agentos-community/adapters/reddit/readme.md
 
 # 2. Restart AgentOS server and test
 cd ~/dev/agentos && ./restart.sh
 curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
-# 3. When working, copy to community repo
-cp -r ~/.agentos/installed/adapters/reddit ~/dev/agentos-community/adapters/
-
-# 4. Validate and commit
+# 3. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
 git add -A && git commit -m "Update Reddit adapter"
 ```
 
 **Why this workflow:**
-- Changes in `~/.agentos/installed/` take effect on server restart
-- No copy step between edits — fast feedback
-- Community repo stays clean — only tested code gets committed
+- This repo IS the live source — no copy step, no installed folder
+- Changes take effect on server restart
+- Everything stays in version control
 
 ---
 
