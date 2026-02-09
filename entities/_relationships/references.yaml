@@ -156,7 +156,11 @@ roles:
   made_by:
     name: Made by
     inverse_name: Makes
-    description: Product/service created by this organization
+    description: Who originally created this product (historical — doesn't change with acquisitions)
+  offered_by:
+    name: Offered by
+    inverse_name: Offers
+    description: Who currently offers/operates/sells this product (changes with acquisitions, licensing, etc.)
   founded_by:
     name: Founded by
     inverse_name: Founded

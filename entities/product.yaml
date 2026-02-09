@@ -1,17 +1,20 @@
-# Product — A Software Product, Service, or Platform
+# Product — Anything That Gets Made and Offered
 #
-# Products are the things organizations make. YouTube, WhatsApp,
-# Linear, Todoist, macOS. Every adapter connects to a product.
+# Software, physical goods, services, vehicles, appliances, drugs,
+# financial instruments. A Honda Civic is a product. A Costco sauna
+# is a product. YouTube is a product. Ibuprofen is a product.
 #
-# Products are also the platforms that accounts live on:
+# Who made it and who offers it can be different:
+#   WhatsApp → made_by → WhatsApp Inc (Jan Koum, Brian Acton)
+#   WhatsApp → offered_by → Meta (current operator, post-acquisition)
+#
+# For software products, this is also the platform accounts live on:
 #   Account: @sarahchen (twitter) → on_platform → Product: Twitter/X
 #   Account: +62-812-345-6789 → on_platform → Product: Phone (PSTN)
 #
-# This is the bridge between meta-entities (what adapters connect to)
-# and account-entity (platform identity for identifiers).
-#
 # Richness lives in relationships:
-#   product → made_by → organization (who built it)
+#   product → made_by → organization (who originally created it)
+#   product → offered_by → organization (who currently offers/operates it)
 #   product → acquired_by → organization (M&A, temporal)
 #   product → runs_on → product (Fosstodon runs on Mastodon)
 #   product → competes_with → product (competitive landscape)
@@ -22,11 +25,11 @@
 id: product
 plural: products
 name: Product
-description: A software product, service, or platform — what organizations make and adapters connect to
+description: Anything that gets made and offered — software, physical goods, services, vehicles, you name it
 
 references:
-  schema_org: https://schema.org/SoftwareApplication
-  wikidata: Q7397
+  schema_org: https://schema.org/Product
+  wikidata: Q2424752
 
 properties:
   id:
@@ -37,48 +40,53 @@ properties:
   name:
     type: string
     required: true
-    description: Product name (YouTube, WhatsApp, Linear)
+    description: Product name (YouTube, Honda Civic, Advil, Linear)
 
   description:
     type: string
-    description: What this product does
+    description: What this product is or does
 
   product_type:
     type: string
     description: |
       Classification — open string, common values:
-      app, service, platform, api, protocol, operating_system,
-      browser, game, library, framework, hardware
+      Software:  app, service, platform, api, protocol, operating_system,
+                 browser, game, library, framework
+      Physical:  vehicle, appliance, electronics, furniture, tool,
+                 food, beverage, clothing, toy, equipment
+      Other:     pharmaceutical, financial_product, media,
+                 building_material, cosmetic, hardware
 
   url:
     type: string
     format: url
-    description: Product website
+    description: Product website or listing page
 
   launched:
     type: string
-    description: When the product was launched (year or date)
+    description: When the product was launched or first sold (year or date)
 
   discontinued:
     type: string
-    description: When the product was shut down (year or date)
+    description: When the product was discontinued (year or date)
 
   status:
     type: string
-    description: "active, discontinued, beta, deprecated, merged"
+    description: "active, discontinued, beta, deprecated, merged, recalled"
 
-  # Platform availability
+  # Digital platform availability (software products)
   platforms:
     type: array
     items:
       type: string
     description: |
-      Where it runs: ios, android, web, macos, windows, linux, api_only.
-      For protocol-level "products" (email, phone): leave empty.
+      For software/digital products — where it runs:
+      ios, android, web, macos, windows, linux, api_only.
+      Not applicable for physical products.
 
   pricing:
     type: string
-    description: "free, freemium, paid, enterprise, open_source"
+    description: "free, freemium, paid, enterprise, open_source, subscription"
 
   # External references
   wikidata_id:
@@ -88,17 +96,20 @@ properties:
   avatar:
     type: string
     format: url
-    description: Product icon or logo URL
+    description: Product icon, logo, or image URL
 
   # Extensible data bag
   data:
     type: object
     description: |
       Domain-specific extensions:
-        SaaS:     { api_docs_url: "...", privacy_policy_url: "..." }
-        Protocol: { rfc: "RFC 5321", standard_body: "IETF" }
-        Game:     { genre: "interactive fiction", engine: "Z-machine" }
-        Hardware: { manufacturer: "Apple", model_year: 2024 }
+        SaaS:           { api_docs_url: "...", privacy_policy_url: "..." }
+        Protocol:       { rfc: "RFC 5321", standard_body: "IETF" }
+        Game:           { genre: "interactive fiction", engine: "Z-machine" }
+        Vehicle:        { make: "Honda", model: "Civic", year: 2024, body: "sedan" }
+        Pharmaceutical: { active_ingredient: "ibuprofen", dosage: "200mg", ndc: "..." }
+        Appliance:      { brand: "Breville", model: "BES870XL", category: "espresso machine" }
+        Electronics:    { manufacturer: "Apple", model_year: 2024, generation: 3 }
 
   notes:
     type: string
