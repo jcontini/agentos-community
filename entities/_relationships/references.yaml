@@ -195,10 +195,8 @@ roles:
     name: Partner of
     inverse_name: Partner of
     description: Strategic or business partnership between organizations (symmetric)
-  competitor_of:
-    name: Competitor of
-    inverse_name: Competitor of
-    description: Organizations competing in the same space (symmetric)
+  # competitor_of — removed (2026-02-09). Competition should be computed
+  # from shared categories/markets, not stored as an explicit relationship.
 
   # --- Location roles ---
   headquartered_in:
@@ -263,6 +261,12 @@ roles:
     name: Valid in
     inverse_name: Has valid licenses for
     description: License is valid in this jurisdiction (place)
+
+  # --- Usage roles ---
+  uses:
+    name: Uses
+    inverse_name: Used by
+    description: Person/org uses this product (temporal — started_at, ended_at; category/use_case in data)
 
   # --- Ownership / hosting roles ---
   owned_by:

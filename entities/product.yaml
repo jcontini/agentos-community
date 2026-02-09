@@ -17,7 +17,7 @@
 #   product → offered_by → organization (who currently offers/operates it)
 #   product → acquired_by → organization (M&A, temporal)
 #   product → runs_on → product (Fosstodon runs on Mastodon)
-#   product → competes_with → product (competitive landscape)
+#   person → uses → product (temporal: what you use and when)
 #   domain → owned_by → product (temporal: twitter.com → Twitter/X)
 #
 # See: .ROADMAP/meta-entities.md, .ROADMAP/account-entity.md

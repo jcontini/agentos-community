@@ -8,6 +8,45 @@ website: https://youtube.com
 
 auth: none
 
+# Seed entities: the product and organizations this adapter connects to
+seed:
+  - id: youtube
+    types: [product]
+    name: YouTube
+    data:
+      product_type: platform
+      url: https://youtube.com
+      launched: "2005"
+      platforms: [web, ios, android, macos, windows]
+      pricing: free
+      wikidata_id: Q866
+    relationships:
+      - role: offered_by
+        to: google
+
+  - id: google
+    types: [organization]
+    name: Google LLC
+    data:
+      type: company
+      url: https://google.com
+      founded: "1998"
+      wikidata_id: Q95
+
+  - id: alphabet
+    types: [organization]
+    name: Alphabet Inc.
+    data:
+      type: company
+      url: https://abc.xyz
+      founded: "2015"
+      ticker: GOOG
+      exchange: NASDAQ
+      wikidata_id: Q21077852
+    relationships:
+      - role: parent_of
+        to: google
+
 instructions: |
   YouTube adapter powered by yt-dlp.
   - No API key needed — uses yt-dlp for metadata and transcripts

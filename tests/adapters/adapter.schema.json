@@ -121,6 +121,13 @@
     "sources": {
       "$ref": "#/definitions/adapterSources"
     },
+    "seed": {
+      "type": "array",
+      "description": "Seed entities to create on startup (products, organizations this adapter connects to)",
+      "items": {
+        "$ref": "#/definitions/seedEntity"
+      }
+    },
     "testing": {
       "type": "object",
       "description": "Test configuration — exemptions for test linting requirements",
@@ -618,6 +625,54 @@
           "description": "Download timeout in seconds"
         }
       }
+    },
+    "seedEntity": {
+      "type": "object",
+      "description": "A seed entity declared by an adapter for auto-creation",
+      "required": ["id", "types", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Well-known slug for cross-adapter dedup (e.g., 'youtube', 'google', 'meta')"
+        },
+        "types": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Entity types (e.g., ['product'], ['organization'])"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "data": {
+          "type": "object",
+          "description": "Entity properties matching the entity schema"
+        },
+        "relationships": {
+          "type": "array",
+          "description": "Relationships from this entity to other seed entities",
+          "items": {
+            "type": "object",
+            "required": ["role", "to"],
+            "properties": {
+              "role": {
+                "type": "string",
+                "description": "Reference role (e.g., 'offered_by', 'parent_of')"
+              },
+              "to": {
+                "type": "string",
+                "description": "Target seed entity ID"
+              },
+              "data": {
+                "type": "object",
+                "description": "Optional relationship data"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "responseMapping": {
       "type": "object",
