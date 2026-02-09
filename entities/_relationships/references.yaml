@@ -91,10 +91,10 @@ roles:
     name: Derived from
     inverse_name: Source of
     description: Adaptation, fork, remix
-  responds_to:
-    name: Responds to
-    inverse_name: Has response
-    description: Reply, reaction, rebuttal
+  # responds_to — Moved to first-class `replies_to` relationship type (2026-02-09)
+  # Threaded replies are now graph edges, not reference roles.
+  # See entities/_relationships/replies_to.yaml
+
   related_to:
     name: Related to
     inverse_name: Related to

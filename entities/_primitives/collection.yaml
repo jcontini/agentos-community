@@ -32,6 +32,11 @@ properties:
   description:
     type: string
 
+  url:
+    type: string
+    format: url
+    description: Canonical URL for this collection (playlist URL, album page, etc.)
+
   item_count:
     type: integer
     description: Number of items in this collection

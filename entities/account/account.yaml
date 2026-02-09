@@ -1,0 +1,102 @@
+# Account Entity — Platform Identity
+#
+# A social media account, handle, or profile on a specific platform.
+# NOT a person — an account is a platform identity that a person
+# claims. One person can have many accounts. One account can be
+# claimed by multiple people (brand accounts). An account can exist
+# with no known person (anonymous commenter).
+#
+# The person ↔ account link is a `claims` relationship with
+# epistemic provenance (confidence, method). We don't assert
+# "this IS the same person" — we say "here's evidence this
+# person controls this account."
+#
+# This is the universal social graph pivot:
+#   Person → claims → Account → owns/moderates → Community
+#
+# Standards basis: FOAF foaf:OnlineAccount
+#
+# See also: .ROADMAP/account-entity.md for full design rationale
+
+id: account
+plural: accounts
+name: Account
+description: A social media account or profile on a specific platform
+
+references:
+  foaf: http://xmlns.com/foaf/0.1/OnlineAccount
+  schema_org: https://schema.org/ProfilePage
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier (typically platform_id or handle)
+
+  platform:
+    type: string
+    required: true
+    description: |
+      Platform this account belongs to.
+      Examples: youtube, reddit, twitter, github, instagram, linkedin,
+      twitch, tiktok, mastodon, discord, facebook
+
+  handle:
+    type: string
+    description: Username or @ name on the platform
+
+  display_name:
+    type: string
+    description: Human-readable display name (may differ from handle)
+
+  url:
+    type: string
+    format: url
+    description: Canonical profile URL
+
+  platform_id:
+    type: string
+    description: |
+      Platform's internal stable ID (survives handle changes).
+      YouTube: channel ID (UCxxxx). Reddit: user ID (t2_xxxx).
+      Twitter: numeric user ID. Not always available.
+
+  avatar:
+    references: image
+    description: Profile photo / avatar
+
+  bio:
+    type: string
+    description: Profile description or bio text
+
+  follower_count:
+    type: integer
+    description: Number of followers/subscribers
+
+  following_count:
+    type: integer
+    description: Number of accounts this account follows
+
+  verified:
+    type: boolean
+    description: Platform-verified status (blue check, etc.)
+
+  status:
+    type: string
+    enum: [active, suspended, deleted, unknown]
+    description: Account status on the platform
+
+# For cross-adapter deduplication
+# platform_id is most stable (survives handle changes)
+# handle is fallback when platform_id isn't available
+identifiers:
+  - platform_id
+  - handle
+
+operations: [get, search]
+
+display:
+  primary: display_name
+  secondary: platform
+  icon: at-sign
+  show_as_app: true

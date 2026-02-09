@@ -4,8 +4,14 @@
 # Extends document. Inherits:
 #   From document: id, content, author, title, url, published_at, fetched_at, data
 #
-# Design principle: Comments ARE posts - just posts with a parent_id.
-# This unifies the model across platforms while preserving tree structure.
+# Design principle: Comments ARE posts — just posts with a replies_to
+# relationship. A YouTube comment, Reddit comment, HN reply — they're
+# all post entities that reply_to another post. Threading lives in the
+# graph, not in properties.
+#
+# The `replies` array is a denormalized convenience for API responses
+# (rendering comment trees). The graph (replies_to edges) is the
+# source of truth for threading.
 
 id: post
 plural: posts
@@ -54,19 +60,20 @@ properties:
         type: integer
         description: Retweets, reposts, shares
 
-  parent_id:
-    type: string
-    description: Parent post/comment ID (null = top-level post)
-
   replies:
     type: array
-    description: Nested reply tree (recursive post structure)
+    description: |
+      Denormalized reply tree for API responses and rendering.
+      NOT the source of truth — the graph (replies_to relationships)
+      is the source of truth for threading. This array is populated
+      by adapters for rendering convenience and may be computed from
+      the graph in the future.
     items:
       type: post
 
   has_more_replies:
     type: boolean
-    description: Whether there are more replies not included
+    description: Whether there are more replies not included in the denormalized tree
 
 operations: [list, search, get]
 

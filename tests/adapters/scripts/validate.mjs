@@ -639,3 +639,5 @@ if (allPassing) {
   console.log(`⚠️  ${passing}/${remaining.length} adapters fully valid — run again after fixing`);
 }
 process.exit(0);
+
+
