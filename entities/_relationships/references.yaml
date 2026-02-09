@@ -160,11 +160,111 @@ roles:
   founded_by:
     name: Founded by
     inverse_name: Founded
-    description: Organization founded by this person
+    description: Organization founded by this person (temporal — use started_at for founding date)
   acquired_by:
     name: Acquired by
     inverse_name: Acquired
-    description: Entity was acquired by this organization (temporal — use started_at)
+    description: Entity was acquired by this organization (temporal — use started_at; amount in relationship data)
+
+  # --- Corporate structure roles ---
+  parent_of:
+    name: Parent of
+    inverse_name: Subsidiary of
+    description: Parent company → subsidiary (Xendit → PT Sinar Digital Terdepan)
+  has_executive:
+    name: Has executive
+    inverse_name: Executive of
+    description: Organization has this person as an executive (temporal — title, started_at, ended_at in relationship data)
+  has_board_member:
+    name: Has board member
+    inverse_name: Board member of
+    description: Organization has this person on its board (temporal — role like "Chairman", "Observer" in data)
+  employee_of:
+    name: Employee of
+    inverse_name: Employs
+    description: Person works/worked at this organization (temporal — title, department in data)
+  advisor_to:
+    name: Advisor to
+    inverse_name: Has advisor
+    description: Person advises this organization (temporal)
+  partner_of:
+    name: Partner of
+    inverse_name: Partner of
+    description: Strategic or business partnership between organizations (symmetric)
+  competitor_of:
+    name: Competitor of
+    inverse_name: Competitor of
+    description: Organizations competing in the same space (symmetric)
+
+  # --- Location roles ---
+  headquartered_in:
+    name: Headquartered in
+    inverse_name: Headquarters of
+    description: Organization's primary HQ location
+  operates_in:
+    name: Operates in
+    inverse_name: Has operations from
+    description: Organization operates in this country/region
+  has_office:
+    name: Has office in
+    inverse_name: Office of
+    description: Organization has a physical office at this place (temporal — address in data)
+  incorporated_in:
+    name: Incorporated in
+    inverse_name: Has incorporation of
+    description: Organization is legally incorporated in this jurisdiction
+
+  # --- Investment / funding roles ---
+  raised:
+    name: Raised
+    inverse_name: Raised by
+    description: Organization raised this funding round (org → milestone)
+  invested_in:
+    name: Invested in
+    inverse_name: Invested in by
+    description: Investor participated in this round (org/person → milestone; amount in data)
+  led:
+    name: Led
+    inverse_name: Led by
+    description: Lead investor of a funding round (org → milestone)
+
+  # --- Government / contract roles ---
+  contracted_by:
+    name: Contracted by
+    inverse_name: Contracts
+    description: Organization was contracted/hired by this client (temporal — contract value, period in data)
+  funded_by:
+    name: Funded by
+    inverse_name: Funds
+    description: Project/organization funded by this entity (USAID, Gates Foundation, World Bank, etc.)
+  regulates:
+    name: Regulates
+    inverse_name: Regulated by
+    description: Organization has regulatory authority over another (Bank Indonesia regulates payment companies)
+  administers:
+    name: Administers
+    inverse_name: Administered by
+    description: Organization administers/oversees this entity or program
+
+  # --- Licensing roles ---
+  holds:
+    name: Holds
+    inverse_name: Held by
+    description: Organization holds this license/certification
+  issued_by:
+    name: Issued by
+    inverse_name: Issues
+    description: License/certification issued by this authority/regulator
+  valid_in:
+    name: Valid in
+    inverse_name: Has valid licenses for
+    description: License is valid in this jurisdiction (place)
+
+  # --- Authorship roles ---
+  authored:
+    name: Authored
+    inverse_name: Authored by
+    description: Person/org authored this work (book, paper, document)
 
   # --- Credits roles ---
   # Used with person → media/document for rich credits.
