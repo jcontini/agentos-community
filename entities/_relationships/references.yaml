@@ -260,6 +260,16 @@ roles:
     inverse_name: Has valid licenses for
     description: License is valid in this jurisdiction (place)
 
+  # --- Ownership / hosting roles ---
+  owned_by:
+    name: Owned by
+    inverse_name: Owns
+    description: General ownership — person/org owns this entity (repo, product, domain, etc.)
+  hosted_at:
+    name: Hosted at
+    inverse_name: Hosts
+    description: Code/adapter lives in this repository or platform
+
   # --- Authorship roles ---
   authored:
     name: Authored
