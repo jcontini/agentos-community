@@ -115,6 +115,55 @@ adapters/{name}/
 
 **Entity-level utilities:** Name as `entity.utility_name` (e.g., `domain.dns_list`, not `dns_record.list`)
 
+### Mapping Field Types
+
+Adapter mappings support three field types, detected by structure:
+
+**String** — Simple jaq expression (stored as entity property):
+```yaml
+mapping:
+  title: .content
+  url: .webpage_url
+  published_at: .upload_date
+```
+
+**Relationship ref** — Links to an existing entity by service_id:
+```yaml
+mapping:
+  project_id:
+    ref: journey          # entity type to look up
+    value: .project_id    # jaq expression for the service_id (scalar or array)
+    rel: includes         # optional: inferred from schemas if unambiguous
+```
+
+**Typed reference** — Creates a new linked entity + relationship:
+```yaml
+mapping:
+  # Basic: creates a person entity with identity fields
+  created_by:
+    person:
+      id: .channel_id
+      name: .channel
+
+  # Rich: full property mappings + relationship metadata
+  transcript_doc:
+    document:
+      id: '(.id) + "_transcript"'
+      title: '"Transcript: " + .title'
+      content: .transcript
+      url: .webpage_url
+    _rel:
+      type: '"references"'
+      role: '"transcript_of"'
+```
+
+Typed references support **all entity fields**, not just identity. The entity schema's `identifiers` list determines which fields are used for deduplication — all other fields are stored as entity properties.
+
+The optional `_rel` block:
+- `type` — overrides the relationship type (default: the mapping field name)
+- Any other key — stored as relationship data (e.g., `role` for `references` relationships)
+- All `_rel` values are jaq expressions (use `'"literal"'` for string constants)
+
 ---
 
 ## Utility Return Types

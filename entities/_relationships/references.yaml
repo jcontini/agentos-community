@@ -34,6 +34,14 @@
 #   performance_of   — performed realization (live recording → sheet music)
 #   part_of          — component of larger work (chapter → book, episode → series)
 #
+# --- Embedding roles (content contains media) ---
+#
+#   embeds — this content contains/presents this media
+#            (blog post embeds image, tweet embeds video,
+#             YouTube page embeds video player, Reddit image post)
+#            Direction: container → contained (universal across standards)
+#            Use `context` for nuance: "primary media", "inline", "gallery item 3"
+#
 # --- Credits roles ---
 #
 #   director, actor, editor, producer, composer, narrator, etc.
@@ -56,6 +64,8 @@
 #   hamlet-text ──references (expression_of)──→ hamlet (work)
 #   audiobook ──references (manifestation_of)──→ hamlet-text (expression)
 #   person ──references (director)──→ video (media)
+#   post   ──references (embeds)──→ video (media)
+#   webpage ──references (embeds)──→ image (inline in blog post)
 
 id: references
 name: References
@@ -90,6 +100,8 @@ properties:
         version_of — same thing, updated
         performance_of — performed realization
         part_of — component of larger work
+      Embedding:
+        embeds — content contains/presents media (container → contained)
 
   context:
     type: string

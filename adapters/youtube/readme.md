@@ -39,6 +39,7 @@ adapters:
       title: .title
       description: .description
       transcript: .transcript
+      transcript_segments: .transcript_segments
       duration_ms: .duration * 1000
       thumbnail: .thumbnail
       published_at: .upload_date
@@ -167,7 +168,14 @@ operations:
       timeout: 30
 
   video.transcript:
-    description: Get video transcript from auto-generated captions
+    description: |
+      Get video transcript with optional timestamps.
+      
+      Formats:
+      - "text" (default): Plain text transcript — best for AI summarization, search, Q&A
+      - "segments": Timestamped segments with start_ms/end_ms — use when the user asks about specific moments (e.g., "when do they talk about X?" or "what happens at the 5 minute mark?")
+      
+      Always returns plain text in the transcript field. The segments format adds a transcript_segments array with timing data.
     returns: video
     web_url: "{{params.url}}"
     params:
@@ -179,6 +187,10 @@ operations:
         type: string
         default: en
         description: Language code (e.g., en, es, fr)
+      format:
+        type: string
+        default: text
+        description: "Transcript format: 'text' for plain text (default), 'segments' for timestamped segments"
     command:
       binary: bash
       args:
@@ -188,40 +200,90 @@ operations:
           set -e
           TMPDIR=$(mktemp -d)
           trap "rm -rf $TMPDIR" EXIT
+          FORMAT="{{params.format}}"
           
-          # Download auto-generated subtitles
-          yt-dlp --skip-download --write-auto-subs --sub-langs "{{params.lang}}" --convert-subs srt -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
+          # Download subtitles as JSON3 (YouTube's richest caption format)
+          # Try auto-generated first (available on ~85% of videos, has word-level timing)
+          yt-dlp --skip-download --write-auto-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
+          SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
           
-          # Find the subtitle file
-          SRTFILE=$(ls "$TMPDIR"/sub_*.srt 2>/dev/null | head -1)
+          # Fallback: manually uploaded subtitles
+          if [ -z "$SUBFILE" ]; then
+            yt-dlp --skip-download --write-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
+            SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
+          fi
           
-          if [ -z "$SRTFILE" ]; then
-            echo '{"error": "No auto-generated captions available for this video"}'
+          if [ -z "$SUBFILE" ]; then
+            echo '{"error": "No captions available for this video in language: {{params.lang}}"}'
             exit 0
           fi
           
-          # Extract clean text: remove timestamps, line numbers, empty lines, dedupe
-          TRANSCRIPT=$(cat "$SRTFILE" | grep -v '^[0-9]*$' | grep -v '^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]' | grep -v '^$' | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/  */ /g' | sed 's/"/\\"/g')
-          
-          # Get full video metadata (same fields as video.get)
+          # Get video metadata
           METADATA=$(yt-dlp --dump-json --skip-download "{{params.url}}" 2>/dev/null)
           
-          # Output JSON with all video fields plus transcript
-          # The adapter will map these to video entity properties
-          echo "$METADATA" | jq --arg transcript "$TRANSCRIPT" '{
-            title: .title,
-            description: .description,
-            transcript: $transcript,
-            duration: .duration,
-            thumbnail: .thumbnail,
-            channel: .channel,
-            channel_url: .channel_url,
-            id: .id,
-            webpage_url: .webpage_url,
-            upload_date: .upload_date,
-            resolution: .resolution
-          }'
-      timeout: 60
+          if [ "$FORMAT" = "segments" ]; then
+            # Parse JSON3 into timestamped segments + plain text
+            # Each segment: { start_ms, end_ms, text }
+            # Filter out empty events and timing markers (events without segs)
+            SEGMENTS=$(jq '[
+              .events[]
+              | select(.segs != null and (.segs | length) > 0)
+              | {
+                  start_ms: .tStartMs,
+                  end_ms: (.tStartMs + .dDurationMs),
+                  text: ([.segs[].utf8 // ""] | join("") | gsub("\n"; " ") | gsub("^ +| +$"; ""))
+                }
+              | select(.text | length > 0)
+            ]' "$SUBFILE")
+            
+            # Derive plain text from segments
+            TRANSCRIPT=$(echo "$SEGMENTS" | jq -r '[.[].text] | join(" ") | gsub("  +"; " ")')
+            
+            # Combine: metadata + transcript + segments
+            echo "$METADATA" | jq \
+              --arg transcript "$TRANSCRIPT" \
+              --argjson segments "$SEGMENTS" \
+              '{
+                title: .title,
+                description: .description,
+                transcript: $transcript,
+                transcript_segments: $segments,
+                duration: .duration,
+                thumbnail: .thumbnail,
+                channel: .channel,
+                channel_url: .channel_url,
+                id: .id,
+                webpage_url: .webpage_url,
+                upload_date: .upload_date,
+                resolution: .resolution
+              }'
+          else
+            # Default: plain text only (fastest for AI consumption)
+            TRANSCRIPT=$(jq -r '
+              [.events[] | select(.segs != null) | [.segs[].utf8 // ""] | join("")]
+              | join(" ")
+              | gsub("\n"; " ")
+              | gsub("  +"; " ")
+              | gsub("^ +| +$"; "")
+            ' "$SUBFILE")
+            
+            echo "$METADATA" | jq \
+              --arg transcript "$TRANSCRIPT" \
+              '{
+                title: .title,
+                description: .description,
+                transcript: $transcript,
+                duration: .duration,
+                thumbnail: .thumbnail,
+                channel: .channel,
+                channel_url: .channel_url,
+                id: .id,
+                webpage_url: .webpage_url,
+                upload_date: .upload_date,
+                resolution: .resolution
+              }'
+          fi
+      timeout: 90
 ---
 
 # YouTube
@@ -246,7 +308,7 @@ choco install yt-dlp   # Windows
 | `video.search_recent` | Search YouTube videos (sorted by upload date, newest first) |
 | `video.list` | List videos from a channel or playlist |
 | `video.get` | Get full metadata for a single video |
-| `video.transcript` | Get video transcript from auto-generated captions |
+| `video.transcript` | Get video transcript — plain text (default) or timestamped segments |
 
 ## video.search
 
@@ -320,13 +382,33 @@ Get full metadata for a single video.
 
 ## video.transcript
 
-Get the transcript from auto-generated captions.
+Get video transcript with optional timestamps. Powered by YouTube's JSON3 caption format.
 
 **Parameters:**
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `url` | string | required | YouTube video URL |
-| `lang` | string | "en" | Language code (en, es, fr, etc.) |
+| `lang` | string | `"en"` | Language code (en, es, fr, etc.) |
+| `format` | string | `"text"` | `"text"` for plain text, `"segments"` for timestamped segments |
+
+**When to use each format:**
+- `text` — AI summarization, search, Q&A ("what is this video about?")
+- `segments` — Temporal navigation ("when do they start talking about X?", "what happens at the 5 minute mark?")
+
+**Segments format response** (in addition to standard video fields):
+
+```json
+{
+  "transcript": "plain text always included...",
+  "transcript_segments": [
+    { "start_ms": 0, "end_ms": 4500, "text": "Welcome to today's video" },
+    { "start_ms": 4500, "end_ms": 8200, "text": "We're going to talk about linear algebra" },
+    { "start_ms": 8200, "end_ms": 12000, "text": "and why it's so fundamental" }
+  ]
+}
+```
+
+Segments are typically 2-5 seconds each. Timestamps are in milliseconds. Uses auto-generated captions when available, falls back to manually uploaded subtitles.
 
 ## Response Schema
 

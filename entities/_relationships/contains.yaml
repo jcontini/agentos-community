@@ -11,16 +11,15 @@
 # a tag contains items, an album contains photos, a playlist contains songs.
 #
 # Phase 1: collection ↔ outcome (Todoist labels, Linear labels)
-# Phase 2: extend from_type/to_type as more collection types appear
-#   (albums, playlists, folders, etc.)
+# Phase 2: playlists contain videos, albums contain audio, folders contain documents
+# Unconstrained — any entity can contain any entity. The from/to types
+# are inferred from the entities themselves.
 
 id: contains
 name: Contains
 description: A collection contains an entity as a member
 
 is_relationship: true
-from_type: collection
-to_type: outcome
 
 properties:
   position:

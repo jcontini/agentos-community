@@ -23,7 +23,21 @@ properties:
   # Content
   transcript:
     type: string
-    description: Full transcript text (the key artifact for AI)
+    description: Full transcript text (the key artifact for AI — plain text, no timestamps)
+
+  transcript_segments:
+    type: array
+    description: Timestamped transcript segments for temporal navigation ("when do they talk about X?")
+    items:
+      start_ms:
+        type: integer
+        description: Segment start time in milliseconds
+      end_ms:
+        type: integer
+        description: Segment end time in milliseconds
+      text:
+        type: string
+        description: Text spoken during this segment
 
   chapters:
     type: array
