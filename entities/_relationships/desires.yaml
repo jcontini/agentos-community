@@ -10,6 +10,7 @@
 
 id: desires
 name: Desires
+inverse_name: Desired by
 description: How strongly an entity wants or wants to avoid an outcome
 
 is_relationship: true

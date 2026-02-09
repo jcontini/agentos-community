@@ -6,6 +6,7 @@
 
 id: supersedes
 name: Supersedes
+inverse_name: Superseded by
 description: A newer decision replaces an older one
 
 is_relationship: true

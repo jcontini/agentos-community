@@ -6,6 +6,7 @@
 
 id: resolves
 name: Resolves
+inverse_name: Resolved by
 description: A decision resolves a question
 
 is_relationship: true

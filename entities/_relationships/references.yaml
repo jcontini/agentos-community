@@ -7,47 +7,14 @@
 # Unlike typed relationships (enables, contains), references is
 # open-ended. The `role` property carries the semantics.
 #
+# Each relationship is ONE edge with TWO labels: name (forward) and
+# inverse_name (reverse). The same edge reads differently depending
+# on which end you're standing on. No duplicate edges needed.
+#
 # Roles are open strings, not an enum. New roles emerge as the
 # graph grows. Adapters, agents, and users can introduce roles
-# without schema changes.
-#
-# --- Common roles ---
-#
-#   about       — primary subject ("this doc is about X")
-#   mentions    — referenced in passing ("this doc mentions Y")
-#   cites       — formal attribution ("this paper cites Z")
-#   inspired_by — creative influence ("this project was inspired by W")
-#   derived_from — adaptation, fork, remix
-#   responds_to — reply, reaction, rebuttal
-#   related_to  — general association (weakest link)
-#
-# --- FRBR roles (content relationships) ---
-#
-#   expression_of    — concrete content → abstract work (English Hamlet text → "Hamlet" work)
-#   manifestation_of — format/edition → expression (Kindle edition → English text)
-#   item_of          — specific copy → manifestation (my signed copy → first-edition hardcover)
-#   variant_of       — same content, different format (logo SVG ↔ logo PNG)
-#   translation_of   — same content, different language (NIV Bible → original Hebrew/Greek)
-#   adaptation_of    — derived creative work (LOTR film → LOTR novel)
-#   transcript_of    — text version of audio/video (YouTube transcript → video)
-#   version_of       — same thing, updated (Linux 6.1 → Linux 6.0)
-#   performance_of   — performed realization (live recording → sheet music)
-#   part_of          — component of larger work (chapter → book, episode → series)
-#
-# --- Embedding roles (content contains media) ---
-#
-#   embeds — this content contains/presents this media
-#            (blog post embeds image, tweet embeds video,
-#             YouTube page embeds video player, Reddit image post)
-#            Direction: container → contained (universal across standards)
-#            Use `context` for nuance: "primary media", "inline", "gallery item 3"
-#
-# --- Credits roles ---
-#
-#   director, actor, editor, producer, composer, narrator, etc.
-#   Used with person → media/document references for rich credits.
-#   The `creator` property on media handles the primary creator;
-#   credits roles handle the full cast/crew graph.
+# without schema changes. Registered roles (below) get proper
+# display labels; unregistered roles fall back to the raw string.
 #
 # Research lineage:
 #   - Dublin Core "relation" element (15 core elements for documents)
@@ -56,19 +23,27 @@
 #   - Open Graph Protocol (structured web references)
 #   - FRBR (Functional Requirements for Bibliographic Records)
 #   - BIBFRAME (Library of Congress linked data model)
+#   - OWL inverse labels (one edge, two display names)
 #
-# Examples:
+# Examples (forward direction, from → to):
 #   vision (document) ──references (about)──→ symbiosis (concept)
 #   vision (document) ──references (cites)──→ Licklider (person)
-#   video  ──references (transcript_of)──→ transcript (document)
+#   transcript (document) ──references (transcript_of)──→ video
 #   hamlet-text ──references (expression_of)──→ hamlet (work)
-#   audiobook ──references (manifestation_of)──→ hamlet-text (expression)
+#   post ──references (embeds)──→ video (media)
 #   person ──references (director)──→ video (media)
-#   post   ──references (embeds)──→ video (media)
-#   webpage ──references (embeds)──→ image (inline in blog post)
+#
+# Same edges read in reverse (to → from):
+#   symbiosis is **subject of** vision
+#   Licklider is **cited by** vision
+#   video **has transcript** transcript
+#   hamlet **has expression** hamlet-text
+#   video is **embedded in** post
+#   video **directed by** person
 
 id: references
 name: References
+inverse_name: Referenced by
 description: A general-purpose link between entities, with a role describing the nature of the connection
 
 is_relationship: true
@@ -80,28 +55,7 @@ is_relationship: true
 properties:
   role:
     type: string
-    description: |
-      The nature of the reference. Common roles:
-        about — primary subject
-        mentions — referenced in passing
-        cites — formal attribution
-        inspired_by — creative influence
-        derived_from — adaptation or fork
-        responds_to — reply or reaction
-        related_to — general association
-      FRBR roles:
-        expression_of — concrete content → abstract work
-        manifestation_of — format/edition → expression
-        item_of — specific copy → manifestation
-        variant_of — same content, different format
-        translation_of — same content, different language
-        adaptation_of — derived creative work
-        transcript_of — text version of audio/video
-        version_of — same thing, updated
-        performance_of — performed realization
-        part_of — component of larger work
-      Embedding:
-        embeds — content contains/presents media (container → contained)
+    description: The nature of the reference (see roles section below)
 
   context:
     type: string
@@ -110,3 +64,115 @@ properties:
   source:
     type: string
     description: Where this reference was discovered (e.g., "extracted from document content", "manually added", "adapter:youtube")
+
+# Registered roles with display labels.
+# Each role has a forward name (from→to) and inverse name (to→from).
+# Roles are still open strings — unregistered roles work fine,
+# they just won't have curated display labels.
+roles:
+  # --- Common roles ---
+  about:
+    name: About
+    inverse_name: Subject of
+    description: Primary subject ("this doc is about X")
+  mentions:
+    name: Mentions
+    inverse_name: Mentioned in
+    description: Referenced in passing
+  cites:
+    name: Cites
+    inverse_name: Cited by
+    description: Formal attribution
+  inspired_by:
+    name: Inspired by
+    inverse_name: Inspires
+    description: Creative influence
+  derived_from:
+    name: Derived from
+    inverse_name: Source of
+    description: Adaptation, fork, remix
+  responds_to:
+    name: Responds to
+    inverse_name: Has response
+    description: Reply, reaction, rebuttal
+  related_to:
+    name: Related to
+    inverse_name: Related to
+    description: General association (weakest link, symmetric)
+
+  # --- FRBR roles (content relationships) ---
+  expression_of:
+    name: Expression of
+    inverse_name: Has expression
+    description: Concrete content → abstract work (English Hamlet text → "Hamlet" work)
+  manifestation_of:
+    name: Manifestation of
+    inverse_name: Has manifestation
+    description: Format/edition → expression (Kindle edition → English text)
+  item_of:
+    name: Item of
+    inverse_name: Has item
+    description: Specific copy → manifestation (my signed copy → first-edition hardcover)
+  variant_of:
+    name: Variant of
+    inverse_name: Has variant
+    description: Same content, different format (logo SVG ↔ logo PNG)
+  translation_of:
+    name: Translation of
+    inverse_name: Has translation
+    description: Same content, different language
+  adaptation_of:
+    name: Adaptation of
+    inverse_name: Has adaptation
+    description: Derived creative work (LOTR film → LOTR novel)
+  transcript_of:
+    name: Transcript of
+    inverse_name: Has transcript
+    description: Text version of audio/video content
+  version_of:
+    name: Version of
+    inverse_name: Has version
+    description: Same thing, updated (Linux 6.1 → Linux 6.0)
+  performance_of:
+    name: Performance of
+    inverse_name: Has performance
+    description: Performed realization (live recording → sheet music)
+  part_of:
+    name: Part of
+    inverse_name: Has part
+    description: Component of larger work (chapter → book, episode → series)
+
+  # --- Embedding roles ---
+  embeds:
+    name: Embeds
+    inverse_name: Embedded in
+    description: Content contains/presents media (container → contained)
+
+  # --- Credits roles ---
+  # Used with person → media/document for rich credits.
+  # The `creator` property on media handles the primary creator;
+  # credits roles handle the full cast/crew graph.
+  director:
+    name: Director of
+    inverse_name: Directed by
+    description: Directed this work
+  actor:
+    name: Actor in
+    inverse_name: Features
+    description: Performed in this work
+  editor:
+    name: Editor of
+    inverse_name: Edited by
+    description: Edited this work
+  producer:
+    name: Producer of
+    inverse_name: Produced by
+    description: Produced this work
+  composer:
+    name: Composer of
+    inverse_name: Composed by
+    description: Composed music for this work
+  narrator:
+    name: Narrator of
+    inverse_name: Narrated by
+    description: Narrated this work

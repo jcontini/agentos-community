@@ -19,6 +19,7 @@
 
 id: believes
 name: Believes
+inverse_name: Believed by
 description: How strongly an entity holds an outcome to be true
 
 is_relationship: true

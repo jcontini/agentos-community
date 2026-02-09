@@ -17,6 +17,7 @@
 
 id: contains
 name: Contains
+inverse_name: In
 description: A collection contains an entity as a member
 
 is_relationship: true

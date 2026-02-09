@@ -8,6 +8,7 @@
 
 id: raises
 name: Raises
+inverse_name: Raised by
 description: Something raises a question — inquiry, decomposition, five whys
 
 is_relationship: true

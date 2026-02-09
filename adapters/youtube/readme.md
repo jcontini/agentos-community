@@ -56,6 +56,42 @@ adapters:
           id: .channel
           name: .channel
 
+      # Typed reference: creates community entity for the YouTube channel
+      # video --posted_in--> community (natural direction)
+      posted_in:
+        community:
+          id: .channel_id
+          name: .channel
+          url: .channel_url
+          member_count: .channel_follower_count
+
+      # Typed reference: creates post entity for the video page (social wrapper)
+      # With reverse: post --references(embeds)--> video (container → contained)
+      video_post:
+        post:
+          id: '(.id) + "_post"'
+          title: .title
+          content: .description
+          url: .webpage_url
+          published_at: .upload_date
+        _rel:
+          type: '"references"'
+          role: '"embeds"'
+          reverse: true
+
+      # Typed reference: creates document entity for the transcript
+      # transcript --references(transcript_of)--> video (document is transcript of video)
+      transcript_doc:
+        document:
+          id: '(.id) + "_transcript"'
+          title: '"Transcript: " + .title'
+          content: .transcript
+          url: .webpage_url
+        _rel:
+          type: '"references"'
+          role: '"transcript_of"'
+          reverse: true
+
 operations:
   video.search:
     description: Search YouTube videos by query (returns 10 results sorted by relevance)
@@ -251,7 +287,9 @@ operations:
                 duration: .duration,
                 thumbnail: .thumbnail,
                 channel: .channel,
+                channel_id: .channel_id,
                 channel_url: .channel_url,
+                channel_follower_count: .channel_follower_count,
                 id: .id,
                 webpage_url: .webpage_url,
                 upload_date: .upload_date,
@@ -276,7 +314,9 @@ operations:
                 duration: .duration,
                 thumbnail: .thumbnail,
                 channel: .channel,
+                channel_id: .channel_id,
                 channel_url: .channel_url,
+                channel_follower_count: .channel_follower_count,
                 id: .id,
                 webpage_url: .webpage_url,
                 upload_date: .upload_date,

@@ -16,6 +16,7 @@
 
 id: includes
 name: Includes
+inverse_name: Included in
 description: A journey explicitly includes an outcome
 
 is_relationship: true

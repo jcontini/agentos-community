@@ -8,6 +8,7 @@
 
 id: enables
 name: Enables
+inverse_name: Enabled by
 description: One outcome enables another when requirements are met
 
 # This is a relationship type, not an entity

@@ -221,15 +221,26 @@
               },
               {
                 "type": "object",
-                "description": "Typed reference: creates linked entity and relationship. Key is entity type, value is identity fields.",
+                "description": "Typed reference: creates linked entity + relationship. Key is entity type, value is field mappings. Optional _rel controls relationship type, direction, and properties.",
                 "minProperties": 1,
-                "maxProperties": 1,
+                "maxProperties": 2,
+                "properties": {
+                  "_rel": {
+                    "type": "object",
+                    "description": "Relationship metadata: type override, role, reverse direction, and additional properties (all jaq expressions except reverse which is boolean)",
+                    "properties": {
+                      "type": { "type": "string", "description": "Relationship type override (jaq expression, e.g., '\"references\"')" },
+                      "reverse": { "type": "boolean", "description": "If true, the linked entity becomes the 'from' side of the relationship" }
+                    },
+                    "additionalProperties": { "type": "string", "description": "Additional relationship properties (jaq expressions, e.g., role: '\"embeds\"')" }
+                  }
+                },
                 "additionalProperties": {
                   "type": "object",
-                  "description": "Identity fields for the linked entity (e.g., { phone: '.sender_jid | ...', name: '.sender_name' })",
+                  "description": "Entity field mappings — jaq expressions for entity properties (e.g., { id: '.channel_id', name: '.channel' })",
                   "additionalProperties": {
                     "type": "string",
-                    "description": "jaq expression for identity field"
+                    "description": "jaq expression for entity field"
                   }
                 }
               }
