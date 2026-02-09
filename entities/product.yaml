@@ -1,0 +1,117 @@
+# Product — A Software Product, Service, or Platform
+#
+# Products are the things organizations make. YouTube, WhatsApp,
+# Linear, Todoist, macOS. Every adapter connects to a product.
+#
+# Products are also the platforms that accounts live on:
+#   Account: @sarahchen (twitter) → on_platform → Product: Twitter/X
+#   Account: +62-812-345-6789 → on_platform → Product: Phone (PSTN)
+#
+# This is the bridge between meta-entities (what adapters connect to)
+# and account-entity (platform identity for identifiers).
+#
+# Richness lives in relationships:
+#   product → made_by → organization (who built it)
+#   product → acquired_by → organization (M&A, temporal)
+#   product → runs_on → product (Fosstodon runs on Mastodon)
+#   product → competes_with → product (competitive landscape)
+#   domain → owned_by → product (temporal: twitter.com → Twitter/X)
+#
+# See: .ROADMAP/meta-entities.md, .ROADMAP/account-entity.md
+
+id: product
+plural: products
+name: Product
+description: A software product, service, or platform — what organizations make and adapters connect to
+
+references:
+  schema_org: https://schema.org/SoftwareApplication
+  wikidata: Q7397
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Product name (YouTube, WhatsApp, Linear)
+
+  description:
+    type: string
+    description: What this product does
+
+  product_type:
+    type: string
+    description: |
+      Classification — open string, common values:
+      app, service, platform, api, protocol, operating_system,
+      browser, game, library, framework, hardware
+
+  url:
+    type: string
+    format: url
+    description: Product website
+
+  launched:
+    type: string
+    description: When the product was launched (year or date)
+
+  discontinued:
+    type: string
+    description: When the product was shut down (year or date)
+
+  status:
+    type: string
+    description: "active, discontinued, beta, deprecated, merged"
+
+  # Platform availability
+  platforms:
+    type: array
+    items:
+      type: string
+    description: |
+      Where it runs: ios, android, web, macos, windows, linux, api_only.
+      For protocol-level "products" (email, phone): leave empty.
+
+  pricing:
+    type: string
+    description: "free, freemium, paid, enterprise, open_source"
+
+  # External references
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID (e.g., Q866 for YouTube, Q18001 for WhatsApp)
+
+  avatar:
+    type: string
+    format: url
+    description: Product icon or logo URL
+
+  # Extensible data bag
+  data:
+    type: object
+    description: |
+      Domain-specific extensions:
+        SaaS:     { api_docs_url: "...", privacy_policy_url: "..." }
+        Protocol: { rfc: "RFC 5321", standard_body: "IETF" }
+        Game:     { genre: "interactive fiction", engine: "Z-machine" }
+        Hardware: { manufacturer: "Apple", model_year: 2024 }
+
+  notes:
+    type: string
+    description: User notes about this product
+
+identifiers: [name, url]
+operations: [list, get, search, create, update, archive]
+
+display:
+  primary: name
+  secondary: product_type
+  icon: package
+  show_as_app: true
+  sort:
+    - field: name
+      order: asc
