@@ -4,10 +4,12 @@
 # Posts and webpages are documents. Messages are NOT — they have
 # delivery semantics, not publication semantics.
 #
-# Formerly extended `writing` — now standalone. The `content` and
-# `author` properties that writing provided are declared directly.
+# Formerly extended `writing` — now standalone.
+# Attribution via relationships (not properties):
+#   person --references(authored)--> document
+#   account --posts--> post (for social media)
 # "Show me everything by person X" works via graph traversal
-# (follow author/creator/sender references), not type inheritance.
+# (follow authored/posts/sender relationships), not type inheritance.
 #
 # The `data` bag is the extension point for adapter-specific
 # properties. Community contributors building new entities that

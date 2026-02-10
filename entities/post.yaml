@@ -2,7 +2,7 @@
 # A social media post, comment, or reply (Reddit, Twitter, HN, etc.)
 #
 # Extends document. Inherits:
-#   From document: id, content, author, title, url, published_at, fetched_at, data
+#   From document: id, content, title, url, published_at, fetched_at, data
 #
 # Design principle: Comments ARE posts — just posts with a replies_to
 # relationship. A YouTube comment, Reddit comment, HN reply — they're
