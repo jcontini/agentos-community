@@ -68,6 +68,8 @@ sources:
   images:
     - ytimg.com            # Video thumbnails (all CDN subdomains)
     - ggpht.com            # Channel avatars (yt3.ggpht.com, etc.)
+  frames:
+    - https://www.youtube.com  # Embedded video player
 
 adapters:
   video:
@@ -134,6 +136,19 @@ adapters:
         _rel:
           type: '"references"'
           role: '"transcript_of"'
+          reverse: true
+
+      # Typed reference: creates collection entity for YouTube playlists
+      # Only activates when playlist fields are present (filtered by jq — PL prefix only)
+      # collection --contains--> video (reverse: collection is the from side)
+      in_playlist:
+        collection:
+          id: .playlist_id
+          name: .playlist
+          url: .playlist_url
+        _rel:
+          type: '"contains"'
+          position: .playlist_index
           reverse: true
 
 operations:
@@ -225,7 +240,11 @@ operations:
             channel_url: .channel_url,
             id: .id,
             webpage_url: ("https://www.youtube.com/watch?v=" + .id),
-            view_count: .view_count
+            view_count: .view_count,
+            playlist: (if (.playlist_id // "" | startswith("PL")) then .playlist else null end),
+            playlist_id: (if (.playlist_id // "" | startswith("PL")) then .playlist_id else null end),
+            playlist_index: (if (.playlist_id // "" | startswith("PL")) then .playlist_index else null end),
+            playlist_url: (if (.playlist_id // "" | startswith("PL")) then "https://www.youtube.com/playlist?list=" + .playlist_id else null end)
           }]'
       timeout: 60
 

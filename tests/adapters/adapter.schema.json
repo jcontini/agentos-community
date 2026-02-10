@@ -208,6 +208,11 @@
           "type": "array",
           "description": "Web fonts → CSP font-src",
           "items": { "type": "string" }
+        },
+        "frames": {
+          "type": "array",
+          "description": "Embeddable frame sources (video players) → CSP frame-src",
+          "items": { "type": "string" }
         }
       }
     },

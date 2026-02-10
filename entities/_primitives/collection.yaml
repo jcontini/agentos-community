@@ -45,3 +45,8 @@ properties:
     type: boolean
     default: false
     description: Whether items have a user-defined order (playlists yes, tags no)
+
+display:
+  primary: name
+  secondary: item_count
+  icon: list
