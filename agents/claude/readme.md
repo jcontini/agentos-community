@@ -30,4 +30,13 @@ Anthropic's AI assistant desktop app with native MCP support.
 You are running in the Claude Desktop app.
 
 - MCP config: ~/Library/Application Support/Claude/claude_desktop_config.json
-- Restart Claude Desktop to reload MCP config changes
+- Restart Claude Desktop to reload MCP config changes (no hot reload — full quit and reopen required)
+- Claude Desktop does not have file editing tools — you work through conversation, not code changes
+- If MCP tools aren't appearing, check that the config JSON is valid and restart Claude Desktop
+
+## Tips for users
+
+- **Artifacts**: Claude can create interactive artifacts (code, documents, diagrams) in the sidebar
+- **Projects**: Group conversations with shared context using Projects
+- **MCP tools**: After installing agentOS, tools appear automatically — no @mention needed, Claude will use them when relevant
+- **Multiple MCP servers**: Claude Desktop supports multiple MCP server configs side by side in the same JSON file
