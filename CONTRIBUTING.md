@@ -139,13 +139,20 @@ mapping:
 **Typed reference** — Creates a new linked entity + relationship:
 ```yaml
 mapping:
-  # Basic: creates a person entity with identity fields
-  created_by:
-    person:
+  # Creates an account entity + posts relationship (account → content)
+  posted_by:
+    account:
       id: .channel_id
-      name: .channel
+      platform: '"youtube"'
+      handle: .channel
+      display_name: .channel
+      platform_id: .channel_id
+      url: .channel_url
+    _rel:
+      type: '"posts"'
+      reverse: true
 
-  # Rich: full property mappings + relationship metadata
+  # Creates a document entity + references relationship with role
   transcript_doc:
     document:
       id: '(.id) + "_transcript"'
@@ -155,14 +162,20 @@ mapping:
     _rel:
       type: '"references"'
       role: '"transcript_of"'
+      reverse: true
 ```
 
 Typed references support **all entity fields**, not just identity. The entity schema's `identifiers` list determines which fields are used for deduplication — all other fields are stored as entity properties.
 
 The optional `_rel` block:
 - `type` — overrides the relationship type (default: the mapping field name)
+- `reverse` — if `true`, flips the relationship direction so the linked entity is the `from` side (e.g., `account --posts--> video` instead of `video --posts--> account`)
 - Any other key — stored as relationship data (e.g., `role` for `references` relationships)
 - All `_rel` values are jaq expressions (use `'"literal"'` for string constants)
+
+**Response flattening:** Typed reference data is automatically flattened in API responses for view consumption. The nested `{ entity_type: { fields }, _rel: { ... } }` structure becomes `{ _type: entity_type, ...fields }`. Views can then use dot notation: `{{posted_by.display_name}}`, `{{posted_in.name}}`.
+
+**Content attribution pattern:** Social content should use the `posts` relationship (`account --posts--> content`) rather than `creator: references: person`. An account posting content is what we can observe; the person behind the account is a separate inference via the `claims` relationship. See `entities/_relationships/posts.yaml` for details.
 
 ---
 

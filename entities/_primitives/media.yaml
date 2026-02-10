@@ -8,9 +8,11 @@
 # and Article as siblings under CreativeWork). 3 of 5 major standards
 # treat media and documents as siblings, not parent-child.
 #
-# Credits model: `creator` is the primary creator (good for YouTube/social).
-# Rich credits (actor, director, editor) use `references` with roles —
-# same infrastructure as the bundled-content credits graph.
+# Attribution model: Social media content uses the `posts` relationship
+# (account --posts--> media). The account is the observable attribution;
+# the person behind it is linked via `claims`. Rich credits (actor,
+# director, editor) use `references` with roles — same infrastructure
+# as the bundled-content credits graph.
 
 id: media
 plural: media
@@ -34,10 +36,6 @@ properties:
   description:
     type: string
     description: Media description
-
-  creator:
-    references: person
-    description: Primary creator
 
   url:
     type: string

@@ -80,15 +80,11 @@ adapters:
       description: .description
       transcript: .transcript
       transcript_segments: .transcript_segments
-      duration_ms: .duration * 1000
+      duration_ms: (.duration // null) | if . != null then . * 1000 else null end
       thumbnail: .thumbnail
       published_at: .upload_date
       resolution: .resolution
       view_count: .view_count
-      
-      # Display fields for views (denormalized on video entity)
-      creator.name: .channel
-      creator.url: .channel_url
       
       # Typed reference: creates account entity and posts relationship
       # account --posts--> video (reverse: account is the from side)
@@ -162,6 +158,7 @@ operations:
             duration: .duration,
             thumbnail: (.thumbnails[-1].url // null),
             channel: .channel,
+            channel_id: .channel_id,
             channel_url: .channel_url,
             id: .id,
             webpage_url: ("https://www.youtube.com/watch?v=" + .id),
@@ -190,6 +187,7 @@ operations:
             duration: .duration,
             thumbnail: (.thumbnails[-1].url // null),
             channel: .channel,
+            channel_id: .channel_id,
             channel_url: .channel_url,
             id: .id,
             webpage_url: ("https://www.youtube.com/watch?v=" + .id),
@@ -223,6 +221,7 @@ operations:
             duration: .duration,
             thumbnail: (.thumbnails[-1].url // null),
             channel: .channel,
+            channel_id: .channel_id,
             channel_url: .channel_url,
             id: .id,
             webpage_url: ("https://www.youtube.com/watch?v=" + .id),
@@ -508,12 +507,25 @@ All operations return videos with these fields:
   "description": "Video description...",
   "duration_ms": 360000,
   "thumbnail": "https://i.ytimg.com/vi/...",
-  "creator": { "name": "Channel Name", "url": "https://youtube.com/channel/..." },
   "remote_id": "dQw4w9WgXcQ",
   "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
   "view_count": 12345,
-  "published_at": "20210101"
+  "published_at": "20210101",
+  "posted_by": {
+    "display_name": "Channel Name",
+    "handle": "Channel Name",
+    "platform": "youtube",
+    "platform_id": "UCxxxxxx",
+    "url": "https://youtube.com/channel/UCxxxxxx"
+  },
+  "posted_in": {
+    "name": "Channel Name",
+    "url": "https://youtube.com/channel/UCxxxxxx",
+    "member_count": 1234000
+  }
 }
 ```
 
-**Note:** `view_count` and `published_at` may be null for search/list results (flat-playlist mode). Use `video.get` on individual videos for complete metadata.
+**Linked entities:** Each operation creates account (channel identity) and community (channel) entities in the graph, linked via `posts` and `posted_in` relationships. `video.get` and `video.transcript` additionally create a post entity (social wrapper) and document entity (transcript).
+
+**Note:** `view_count`, `published_at`, and `posted_in.member_count` may be null for search/list results (flat-playlist mode). Use `video.get` on individual videos for complete metadata.

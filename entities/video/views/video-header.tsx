@@ -1,13 +1,14 @@
 /**
  * Video Header Component
  * 
- * Displays a video header with thumbnail, title, creator, and duration.
+ * Displays a video header with thumbnail, title, creator account,
+ * channel/community info, duration, and view count.
  * Uses primitive data-attributes for full theme compatibility.
  * 
  * Layout:
  * [thumbnail 16:9] | title
- *                  | creator (link)
- *                  | duration
+ *                  | creator (link) • subscribers
+ *                  | duration • views
  */
 
 import React, { useState } from 'react';
@@ -19,12 +20,20 @@ export interface VideoHeaderProps {
   title: string;
   /** Video URL (makes title clickable) */
   url?: string;
-  /** Creator/channel name */
+  /** Creator/channel display name (from posted_by account) */
   creator?: string;
-  /** Creator profile URL (makes name clickable) */
+  /** Creator profile URL (from posted_by account) */
   creatorUrl?: string;
+  /** Channel/community name (from posted_in community) */
+  channel?: string;
+  /** Channel/community URL (from posted_in community) */
+  channelUrl?: string;
+  /** Subscriber/member count */
+  subscribers?: number;
   /** Duration in milliseconds */
   duration?: number;
+  /** View count */
+  viewCount?: number;
   /** Optional label to show below duration (e.g., "Transcript") */
   label?: string;
 }
@@ -46,6 +55,19 @@ function formatDuration(ms: number): string {
     return `${hours}:${pad(minutes)}:${pad(seconds)}`;
   }
   return `${minutes}:${pad(seconds)}`;
+}
+
+/**
+ * Format a large number with K/M suffix
+ */
+function formatCount(count: number): string {
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`;
+  }
+  return count.toLocaleString();
 }
 
 /**
@@ -96,7 +118,11 @@ export function VideoHeader({
   url,
   creator,
   creatorUrl,
+  channel,
+  channelUrl,
+  subscribers,
   duration,
+  viewCount,
   label,
 }: VideoHeaderProps) {
   const [imageError, setImageError] = useState(false);
@@ -104,6 +130,20 @@ export function VideoHeader({
   // Determine if we should show thumbnail or fallback
   const showImage = thumbnail && !imageError;
   const showFallback = !showImage;
+
+  // Use channel name if creator not available (fallback)
+  const displayCreator = creator || channel;
+  const displayCreatorUrl = creatorUrl || channelUrl;
+
+  // Build meta line: "17:05 • 10.9M views"
+  const metaParts: string[] = [];
+  if (duration !== undefined && duration > 0) {
+    metaParts.push(formatDuration(duration));
+  }
+  if (viewCount !== undefined && viewCount > 0) {
+    metaParts.push(`${formatCount(viewCount)} views`);
+  }
+  const metaLine = metaParts.join(' · ');
   
   return (
     <div
@@ -164,27 +204,39 @@ export function VideoHeader({
           </span>
         )}
         
-        {/* Creator */}
-        {creator && (
-          creatorUrl ? (
-            <a
-              data-component="text"
-              data-variant="secondary"
-              href={creatorUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {creator}
-            </a>
-          ) : (
-            <span data-component="text" data-variant="secondary">{creator}</span>
-          )
+        {/* Creator + subscribers */}
+        {displayCreator && (
+          <div
+            data-component="stack"
+            data-direction="horizontal"
+            data-gap="sm"
+            data-align="center"
+          >
+            {displayCreatorUrl ? (
+              <a
+                data-component="text"
+                data-variant="secondary"
+                href={displayCreatorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {displayCreator}
+              </a>
+            ) : (
+              <span data-component="text" data-variant="secondary">{displayCreator}</span>
+            )}
+            {subscribers !== undefined && subscribers > 0 && (
+              <span data-component="text" data-variant="caption">
+                {formatCount(subscribers)} subscribers
+              </span>
+            )}
+          </div>
         )}
         
-        {/* Duration */}
-        {duration !== undefined && duration > 0 && (
+        {/* Duration + Views */}
+        {metaLine && (
           <span data-component="text" data-variant="caption">
-            {formatDuration(duration)}
+            {metaLine}
           </span>
         )}
         

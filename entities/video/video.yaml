@@ -2,7 +2,11 @@
 # Video content from YouTube, Vimeo, or local files
 #
 # Extends media. Inherits:
-#   From media: id, title, description, creator, url, published_at, duration_ms, thumbnail
+#   From media: id, title, description, url, published_at, duration_ms, thumbnail
+#
+# Attribution: Uses `posts` relationship (account --posts--> video).
+# The account is the observable source; the person behind it is linked
+# via `claims`. This replaces the old `creator: references: person`.
 
 id: video
 plural: videos
@@ -85,7 +89,7 @@ operations: [get, search, list, transcript]
 
 display:
   primary: title
-  secondary: creator.name
+  secondary: posted_by.display_name
   description: description
   image: thumbnail
   icon: play
@@ -105,8 +109,8 @@ views:
           title: "{{title}}"
           url: "{{url}}"
           thumbnail: "{{thumbnail}}"
-          creator_name: "{{creator_name}}"
-          creator_url: "{{creator_url}}"
+          creator_name: "{{posted_by.display_name}}"
+          creator_url: "{{posted_by.url}}"
           duration_ms: "{{duration_ms}}"
           view_count: "{{view_count}}"
           description: "{{description}}"
@@ -122,8 +126,8 @@ views:
           title: "{{title}}"
           url: "{{url}}"
           thumbnail: "{{thumbnail}}"
-          creator_name: "{{creator_name}}"
-          creator_url: "{{creator_url}}"
+          creator_name: "{{posted_by.display_name}}"
+          creator_url: "{{posted_by.url}}"
           duration_ms: "{{duration_ms}}"
           view_count: "{{view_count}}"
           description: "{{description}}"
@@ -139,8 +143,8 @@ views:
           title: "{{title}}"
           url: "{{url}}"
           thumbnail: "{{thumbnail}}"
-          creator_name: "{{creator_name}}"
-          creator_url: "{{creator_url}}"
+          creator_name: "{{posted_by.display_name}}"
+          creator_url: "{{posted_by.url}}"
           duration_ms: "{{duration_ms}}"
           view_count: "{{view_count}}"
           description: "{{description}}"
@@ -160,9 +164,13 @@ views:
               thumbnail: "{{activity.response.thumbnail}}"
               title: "{{activity.response.title}}"
               url: "{{activity.response.url}}"
-              creator: "{{activity.response.creator.name}}"
-              creatorUrl: "{{activity.response.creator.url}}"
+              creator: "{{activity.response.posted_by.display_name}}"
+              creatorUrl: "{{activity.response.posted_by.url}}"
+              channel: "{{activity.response.posted_in.name}}"
+              channelUrl: "{{activity.response.posted_in.url}}"
+              subscribers: "{{activity.response.posted_in.member_count}}"
               duration: "{{activity.response.duration_ms}}"
+              viewCount: "{{activity.response.view_count}}"
           - component: markdown
             props:
               content: "{{activity.response.description}}"
@@ -182,8 +190,11 @@ views:
               thumbnail: "{{activity.response.thumbnail}}"
               title: "{{activity.response.title}}"
               url: "{{activity.response.url}}"
-              creator: "{{activity.response.creator.name}}"
-              creatorUrl: "{{activity.response.creator.url}}"
+              creator: "{{activity.response.posted_by.display_name}}"
+              creatorUrl: "{{activity.response.posted_by.url}}"
+              channel: "{{activity.response.posted_in.name}}"
+              channelUrl: "{{activity.response.posted_in.url}}"
+              subscribers: "{{activity.response.posted_in.member_count}}"
               duration: "{{activity.response.duration_ms}}"
               label: "Transcript"
           - component: markdown
