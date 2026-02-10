@@ -694,7 +694,7 @@
       "properties": {
         "root": {
           "type": "string",
-          "description": "JSON Pointer (RFC 6901) to extract data. Must start with '/'. Examples: '/data', '/results/0', '/data/items'",
+          "description": "JSON Pointer (RFC 6901) to extract data. Must start with '/'. For entity[] operations, root must point to the array (e.g. '/results', '/data/items'). Use '/' for APIs that return a top-level array. The final activity.response is always a top-level array for list/search.",
           "pattern": "^/.*$"
         },
         "context": {
