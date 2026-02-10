@@ -8,6 +8,32 @@ color: "#000000"
 website: https://www.apple.com/macos/
 
 auth: none
+connects_to: apple-calendar
+
+seed:
+  - id: apple-calendar
+    types: [product]
+    name: Apple Calendar
+    data:
+      product_type: app
+      url: https://support.apple.com/guide/calendar/welcome/mac
+      launched: "2002"
+      platforms: [macos, ios, ipados, watchos, visionos]
+      wikidata_id: Q306184
+    relationships:
+      - role: offered_by
+        to: apple
+
+  - id: apple
+    types: [organization]
+    name: Apple Inc.
+    data:
+      type: company
+      url: https://apple.com
+      founded: "1976"
+      ticker: AAPL
+      exchange: NASDAQ
+      wikidata_id: Q312
 
 instructions: |
   Apple Calendar accesses local macOS Calendar via EventKit.

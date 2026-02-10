@@ -8,6 +8,32 @@ color: "#333333"
 website: https://www.apple.com/macos/
 
 auth: none
+connects_to: apple-contacts
+
+seed:
+  - id: apple-contacts
+    types: [product]
+    name: Apple Contacts
+    data:
+      product_type: app
+      url: https://support.apple.com/guide/contacts/welcome/mac
+      launched: "2001"
+      platforms: [macos, ios, ipados, watchos]
+      wikidata_id: Q621217
+    relationships:
+      - role: offered_by
+        to: apple
+
+  - id: apple
+    types: [organization]
+    name: Apple Inc.
+    data:
+      type: company
+      url: https://apple.com
+      founded: "1976"
+      ticker: AAPL
+      exchange: NASDAQ
+      wikidata_id: Q312
 
 testing:
   exempt:

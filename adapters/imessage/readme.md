@@ -8,6 +8,32 @@ color: "#34C759"
 website: https://support.apple.com/messages
 
 auth: none
+connects_to: imessage
+
+seed:
+  - id: imessage
+    types: [product]
+    name: iMessage
+    data:
+      product_type: service
+      url: https://support.apple.com/explore/messages
+      launched: "2011"
+      platforms: [ios, ipados, macos, watchos, visionos]
+      wikidata_id: Q290267
+    relationships:
+      - role: offered_by
+        to: apple
+
+  - id: apple
+    types: [organization]
+    name: Apple Inc.
+    data:
+      type: company
+      url: https://apple.com
+      founded: "1976"
+      ticker: AAPL
+      exchange: NASDAQ
+      wikidata_id: Q312
 
 database: "~/Library/Messages/chat.db"
 

@@ -8,6 +8,29 @@ color: "#333333"
 website: https://curl.se
 auth: none
 
+connects_to: curl
+
+seed:
+  - id: curl
+    types: [product]
+    name: curl
+    data:
+      product_type: tool
+      url: https://curl.se
+      launched: "1998"
+      platforms: [linux, macos, windows]
+      wikidata_id: Q286306
+    relationships:
+      - role: created_by
+        to: daniel-stenberg
+
+  - id: daniel-stenberg
+    types: [person]
+    name: Daniel Stenberg
+    data:
+      url: https://daniel.haxx.se
+      wikidata_id: Q42160379
+
 instructions: |
   Curl is a simple fallback for fetching URLs.
   - No API key required

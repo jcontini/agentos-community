@@ -11,6 +11,31 @@ terms_url: https://www.ycombinator.com/legal
 
 auth: none
 
+connects_to: hackernews
+
+seed:
+  - id: hackernews
+    types: [product]
+    name: Hacker News
+    data:
+      product_type: platform
+      url: https://news.ycombinator.com
+      launched: "2007"
+      platforms: [web]
+      wikidata_id: Q686797
+    relationships:
+      - role: offered_by
+        to: ycombinator
+
+  - id: ycombinator
+    types: [organization]
+    name: Y Combinator
+    data:
+      type: company
+      url: https://www.ycombinator.com
+      founded: "2005"
+      wikidata_id: Q2616400
+
 instructions: |
   Hacker News notes:
   - Uses Algolia HN Search API (faster than official Firebase API)

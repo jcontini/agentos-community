@@ -14,6 +14,8 @@ auth:
   label: Publishable Key
   help_url: https://www.logo.dev/dashboard
 
+connects_to: logo-dev
+
 adapters:
   image:
     terminology: Logo
@@ -23,6 +25,28 @@ adapters:
       alt: .name
       size: .size
       format: '.mime_type | split("/") | .[1]'
+
+seed:
+  - id: logo-dev
+    types: [product]
+    name: Logo.dev
+    data:
+      product_type: api
+      url: https://logo.dev
+      launched: "2024"
+      platforms: [api]
+      pricing: freemium
+    relationships:
+      - role: offered_by
+        to: simple-casual
+
+  - id: simple-casual
+    types: [organization]
+    name: Simple Casual, LLC
+    data:
+      type: company
+      url: https://logo.dev
+      founded: "2024"
 
 instructions: |
   Logo.dev returns company logos as images via CDN URLs.

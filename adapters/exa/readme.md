@@ -15,6 +15,30 @@ auth:
   label: API Key
   help_url: https://dashboard.exa.ai/api-keys
 
+connects_to: exa
+
+seed:
+  - id: exa
+    types: [product]
+    name: Exa
+    data:
+      product_type: api
+      url: https://exa.ai
+      launched: "2022"
+      platforms: [api]
+      pricing: freemium
+    relationships:
+      - role: offered_by
+        to: exa-ai
+
+  - id: exa-ai
+    types: [organization]
+    name: Exa AI Inc.
+    data:
+      type: company
+      url: https://exa.ai
+      founded: "2021"
+
 instructions: |
   Exa-specific notes:
   - Neural search finds content by meaning, not just keywords

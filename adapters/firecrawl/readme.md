@@ -16,6 +16,30 @@ auth:
   label: API Key
   help_url: https://www.firecrawl.dev/app/api-keys
 
+connects_to: firecrawl
+
+seed:
+  - id: firecrawl
+    types: [product]
+    name: Firecrawl
+    data:
+      product_type: api
+      url: https://firecrawl.dev
+      launched: "2024"
+      platforms: [api]
+      pricing: freemium
+    relationships:
+      - role: offered_by
+        to: mendable
+
+  - id: mendable
+    types: [organization]
+    name: Mendable Inc.
+    data:
+      type: company
+      url: https://firecrawl.dev
+      founded: "2022"
+
 instructions: |
   Firecrawl-specific notes:
   - Renders JavaScript - use for React, Vue, Angular, SPAs

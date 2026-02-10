@@ -19,6 +19,32 @@ auth:
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 
+connects_to: todoist
+
+seed:
+  - id: todoist
+    types: [product]
+    name: Todoist
+    data:
+      product_type: app
+      url: https://todoist.com
+      launched: "2007"
+      platforms: [web, ios, android, macos, windows]
+      pricing: freemium
+      wikidata_id: Q7812817
+    relationships:
+      - role: offered_by
+        to: doist
+
+  - id: doist
+    types: [organization]
+    name: Doist Inc.
+    data:
+      type: company
+      url: https://doist.com
+      founded: "2007"
+      wikidata_id: Q16249122
+
 instructions: |
   Todoist task management via the Unified API v1.
   - Priority is inverted: Todoist 4=urgent → AgentOS 1=highest

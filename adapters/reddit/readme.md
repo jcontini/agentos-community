@@ -10,6 +10,7 @@ privacy_url: https://www.reddit.com/policies/privacy-policy
 terms_url: https://www.redditinc.com/policies/user-agreement
 
 auth: none
+connects_to: reddit
 
 sources:
   images:
@@ -19,6 +20,31 @@ sources:
     - external-preview.redd.it
     - a.thumbs.redditmedia.com
     - b.thumbs.redditmedia.com
+
+seed:
+  - id: reddit
+    types: [product]
+    name: Reddit
+    data:
+      product_type: platform
+      url: https://reddit.com
+      launched: "2005"
+      platforms: [web, ios, android]
+      wikidata_id: Q1136
+    relationships:
+      - role: offered_by
+        to: reddit-inc
+
+  - id: reddit-inc
+    types: [organization]
+    name: Reddit, Inc.
+    data:
+      type: company
+      url: https://redditinc.com
+      founded: "2005"
+      ticker: RDDT
+      exchange: NYSE
+      wikidata_id: Q111759432
 
 instructions: |
   Reddit-specific notes:

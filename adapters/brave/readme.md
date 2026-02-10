@@ -15,6 +15,31 @@ auth:
   label: API Key
   help_url: https://api-dashboard.search.brave.com/app/keys
 
+connects_to: brave-search
+
+seed:
+  - id: brave-search
+    types: [product]
+    name: Brave Search
+    data:
+      product_type: service
+      url: https://search.brave.com
+      launched: "2021"
+      platforms: [web]
+      wikidata_id: Q107355971
+    relationships:
+      - role: offered_by
+        to: brave-software
+
+  - id: brave-software
+    types: [organization]
+    name: Brave Software, Inc.
+    data:
+      type: company
+      url: https://brave.com
+      founded: "2015"
+      wikidata_id: Q50391972
+
 instructions: |
   Brave Search - privacy-focused web search with its own index.
   - Free tier: 2,000 queries/month

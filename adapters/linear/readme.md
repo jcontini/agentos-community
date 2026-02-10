@@ -36,6 +36,8 @@ auth:
       description: "Filter operations to this team by default"
       discover: get_teams  # Returns team id and key
 
+connects_to: linear
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -483,6 +485,27 @@ utilities:
           success: .success
           id: .issueRelation.id
 
+seed:
+  - id: linear
+    types: [product]
+    name: Linear
+    data:
+      product_type: app
+      url: https://linear.app
+      launched: "2019"
+      platforms: [web, ios, macos]
+      pricing: freemium
+    relationships:
+      - role: offered_by
+        to: linear-orbit
+
+  - id: linear-orbit
+    types: [organization]
+    name: Linear Orbit, Inc.
+    data:
+      type: company
+      url: https://linear.app
+      founded: "2019"
 
 instructions: |
   Linear adapter notes for AI:

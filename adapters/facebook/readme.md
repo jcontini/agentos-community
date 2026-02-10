@@ -10,6 +10,7 @@ privacy_url: https://www.facebook.com/privacy/policy
 terms_url: https://www.facebook.com/legal/terms
 
 auth: none
+connects_to: facebook
 
 requires:
   - name: Chromium
@@ -17,6 +18,31 @@ requires:
       macos: brew install --cask chromium
       linux: sudo apt install -y chromium-browser
       windows: choco install chromium -y
+
+seed:
+  - id: facebook
+    types: [product]
+    name: Facebook
+    data:
+      product_type: platform
+      url: https://www.facebook.com
+      launched: "2004"
+      platforms: [web, ios, android]
+      wikidata_id: Q355
+    relationships:
+      - role: offered_by
+        to: meta
+
+  - id: meta
+    types: [organization]
+    name: Meta Platforms, Inc.
+    data:
+      type: company
+      url: https://about.meta.com
+      founded: "2004"
+      ticker: META
+      exchange: NASDAQ
+      wikidata_id: Q380
 
 instructions: |
   Facebook-specific notes:

@@ -8,8 +8,34 @@ color: "#2CD46B"
 website: https://www.whatsapp.com/
 
 auth: none
+connects_to: whatsapp
 
 database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
+
+seed:
+  - id: whatsapp
+    types: [product]
+    name: WhatsApp
+    data:
+      product_type: app
+      url: https://www.whatsapp.com
+      launched: "2009"
+      platforms: [ios, android, macos, windows, web]
+      wikidata_id: Q1049511
+    relationships:
+      - role: offered_by
+        to: meta
+
+  - id: meta
+    types: [organization]
+    name: Meta Platforms, Inc.
+    data:
+      type: company
+      url: https://about.meta.com
+      founded: "2004"
+      ticker: META
+      exchange: NASDAQ
+      wikidata_id: Q380
 
 instructions: |
   WhatsApp stores messages in a local SQLite database.

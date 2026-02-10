@@ -121,6 +121,20 @@
     "sources": {
       "$ref": "#/definitions/adapterSources"
     },
+    "connects_to": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Single product seed entity ID this adapter connects to"
+        },
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Product seed entity IDs this adapter connects to"
+        }
+      ],
+      "description": "Product(s) this adapter connects to — references seed entity IDs (e.g., 'youtube', 'whatsapp')"
+    },
     "seed": {
       "type": "array",
       "description": "Seed entities to create on startup (products, organizations this adapter connects to)",

@@ -7,6 +7,7 @@ color: "#FF0808"
 website: https://youtube.com
 
 auth: none
+connects_to: youtube
 
 # Seed entities: the product and organizations this adapter connects to
 seed:
@@ -40,7 +41,7 @@ seed:
       type: company
       url: https://abc.xyz
       founded: "2015"
-      ticker: GOOG
+      ticker: GOOGL
       exchange: NASDAQ
       wikidata_id: Q21077852
     relationships:
