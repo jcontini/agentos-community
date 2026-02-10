@@ -10,8 +10,8 @@
  *   5. Seed    — connects_to + seed data (product/org entities)
  *   6. Tests   — Every operation has a test file
  * 
- * Adapters that fail schema structure or entity checks get moved to .needs-work/.
- * Run again after fixing — when they pass, they stay in adapters/.
+ * Adapters in .needs-work/ are shown separately but never auto-moved.
+ * Fix errors, then manually move to adapters/ when ready.
  * 
  * Usage:
  *   node validate.mjs                     # Full validation + enforce
@@ -20,10 +20,9 @@
  *   node validate.mjs --pre-commit        # Quick structural check only (no table, no move)
  */
 
-import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 import { parse as parseYaml, parseAllDocuments } from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
@@ -510,7 +509,7 @@ function renderErrors(results) {
     if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
     
     if (allErrors.length > 0) {
-      console.log(`  ${r._moved ? '📦' : '❌'} ${r.name}${r._moved ? ' → .needs-work/' : ''}`);
+      console.log(`  ❌ ${r.name}`);
       for (const err of allErrors) {
         console.log(`     ${err}`);
       }
@@ -566,11 +565,6 @@ function validateAdapter(adapter) {
   };
 }
 
-// Ensure .needs-work exists
-if (!existsSync(NEEDS_WORK_DIR)) {
-  mkdirSync(NEEDS_WORK_DIR, { recursive: true });
-}
-
 // --- Pre-commit mode: quick structural check, no table, no move ---
 if (preCommit) {
   const adapters = findAdapters(ADAPTERS_DIR);
@@ -599,8 +593,8 @@ if (filterValue) {
 }
 
 // 2. Validate
-const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a, _moved: false }));
-const needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a, _moved: false }));
+const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
+const needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
@@ -638,28 +632,11 @@ if (needsWorkResults.length > 0) {
 }
 renderTable(sections);
 
-// 5. Move failures from adapters/ → .needs-work/
-let movedCount = 0;
-for (const result of activeResults) {
-  if (!result.schema.structureValid || !result.entity.pass) {
-    const adapter = result._adapter;
-    const destPath = join(NEEDS_WORK_DIR, adapter.name);
-    if (existsSync(destPath)) continue; // already exists there
-    try {
-      execSync(`git mv "${adapter.dir}" "${destPath}"`, { cwd: ROOT, stdio: 'ignore' });
-      result._moved = true;
-      movedCount++;
-    } catch (err) {
-      console.error(`  Failed to move ${adapter.name}: ${err.message}`);
-    }
-  }
-}
-
-// 6. Error details (always show for active adapters)
+// 5. Error details (always show for active adapters)
 renderErrors(activeResults);
 if (verbose) renderErrors(needsWorkResults);
 
-// 7. Check for promotable .needs-work adapters
+// 6. Check for promotable .needs-work adapters
 const promotable = needsWorkResults.filter(r =>
   r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass
 );
@@ -667,11 +644,7 @@ if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
 }
 
-// 8. Summary
-if (movedCount > 0) {
-  console.log(`📦 Moved ${movedCount} adapter(s) to .needs-work/`);
-}
-
+// 7. Summary
 console.log(`📊 Entity coverage: ${coveredEntities.size}/${knownEntities.length} entity types have adapters`);
 if (verbose) {
   const uncovered = knownEntities.filter(e => !coveredEntities.has(e));
@@ -681,14 +654,16 @@ if (verbose) {
 }
 console.log();
 
-const remaining = activeResults.filter(r => !r._moved);
-const allPassing = remaining.length > 0 && remaining.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass);
+const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass);
 if (allPassing) {
   console.log('✅ All adapters fully valid');
-} else if (remaining.length === 0) {
-  console.log('📭 No adapters in adapters/ — everything moved to .needs-work/');
+} else if (activeResults.length === 0) {
+  console.log('📭 No adapters in adapters/');
 } else {
-  const passing = remaining.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
-  console.log(`⚠️  ${passing}/${remaining.length} adapters fully valid — run again after fixing`);
+  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
+  console.log(`⚠️  ${passing}/${activeResults.length} adapters fully valid — fix errors and run again`);
 }
-process.exit(0);
+
+// Exit with error if any active adapters have critical failures
+const criticalFailures = activeResults.filter(r => !r.schema.structureValid || !r.entity.pass);
+process.exit(criticalFailures.length > 0 ? 1 : 0);
