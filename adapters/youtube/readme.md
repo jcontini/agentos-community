@@ -69,7 +69,8 @@ sources:
     - ytimg.com            # Video thumbnails (all CDN subdomains)
     - ggpht.com            # Channel avatars (yt3.ggpht.com, etc.)
   frames:
-    - https://www.youtube.com  # Embedded video player
+    - https://www.youtube.com          # Embedded video player
+    - https://www.youtube-nocookie.com  # Privacy-enhanced embed (better webview compat)
 
 adapters:
   video:
