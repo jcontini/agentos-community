@@ -90,7 +90,7 @@ themes/            Visual styling (CSS)
 **For detailed adapter writing guidance, read the skill:**
 
 ```bash
-~/.agentos/drive/skills/write-adapter.md
+skills/write-adapter.md
 ```
 
 This covers:

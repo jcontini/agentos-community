@@ -9,7 +9,7 @@
 **Before starting work, check if there's a relevant skill:**
 
 ```bash
-ls ~/.agentos/drive/skills/
+ls skills/
 ```
 
 Skills contain detailed guidance for specific tasks. If the user asks you to do something that matches a skill, **read the skill first** before proceeding.
@@ -17,6 +17,8 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 | Skill | When to Use |
 |-------|-------------|
 | `write-adapter.md` | Creating or modifying adapters |
+| `write-app.md` | Writing apps or entity components |
+| `shell-history.md` | Querying shell history |
 
 ---
 
