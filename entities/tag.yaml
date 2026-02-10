@@ -35,7 +35,6 @@ operations: [list, get, create, update, archive]
 display:
   primary: name
   icon: tag
-  show_as_app: true
   sort:
     - field: name
       order: asc

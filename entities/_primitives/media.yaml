@@ -55,4 +55,3 @@ properties:
     description: Thumbnail or cover image
 
 display:
-  show_as_app: false

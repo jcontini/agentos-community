@@ -53,4 +53,3 @@ display:
   primary: name
   secondary: type
   icon: server
-  show_as_app: false

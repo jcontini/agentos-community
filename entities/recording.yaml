@@ -28,4 +28,3 @@ display:
   primary: title
   secondary: creator.name
   icon: mic
-  show_as_app: false

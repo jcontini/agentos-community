@@ -14,7 +14,6 @@ display:
   primary: name
   status: data.completed
   icon: checkbox
-  show_as_app: true
   sort:
     - field: data.completed
       completed_last: true

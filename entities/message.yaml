@@ -80,4 +80,3 @@ display:
   primary: content
   secondary: sender
   icon: message-circle
-  show_as_app: true

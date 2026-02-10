@@ -59,4 +59,3 @@ properties:
     description: Adapter-specific extensions
 
 display:
-  show_as_app: false

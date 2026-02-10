@@ -82,4 +82,3 @@ display:
   secondary: author.name
   description: content
   icon: message-square
-  show_as_app: true

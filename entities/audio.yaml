@@ -32,4 +32,3 @@ display:
   primary: title
   secondary: creator.name
   icon: headphones
-  show_as_app: true

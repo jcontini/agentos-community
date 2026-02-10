@@ -47,4 +47,3 @@ properties:
     description: Whether items have a user-defined order (playlists yes, tags no)
 
 display:
-  show_as_app: false

@@ -79,7 +79,6 @@ display:
   secondary: location
   image: url
   icon: camera
-  show_as_app: true
   sort:
     - field: date_taken
       order: desc

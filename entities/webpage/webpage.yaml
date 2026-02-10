@@ -41,31 +41,3 @@ display:
   secondary: url
   description: snippet
   icon: globe
-  show_as_app: true
-  app_name: Webpages
-
-# Views for rendering webpage activities
-views:
-  search:
-    title: Web Search
-    tool_alias: search_web
-    layout:
-      - component: list
-        data:
-          source: activity
-        item_component: search-result
-        item_props:
-          title: "{{title}}"
-          url: "{{url}}"
-          snippet: "{{snippet}}"
-          favicon: "{{favicon}}"
-
-  read:
-    title: "{{activity.response.title}}"
-    tool_alias: read_webpage
-    layout:
-      - component: content
-        props:
-          data: "{{activity.response.content}}"
-          type: "{{activity.response.content_type}}"
-          url: "{{activity.response.url}}"

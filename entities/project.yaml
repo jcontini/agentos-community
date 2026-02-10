@@ -13,4 +13,3 @@ description: A collection of tasks working toward a goal
 display:
   primary: name
   icon: folder
-  show_as_app: false  # shows as grouping within Tasks app

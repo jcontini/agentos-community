@@ -48,7 +48,6 @@ properties:
 display:
   primary: name
   icon: gavel
-  show_as_app: true
   sort:
     - field: created_at
       order: desc

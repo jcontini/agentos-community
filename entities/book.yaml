@@ -54,4 +54,3 @@ display:
   secondary: author.name
   image: cover
   icon: book-open
-  show_as_app: true

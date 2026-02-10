@@ -43,4 +43,3 @@ display:
   primary: name
   secondary: schema
   icon: database
-  show_as_app: true

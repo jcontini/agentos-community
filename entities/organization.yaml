@@ -129,7 +129,6 @@ display:
   primary: name
   secondary: type
   icon: building
-  show_as_app: true
   sort:
     - field: name
       order: asc

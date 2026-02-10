@@ -53,4 +53,3 @@ properties:
     description: When the work was originally created (can be approximate, e.g., "1600" for Hamlet)
 
 display:
-  show_as_app: false

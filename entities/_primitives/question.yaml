@@ -51,7 +51,6 @@ display:
   primary: name
   secondary: status
   icon: help-circle
-  show_as_app: true
   sort:
     - field: status
       order: asc

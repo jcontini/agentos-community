@@ -100,7 +100,6 @@ display:
   primary: name
   secondary: status
   icon: shield-check
-  show_as_app: true
   sort:
     - field: status
     - field: name

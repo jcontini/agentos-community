@@ -157,7 +157,6 @@ display:
   primary: name
   secondary: organization
   icon: user
-  show_as_app: true
   sort:
     - field: name
       order: asc

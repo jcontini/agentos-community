@@ -86,7 +86,6 @@ display:
   primary: name
   secondary: adapter_id
   icon: plug
-  show_as_app: false
   sort:
     - field: name
       order: asc
