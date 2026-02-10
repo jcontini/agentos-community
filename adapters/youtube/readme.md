@@ -53,7 +53,7 @@ instructions: |
   - No API key needed — uses yt-dlp for metadata and transcripts
   - Search uses yt-dlp's ytsearch (returns up to 50 results)
   - Transcripts extracted from auto-captions when available
-  - Channel info extracted as person entities via relationships
+  - Channel info extracted as account entities via posted_by relationship
 
 requires:
   - name: yt-dlp
@@ -90,11 +90,19 @@ adapters:
       creator.name: .channel
       creator.url: .channel_url
       
-      # Typed reference: creates person entity and created_by relationship
-      created_by:
-        person:
-          id: .channel
-          name: .channel
+      # Typed reference: creates account entity and posts relationship
+      # account --posts--> video (reverse: account is the from side)
+      posted_by:
+        account:
+          id: .channel_id
+          platform: '"youtube"'
+          handle: .channel
+          display_name: .channel
+          platform_id: .channel_id
+          url: .channel_url
+        _rel:
+          type: '"posts"'
+          reverse: true
 
       # Typed reference: creates community entity for the YouTube channel
       # video --posted_in--> community (natural direction)
