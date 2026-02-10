@@ -51,6 +51,6 @@ identifiers: [isbn]
 
 display:
   primary: title
-  secondary: author.name
+  secondary: null  # TODO: Show author via relationship query
   image: cover
   icon: book-open

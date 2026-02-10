@@ -89,7 +89,7 @@ operations: [get, search, list, transcript]
 
 display:
   primary: title
-  secondary: posted_by.display_name
+  secondary: posted_by.account.display_name  # Account attribution via posts relationship
   description: description
   image: thumbnail
   icon: play

@@ -1,11 +1,14 @@
 # Recording — Voice Notes, Calls, Personal Audio
 #
 # Extends media. Inherits:
-#   From media: id, title, description, creator, url, published_at, duration_ms, thumbnail
+#   From media: id, title, description, url, published_at, duration_ms, thumbnail
 #
 # For personal recordings: voice memos, phone calls, meeting recordings.
 # Distinguished from `audio` by intent — recordings are captured moments,
 # not published content.
+#
+# Attribution: The person who made the recording. For calls/meetings,
+# use `call_participants` to list all people involved.
 
 id: recording
 plural: recordings
@@ -26,5 +29,5 @@ operations: [list, get]
 
 display:
   primary: title
-  secondary: creator.name
+  secondary: null  # TODO: Show recorder via relationship query
   icon: mic

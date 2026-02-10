@@ -44,10 +44,6 @@ properties:
     type: string
     description: What this work is
 
-  original_creator:
-    references: person
-    description: Who originally created this work
-
   created_date:
     type: string
     description: When the work was originally created (can be approximate, e.g., "1600" for Hamlet)

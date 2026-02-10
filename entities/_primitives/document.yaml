@@ -33,10 +33,6 @@ properties:
     type: string
     description: The text content
 
-  author:
-    references: person
-    description: Who wrote this
-
   title:
     type: string
     description: Document title

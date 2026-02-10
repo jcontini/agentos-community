@@ -79,7 +79,7 @@ operations: [list, search, get]
 
 display:
   primary: title
-  secondary: author.name
+  secondary: posted_by.account.display_name  # Account attribution via posts relationship
   description: content
   icon: message-square
   sort:
