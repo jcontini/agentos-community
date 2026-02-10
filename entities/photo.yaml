@@ -67,7 +67,7 @@ properties:
 
   # Organization
   album:
-    references: album
+    references: collection
     description: Photo album this belongs to
 
 # Inherit identifiers from image (hash)

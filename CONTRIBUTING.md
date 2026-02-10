@@ -1,6 +1,6 @@
 # Contributing to the AgentOS Community
 
-Declarative YAML for entities, adapters, components, apps, and themes.
+Declarative YAML for entities, adapters, apps, skills, and themes.
 
 **Schema reference:** `tests/adapters/adapter.schema.json` — the source of truth for adapter structure.
 
@@ -10,21 +10,18 @@ Declarative YAML for entities, adapters, components, apps, and themes.
 
 ## Development Workflow
 
-**Recommended:** Develop in `~/.agentos/installed/`, then copy here when ready.
+**Edit directly in this repo.** The server's `sources` setting points here (`~/dev/agentos-community`). Changes take effect on server restart.
 
 ```bash
-# 1. Edit directly in installed folder (fast iteration)
-vim ~/.agentos/installed/adapters/reddit/readme.md
+# 1. Edit directly in the community repo (this is the live source)
+vim ~/dev/agentos-community/adapters/reddit/readme.md
 
-# 2. Restart server and test
+# 2. Restart AgentOS server and test
 cd ~/dev/agentos && ./restart.sh
 curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
-# 3. When working, copy to community repo
-cp -r ~/.agentos/installed/adapters/reddit ~/dev/agentos-community/adapters/
-
-# 4. Validate and commit
+# 3. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
 git add -A && git commit -m "Update Reddit adapter"
@@ -32,7 +29,7 @@ git add -A && git commit -m "Update Reddit adapter"
 
 ---
 
-## 🎉 Manifest Auto-Generates!
+## Manifest Auto-Generates
 
 **Never edit `manifest.json` manually!** 
 
@@ -48,41 +45,43 @@ node scripts/generate-manifest.js --check # Validate only
 
 ## Architecture Overview
 
-**Skills are the single source of truth for entity types.** Want a new entity type? Add a skill YAML file. That's it. The skill defines:
+**Full taxonomy:** See [agentos/ARCHITECTURE.md](https://github.com/jcontini/agentos/blob/main/ARCHITECTURE.md) for entities, skills, adapters, vibes, client vs interface.
+
+**Entity YAML files are the single source of truth for entity types.** Want a new entity type? Add a YAML file in `entities/`. The entity defines:
 
 - **Schema** — properties, types, validation
-- **Relationships** — what this entity connects to (via properties or relationships table)
-- **Display** — how it appears in UI, whether it shows as an app
-- **Views** — TSX components for rendering
+- **Relationships** — what this entity connects to (via references or relationship types)
+- **Display** — how it appears in generic components (primary field, image, icon, sort)
 
-Adapters are adapters that map external APIs to these entity types. No hardcoded types anywhere.
+Adapters map external APIs to these entity types. Apps provide visual experiences on the desktop. Both are separate from the entity definitions.
 
 ```
 entities/          Entity type definitions (single source of truth)
-  _primitives/     Abstract base types (document, collection, etc.)
-  _relationships/  Relationship types (contains, enables, etc.)
+  _primitives/     Abstract base types (document, media, collection, etc.)
+  _relationships/  Relationship types (contains, references, posts, etc.)
   _system/         operations.yaml (standard operation definitions)
-  post/            post.yaml + views/  (entities with views keep a folder)
-  community/       community.yaml + views/
-  task.yaml        Flat entity files (no views, no subfolder)
+  task.yaml        All entities are flat YAML files
   person.yaml
+  video.yaml
   ...
 
-skills/            Workflow guides (how to use entities for specific domains)
-  roadmap/         skill.md, skill.yaml — extends outcomes for project planning
-
-adapters/           Adapters (how services map to entities)
+adapters/          Adapters (how services map to entities)
   reddit/          Maps Reddit API → post entity
   todoist/         Maps Todoist API → task entity
-  whatsapp/        Maps WhatsApp DB → message, conversation, person entities
+  youtube/         Maps YouTube API → video, community, account entities
+  ...
+
+skills/            Workflow guides (AI context, not visual)
+  write-adapter/   How to build an adapter
 
 themes/            Visual styling (CSS)
 ```
 
 **The flow:** 
-1. Skills define entity types (schema, display, views)
-2. Adapters declare which entities they provide (via `adapters:` section)
-3. Entities with `show_as_app: true` appear on the desktop when adapters support them
+1. Entity YAMLs define data types (schema + display hints)
+2. Adapters declare which entities they provide and how to map API data
+3. The Browser app renders any entity type using generic components that read display hints
+4. Custom apps (when needed) provide specialized views on top of entities
 
 ---
 
@@ -236,51 +235,41 @@ utilities:
 
 ---
 
-## Writing Apps
+## Entity Schemas
 
-**For detailed app writing guidance, read the skill:**
+**Entities are pure data model.** They define what things ARE — properties, types, display hints. No views, no visual logic.
 
-```bash
-~/.agentos/drive/skills/write-app.md
+```yaml
+# entities/video.yaml
+id: video
+plural: videos
+extends: media
+name: Video
+description: Video content with metadata and optional transcript
+
+properties:
+  remote_id: { type: string }
+  transcript: { type: string }
+  view_count: { type: integer }
+
+operations: [get, search, list, transcript]
+
+display:
+  primary: title
+  secondary: posted_by.display_name
+  description: description
+  image: thumbnail
+  icon: play
+  sort:
+    - field: published_at
+      order: desc
 ```
 
-### Quick Reference
+The `display` section tells generic components how to render this entity. No custom code needed — `entity-list` reads `display.primary` for the title, `display.image` for the thumbnail, etc.
 
-**Entity structure (flat):**
-```
-entities/
-  {entity}.yaml         # Most entities are flat files at root
-  {entity}/             # Entities with views get a folder
-    {entity}.yaml
-    views/              # TSX components + view configs
-  _primitives/          # Abstract base types
-  _relationships/       # Relationship types
-  _system/operations.yaml # Standard operation definitions
-```
+### Entity Model Extension Mechanisms
 
-**Skill structure:**
-```
-skills/{skill}/
-  skill.md        # Workflow guide (how to use entities)
-  skill.yaml      # Metadata: extends, naming, relationships
-  icon.png        # Optional
-```
-
-**Models can define:**
-- `properties:` — Entity schema
-- `operations:` — Standard CRUD (`[list, get, create, update, delete]`)
-- `utilities:` — Entity-level helpers with custom return shapes
-- `display:` — How to show in UI (`show_as_app: true` for desktop apps)
-
----
-
-## Entity Model Extension Mechanisms
-
-The entity model supports three extension mechanisms. Together they allow community contributors to build rich type hierarchies while keeping individual schemas clean.
-
-### `extends:` — Type Hierarchy
-
-Entities can inherit properties from a parent type. The Rust resolver handles multi-level inheritance (e.g., `document → post`, `media → video`). Child entities get all parent properties plus their own.
+**`extends:`** — Type hierarchy. Entities inherit properties from a parent type. The Rust resolver handles multi-level inheritance (e.g., `document → post`, `media → video`).
 
 ```yaml
 # post.yaml — inherits id, content, author, title, url, published_at from document
@@ -289,61 +278,27 @@ extends: document
 properties:
   community:
     references: community
-  # ... post-specific properties
 ```
 
-### `vocabulary:` — Context-Appropriate Naming
-
-When inheriting a property, you can rename it for domain context. The graph still treats them as equivalent — querying by the renamed field works transparently.
+**`vocabulary:`** — Context-appropriate naming. Rename inherited properties for domain context. The graph still treats them as equivalent.
 
 ```yaml
-# Example: if an entity inherits `url` but wants it called `source_url`
 id: my-entity
 extends: parent
 vocabulary:
   url: source_url
-properties:
-  # No explicit `source_url` needed — vocabulary override handles it
-  some_field:
-    type: string
 ```
 
-Both the Rust resolver and JS validator resolve vocabulary overrides. Inherited identifiers are also renamed.
-
-### `data: {}` — Adapter-Specific Extensions
-
-An open object property for adapter-specific data that doesn't belong in the shared schema. Adapters can store extra fields here without modifying the entity definition.
+**`data: {}`** — Adapter-specific extensions. An open object property for adapter-specific fields that don't belong in the shared schema.
 
 ```yaml
-# In entity YAML
-data:
-  type: object
-  description: Domain-specific extensions
-
 # In adapter mapping — store adapter-specific fields
-adapters:
-  task:
-    mapping:
-      data.priority_label: .priority_label
-      data.section_id: .section_id
+mapping:
+  data.priority_label: .priority_label
+  data.section_id: .section_id
 ```
 
-### System Properties
-
-Every entity automatically gets `created_at` and `updated_at` (datetime) as system-injected properties. These don't need to be declared in YAML — the resolver adds them. Adapters can map source timestamps into them.
-
----
-
-## Components
-
-Entity components live in `entities/{entity}/views/`. They compose framework primitives — never custom CSS.
-
-**Key rules:**
-- Use `data-*` attributes: `data-component="text" data-variant="title"`
-- Proxy external images with `getProxiedSrc()`
-- Export default: `export default MyComponent`
-
-**See examples:** `entities/post/views/`, `entities/community/views/`
+**System properties:** Every entity automatically gets `created_at` and `updated_at` (datetime). These don't need to be declared in YAML — the resolver adds them.
 
 ---
 

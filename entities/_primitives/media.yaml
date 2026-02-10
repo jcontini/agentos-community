@@ -53,5 +53,3 @@ properties:
   thumbnail:
     references: image
     description: Thumbnail or cover image
-
-display:

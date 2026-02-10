@@ -57,5 +57,3 @@ properties:
   data:
     type: object
     description: Adapter-specific extensions
-
-display:

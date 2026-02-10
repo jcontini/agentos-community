@@ -24,6 +24,9 @@
 id: replies_to
 name: Replies to
 inverse_name: Has replies
+description: A post or message replying directly to another post or message
+
+is_relationship: true
 
 from_type:
   - post

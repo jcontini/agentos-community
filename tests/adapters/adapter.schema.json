@@ -477,7 +477,7 @@
         },
         "url": {
           "type": "string",
-          "description": "Request URL (supports {{params.x}} templates)"
+          "description": "Request URL (jaq expression, e.g. '\"https://api.example.com/\" + .params.id')"
         },
         "headers": {
           "type": "object",
@@ -517,7 +517,7 @@
         },
         "variables": {
           "type": "object",
-          "description": "Query variables (supports {{params.x}} templates)"
+          "description": "Query variables (values are jaq expressions)"
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
@@ -531,7 +531,7 @@
       "properties": {
         "query": {
           "type": "string",
-          "description": "SQL query (supports {{params.x}} templates)"
+          "description": "SQL query (jaq expression)"
         },
         "database": {
           "type": "string",
@@ -554,7 +554,7 @@
         "args": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Arguments (supports {{params.x}} templates)"
+          "description": "Arguments (jaq expressions)"
         },
         "args_string": {
           "type": "string",
@@ -603,7 +603,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "Path to CSV file (supports ~ expansion, {{params.x}} templates)"
+          "description": "Path to CSV file (jaq expression, supports ~ expansion)"
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
