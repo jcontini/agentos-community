@@ -7,7 +7,8 @@
  *   2. Entity  — All operations return valid entity types
  *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
  *   4. Icon    — icon.svg or icon.png exists
- *   5. Tests   — Every operation has a test file
+ *   5. Seed    — connects_to + seed data (product/org entities)
+ *   6. Tests   — Every operation has a test file
  * 
  * Adapters that fail schema structure or entity checks get moved to .needs-work/.
  * Run again after fixing — when they pass, they stay in adapters/.
@@ -278,6 +279,46 @@ function checkIcon(adapterDir) {
   return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
 }
 
+function checkSeed(frontmatter) {
+  const errors = [];
+  let total = 0;
+  let passed = 0;
+  
+  // Check connects_to exists
+  total++;
+  const connectsTo = frontmatter.connects_to;
+  if (connectsTo) {
+    passed++;
+  } else {
+    errors.push('Missing connects_to — adapter must declare which product it connects to');
+  }
+  
+  // Check seed data exists
+  total++;
+  const seed = frontmatter.seed;
+  if (seed && seed.length > 0) {
+    passed++;
+  } else {
+    errors.push('Missing seed data — adapter must seed product and organization entities');
+  }
+  
+  // Check connects_to references exist in seed data
+  if (connectsTo && seed && seed.length > 0) {
+    const seedIds = new Set(seed.map(s => s.id));
+    const targets = Array.isArray(connectsTo) ? connectsTo : [connectsTo];
+    for (const target of targets) {
+      total++;
+      if (seedIds.has(target)) {
+        passed++;
+      } else {
+        errors.push(`connects_to '${target}' not found in seed data`);
+      }
+    }
+  }
+  
+  return { pass: errors.length === 0, passed, total, errors };
+}
+
 function checkTests(adapterDir, frontmatter) {
   const tools = [];
   if (frontmatter.operations) tools.push(...Object.keys(frontmatter.operations));
@@ -365,13 +406,13 @@ function renderTable(sections) {
   }
   
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Adapter', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Adapter', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Seed', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
   
-  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
-  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
   
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 4 + testColW + 5;
+    const inner = nameWidth + 1 + colW * 5 + testColW + 6;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
@@ -421,7 +462,7 @@ function renderTable(sections) {
     console.log(sectionDivider(section.label));
     
     for (const r of section.results) {
-      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass;
+      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass;
       const critical = !r.schema.structureValid || !r.entity.pass;
       const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
       
@@ -430,6 +471,7 @@ function renderTable(sections) {
         `${checkCell(r.entity, colW)}${SEP}` +
         `${checkCell(r.mapping, colW)}${SEP}` +
         `${iconCell(r.icon, colW)}${SEP}` +
+        `${checkCell(r.seed, colW)}${SEP}` +
         `${testCell(r, testColW)}${SEP}`;
       console.log(line);
     }
@@ -440,7 +482,7 @@ function renderTable(sections) {
   for (const section of sections) {
     if (section.results.length === 0) continue;
     const total = section.results.length;
-    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
     const passColor = passing === total ? GREEN : passing > 0 ? YELLOW : RED;
     console.log(`  ${section.icon} ${passColor}${passing}/${total}${RESET} ${section.label}`);
   }
@@ -448,7 +490,7 @@ function renderTable(sections) {
 }
 
 function renderErrors(results) {
-  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass);
+  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.seed.pass || !r.tests.pass);
   if (failing.length === 0) return;
   
   for (const r of failing) {
@@ -457,6 +499,7 @@ function renderErrors(results) {
     if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
     if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
     if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
+    if (!r.seed.pass)    allErrors.push(...r.seed.errors.map(e => `seed: ${e}`));
     if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
     
     if (allErrors.length > 0) {
@@ -492,6 +535,7 @@ function validateAdapter(adapter) {
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       icon: checkIcon(adapter.dir),
+      seed: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },
     };
   }
@@ -501,6 +545,7 @@ function validateAdapter(adapter) {
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const iconResult = checkIcon(adapter.dir);
+  const seedResult = canCheck ? checkSeed(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const testsResult = canCheck ? checkTests(adapter.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
   
   return {
@@ -509,6 +554,7 @@ function validateAdapter(adapter) {
     entity: entityResult,
     mapping: mappingResult,
     icon: iconResult,
+    seed: seedResult,
     tests: testsResult,
   };
 }
@@ -551,8 +597,8 @@ const needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _a
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
-  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
-  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
+  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.seed.pass && a.tests.pass;
+  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.seed.pass && b.tests.pass;
   if (aPass !== bPass) return bPass - aPass;
   return a.name.localeCompare(b.name);
 });
@@ -608,7 +654,7 @@ if (verbose) renderErrors(needsWorkResults);
 
 // 7. Check for promotable .needs-work adapters
 const promotable = needsWorkResults.filter(r =>
-  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass
+  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass
 );
 if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
@@ -629,13 +675,13 @@ if (verbose) {
 console.log();
 
 const remaining = activeResults.filter(r => !r._moved);
-const allPassing = remaining.length > 0 && remaining.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
+const allPassing = remaining.length > 0 && remaining.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass);
 if (allPassing) {
   console.log('✅ All adapters fully valid');
 } else if (remaining.length === 0) {
   console.log('📭 No adapters in adapters/ — everything moved to .needs-work/');
 } else {
-  const passing = remaining.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+  const passing = remaining.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
   console.log(`⚠️  ${passing}/${remaining.length} adapters fully valid — run again after fixing`);
 }
 process.exit(0);
