@@ -164,7 +164,7 @@ operations:
             {
               id: .id,
               content: .body,
-              author: { name: .author, url: ("https://reddit.com/u/" + .author) },
+              author: .author,
               engagement: { score: .ups },
               published_at: (.created_utc | todate),
               replies: [if .replies == "" then empty else (.replies.data.children[] | select(.kind == "t1") | .data | map_comment) end]
@@ -199,7 +199,7 @@ operations:
             title: .data.title,
             content: .data.selftext,
             url: ("https://reddit.com" + .data.permalink),
-            author: { name: .data.author, url: ("https://reddit.com/u/" + .data.author) },
+            author: .data.author,
             community: { name: .data.subreddit, url: ("https://reddit.com/r/" + .data.subreddit) },
             engagement: { score: .data.score, comment_count: .data.num_comments },
             published_at: (.data.created_utc | todate)

@@ -145,7 +145,7 @@ operations:
             {
               id: (.id | tostring),
               content: .text,
-              author: { name: .author, url: ("https://news.ycombinator.com/user?id=" + .author) },
+              author: .author,
               published_at: .created_at,
               replies: [.children[]? | map_comment]
             };
