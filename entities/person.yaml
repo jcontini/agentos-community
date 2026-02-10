@@ -156,6 +156,7 @@ operations: [list, get, search, create, update]
 display:
   primary: name
   secondary: organization
+  image: avatar
   icon: user
   sort:
     - field: name
