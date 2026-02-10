@@ -85,6 +85,76 @@ themes/            Visual styling (CSS)
 
 ---
 
+## Attribution Model — Accounts, Not People
+
+**CRITICAL:** When pulling content from social platforms (YouTube, Reddit, Twitter, HackerNews, etc.), create **account entities**, not person entities.
+
+### The Model
+
+```
+Account (platform identity) → on_platform → Product (YouTube, Reddit, Phone, Email)
+Person (the human) → claims → Account (with epistemic provenance)
+```
+
+**Why this matters:**
+1. **You don't know it's a person** — @3blue1brown could be one person, a team, or a brand account
+2. **Navigation is the point** — Click a username in a comment → jump to that account → see all their posts across platforms → discover it's the same person you follow elsewhere
+3. **The graph enables discovery** — "Oh, patio11 on HackerNews is the same person as patio11 on Twitter? Worth following."
+4. **Governance is via accounts** — An account owns a channel, not a person directly. Brand accounts can have multiple person-owners.
+
+### When to Use Person vs Account
+
+| Use Account | Use Person |
+|-------------|-----------|
+| Social media posts (Reddit, Twitter, YouTube) | Contact from Apple Contacts |
+| Comments and replies | Author from Hardcover book API |
+| Channel ownership | Meeting participant |
+| Anonymous commenters | Family member in iMessage |
+
+**The difference:** If the source is a public platform where identity is mediated by the platform, it's an account. If it's a direct personal identifier (your contacts, your calendar), it's a person.
+
+### Example: HackerNews Posts
+
+```yaml
+# CORRECT — creates account entities
+posted_by:
+  account:
+    id: .author
+    platform: '"hackernews"'
+    handle: .author
+    display_name: .author
+    url: '"https://news.ycombinator.com/user?id=" + .author'
+```
+
+```yaml
+# WRONG — creates person entities
+posted_by:
+  person:
+    id: .author
+    name: .author
+```
+
+**Why wrong:** You don't know if "patio11" is Patrick McKenzie (person) just from the HackerNews API. You know there's an account called "patio11" on HackerNews. Later, via `claims` relationships with provenance, you might link that account to a person entity.
+
+### Platform as Product Reference
+
+The `platform` field on account should reference a product entity:
+
+```yaml
+# Account entity
+platform:
+  references: product  # ← Product entity (YouTube, Reddit, Phone, Email)
+```
+
+This enables:
+- Product timeline ("Show me when Twitter became X")
+- Ownership tracking (WhatsApp → made_by → WhatsApp Inc → acquired_by → Meta)
+- Platform availability ("Does this account still exist?" depends on product.status)
+
+**See:** `.ROADMAP/.archived/account-entity.md` for complete account/person/product architecture.
+
+---
+
 ## Writing Adapters
 
 **For detailed adapter writing guidance, read the skill:**

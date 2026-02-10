@@ -59,20 +59,19 @@ adapters:
       external_url: .url
       replies: .replies
       
-      # Display fields for views (denormalized on post entity)
-      author.name: .author
-      author.url: '"https://news.ycombinator.com/user?id=" + .author'
-      
       # Engagement metrics
       engagement.score: .points
       engagement.comment_count: .num_comments
       published_at: .created_at
       
-      # Typed reference: creates person entity and posted_by relationship
+      # Typed reference: creates account entity and posts relationship
       posted_by:
-        person:
+        account:
           id: .author
-          name: .author
+          platform: '"hackernews"'
+          handle: .author
+          display_name: .author
+          url: '"https://news.ycombinator.com/user?id=" + .author'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -145,7 +144,15 @@ operations:
             {
               id: (.id | tostring),
               content: .text,
-              author: .author,
+              posted_by: {
+                account: {
+                  id: .author,
+                  platform: "hackernews",
+                  handle: .author,
+                  display_name: .author,
+                  url: ("https://news.ycombinator.com/user?id=" + .author)
+                }
+              },
               published_at: .created_at,
               replies: [.children[]? | map_comment]
             };

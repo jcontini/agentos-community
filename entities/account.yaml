@@ -49,16 +49,19 @@ properties:
     description: Unique identifier (typically platform_id or handle)
 
   platform:
-    type: string
+    references: product
     required: true
     description: |
-      Which platform/network this account belongs to. Open string.
-      Core: phone, email.
-      Social: twitter, github, linkedin, instagram, facebook, youtube,
-      reddit, mastodon, tiktok, twitch, discord.
-      Messaging: whatsapp, imessage, telegram, signal, slack.
-      Historical: aol, icq, msn, google-plus.
-      Any string allowed — new platforms emerge, old ones die.
+      Which product/platform this account belongs to.
+      Twitter/X, YouTube, Reddit, Phone (PSTN), Email, GitHub, etc.
+      
+      Platform is a product — made by a company, has a URL, can be
+      acquired or discontinued. Account → on_platform → Product.
+      
+      Examples:
+        Account: @sarahchen → on_platform → Product: Twitter/X
+        Account: +1-555-867-5309 → on_platform → Product: Phone (PSTN)
+        Account: sarah@gmail.com → on_platform → Product: Email (protocol)
 
   handle:
     type: string

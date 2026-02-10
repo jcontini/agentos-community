@@ -71,16 +71,15 @@ adapters:
       published_at: .data.created_utc | todate
       replies: .replies
       
-      # Display fields for views (denormalized on post entity)
-      author.name: .data.author
-      author.url: '"https://reddit.com/u/" + .data.author'
-      
-      # Typed reference: creates person entity and 'posted_by' relationship
+      # Typed reference: creates account entity and posts relationship
       # Uses raw API path — all mapping expressions reference raw data
       posted_by:
-        person:
+        account:
           id: .data.author
-          name: .data.author
+          platform: '"reddit"'
+          handle: .data.author
+          display_name: .data.author
+          url: '"https://reddit.com/u/" + .data.author'
   
   community:
     terminology: Subreddit
@@ -164,7 +163,15 @@ operations:
             {
               id: .id,
               content: .body,
-              author: .author,
+              posted_by: {
+                account: {
+                  id: .author,
+                  platform: "reddit",
+                  handle: .author,
+                  display_name: .author,
+                  url: ("https://reddit.com/u/" + .author)
+                }
+              },
               engagement: { score: .ups },
               published_at: (.created_utc | todate),
               replies: [if .replies == "" then empty else (.replies.data.children[] | select(.kind == "t1") | .data | map_comment) end]
