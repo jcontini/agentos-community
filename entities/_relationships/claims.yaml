@@ -72,3 +72,20 @@ properties:
     description: |
       Is this the person's main/preferred account for this platform?
       Only one claims relationship per platform should have primary: true.
+
+  started_at:
+    type: string
+    format: date
+    description: |
+      When the person started using/controlling this account.
+      Preserves temporal continuity — old accounts aren't deleted,
+      they get temporal bounds so historical data stays linked.
+
+  ended_at:
+    type: string
+    format: date
+    description: |
+      When the person stopped using/controlling this account.
+      A claim with ended_at is historical — the person no longer
+      controls this account, but past messages/data still link
+      through it. Filter to ended_at IS NULL for current accounts.
