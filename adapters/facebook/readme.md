@@ -21,10 +21,10 @@ requires:
 
 seed:
   - id: facebook
-    types: [product]
+    types: [software]
     name: Facebook
     data:
-      product_type: platform
+      software_type: platform
       url: https://www.facebook.com
       launched: "2004"
       platforms: [web, ios, android]
@@ -57,7 +57,7 @@ instructions: |
 # ═══════════════════════════════════════════════════════════════════════════════
 
 adapters:
-  community:
+  forum:
     terminology: Group
     mapping:
       id: .id
@@ -74,9 +74,9 @@ adapters:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  community.get:
+  forum.get:
     description: Get metadata for a public Facebook group
-    returns: community
+    returns: forum
     params:
       group:
         type: string

@@ -23,10 +23,10 @@ sources:
 
 seed:
   - id: reddit
-    types: [product]
+    types: [software]
     name: Reddit
     data:
-      product_type: platform
+      software_type: platform
       url: https://reddit.com
       launched: "2005"
       platforms: [web, ios, android]
@@ -64,8 +64,8 @@ adapters:
       title: .data.title
       content: .data.selftext
       url: '"https://reddit.com" + .data.permalink'
-      community.name: .data.subreddit
-      community.url: '"https://reddit.com/r/" + .data.subreddit'
+      forum.name: .data.subreddit
+      forum.url: '"https://reddit.com/r/" + .data.subreddit'
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
       published_at: .data.created_utc | todate
@@ -81,7 +81,7 @@ adapters:
           display_name: .data.author
           url: '"https://reddit.com/u/" + .data.author'
   
-  community:
+  forum:
     terminology: Subreddit
     mapping:
       id: .name
@@ -181,9 +181,9 @@ operations:
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
 
-  community.get:
+  forum.get:
     description: Get a subreddit with its top posts
-    returns: community
+    returns: forum
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
@@ -207,7 +207,7 @@ operations:
             content: .data.selftext,
             url: ("https://reddit.com" + .data.permalink),
             author: .data.author,
-            community: { name: .data.subreddit, url: ("https://reddit.com/r/" + .data.subreddit) },
+            forum: { name: .data.subreddit, url: ("https://reddit.com/r/" + .data.subreddit) },
             engagement: { score: .data.score, comment_count: .data.num_comments },
             published_at: (.data.created_utc | todate)
           }]')" '
@@ -222,9 +222,9 @@ operations:
           '
       timeout: 30
 
-  community.search:
-    description: Search for subreddits (communities)
-    returns: community[]
+  forum.search:
+    description: Search for subreddits
+    returns: forum[]
     web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
@@ -274,8 +274,8 @@ No authentication required, just a custom User-Agent header to avoid rate limiti
 | `post.search` | Search posts across all of Reddit |
 | `post.list` | List posts from a specific subreddit |
 | `post.get` | Get a single post with comments |
-| `community.search` | Search for subreddits (communities) |
-| `community.get` | Get metadata for a specific subreddit |
+| `forum.search` | Search for subreddits |
+| `forum.get` | Get metadata for a specific subreddit |
 
 ## Examples
 

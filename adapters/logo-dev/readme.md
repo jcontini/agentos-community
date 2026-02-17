@@ -28,10 +28,10 @@ adapters:
 
 seed:
   - id: logo-dev
-    types: [product]
+    types: [software]
     name: Logo.dev
     data:
-      product_type: api
+      software_type: api
       url: https://logo.dev
       launched: "2024"
       platforms: [api]

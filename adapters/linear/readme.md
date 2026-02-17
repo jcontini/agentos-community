@@ -487,10 +487,10 @@ utilities:
 
 seed:
   - id: linear
-    types: [product]
+    types: [software]
     name: Linear
     data:
-      product_type: app
+      software_type: app
       url: https://linear.app
       launched: "2019"
       platforms: [web, ios, macos]

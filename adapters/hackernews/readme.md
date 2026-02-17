@@ -15,10 +15,10 @@ connects_to: hackernews
 
 seed:
   - id: hackernews
-    types: [product]
+    types: [software]
     name: Hacker News
     data:
-      product_type: platform
+      software_type: platform
       url: https://news.ycombinator.com
       launched: "2007"
       platforms: [web]

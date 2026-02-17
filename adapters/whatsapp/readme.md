@@ -14,10 +14,10 @@ database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatSto
 
 seed:
   - id: whatsapp
-    types: [product]
+    types: [software]
     name: WhatsApp
     data:
-      product_type: app
+      software_type: app
       url: https://www.whatsapp.com
       launched: "2009"
       platforms: [ios, android, macos, windows, web]

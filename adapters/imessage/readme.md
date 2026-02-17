@@ -12,10 +12,10 @@ connects_to: imessage
 
 seed:
   - id: imessage
-    types: [product]
+    types: [software]
     name: iMessage
     data:
-      product_type: service
+      software_type: service
       url: https://support.apple.com/explore/messages
       launched: "2011"
       platforms: [ios, ipados, macos, watchos, visionos]

@@ -19,10 +19,10 @@ connects_to: brave-search
 
 seed:
   - id: brave-search
-    types: [product]
+    types: [software]
     name: Brave Search
     data:
-      product_type: service
+      software_type: service
       url: https://search.brave.com
       launched: "2021"
       platforms: [web]

@@ -19,10 +19,10 @@ connects_to: exa
 
 seed:
   - id: exa
-    types: [product]
+    types: [software]
     name: Exa
     data:
-      product_type: api
+      software_type: api
       url: https://exa.ai
       launched: "2022"
       platforms: [api]

@@ -12,10 +12,10 @@ connects_to: apple-calendar
 
 seed:
   - id: apple-calendar
-    types: [product]
+    types: [software]
     name: Apple Calendar
     data:
-      product_type: app
+      software_type: app
       url: https://support.apple.com/guide/calendar/welcome/mac
       launched: "2002"
       platforms: [macos, ios, ipados, watchos, visionos]
@@ -58,7 +58,7 @@ adapters:
       color: .color
       is_subscribed: .is_readonly
 
-  event:
+  meeting:
     terminology: Event
     mapping:
       id: .id
@@ -126,9 +126,9 @@ operations:
             print("[]")
         }
 
-  event.list:
+  meeting.list:
     description: List calendar events within a date range
-    returns: event[]
+    returns: meeting[]
     params:
       days: { type: integer, default: 7, description: "Days from today (1-30)" }
       past: { type: boolean, default: false, description: "Look backward instead of forward" }
@@ -255,9 +255,9 @@ operations:
         - "{{params.limit}}"
         - "{{params.exclude_all_day}}"
 
-  event.get:
+  meeting.get:
     description: Get full details of a specific event
-    returns: event
+    returns: meeting
     params:
       id: { type: string, required: true, description: "Event ID" }
     swift:
@@ -320,9 +320,9 @@ operations:
       args:
         - "{{params.id}}"
 
-  event.create:
+  meeting.create:
     description: Create a new calendar event
-    returns: event
+    returns: meeting
     params:
       title: { type: string, required: true, description: "Event title" }
       start: { type: string, required: true, description: "Start (YYYY-MM-DD HH:MM or YYYY-MM-DD)" }
@@ -455,9 +455,9 @@ operations:
         - "{{params.description}}"
         - "{{params.all_day}}"
 
-  event.update:
+  meeting.update:
     description: Update an existing calendar event
-    returns: event
+    returns: meeting
     params:
       id: { type: string, required: true, description: "Event ID" }
       title: { type: string, description: "New title" }
@@ -563,7 +563,7 @@ operations:
         - "{{params.description}}"
         - "{{params.calendar_id}}"
 
-  event.delete:
+  meeting.delete:
     description: Delete a calendar event
     returns: void
     params:

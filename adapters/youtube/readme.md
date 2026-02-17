@@ -12,10 +12,10 @@ connects_to: youtube
 # Seed entities: the product and organizations this adapter connects to
 seed:
   - id: youtube
-    types: [product]
+    types: [software]
     name: YouTube
     data:
-      product_type: platform
+      software_type: platform
       url: https://youtube.com
       launched: "2005"
       platforms: [web, ios, android, macos, windows]
@@ -103,10 +103,10 @@ adapters:
           type: '"posts"'
           reverse: true
 
-      # Typed reference: creates community entity for the YouTube channel
-      # video --posted_in--> community (natural direction)
+      # Typed reference: creates channel entity for the YouTube channel
+      # video --posted_in--> channel (natural direction)
       posted_in:
-        community:
+        channel:
           id: .channel_id
           name: .channel
           url: .channel_url
@@ -139,11 +139,11 @@ adapters:
           role: '"transcript_of"'
           reverse: true
 
-      # Typed reference: creates collection entity for YouTube playlists
+      # Typed reference: creates playlist entity for YouTube playlists
       # Only activates when playlist fields are present (filtered by jq — PL prefix only)
-      # collection --contains--> video (reverse: collection is the from side)
+      # playlist --contains--> video (reverse: playlist is the from side)
       in_playlist:
-        collection:
+        playlist:
           id: .playlist_id
           name: .playlist
           url: .playlist_url
@@ -546,6 +546,6 @@ All operations return videos with these fields:
 }
 ```
 
-**Linked entities:** Each operation creates account (channel identity) and community (channel) entities in the graph, linked via `posts` and `posted_in` relationships. `video.get` and `video.transcript` additionally create a post entity (social wrapper) and document entity (transcript).
+**Linked entities:** Each operation creates account (channel identity) and channel entities in the graph, linked via `posts` and `posted_in` relationships. `video.get` and `video.transcript` additionally create a post entity (social wrapper) and document entity (transcript).
 
 **Note:** `view_count`, `published_at`, and `posted_in.member_count` may be null for search/list results (flat-playlist mode). Use `video.get` on individual videos for complete metadata.

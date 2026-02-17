@@ -23,10 +23,10 @@ connects_to: todoist
 
 seed:
   - id: todoist
-    types: [product]
+    types: [software]
     name: Todoist
     data:
-      product_type: app
+      software_type: app
       url: https://todoist.com
       launched: "2007"
       platforms: [web, ios, android, macos, windows]

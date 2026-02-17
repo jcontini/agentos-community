@@ -20,10 +20,10 @@ connects_to: firecrawl
 
 seed:
   - id: firecrawl
-    types: [product]
+    types: [software]
     name: Firecrawl
     data:
-      product_type: api
+      software_type: api
       url: https://firecrawl.dev
       launched: "2024"
       platforms: [api]

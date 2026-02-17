@@ -6,7 +6,7 @@
  * 
  * Coverage:
  * - calendar.list (list all calendars)
- * - event.list (with filters: days, calendar_id, query)
+ * - meeting.list (with filters: days, calendar_id, query)
  * - event CRUD (create, get, update, delete)
  */
 
@@ -46,7 +46,7 @@ describe('Apple Calendar Adapter', () => {
       try {
         await aos().call('UseAdapter', {
           adapter,
-          tool: 'event.delete',
+          tool: 'meeting.delete',
           params: { id: eventId },
         });
       } catch (e) {
@@ -90,15 +90,15 @@ describe('Apple Calendar Adapter', () => {
   });
 
   // ===========================================================================
-  // event.list
+  // meeting.list
   // ===========================================================================
-  describe('event.list', () => {
+  describe('meeting.list', () => {
     it('returns an array of events', async () => {
       if (skipTests) return;
       
       const events = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.list',
+        tool: 'meeting.list',
         params: { days: 30 },
       });
 
@@ -110,7 +110,7 @@ describe('Apple Calendar Adapter', () => {
       
       const events = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.list',
+        tool: 'meeting.list',
         params: { days: 1 },
       });
 
@@ -132,12 +132,12 @@ describe('Apple Calendar Adapter', () => {
     const startTime = `${tomorrow.toISOString().split('T')[0]} 14:00`;
     const endTime = `${tomorrow.toISOString().split('T')[0]} 15:00`;
 
-    it('event.create - creates event with title and time', async () => {
+    it('meeting.create - creates event with title and time', async () => {
       if (skipTests) return;
       
       const event = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.create',
+        tool: 'meeting.create',
         params: {
           title: testTitle,
           start: startTime,
@@ -148,36 +148,36 @@ describe('Apple Calendar Adapter', () => {
       });
 
       expect(event).toHaveProperty('id');
-      expect(event.title).toBe(testTitle);
+      expect(meeting.title).toBe(testTitle);
       expect(event).toHaveProperty('start');
       
-      testEventId = event.id;
+      testEventId = meeting.id;
       createdEvents.push(testEventId);
     });
 
-    it('event.get - retrieves event with all fields', async () => {
+    it('meeting.get - retrieves event with all fields', async () => {
       if (skipTests || !testEventId) return;
       
       const event = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.get',
+        tool: 'meeting.get',
         params: { id: testEventId },
       });
 
-      expect(event.id).toBe(testEventId);
-      expect(event.title).toBe(testTitle);
-      expect(event.location).toBe('Test Location');
-      expect(event.description).toBe('Test description for automated test');
+      expect(meeting.id).toBe(testEventId);
+      expect(meeting.title).toBe(testTitle);
+      expect(meeting.location).toBe('Test Location');
+      expect(meeting.description).toBe('Test description for automated test');
     });
 
-    it('event.update - updates title and location', async () => {
+    it('meeting.update - updates title and location', async () => {
       if (skipTests || !testEventId) return;
       
       const updatedTitle = `${TEST_PREFIX} Updated Meeting`;
       
       const event = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.update',
+        tool: 'meeting.update',
         params: {
           id: testEventId,
           title: updatedTitle,
@@ -185,29 +185,29 @@ describe('Apple Calendar Adapter', () => {
         },
       });
 
-      expect(event.id).toBe(testEventId);
-      expect(event.title).toBe(updatedTitle);
+      expect(meeting.id).toBe(testEventId);
+      expect(meeting.title).toBe(updatedTitle);
     });
 
-    it('event.get - confirms update persisted', async () => {
+    it('meeting.get - confirms update persisted', async () => {
       if (skipTests || !testEventId) return;
       
       const event = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.get',
+        tool: 'meeting.get',
         params: { id: testEventId },
       });
 
-      expect(event.title).toBe(`${TEST_PREFIX} Updated Meeting`);
-      expect(event.location).toBe('Updated Location');
+      expect(meeting.title).toBe(`${TEST_PREFIX} Updated Meeting`);
+      expect(meeting.location).toBe('Updated Location');
     });
 
-    it('event.delete - removes the event', async () => {
+    it('meeting.delete - removes the event', async () => {
       if (skipTests || !testEventId) return;
       
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.delete',
+        tool: 'meeting.delete',
         params: { id: testEventId },
       });
 
@@ -219,14 +219,14 @@ describe('Apple Calendar Adapter', () => {
       expect(result).toBeDefined();
     });
 
-    it('event.get - confirms deletion', async () => {
+    it('meeting.get - confirms deletion', async () => {
       if (skipTests || !testEventId) return;
       
       // Should throw error when trying to get deleted event
       await expect(
         aos().call('UseAdapter', {
           adapter,
-          tool: 'event.get',
+          tool: 'meeting.get',
           params: { id: testEventId },
         })
       ).rejects.toThrow();
@@ -248,7 +248,7 @@ describe('Apple Calendar Adapter', () => {
       
       const event = await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.create',
+        tool: 'meeting.create',
         params: {
           title: `${TEST_PREFIX} All Day Event`,
           start: dateStr,  // Just date, no time = all-day
@@ -256,9 +256,9 @@ describe('Apple Calendar Adapter', () => {
       });
 
       expect(event).toHaveProperty('id');
-      expect(event.all_day).toBe(true);
+      expect(meeting.all_day).toBe(true);
       
-      allDayEventId = event.id;
+      allDayEventId = meeting.id;
       createdEvents.push(allDayEventId);
     });
 
@@ -267,7 +267,7 @@ describe('Apple Calendar Adapter', () => {
       
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'event.delete',
+        tool: 'meeting.delete',
         params: { id: allDayEventId },
       });
 

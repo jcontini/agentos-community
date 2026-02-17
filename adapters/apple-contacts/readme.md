@@ -12,10 +12,10 @@ connects_to: apple-contacts
 
 seed:
   - id: apple-contacts
-    types: [product]
+    types: [software]
     name: Apple Contacts
     data:
-      product_type: app
+      software_type: app
       url: https://support.apple.com/guide/contacts/welcome/mac
       launched: "2001"
       platforms: [macos, ios, ipados, watchos]

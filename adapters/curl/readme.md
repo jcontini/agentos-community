@@ -12,10 +12,10 @@ connects_to: curl
 
 seed:
   - id: curl
-    types: [product]
+    types: [software]
     name: curl
     data:
-      product_type: tool
+      software_type: tool
       url: https://curl.se
       launched: "1998"
       platforms: [linux, macos, windows]
