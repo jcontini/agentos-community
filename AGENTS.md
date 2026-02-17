@@ -19,6 +19,7 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 | `write-adapter.md` | Creating or modifying adapters |
 | `write-app.md` | Writing apps or entity components |
 | `shell-history.md` | Querying shell history |
+| `apple-biome.md` | Screen time, app usage, media playback, location, device activity |
 
 ---
 
