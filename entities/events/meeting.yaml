@@ -1,0 +1,42 @@
+# Meeting — Calendar Events, Calls, Scheduled Meetings
+#
+# Extends event. The most common event subtype — what calendar
+# apps create. Includes scheduling metadata like all_day,
+# recurrence, organizer, attendees.
+
+id: meeting
+plural: meetings
+extends: event
+name: Meeting
+description: A calendar event, call, or scheduled meeting
+
+references:
+  schema_org: https://schema.org/Event
+  wikidata: Q1656682
+
+properties:
+  all_day:
+    type: boolean
+    default: false
+    description: Whether this is an all-day event
+
+  organizer:
+    references: person
+    description: Who organized this event
+
+  attendees:
+    type: array
+    description: People attending this event
+    items:
+      references: person
+
+  recurrence:
+    type: string
+    description: Recurrence rule (RRULE format)
+
+operations: [list, get, create, update, delete]
+
+display:
+  primary: title
+  secondary: start
+  icon: calendar

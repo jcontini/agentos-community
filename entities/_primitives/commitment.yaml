@@ -1,0 +1,52 @@
+# Commitment — Promises to Make the World Different
+#
+# Tasks, outcomes, goals — things an actor commits to achieving.
+# Commissive speech acts: the speaker commits to making the
+# world match their words (World → Word in Searle's framework).
+#
+# Replaces the old `outcome` primitive. The key insight: outcomes
+# at any scale are commitments. A task is a commitment. A milestone
+# is a commitment. A quarterly goal is a commitment.
+#
+# Status flow: open → in_progress → done | cancelled
+# Completion is tracked via the `complete` relationship (assertive
+# speech act — claiming the commitment is fulfilled), not a boolean.
+
+id: commitment
+plural: commitments
+name: Commitment
+description: Promises to make the world different — tasks, outcomes, goals
+
+references:
+  searle: Commissive speech acts (World fits Word)
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: What is this commitment?
+
+  description:
+    type: string
+    description: Details about the commitment
+
+  status:
+    type: string
+    enum: [open, in_progress, done, cancelled]
+    description: Current status
+
+  deadline:
+    type: datetime
+    description: When this commitment is due
+
+  fulfilled_at:
+    type: datetime
+    description: When this commitment was fulfilled
+
+identifiers: [name]
+operations: [list, get, create, update, archive, complete, reopen]

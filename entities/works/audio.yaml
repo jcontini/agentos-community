@@ -1,0 +1,48 @@
+# Audio — Podcasts, Music, Sound
+#
+# Extends work. Inherits: id, title, description, url, expressed_at, created_date.
+# Properties formerly from media (published_at, duration_ms, thumbnail) are
+# now declared directly since media was removed.
+#
+# For podcast episodes, music tracks, sound effects, and any
+# audio-only content.
+
+id: audio
+plural: audio
+extends: work
+name: Audio
+description: Audio content — podcasts, music, sound
+
+references:
+  schema_org: https://schema.org/AudioObject
+
+properties:
+  # From media (now declared directly)
+  published_at:
+    type: datetime
+    description: When this audio was published
+
+  duration_ms:
+    type: integer
+    description: Duration in milliseconds
+
+  thumbnail:
+    references: image
+    description: Cover art or thumbnail image
+
+  bitrate:
+    type: integer
+    description: Audio bitrate in kbps
+
+  transcript:
+    type: string
+    description: Full transcript text
+
+identifiers: [url]
+
+operations: [list, get, search]
+
+display:
+  primary: title
+  secondary: null  # TODO: Show performer/author via relationship query
+  icon: headphones

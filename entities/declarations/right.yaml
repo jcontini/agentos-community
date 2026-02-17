@@ -1,0 +1,38 @@
+# Right — An Entitlement or Grant
+#
+# Extends declaration. Rights, entitlements, and grants —
+# things that authorize actions. Licenses extend right.
+#
+# In the inheritance chain: declaration → right → license.
+
+id: right
+plural: rights
+extends: declaration
+name: Right
+description: An entitlement or grant — something that authorizes actions
+
+references:
+  wikidata: Q780687
+
+properties:
+  scope:
+    type: string
+    description: What the right authorizes
+
+  valid_from:
+    type: datetime
+    description: When the right takes effect
+
+  valid_until:
+    type: datetime
+    description: When the right expires
+
+  status:
+    type: string
+    enum: [active, expired, revoked, pending]
+    description: Current status of the right
+
+display:
+  primary: name
+  secondary: status
+  icon: shield

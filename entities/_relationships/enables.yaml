@@ -15,8 +15,8 @@ description: One outcome enables another when requirements are met
 is_relationship: true
 
 # Connects outcome to outcome
-from_type: outcome
-to_type: outcome
+from_type: commitment
+to_type: commitment
 
 properties:
   # Semantic role

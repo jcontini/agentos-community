@@ -1,0 +1,42 @@
+# Declaration — Things Made True by Saying Them
+#
+# Rights, decisions, grants, appointments — speech acts that
+# create reality. Declarative speech acts in Searle's framework:
+# the word-world fit goes both ways. A judge says "guilty" and
+# the person IS guilty. A regulator grants a license and it IS
+# granted.
+#
+# Distinguished from assertions (claims about how the world is)
+# and commitments (promises about how the world will be).
+# Declarations CREATE the state of affairs they describe.
+
+id: declaration
+plural: declarations
+name: Declaration
+description: Things made true by saying them — rights, decisions, grants
+
+references:
+  searle: Declarative speech acts (both Word-World directions)
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: What was declared
+
+  description:
+    type: string
+    description: Context and details of the declaration
+
+  declared_at:
+    type: datetime
+    description: When the declaration was made
+
+  declared_by:
+    type: string
+    description: Who made the declaration (authority)

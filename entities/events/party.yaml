@@ -1,0 +1,28 @@
+# Party — Social Gatherings
+#
+# Extends event. Birthday parties, dinner parties, celebrations,
+# social events — gatherings that are primarily social.
+
+id: party
+plural: parties
+extends: event
+name: Party
+description: A social gathering — birthday parties, celebrations, dinner parties
+
+properties:
+  party_type:
+    type: string
+    description: birthday, dinner, celebration, housewarming, etc.
+
+  host:
+    references: person
+    description: Who is hosting
+
+  guest_count:
+    type: integer
+    description: Expected or actual number of guests
+
+display:
+  primary: title
+  secondary: start
+  icon: party-popper

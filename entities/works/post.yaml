@@ -1,0 +1,87 @@
+# Post Entity
+# A social media post, comment, or reply (Reddit, Twitter, HN, etc.)
+#
+# Extends document. Inherits:
+#   From document: id, content, title, url, published_at, fetched_at, data
+#
+# Design principle: Comments ARE posts — just posts with a replies_to
+# relationship. A YouTube comment, Reddit comment, HN reply — they're
+# all post entities that reply_to another post. Threading lives in the
+# graph, not in properties.
+#
+# The `replies` array is a denormalized convenience for API responses
+# (rendering comment trees). The graph (replies_to edges) is the
+# source of truth for threading.
+
+id: post
+plural: posts
+extends: document
+name: Post
+description: A social media post, comment, or reply
+
+references:
+  schema_org: https://schema.org/SocialMediaPosting
+  wikidata: Q7246757  # social media post
+
+properties:
+  # Post overrides url as required (every post has a permalink)
+  url:
+    type: string
+    format: url
+    required: true
+    description: Permalink to the post (HN discussion, Reddit thread, etc.)
+
+  external_url:
+    type: string
+    format: url
+    description: External link target (the article being linked to, if any)
+
+  community:
+    references: place
+    description: The place this was posted in (forum, channel, etc.)
+
+  engagement:
+    type: object
+    description: Engagement metrics
+    properties:
+      score:
+        type: integer
+        description: Net score (upvotes - downvotes) for Reddit, HN
+      likes:
+        type: integer
+        description: Like count for Twitter, YouTube
+      views:
+        type: integer
+        description: View count
+      comment_count:
+        type: integer
+        description: Number of replies/comments
+      shares:
+        type: integer
+        description: Retweets, reposts, shares
+
+  replies:
+    type: array
+    description: |
+      Denormalized reply tree for API responses and rendering.
+      NOT the source of truth — the graph (replies_to relationships)
+      is the source of truth for threading. This array is populated
+      by adapters for rendering convenience and may be computed from
+      the graph in the future.
+    items:
+      type: post
+
+  has_more_replies:
+    type: boolean
+    description: Whether there are more replies not included in the denormalized tree
+
+operations: [list, search, get]
+
+display:
+  primary: title
+  secondary: posted_by.account.display_name  # Account attribution via posts relationship
+  description: content
+  icon: message-square
+  sort:
+    - field: published_at
+      order: desc

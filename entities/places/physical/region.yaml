@@ -1,0 +1,33 @@
+# Region — State, Province, Territory
+#
+# Extends place. Administrative subdivisions of countries.
+
+id: region
+plural: regions
+extends: place
+name: Region
+description: A state, province, or territory — administrative subdivision of a country
+
+references:
+  schema_org: https://schema.org/State
+  wikidata: Q10864048
+
+properties:
+  region_type:
+    type: string
+    description: state, province, territory, prefecture, etc.
+
+  iso_code:
+    type: string
+    description: ISO 3166-2 code (US-TX, GB-ENG, etc.)
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name, iso_code]
+
+display:
+  primary: name
+  secondary: region_type
+  icon: map

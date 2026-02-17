@@ -1,0 +1,62 @@
+# Hardware — Physical Products and Devices
+#
+# Extends work. Vehicles, appliances, electronics, furniture,
+# tools — physical things that get made and offered.
+#
+# Richness lives in relationships:
+#   hardware → made_by → organization
+#   hardware → offered_by → organization
+
+id: hardware
+plural: hardware
+extends: work
+name: Hardware
+description: Physical products and devices — vehicles, appliances, electronics
+
+references:
+  schema_org: https://schema.org/Product
+  wikidata: Q2424752
+
+properties:
+  hardware_type:
+    type: string
+    description: |
+      Classification — open string, common values:
+      vehicle, appliance, electronics, furniture, tool,
+      equipment, toy, instrument
+
+  manufacturer:
+    type: string
+    description: Who made this
+
+  model:
+    type: string
+    description: Model name or number
+
+  launched:
+    type: string
+    description: When launched or first sold (year or date)
+
+  discontinued:
+    type: string
+    description: When discontinued (year or date)
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+  data:
+    type: object
+    description: Domain-specific extensions
+
+  notes:
+    type: string
+    description: User notes
+
+identifiers: [title, model]
+operations: [list, get, search, create, update]
+
+display:
+  primary: title
+  secondary: hardware_type
+  icon: cpu

@@ -1,0 +1,10 @@
+id: add_to
+name: Add to
+inverse_name: Added to
+description: Actor added an item to a place
+speech_act: declarative
+extends: add
+
+is_relationship: true
+
+properties: {}

@@ -1,0 +1,27 @@
+# Believe — Actor Believes a Story
+#
+# Extends claim. An actor asserts a belief about a story,
+# narrative, or claim. Strength ranges from -1 (certain false)
+# to +1 (certain true).
+
+id: believe
+name: Believe
+inverse_name: Believed by
+description: Actor believes a story or claim
+speech_act: assertive
+extends: claim
+
+is_relationship: true
+
+properties:
+  strength:
+    type: number
+    min: -1
+    max: 1
+    description: |
+      How strongly they believe this.
+      +1.0 = certain true, 0.0 = unsure, -1.0 = certain false.
+
+  rationale:
+    type: string
+    description: Why they hold this belief

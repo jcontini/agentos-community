@@ -1,0 +1,12 @@
+id: upload
+name: Upload
+inverse_name: Uploaded by
+description: Actor uploaded content to a place
+speech_act: declarative
+extends: add
+
+is_relationship: true
+
+properties:
+  platform:
+    type: string

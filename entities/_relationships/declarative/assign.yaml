@@ -1,0 +1,9 @@
+id: assign
+name: Assign
+inverse_name: Assigned to
+description: Actor assigned a commitment to a person
+speech_act: declarative
+
+is_relationship: true
+
+properties: {}

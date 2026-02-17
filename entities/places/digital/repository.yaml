@@ -1,0 +1,124 @@
+# Repository — A Code Repository
+#
+# GitHub repos, GitLab projects, Bitbucket repos, Codeberg, SourceHut —
+# wherever code lives. The foundational link between software and the
+# people/organizations that create it.
+#
+# In the meta-entity graph, repositories connect adapters to their
+# source code and organizations to their open-source presence:
+#   repository → owned_by → person/organization
+#   repository → derived_from → repository (forks)
+#   adapter → hosted_at → repository
+#
+# Every adapter has a source repository. When adapters become entities
+# (Phase 3), the adapter → repository → organization chain makes the
+# full provenance graph traversable:
+#   WhatsApp adapter → hosted_at → agentos-community repo → owned_by → AgentOS org
+#
+# See: .ROADMAP/meta-entities.md
+
+id: repository
+plural: repositories
+extends: place
+name: Repository
+description: A code repository — where software lives and is developed
+
+references:
+  schema_org: https://schema.org/SoftwareSourceCode
+  wikidata: Q73539422
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Repository name (e.g., "agentos-community")
+
+  description:
+    type: string
+    description: What this repository contains or does
+
+  full_name:
+    type: string
+    description: |
+      Owner-qualified name for dedup across owners.
+      GitHub: "anthropics/agentos-community"
+      GitLab: "gitlab-org/gitlab"
+
+  url:
+    type: string
+    format: url
+    description: Repository URL (e.g., https://github.com/anthropics/agentos-community)
+
+  platform:
+    type: string
+    description: |
+      Hosting platform: github, gitlab, bitbucket, codeberg,
+      sourcehut, gitea, self_hosted
+
+  visibility:
+    type: string
+    description: "public, private, internal"
+
+  language:
+    type: string
+    description: Primary programming language
+
+  license:
+    type: string
+    description: |
+      Software license identifier (SPDX when possible):
+      MIT, Apache-2.0, GPL-3.0, BSD-3-Clause, AGPL-3.0, MPL-2.0, etc.
+      Not the same as regulatory licenses — see the license entity.
+
+  default_branch:
+    type: string
+    description: Default branch name (main, master, develop)
+
+  topics:
+    type: array
+    items:
+      type: string
+    description: Repository topics/tags
+
+  archived:
+    type: boolean
+    description: Whether the repository is archived
+
+  # External references
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID for notable repositories
+
+  avatar:
+    type: string
+    format: url
+    description: Repository or owner avatar URL
+
+  # Extensible data bag
+  data:
+    type: object
+    description: |
+      Platform-specific metrics and metadata:
+        GitHub:  { stars: 12500, forks: 890, watchers: 200, open_issues: 45 }
+        GitLab:  { stars: 500, forks: 120, ci_enabled: true }
+        Stats:   { size_kb: 45000, contributors: 35 }
+
+  notes:
+    type: string
+    description: User notes about this repository
+
+identifiers: [full_name, url, name]
+operations: [list, get, search, create, update, archive]
+
+display:
+  primary: name
+  secondary: language
+  icon: git-branch
+  sort:
+    - field: name
+      order: asc

@@ -1,0 +1,10 @@
+id: revoke
+name: Revoke
+inverse_name: Revoked from
+description: Authority revoked a right or entitlement (reverses grant)
+speech_act: declarative
+negates: grant
+
+is_relationship: true
+
+properties: {}

@@ -1,0 +1,61 @@
+# Outcome — A Significant Commitment on a Roadmap
+#
+# Extends commitment. Replaces the old `milestone` entity.
+# Marks a meaningful point of progress. Inherits all properties
+# from commitment (name, description, status, deadline, fulfilled_at).
+
+id: outcome
+plural: outcomes
+extends: commitment
+name: Outcome
+description: A significant commitment on a roadmap — milestones and key results
+
+properties:
+  value:
+    type: number
+    description: Current measurement (for numeric outcomes)
+
+  unit:
+    type: string
+    description: Unit of measurement
+
+  target:
+    type: object
+    description: The goal to hit
+    properties:
+      value:
+        type: number
+        description: The goal number to hit
+      date:
+        type: date
+        description: When you want this state to exist by
+
+  output:
+    type: object
+    description: What this outcome produces for downstream dependencies
+    properties:
+      metric:
+        type: string
+      value:
+        type: number
+      unit:
+        type: string
+
+  indicators:
+    type: array
+    items:
+      type: string
+    description: How to measure this outcome
+
+  data:
+    type: object
+    description: Domain-specific extensions
+
+display:
+  primary: name
+  icon: flag
+  sort:
+    - field: status
+      order: asc
+    - field: name
+      order: asc

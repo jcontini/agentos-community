@@ -1,0 +1,15 @@
+# Commit — Actor Commits to a Task/Outcome
+#
+# Commissive speech act — the actor promises to achieve
+# a commitment. This is how tasks get their assignees
+# in the graph (beyond the assign relationship).
+
+id: commit
+name: Commit
+inverse_name: Committed by
+description: Actor commits to achieving a task or outcome
+speech_act: commissive
+
+is_relationship: true
+
+properties: {}

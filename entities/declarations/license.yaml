@@ -1,0 +1,107 @@
+# License — A Regulatory Approval or Certification
+#
+# Licenses, permits, certifications, and regulatory approvals are
+# entities because they're queryable in their own right:
+#   "Who else has a banking charter in this state?"
+#   "When did they lose their payment license?"
+#   "What companies hold e-money licenses in Indonesia?"
+#
+# The license entity stores the APPROVAL. Relationships connect it:
+#   license → held_by → organization (who holds it)
+#   license → issued_by → organization (regulator/authority)
+#   license → valid_in → place (jurisdiction)
+#
+# Examples across domains:
+#   - Payment Gateway License (Category 1) from Bank Indonesia
+#   - Major Payment Institution from MAS (Singapore)
+#   - Series 7 broker-dealer license from FINRA
+#   - GSA Multiple Award Schedule from GSA
+#   - Liquor license from State Liquor Authority
+#   - FDA 510(k) clearance for medical devices
+#   - FCC broadcast license
+#   - ISO 27001 certification
+
+id: license
+plural: licenses
+extends: right
+name: License
+description: A regulatory approval, certification, or permit
+
+references:
+  wikidata: Q79719
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: |
+      Name/type of the license. Be specific:
+      "Payment Gateway License (Category 1)" not just "Payment License"
+
+  description:
+    type: string
+    description: What this license authorizes the holder to do
+
+  license_type:
+    type: string
+    description: |
+      Broad category: payment, banking, insurance, securities,
+      broadcasting, telecommunications, liquor, cannabis, professional,
+      environmental, healthcare, construction, government_contract, 
+      data_protection, financial_services
+
+  category:
+    type: string
+    description: |
+      Sub-classification or level within the type.
+      e.g., "Category 1", "Class A", "Major", "Tier 1"
+
+  license_number:
+    type: string
+    description: Official license/registration number if known
+
+  status:
+    type: string
+    description: "active, suspended, revoked, expired, pending, surrendered"
+
+  issued_at:
+    type: string
+    description: When the license was granted
+
+  expires_at:
+    type: string
+    description: When the license expires (null if perpetual or renewed indefinitely)
+
+  revoked_at:
+    type: string
+    description: When the license was revoked or surrendered (if applicable)
+
+  # Extensible data bag
+  data:
+    type: object
+    description: |
+      Domain-specific extensions:
+        Payment: { scope: "cross-border money transfer", currency: ["USD", "SGD"] }
+        Government contract: { vehicle: "GSA OASIS", contract_number: "GS-10F-0000" }
+        Professional: { holder_name: "John Doe, CPA", renewal_date: "2027-03" }
+
+  notes:
+    type: string
+    description: User notes about this license
+
+identifiers: [name, license_number]
+operations: [list, get, search, create, update, archive]
+
+display:
+  primary: name
+  secondary: status
+  icon: shield-check
+  sort:
+    - field: status
+    - field: name
+      order: asc

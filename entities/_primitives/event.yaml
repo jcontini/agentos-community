@@ -1,0 +1,45 @@
+# Event — Things That Happen
+#
+# Meetings, parties, launches, conferences — bounded occurrences
+# in time. Events are ontological: they exist independent of
+# anyone's speech acts about them.
+#
+# Distinguished from commitments (promises about the future)
+# and records (data that was observed). Events are things that
+# happen at a time and place.
+
+id: event
+plural: events
+name: Event
+description: Things that happen — meetings, parties, launches, gatherings
+
+references:
+  schema_org: https://schema.org/Event
+  wikidata: Q1656682
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  title:
+    type: string
+    required: true
+    description: Event title
+
+  description:
+    type: string
+    description: Event description
+
+  start:
+    type: datetime
+    description: Start time
+
+  end:
+    type: datetime
+    description: End time
+
+  location:
+    type: string
+    description: Where the event takes place

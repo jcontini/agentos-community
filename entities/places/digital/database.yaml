@@ -1,0 +1,31 @@
+# Database — A Data Store
+#
+# Extends place. PostgreSQL databases, MongoDB instances,
+# SQLite files — places where data lives.
+
+id: database
+plural: databases
+extends: place
+name: Database
+description: A data store — PostgreSQL, MongoDB, SQLite instances
+
+properties:
+  engine:
+    type: string
+    description: Database engine (postgres, mysql, sqlite, mongodb, etc.)
+
+  host:
+    type: string
+    description: Hostname or connection string
+
+  version:
+    type: string
+    description: Engine version
+
+identifiers: [name]
+operations: [list, get]
+
+display:
+  primary: name
+  secondary: engine
+  icon: database

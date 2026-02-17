@@ -1,0 +1,137 @@
+# Account Entity — Universal Platform Identifier
+#
+# ANY way of identifying or reaching a person on ANY platform.
+# A phone number is no different from a Twitter handle in the graph.
+#
+# NOT a person — an account is a platform identity that a person
+# claims. One person can have many accounts. One account can be
+# claimed by multiple people (brand accounts, family phone lines).
+# An account can exist with no known person (anonymous commenter).
+#
+# The person ↔ account link is a `claims` relationship with
+# epistemic provenance (confidence, method, context, temporal bounds).
+# We don't assert "this IS the same person" — we say "here's evidence
+# this person controls this account."
+#
+# This is the universal identity graph:
+#   Person → claims → Account (phone, email, twitter, youtube, ...)
+#                       └── owns/moderates → Community (channel/sub/server)
+#
+# A "contact card" is a VIEW computed from graph traversals over
+# a person's claimed accounts — not a stored flat record.
+#
+# Platform examples:
+#   phone    — +62-812-345-6789 (the phone network is the platform)
+#   email    — sarah@example.com (email is the platform)
+#   twitter  — @sarahchen
+#   youtube  — @3blue1brown (channel handle)
+#   whatsapp — 6281234567890@s.whatsapp.net (JID format)
+#   github   — jcontini
+#   aol      — surferdude92 (historical — preserves old message links)
+#
+# Standards basis: FOAF foaf:OnlineAccount (expanded beyond social)
+#
+# See also: .ROADMAP/account-entity.md for full design rationale
+
+id: account
+plural: accounts
+extends: actor
+name: Account
+description: A platform identity — phone number, email address, social handle, or any identifier on any platform
+
+references:
+  foaf: http://xmlns.com/foaf/0.1/OnlineAccount
+  schema_org: https://schema.org/ProfilePage
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier (typically platform_id or handle)
+
+  platform:
+    references: software
+    required: true
+    description: |
+      Which product/platform this account belongs to.
+      Twitter/X, YouTube, Reddit, Phone (PSTN), Email, GitHub, etc.
+      
+      Platform is a product — made by a company, has a URL, can be
+      acquired or discontinued. Account → on_platform → Product.
+      
+      Examples:
+        Account: @sarahchen → on_platform → Product: Twitter/X
+        Account: +1-555-867-5309 → on_platform → Product: Phone (PSTN)
+        Account: sarah@gmail.com → on_platform → Product: Email (protocol)
+
+  handle:
+    type: string
+    description: |
+      The human-readable identifier on this platform. Universal field:
+      - Phone: "+62-812-345-6789" or "+1-555-867-5309"
+      - Email: "sarah@example.com"
+      - Twitter: "sarahchen" (without @)
+      - YouTube: "@3blue1brown"
+      - WhatsApp: "6281234567890@s.whatsapp.net"
+      This is what humans see and use to find each other.
+
+  display_name:
+    type: string
+    description: Human-readable display name on the platform (may differ from handle)
+
+  url:
+    type: string
+    format: url
+    description: |
+      Canonical profile URL. Applies to social platforms (twitter.com/sarahchen),
+      websites, blogs. Not applicable to phone/email.
+
+  platform_id:
+    type: string
+    description: |
+      Platform's internal stable ID (survives handle changes).
+      Phone: E.164 normalized number (+6281234567890).
+      Email: lowercase normalized (sarah@example.com).
+      YouTube: channel ID (UCxxxx).
+      Twitter: numeric user ID.
+      Reddit: user ID (t2_xxxx).
+      Not always available — handle is the fallback.
+
+  avatar:
+    references: image
+    description: Profile photo / avatar
+
+  bio:
+    type: string
+    description: Profile description or bio text
+
+  follower_count:
+    type: integer
+    description: Number of followers/subscribers (social platforms)
+
+  following_count:
+    type: integer
+    description: Number of accounts this account follows (social platforms)
+
+  verified:
+    type: boolean
+    description: Platform-verified status (blue check, etc.)
+
+  status:
+    type: string
+    enum: [active, suspended, deleted, unknown]
+    description: Account status on the platform
+
+# For cross-adapter deduplication
+# platform_id is most stable (survives handle changes)
+# handle is fallback when platform_id isn't available
+identifiers:
+  - platform_id
+  - handle
+
+operations: [get, search]
+
+display:
+  primary: handle
+  secondary: platform
+  icon: at-sign

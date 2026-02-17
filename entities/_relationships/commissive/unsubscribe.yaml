@@ -1,0 +1,14 @@
+# Unsubscribe — Reverses Subscribe
+#
+# Anti-relationship for subscribe. Actor stops following a place.
+
+id: unsubscribe
+name: Unsubscribe
+inverse_name: Unsubscribed from
+description: Actor unsubscribes from a place (reverses subscribe)
+speech_act: commissive
+negates: subscribe
+
+is_relationship: true
+
+properties: {}

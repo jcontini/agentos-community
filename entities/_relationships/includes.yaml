@@ -20,8 +20,8 @@ inverse_name: Included in
 description: A journey explicitly includes an outcome
 
 is_relationship: true
-from_type: journey
-to_type: outcome
+from_type: narrative
+to_type: commitment
 
 properties:
   optional:

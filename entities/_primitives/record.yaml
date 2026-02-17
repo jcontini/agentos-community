@@ -1,0 +1,33 @@
+# Record — Data That Was Recorded
+#
+# DNS entries, settings, measurements, database rows, sensor
+# readings — factual data captured at a point in time.
+# Records are ontological: they're observations of the world,
+# not speech acts about it.
+#
+# Distinguished from commitments (promises), declarations
+# (things made true by saying them), and events (happenings).
+# Records are just data.
+
+id: record
+plural: records
+name: Record
+description: Data that was recorded — DNS entries, settings, measurements, database rows
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    description: Record name or label
+
+  type:
+    type: string
+    description: Record type (dns, setting, measurement, row)
+
+  value:
+    type: any
+    description: Convenience snapshot of the record's value

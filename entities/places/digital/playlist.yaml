@@ -1,0 +1,43 @@
+# Playlist — An Ordered Collection of Content
+#
+# Extends place. YouTube playlists, Spotify playlists, podcast
+# queues — ordered places where content gets added.
+#
+# The `add_to` relationship puts items into a playlist.
+# The `position` property on the relationship edge stores order.
+
+id: playlist
+plural: playlists
+extends: place
+name: Playlist
+description: An ordered collection of content — YouTube playlists, Spotify playlists
+
+references:
+  schema_org: https://schema.org/ItemList
+
+properties:
+  url:
+    type: string
+    format: url
+    description: Playlist URL
+
+  item_count:
+    type: integer
+    description: Number of items in the playlist
+
+  thumbnail:
+    references: image
+    description: Playlist cover image
+
+  platform:
+    type: string
+    description: Which platform (youtube, spotify, apple_music, etc.)
+
+identifiers: [name, url]
+operations: [list, get]
+
+display:
+  primary: name
+  secondary: item_count
+  image: thumbnail
+  icon: list-music

@@ -1,0 +1,14 @@
+# Archive — Actor Archives an Item
+#
+# Assertive speech act — the actor claims this item should
+# be archived. Anti-relationship: unarchive.
+
+id: archive
+name: Archive
+inverse_name: Archived by
+description: Actor archives an item
+speech_act: assertive
+
+is_relationship: true
+
+properties: {}

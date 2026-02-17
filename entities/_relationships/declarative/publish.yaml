@@ -1,0 +1,10 @@
+id: publish
+name: Publish
+inverse_name: Published in
+description: Actor published content to a place
+speech_act: declarative
+extends: add
+
+is_relationship: true
+
+properties: {}

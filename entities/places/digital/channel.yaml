@@ -1,0 +1,49 @@
+# Channel — A Broadcast Place
+#
+# Extends place. YouTube channels, Twitch streams, newsletters,
+# podcast feeds — one-to-many broadcast places where content
+# gets uploaded/published.
+#
+# Replaces part of the old `community` entity. The key distinction:
+# channels are broadcast (one → many), forums are discussion
+# (many → many), servers are realtime (many → many, live).
+
+id: channel
+plural: channels
+extends: place
+name: Channel
+description: A broadcast place — YouTube channels, Twitch streams, newsletters, podcast feeds
+
+references:
+  wikidata: Q16018865
+
+properties:
+  url:
+    type: string
+    format: url
+    description: Channel URL
+
+  icon:
+    references: image
+    description: Channel avatar/icon
+
+  subscriber_count:
+    type: integer
+    description: Number of subscribers/followers
+
+  content_count:
+    type: integer
+    description: Number of videos, episodes, or posts
+
+  platform:
+    type: string
+    description: Which platform (youtube, twitch, substack, etc.)
+
+identifiers: [name, url]
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: subscriber_count
+  image: icon
+  icon: radio

@@ -1,0 +1,10 @@
+id: file_in
+name: File in
+inverse_name: Filed in
+description: Actor filed an item in a place
+speech_act: declarative
+extends: add
+
+is_relationship: true
+
+properties: {}

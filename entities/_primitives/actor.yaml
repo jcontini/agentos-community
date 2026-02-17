@@ -1,0 +1,29 @@
+# Actor — Things That Can Do Things
+#
+# People, organizations, accounts, AI agents. The subject
+# of every relationship edge — actors are always the ones
+# acting in the graph.
+#
+# Design: "Actor is always the subject." Every edge was created
+# by an actor. Accounts link to people via `claim` relationships,
+# not type inheritance.
+
+id: actor
+plural: actors
+name: Actor
+description: Things that can do things — people, organizations, accounts, agents
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Display name
+
+  description:
+    type: string
+    description: What or who this actor is

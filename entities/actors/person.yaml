@@ -1,0 +1,164 @@
+# Person Entity — the human in the graph
+#
+# A person is the human being. NOT their phone number, email, or
+# social handle — those are account entities linked via `claims`.
+#
+# The "contact card" is a VIEW computed from graph traversals:
+#   person → claims → accounts (phone, email, social, etc.)
+#   person → lives_at → place (address/location)
+#   person → works_at → organization (employer)
+#
+# Phone, email, and accounts array below are TRANSITIONAL —
+# they exist for backward compatibility while adapters migrate
+# to producing account entities + claims relationships.
+# Target state: person has only identity fields (name, birthday,
+# notes, avatar). Everything else is graph traversal.
+#
+# See: .ROADMAP/account-entity.md for the full design.
+
+id: person
+plural: people
+extends: actor
+name: Person
+description: Someone in your social graph — the human, not their identifiers
+
+references:
+  schema_org: https://schema.org/Person
+  wikidata: Q5
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  # Display name (best known name for this person)
+  name:
+    type: string
+    required: true
+    description: Primary display name
+
+  # Structured name fields (from Apple Contacts, vCard)
+  first_name:
+    type: string
+    description: First/given name
+  last_name:
+    type: string
+    description: Last/family name
+  middle_name:
+    type: string
+    description: Middle name
+  nickname:
+    type: string
+    description: Nickname or alias
+
+  # Primary contact info — TRANSITIONAL
+  # These become graph traversals: person → claims → account WHERE platform="phone"/"email"
+  # Kept for backward compatibility until all adapters produce account entities
+  phone:
+    type: string
+    description: "[TRANSITIONAL] Primary phone — will become claims → account traversal"
+  email:
+    type: string
+    format: email
+    description: "[TRANSITIONAL] Primary email — will become claims → account traversal"
+
+  # Avatar references image entity
+  avatar:
+    references: image
+    description: Primary profile photo
+
+  # Work info
+  organization:
+    type: string
+    description: Company or organization
+  job_title:
+    type: string
+    description: Job title or role
+  department:
+    type: string
+    description: Department within organization
+
+  # Rich data
+  birthday:
+    type: date
+    description: Birth date
+  notes:
+    type: string
+    description: User notes about this person
+
+  # Unified accounts array — TRANSITIONAL
+  # Moving to first-class account entities + claims relationships.
+  # Each item here will become:
+  #   1. An account entity (platform=type, handle=value)
+  #   2. A claims relationship (person → account, with label as context)
+  # Kept for backward compatibility until all adapters migrate.
+  # See: .ROADMAP/account-entity.md
+  accounts:
+    type: array
+    description: "[TRANSITIONAL] All ways to reach or identify this person — migrating to account entities + claims relationships"
+    items:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          description: |
+            Account type / platform. Core: phone, email.
+            Social: twitter, github, linkedin, instagram, facebook.
+            Messaging: whatsapp, imessage, telegram, signal, slack.
+            Any string allowed for extensibility.
+        value:
+          type: string
+          description: The identifier (format depends on type)
+        label:
+          type: string
+          description: Context like work, personal, home, old
+        avatar:
+          references: image
+          description: Profile photo for this specific account
+        source:
+          type: string
+          description: Where we learned about this account (apple-contacts, whatsapp, etc.)
+
+  # Legacy fields (being replaced by accounts array)
+  identities:
+    type: array
+    description: "[DEPRECATED] Cross-platform identities - use accounts instead"
+    items:
+      type: object
+      properties:
+        platform:
+          type: string
+        identifier:
+          type: string
+
+  sources:
+    type: array
+    description: Data sources that contribute to this entity
+    items:
+      type: object
+      properties:
+        adapter:
+          type: string
+        platform:
+          type: string
+        id:
+          type: string
+
+# For cross-adapter deduplication
+# Ordered by strength - try each until a match is found
+identifiers:
+  - phone
+  - email
+
+operations: [list, get, search, create, update]
+
+display:
+  primary: name
+  secondary: organization
+  image: avatar
+  icon: user
+  sort:
+    - field: name
+      order: asc

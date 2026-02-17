@@ -1,0 +1,21 @@
+# Mention — Abstract Reference Relationship
+#
+# Never used directly. All reference relationships extend mention:
+# embed, link_to, cite, transcribe, express_as, adapt, translate, cover.
+#
+# Replaces the old `references` relationship. The key shift:
+# "references" was a catch-all with roles. Now each type of
+# reference is a first-class relationship with its own semantics.
+
+id: mention
+name: Mention
+inverse_name: Mentioned in
+description: "[Abstract] One entity references another — never used directly"
+speech_act: declarative
+
+is_relationship: true
+
+properties:
+  context:
+    type: string
+    description: Why this reference exists

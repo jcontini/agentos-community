@@ -1,0 +1,10 @@
+id: embed
+name: Embed
+inverse_name: Embedded in
+description: Content embedded inline in another work
+speech_act: declarative
+extends: mention
+
+is_relationship: true
+
+properties: {}

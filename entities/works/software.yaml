@@ -1,0 +1,83 @@
+# Software — Digital Products and Services
+#
+# Extends work. Apps, platforms, APIs, protocols, operating systems,
+# games, libraries, frameworks. Replaces the old `product` entity
+# for digital things. Physical products use `hardware` instead.
+#
+# This is also what accounts live on — platforms:
+#   Account: @sarahchen → on_platform → Software: Twitter/X
+#   Account: +62-812-345-6789 → on_platform → Software: Phone (PSTN)
+#
+# Richness lives in relationships:
+#   software → made_by → organization
+#   software → offered_by → organization
+#   adapter → extends → software (adapters are software)
+#   repository → hosts → software (source code)
+
+id: software
+plural: software
+extends: work
+name: Software
+description: Digital products and services — apps, platforms, APIs, protocols
+
+references:
+  schema_org: https://schema.org/SoftwareApplication
+  wikidata: Q7397
+
+properties:
+  software_type:
+    type: string
+    description: |
+      Classification — open string, common values:
+      app, service, platform, api, protocol, operating_system,
+      browser, game, library, framework
+
+  platforms:
+    type: array
+    items:
+      type: string
+    description: Where it runs — ios, android, web, macos, windows, linux, api_only
+
+  pricing:
+    type: string
+    description: free, freemium, paid, enterprise, open_source, subscription
+
+  launched:
+    type: string
+    description: When the software was launched (year or date)
+
+  discontinued:
+    type: string
+    description: When the software was discontinued (year or date)
+
+  status:
+    type: string
+    description: active, discontinued, beta, deprecated
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID (e.g., Q866 for YouTube)
+
+  avatar:
+    type: string
+    format: url
+    description: Logo or icon URL
+
+  data:
+    type: object
+    description: Domain-specific extensions
+
+  notes:
+    type: string
+    description: User notes about this software
+
+identifiers: [title, url]
+operations: [list, get, search, create, update, archive]
+
+display:
+  primary: title
+  secondary: software_type
+  icon: code
+  sort:
+    - field: title
+      order: asc

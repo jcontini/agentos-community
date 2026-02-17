@@ -1,0 +1,46 @@
+# Forum — A Discussion Place
+#
+# Extends place. Subreddits, Hacker News, Discourse forums,
+# Facebook Groups — many-to-many discussion spaces where
+# people post and reply.
+
+id: forum
+plural: forums
+extends: place
+name: Forum
+description: A discussion place — subreddits, HN, Discourse forums, Facebook Groups
+
+references:
+  wikidata: Q288514
+
+properties:
+  url:
+    type: string
+    format: url
+    description: Forum URL
+
+  icon:
+    references: image
+    description: Forum icon/avatar
+
+  member_count:
+    type: integer
+    description: Number of members
+
+  privacy:
+    type: string
+    enum: [public, private, secret]
+    description: Access level
+
+  platform:
+    type: string
+    description: Which platform (reddit, hn, discourse, facebook, etc.)
+
+identifiers: [name, url]
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: member_count
+  image: icon
+  icon: users

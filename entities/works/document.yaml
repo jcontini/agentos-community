@@ -1,0 +1,54 @@
+# Document — Text-Centric Published Content
+#
+# Extends work. Inherits: id, title, description, url, expressed_at, created_date.
+#
+# Posts and webpages are documents. Messages extend post (which
+# extends document) in the chain: work → document → post → message.
+#
+# Attribution via relationships:
+#   account --posts--> post (for social media)
+#   actor --cite--> document (formal attribution)
+#
+# The `data` bag is the extension point for adapter-specific
+# properties.
+
+id: document
+plural: documents
+extends: work
+name: Document
+description: Text-centric published content with title and URL
+
+references:
+  schema_org: https://schema.org/CreativeWork
+  dublin_core: https://www.dublincore.org/specifications/dublin-core/dcmi-terms/
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  content:
+    type: string
+    description: The text content
+
+  title:
+    type: string
+    description: Document title
+
+  url:
+    type: string
+    format: url
+    description: Canonical URL
+
+  published_at:
+    type: datetime
+    description: When this content was published
+
+  fetched_at:
+    type: datetime
+    description: When we retrieved this content
+
+  data:
+    type: object
+    description: Adapter-specific extensions

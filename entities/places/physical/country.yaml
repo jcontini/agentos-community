@@ -1,0 +1,28 @@
+# Country — A Sovereign State or Territory
+#
+# Extends place. Nations, territories, and sovereign entities.
+
+id: country
+plural: countries
+extends: place
+name: Country
+description: A sovereign state or territory
+
+references:
+  schema_org: https://schema.org/Country
+  wikidata: Q6256
+
+properties:
+  iso_code:
+    type: string
+    description: ISO 3166-1 alpha-2 code (US, GB, ID, etc.)
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name, iso_code]
+
+display:
+  primary: name
+  icon: flag

@@ -1,0 +1,41 @@
+# City — A City, Town, or Municipality
+#
+# Extends place. Urban and suburban settlements.
+
+id: city
+plural: cities
+extends: place
+name: City
+description: A city, town, or municipality
+
+references:
+  schema_org: https://schema.org/City
+  wikidata: Q515
+
+properties:
+  population:
+    type: integer
+    description: Population count
+
+  timezone:
+    type: string
+    description: IANA timezone (America/Chicago, Asia/Jakarta, etc.)
+
+  coordinates:
+    type: object
+    description: Geographic coordinates
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name]
+
+display:
+  primary: name
+  icon: building-2

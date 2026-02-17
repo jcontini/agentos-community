@@ -1,0 +1,24 @@
+# Date — One-on-One Plans
+#
+# Extends event. Coffee dates, dinner dates, catch-ups —
+# planned one-on-one interactions.
+
+id: date
+plural: dates
+extends: event
+name: Date
+description: A one-on-one plan — coffee, dinner, catch-up
+
+properties:
+  with:
+    references: person
+    description: Who the date is with
+
+  date_type:
+    type: string
+    description: coffee, dinner, drinks, activity, etc.
+
+display:
+  primary: title
+  secondary: start
+  icon: heart

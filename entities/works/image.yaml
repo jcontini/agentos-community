@@ -1,0 +1,74 @@
+# Image Entity - base for all images
+# Avatars, thumbnails, photos all extend from this
+
+id: image
+plural: images
+extends: work
+name: Image
+description: An image file, possibly cached locally from a remote source
+
+references:
+  schema_org: https://schema.org/ImageObject
+  wikidata: Q478798  # digital image
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  # Source (where it came from)
+  url:
+    type: string
+    format: url
+    description: Remote URL (original source, for re-fetching)
+
+  # Local storage (where we saved it)
+  path:
+    type: string
+    description: "Local file path (A: drive or cache)"
+
+  # Content identity
+  hash:
+    type: string
+    description: Content hash of local file (SHA-256)
+
+  # Metadata
+  format:
+    type: string
+    enum: [jpeg, png, gif, webp, svg, heic]
+    description: Image format
+
+  width:
+    type: integer
+    description: Width in pixels (not applicable for SVG)
+
+  height:
+    type: integer
+    description: Height in pixels (not applicable for SVG)
+
+  size:
+    type: integer
+    description: File size in bytes
+
+  # Alt text for accessibility
+  alt:
+    type: string
+    description: Alternative text description
+
+  # Freshness tracking
+  fetched_at:
+    type: datetime
+    description: When we downloaded/cached it
+
+# For deduplication - same content = same image
+identifiers:
+  - hash
+
+operations: [list, get]
+
+display:
+  primary: path
+  secondary: format
+  image: url
+  icon: image

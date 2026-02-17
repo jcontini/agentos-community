@@ -1,0 +1,135 @@
+# Organization — A Legal Entity in the Graph
+#
+# Companies, non-profits, government agencies, VC firms, foundations,
+# universities, intergovernmental bodies — any structured group with
+# legal or institutional identity.
+#
+# The organization entity stores IDENTITY. Everything else is graph:
+#   org → founded_by → person (founders)
+#   org → has_executive → person (leadership, temporal)
+#   org → has_board_member → person (governance, temporal)
+#   org → parent_of → organization (corporate structure)
+#   org → headquartered_in → place (HQ)
+#   org → operates_in → place (countries/regions)
+#   org → has_office → place (physical offices, temporal)
+#   org → makes → product (what they build)
+#   org → raised → milestone (funding rounds)
+#   org → acquired → organization (M&A, temporal)
+#   org → holds → license (regulatory approvals)
+#   org → contracted_by → organization (clients)
+#
+# Rebranding/renaming is handled by previous_names with temporal bounds.
+# Same pattern as platform identity (Twitter → X, Abt Associates → Abt Global).
+#
+# See: .ROADMAP/meta-entities.md for the full vision.
+
+id: organization
+plural: organizations
+extends: actor
+name: Organization
+description: A company, institution, or structured group — the other half of the social graph
+
+references:
+  schema_org: https://schema.org/Organization
+  wikidata: Q43229
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Current legal or common name
+
+  description:
+    type: string
+    description: What this organization does
+
+  type:
+    type: string
+    description: |
+      Classification. Not an enum — open string, but common values:
+      company, startup, non_profit, ngo, government_agency, regulator,
+      vc_firm, pe_firm, foundation, university, research_institute,
+      intergovernmental, military, political_party, trade_union,
+      professional_association, religious, cooperative
+
+  url:
+    type: string
+    format: url
+    description: Official website
+
+  founded:
+    type: string
+    description: When the organization was established (year or full date)
+
+  dissolved:
+    type: string
+    description: When the organization ceased to exist (year or full date)
+
+  status:
+    type: string
+    description: |
+      Operational status: active, dissolved, merged, acquired, dormant, bankrupt.
+      For acquired orgs, the acquired_by relationship carries the details.
+
+  # Temporal identity — brands change, the entity persists
+  previous_names:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+        from:
+          type: string
+        until:
+          type: string
+    description: |
+      Historical names with temporal bounds. The entity persists through rebrands.
+      Examples:
+        - Abt Associates (1965–2024) → Abt Global (2024–present)
+        - Twitter, Inc. (2006–2023) → X Corp (2023–present)
+        - Facebook, Inc. (2004–2021) → Meta Platforms, Inc. (2021–present)
+
+  # External references for cross-linking
+  wikidata_id:
+    type: string
+    description: |
+      Wikidata Q-ID for universal cross-referencing.
+      e.g., Q380 (Meta), Q95 (Google), Q312 (Apple Inc.)
+
+  avatar:
+    type: string
+    format: url
+    description: Logo or avatar URL
+
+  # Extensible data bag — domain-specific properties
+  data:
+    type: object
+    description: |
+      Domain-specific extensions. Common patterns:
+        Company:     { ticker: "META", exchange: "NASDAQ", industry: "technology" }
+        VC firm:     { aum: 10000000000, focus: ["fintech", "saas"] }
+        Government:  { jurisdiction: "federal", country: "US", branch: "executive" }
+        University:  { endowment: 53200000000, type: "private" }
+        Regulator:   { jurisdiction: "Indonesia", scope: "financial services" }
+        Non-profit:  { tax_status: "501c3", mission: "global health" }
+
+  notes:
+    type: string
+    description: User notes about this organization
+
+identifiers: [name, url]
+operations: [list, get, search, create, update, archive]
+
+display:
+  primary: name
+  secondary: type
+  icon: building
+  sort:
+    - field: name
+      order: asc

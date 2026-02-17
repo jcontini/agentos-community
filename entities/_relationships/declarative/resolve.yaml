@@ -1,0 +1,15 @@
+id: resolve
+name: Resolve
+inverse_name: Resolved by
+description: A decision resolves a question
+speech_act: declarative
+
+is_relationship: true
+
+from_type: decision
+to_type: question
+
+properties:
+  rationale:
+    type: string
+    description: Why this decision resolves the question

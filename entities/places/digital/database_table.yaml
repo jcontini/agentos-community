@@ -1,0 +1,32 @@
+# Database Table — A Table or Collection Within a Database
+#
+# Extends place. Tables in SQL databases, collections in
+# document stores. Replaces the old `table` entity.
+
+id: database_table
+plural: database_tables
+extends: place
+name: Database Table
+description: A table or collection within a database
+
+properties:
+  schema:
+    type: string
+    default: "public"
+    description: Database schema (e.g., "public")
+
+  row_count:
+    type: integer
+    description: Approximate row count
+
+  size:
+    type: string
+    description: Table size (human-readable, e.g., "2.3 MB")
+
+identifiers: [name]
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: schema
+  icon: table

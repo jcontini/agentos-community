@@ -1,0 +1,37 @@
+# Emotion — Psychological States Actors Feel
+#
+# Expressive speech acts in Searle's framework: neither Word→World
+# nor World→Word. Emotions express a psychological state without
+# asserting truth or committing to action.
+#
+# Emotions in the graph are first-class entities — not just
+# properties on other entities. "I feel anxious about this
+# project" creates an emotion entity with a `feel` relationship
+# to the actor and the project.
+
+id: emotion
+plural: emotions
+name: Emotion
+description: Psychological states actors feel — joy, anxiety, gratitude, frustration
+
+references:
+  searle: Expressive speech acts (neither Word-World direction)
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: The emotion (anxiety, joy, gratitude, frustration, etc.)
+
+  intensity:
+    type: number
+    description: Intensity on a 0-1 scale
+
+  notes:
+    type: string
+    description: Context or explanation

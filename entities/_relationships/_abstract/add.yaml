@@ -1,0 +1,22 @@
+# Add — Abstract Placement Relationship
+#
+# Never used directly. All placement relationships extend add:
+# upload, publish, add_to, set, file_in, tag.
+#
+# Replaces the old `contains` relationship. The key shift:
+# "contains" is passive state ("this place contains X").
+# "add" is an action ("someone added X to this place").
+# Current state is computed by netting add/remove edges.
+
+id: add
+name: Add
+inverse_name: Added to
+description: "[Abstract] Something placed into a location — never used directly"
+speech_act: declarative
+
+is_relationship: true
+
+properties:
+  position:
+    type: integer
+    description: Item position within the place (for ordered places like playlists)

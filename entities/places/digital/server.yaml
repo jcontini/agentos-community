@@ -1,0 +1,41 @@
+# Server — A Realtime Communication Space
+#
+# Extends place. Discord servers, Slack workspaces, Matrix
+# homeservers — persistent realtime spaces with channels,
+# roles, and presence.
+
+id: server
+plural: servers
+extends: place
+name: Server
+description: A realtime communication space — Discord servers, Slack workspaces
+
+references:
+  wikidata: Q105584149
+
+properties:
+  url:
+    type: string
+    format: url
+    description: Server invite or URL
+
+  icon:
+    references: image
+    description: Server icon
+
+  member_count:
+    type: integer
+    description: Number of members
+
+  platform:
+    type: string
+    description: Which platform (discord, slack, matrix, etc.)
+
+identifiers: [name, url]
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: member_count
+  image: icon
+  icon: server

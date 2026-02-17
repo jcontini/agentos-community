@@ -1,0 +1,14 @@
+# Unsend — Reverses Send
+#
+# Anti-relationship for send. Actor retracts a sent message.
+
+id: unsend
+name: Unsend
+inverse_name: Unsent by
+description: Actor retracts a sent message (reverses send)
+speech_act: commissive
+negates: send
+
+is_relationship: true
+
+properties: {}

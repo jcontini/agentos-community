@@ -15,7 +15,7 @@ description: How strongly an entity wants or wants to avoid an outcome
 
 is_relationship: true
 from_type: [person, organization]
-to_type: outcome
+to_type: commitment
 temporal_nature: snapshot  # Event-sourced: multiple readings, current = most recent
 
 properties:

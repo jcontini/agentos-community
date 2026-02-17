@@ -1,0 +1,47 @@
+# Venue — A Building, Park, Stadium, or Named Physical Location
+#
+# Extends place. Specific physical locations where things happen.
+
+id: venue
+plural: venues
+extends: place
+name: Venue
+description: A building, park, stadium, or named physical location
+
+references:
+  schema_org: https://schema.org/Place
+  wikidata: Q17350442
+
+properties:
+  venue_type:
+    type: string
+    description: restaurant, bar, office, park, stadium, museum, airport, etc.
+
+  address:
+    type: string
+    description: Street address
+
+  coordinates:
+    type: object
+    description: Geographic coordinates
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+
+  url:
+    type: string
+    format: url
+    description: Website or listing page
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name, address]
+
+display:
+  primary: name
+  secondary: venue_type
+  icon: map-pin

@@ -1,0 +1,41 @@
+# Agent — AI Agents and Bots
+#
+# Extends actor. AI assistants, automated bots, and autonomous
+# agents that can act in the graph. Cursor, Claude, GPT — they're
+# all agents.
+#
+# The system itself is an agent. When AgentOS auto-creates
+# entities on startup, the actor is the system agent.
+
+id: agent
+plural: agents
+extends: actor
+name: Agent
+description: AI agents, bots, and autonomous actors
+
+properties:
+  agent_type:
+    type: string
+    description: Type of agent — ai_assistant, bot, automation, system
+
+  provider:
+    type: string
+    description: Who provides this agent (anthropic, openai, cursor, etc.)
+
+  model:
+    type: string
+    description: Underlying model if applicable (claude-4, gpt-4, etc.)
+
+  capabilities:
+    type: array
+    items:
+      type: string
+    description: What this agent can do (code, search, browse, etc.)
+
+identifiers: [name]
+operations: [list, get]
+
+display:
+  primary: name
+  secondary: provider
+  icon: bot

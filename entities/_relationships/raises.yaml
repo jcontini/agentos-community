@@ -13,7 +13,7 @@ description: Something raises a question — inquiry, decomposition, five whys
 
 is_relationship: true
 
-from_type: [question, person, outcome, post, event]
+from_type: [question, person, commitment, post, event]
 to_type: question
 
 properties:

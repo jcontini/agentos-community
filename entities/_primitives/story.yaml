@@ -1,0 +1,33 @@
+# Story — Connected Ideas, Beliefs, Plans
+#
+# Narratives, projects, roadmaps, life plans — connected sequences
+# of ideas with intention and direction. Stories are assertive
+# speech acts: they describe the world as the speaker sees it
+# (Word → World in Searle's framework).
+#
+# Design: Stories are the container for plans and narratives.
+# They don't contain outcomes directly — they point to a goal
+# outcome and the enables graph computes the path.
+
+id: story
+plural: stories
+name: Story
+description: Connected ideas, beliefs, plans — narratives with intention and direction
+
+references:
+  searle: Assertive speech acts (Word fits World)
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Story name
+
+  description:
+    type: string
+    description: The vision or intention behind this story

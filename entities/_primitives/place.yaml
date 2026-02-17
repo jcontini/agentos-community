@@ -1,0 +1,31 @@
+# Place — Where Things Exist or Happen
+#
+# Physical and digital locations. Cities, channels, databases,
+# tags, calendars, conversations, playlists — anything that
+# contains things is a place.
+#
+# Design: No `list` primitive — anything that contains things
+# is a place. Tags, calendars, conversations, playlists are
+# all places. The `add` relationship family puts things into
+# places; current membership is computed by netting anti-
+# relationships (add/remove).
+
+id: place
+plural: places
+name: Place
+description: Where things exist or happen — physical locations, digital spaces, containers
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Place name
+
+  description:
+    type: string
+    description: What this place is

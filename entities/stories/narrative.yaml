@@ -1,0 +1,59 @@
+# Narrative — A Path Through Outcomes
+#
+# Extends story. Replaces the old `journey` entity.
+# A curated path through commitments and outcomes. Most positions
+# are inferred from the enables graph via a goal. Explicit
+# relationships add to this computed set.
+#
+# What used to be separate concepts: life plans, OKR cycles,
+# sprints, projects, roadmaps, trips, story arcs, bucket lists,
+# dreams, campaigns — all narratives.
+
+id: narrative
+plural: narratives
+extends: story
+name: Narrative
+description: A path through outcomes — roadmaps, trips, arcs, plans
+
+properties:
+  goal:
+    type: string
+    nullable: true
+    description: |
+      The destination outcome/commitment. The enables graph is walked
+      backward from here to compute all positions on the narrative.
+      If null, the narrative is purely curated (bucket list, dream).
+
+  horizon:
+    type: string
+    description: |
+      Timescale. Not an enum — any string.
+      Common: life, decade, year, quarter, month, week, sprint, trip, story, dream.
+
+  started_at:
+    type: datetime
+    nullable: true
+
+  completed_at:
+    type: datetime
+    nullable: true
+
+  abandoned_at:
+    type: datetime
+    nullable: true
+
+  data:
+    type: object
+    description: |
+      Domain-specific extensions.
+      - Roadmap: { product: "AgentOS" }
+      - Trip: { origin: "Austin, TX", budget: 5000 }
+      - Dream: { dreamt_on: "2026-02-07", recurring: true }
+
+identifiers: [name]
+operations: [list, get, create, update, archive]
+
+display:
+  primary: name
+  secondary: horizon
+  icon: map
