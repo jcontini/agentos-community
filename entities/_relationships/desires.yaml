@@ -12,6 +12,7 @@ id: desires
 name: Desires
 inverse_name: Desired by
 description: How strongly an entity wants or wants to avoid an outcome
+speech_act: expressive
 
 is_relationship: true
 from_type: [person, organization]

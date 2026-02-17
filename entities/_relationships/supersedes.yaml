@@ -8,6 +8,7 @@ id: supersedes
 name: Supersedes
 inverse_name: Superseded by
 description: A newer decision replaces an older one
+speech_act: declarative
 
 is_relationship: true
 

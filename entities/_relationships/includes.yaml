@@ -18,6 +18,7 @@ id: includes
 name: Includes
 inverse_name: Included in
 description: A journey explicitly includes an outcome
+speech_act: declarative
 
 is_relationship: true
 from_type: narrative

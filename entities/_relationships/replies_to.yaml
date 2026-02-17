@@ -25,6 +25,7 @@ id: replies_to
 name: Replies to
 inverse_name: Has replies
 description: A post or message replying directly to another post or message
+speech_act: declarative
 
 is_relationship: true
 

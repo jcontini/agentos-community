@@ -64,8 +64,8 @@ adapters:
       title: .data.title
       content: .data.selftext
       url: '"https://reddit.com" + .data.permalink'
-      forum.name: .data.subreddit
-      forum.url: '"https://reddit.com/r/" + .data.subreddit'
+      community.name: .data.subreddit
+      community.url: '"https://reddit.com/r/" + .data.subreddit'
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
       published_at: .data.created_utc | todate
@@ -90,9 +90,7 @@ adapters:
       url: '"https://reddit.com/r/" + .display_name'
       icon: .community_icon
       member_count: .subscribers
-      member_count_numeric: .subscribers
       privacy: '"OPEN"'
-      posts: .posts
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

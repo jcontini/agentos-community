@@ -10,6 +10,7 @@ id: enables
 name: Enables
 inverse_name: Enabled by
 description: One outcome enables another when requirements are met
+speech_act: assertive
 
 # This is a relationship type, not an entity
 is_relationship: true

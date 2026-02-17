@@ -8,8 +8,8 @@
  * - post.search
  * - post.list
  * - post.get
- * - community.get
- * - community.search
+ * - forum.get
+ * - forum.search
  */
 
 import { describe, it, expect } from 'vitest';
@@ -79,13 +79,13 @@ describe('Reddit Adapter', () => {
   });
 
   // ===========================================================================
-  // community.get
+  // forum.get
   // ===========================================================================
-  describe('community.get', () => {
+  describe('forum.get', () => {
     it('fetches subreddit metadata', async () => {
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'community.get',
+        tool: 'forum.get',
         params: { subreddit: 'programming' },
       }) as { id: string; name: string; description: string };
 
@@ -95,13 +95,13 @@ describe('Reddit Adapter', () => {
   });
 
   // ===========================================================================
-  // community.search
+  // forum.search
   // ===========================================================================
-  describe('community.search', () => {
+  describe('forum.search', () => {
     it('searches for subreddits', async () => {
       const results = await aos().call('UseAdapter', {
         adapter,
-        tool: 'community.search',
+        tool: 'forum.search',
         params: { query: 'programming', limit: 3 },
       }) as Array<{ id: string; name: string }>;
 

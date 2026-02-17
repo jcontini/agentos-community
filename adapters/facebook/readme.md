@@ -65,8 +65,7 @@ adapters:
       description: .description
       url: .url
       icon: .icon
-      member_count: .member_count_raw
-      member_count_numeric: .member_count_numeric
+      member_count: .member_count_numeric
       privacy: .privacy
 
 # ═══════════════════════════════════════════════════════════════════════════════
