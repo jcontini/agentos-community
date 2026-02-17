@@ -1,0 +1,61 @@
+# Theme — Visual Theme for AgentOS
+#
+# Extends software. A theme contains CSS, icons, sounds, wallpapers, and
+# chrome configuration (titlebar, menubar, taskbar). Part of the
+# "system as entities" pattern — themes are entities in the graph,
+# not just config files on disk.
+#
+# The entity holds metadata. The filesystem holds assets (CSS, icons, sounds).
+# This is the NEPOMUK separation: content identity (graph) vs storage (disk).
+#
+# Relationships:
+#   theme → add_to → album (its wallpapers in a collection)
+#   theme → extends → theme (theme inheritance)
+
+id: theme
+plural: themes
+extends: software
+name: Theme
+description: A visual theme for AgentOS — CSS, icons, wallpapers, sounds
+
+properties:
+  theme_id:
+    type: string
+    required: true
+    description: Filesystem slug (e.g., "macos9", "win9x", "cde")
+
+  family:
+    type: string
+    enum: [macos, windows, unix, custom]
+    description: OS family this theme emulates
+
+  color_scheme:
+    type: string
+    enum: [light, dark, both]
+    description: Color scheme support — light only, dark only, or both
+
+  theme_type:
+    type: string
+    enum: [os, app]
+    description: OS theme (full chrome) or app-specific override
+
+  has_menubar:
+    type: boolean
+    description: Whether the theme shows a menu bar (Mac style)
+
+  has_taskbar:
+    type: boolean
+    description: Whether the theme shows a taskbar (Windows style)
+
+identifiers: [theme_id]
+operations: [list, get]
+
+display:
+  primary: title
+  secondary: family
+  icon: palette
+  sort:
+    - field: family
+      order: asc
+    - field: title
+      order: asc
