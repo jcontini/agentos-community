@@ -100,7 +100,7 @@ adapters:
           platform_id: .channel_id
           url: .channel_url
         _rel:
-          type: '"posts"'
+          type: '"post"'
           reverse: true
 
       # Typed reference: creates channel entity for the YouTube channel

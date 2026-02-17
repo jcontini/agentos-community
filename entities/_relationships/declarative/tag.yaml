@@ -1,10 +1,7 @@
-# Tags — Actor tagged an item with a tag
-#
-# Uses plural `id: tags` to avoid collision with the `tag` entity.
-# Phase 3 will separate entity and relationship namespaces.
+# Tag — Actor tagged an item with a tag
 
-id: tags
-name: Tags
+id: tag
+name: Tag
 inverse_name: Tagged with
 description: Actor tagged an item with a tag
 speech_act: declarative

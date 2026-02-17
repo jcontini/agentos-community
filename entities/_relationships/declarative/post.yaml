@@ -1,13 +1,10 @@
-# Posts — Content Attribution to Platform Account
+# Post — Content Attribution to Platform Account
 #
 # Account posted content to a platform. The observable fact.
-# The full attribution chain: Person --claim--> Account --posts--> Work.
-#
-# Uses plural `id: posts` to avoid collision with the `post` entity.
-# Phase 3 will separate entity and relationship namespaces.
+# The full attribution chain: Person --claim--> Account --post--> Work.
 
-id: posts
-name: Posts
+id: post
+name: Post
 inverse_name: Posted by
 description: Account posted content to a platform
 speech_act: declarative
