@@ -1,0 +1,45 @@
+# Album — A Collection of Images
+#
+# Extends place. Photo albums, wallpaper collections, mood boards —
+# any container for images. Items get added via the `add_to`
+# relationship. Photos already reference albums via their `album`
+# property.
+#
+# The "Wallpapers" album is seeded by the system — any image added
+# to it becomes available in the Settings wallpaper picker.
+
+id: album
+plural: albums
+extends: place
+name: Album
+description: A collection of images — photo albums, wallpaper collections, galleries
+
+references:
+  schema_org: https://schema.org/ImageGallery
+
+properties:
+  url:
+    type: string
+    format: url
+    description: Album URL (if from an external service)
+
+  item_count:
+    type: integer
+    description: Number of images in the album
+
+  thumbnail:
+    references: image
+    description: Album cover image
+
+  family:
+    type: string
+    description: Grouping category (e.g., "macos", "nature", "retro")
+
+identifiers: [name, url]
+operations: [list, get]
+
+display:
+  primary: name
+  secondary: item_count
+  image: thumbnail
+  icon: images
