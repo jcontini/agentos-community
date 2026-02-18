@@ -104,13 +104,17 @@ adapters:
           reverse: true
 
       # Typed reference: creates channel entity for the YouTube channel
-      # video --posted_in--> channel (natural direction)
+      # channel --upload--> video (event-based: "content uploaded to a place")
       posted_in:
         channel:
           id: .channel_id
           name: .channel
           url: .channel_url
-          member_count: .channel_follower_count
+          subscriber_count: .channel_follower_count
+          platform: '"youtube"'
+        _rel:
+          type: '"upload"'
+          reverse: true
 
       # Typed reference: creates post entity for the video page (social wrapper)
       # With reverse: post --references(embeds)--> video (container → contained)
@@ -141,14 +145,15 @@ adapters:
 
       # Typed reference: creates playlist entity for YouTube playlists
       # Only activates when playlist fields are present (filtered by jq — PL prefix only)
-      # playlist --contains--> video (reverse: playlist is the from side)
+      # playlist --add_to--> video (event-based: "item added to a place")
       in_playlist:
         playlist:
           id: .playlist_id
           name: .playlist
           url: .playlist_url
+          platform: '"youtube"'
         _rel:
-          type: '"contains"'
+          type: '"add_to"'
           position: .playlist_index
           reverse: true
 
