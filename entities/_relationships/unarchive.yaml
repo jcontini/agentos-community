@@ -12,4 +12,6 @@ negates: archive
 
 is_relationship: true
 
+from_type: actor
+
 properties: {}

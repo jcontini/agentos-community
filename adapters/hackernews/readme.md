@@ -73,7 +73,6 @@ adapters:
           url: '"https://news.ycombinator.com/user?id=" + .author'
         _rel:
           type: '"post"'
-          reverse: true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

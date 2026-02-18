@@ -89,8 +89,8 @@ adapters:
       resolution: .resolution
       view_count: .view_count
       
-      # Typed reference: creates account entity and posts relationship
-      # account --posts--> video (reverse: account is the from side)
+      # Typed reference: creates account entity and post relationship
+      # Direction inferred from post schema: account(from) → video(to)
       posted_by:
         account:
           id: .channel_id
@@ -101,10 +101,9 @@ adapters:
           url: .channel_url
         _rel:
           type: '"post"'
-          reverse: true
 
       # Typed reference: creates channel entity for the YouTube channel
-      # channel --upload--> video (event-based: "content uploaded to a place")
+      # Direction inferred from upload schema: channel/place(from) → video/work(to)
       posted_in:
         channel:
           id: .channel_id
@@ -114,10 +113,8 @@ adapters:
           platform: '"youtube"'
         _rel:
           type: '"upload"'
-          reverse: true
 
-      # Typed reference: creates post entity for the video page (social wrapper)
-      # With reverse: post --references(embeds)--> video (container → contained)
+      # Post embeds the video. Both are works — direction ambiguous, reverse needed.
       video_post:
         post:
           id: '(.id) + "_post"'
@@ -126,12 +123,10 @@ adapters:
           url: .webpage_url
           published_at: .upload_date
         _rel:
-          type: '"references"'
-          role: '"embeds"'
+          type: '"embed"'
           reverse: true
 
-      # Typed reference: creates document entity for the transcript
-      # transcript --references(transcript_of)--> video (document is transcript of video)
+      # Transcript of the video. Both are works — direction ambiguous, reverse needed.
       transcript_doc:
         document:
           id: '(.id) + "_transcript"'
@@ -139,13 +134,11 @@ adapters:
           content: .transcript
           url: .webpage_url
         _rel:
-          type: '"references"'
-          role: '"transcript_of"'
+          type: '"transcribe"'
           reverse: true
 
       # Typed reference: creates playlist entity for YouTube playlists
-      # Only activates when playlist fields are present (filtered by jq — PL prefix only)
-      # playlist --add_to--> video (event-based: "item added to a place")
+      # Direction inferred from add_to schema: playlist/place(from) → video(to)
       in_playlist:
         playlist:
           id: .playlist_id
@@ -155,7 +148,6 @@ adapters:
         _rel:
           type: '"add_to"'
           position: .playlist_index
-          reverse: true
 
   post:
     terminology: Comment
@@ -177,7 +169,6 @@ adapters:
           avatar: .author_thumbnail
         _rel:
           type: '"post"'
-          reverse: true
 
       parent_post:
         post:

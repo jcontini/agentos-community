@@ -77,7 +77,6 @@ adapters:
           platform: '"reddit"'
         _rel:
           type: '"publish"'
-          reverse: true
 
       posted_by:
         account:
@@ -88,7 +87,6 @@ adapters:
           url: '"https://reddit.com/u/" + .data.author'
         _rel:
           type: '"post"'
-          reverse: true
   
   forum:
     terminology: Subreddit

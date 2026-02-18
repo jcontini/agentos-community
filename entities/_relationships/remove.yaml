@@ -7,4 +7,7 @@ negates: upload
 
 is_relationship: true
 
+from_type: place
+to_type: work
+
 properties: {}

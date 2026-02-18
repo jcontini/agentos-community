@@ -6,4 +6,7 @@ speech_act: declarative
 
 is_relationship: true
 
+from_type: actor
+to_type: place
+
 properties: {}

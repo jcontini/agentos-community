@@ -13,6 +13,8 @@ extends: claim
 
 is_relationship: true
 
+to_type: emotion
+
 properties:
   intensity:
     type: number

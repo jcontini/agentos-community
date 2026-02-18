@@ -12,4 +12,7 @@ speech_act: commissive
 
 is_relationship: true
 
+from_type: [person, organization]
+to_type: commitment
+
 properties: {}

@@ -11,4 +11,6 @@ speech_act: assertive
 
 is_relationship: true
 
+from_type: actor
+
 properties: {}

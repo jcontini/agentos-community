@@ -7,4 +7,6 @@ negates: add_to
 
 is_relationship: true
 
+from_type: place
+
 properties: {}

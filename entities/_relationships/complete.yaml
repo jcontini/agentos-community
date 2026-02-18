@@ -13,4 +13,6 @@ extends: claim
 
 is_relationship: true
 
+to_type: commitment
+
 properties: {}

@@ -15,6 +15,9 @@ speech_act: declarative
 
 is_relationship: true
 
+from_type: work
+to_type: work
+
 properties:
   context:
     type: string

@@ -16,6 +16,8 @@ speech_act: declarative
 
 is_relationship: true
 
+from_type: place
+
 properties:
   position:
     type: integer

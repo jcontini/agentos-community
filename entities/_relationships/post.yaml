@@ -12,6 +12,7 @@ speech_act: declarative
 is_relationship: true
 
 from_type: account
+to_type: work
 
 properties: {}
 
