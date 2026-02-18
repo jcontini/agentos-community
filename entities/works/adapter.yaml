@@ -76,12 +76,7 @@ properties:
 
 identifiers: [adapter_id, name]
 
-# No CRUD operations — adapter entities are system-managed.
-# The /api/adapters management endpoint already exists for adapter config.
-# Adapter entities are queryable through the graph/relationships.
-# When data-routes.md is implemented (/data/* vs /api/* split), we can
-# add operations here without collisions.
-operations: []
+operations: [list, get]
 
 display:
   primary: name
