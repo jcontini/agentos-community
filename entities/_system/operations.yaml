@@ -6,6 +6,19 @@
 # Return types use "entity" as placeholder - replaced by actual entity at runtime:
 #   - webpage.search returns webpage[]
 #   - task.get returns task
+#
+# kind:
+#   "query"  — data-fetching, not surfaced in action UI
+#   "action" — state-changing one-shot (button in UI)
+#   "toggle" — boolean state change (checkbox in UI), paired with inverse operation
+#
+# For toggles:
+#   property: path to the boolean property in entity data (e.g., "data.completed")
+#   pair: the inverse operation name (e.g., complete ↔ reopen)
+#
+# For actions:
+#   label: human-readable button label
+#   confirm: if true, UI shows confirmation dialog before executing
 
 # =============================================================================
 # Collection Operations (return entity[])
@@ -13,6 +26,7 @@
 
 list:
   description: List all items, optionally filtered
+  kind: query
   params:
     limit:
       type: integer
@@ -25,6 +39,7 @@ list:
 
 search:
   description: Search by query string
+  kind: query
   params:
     query:
       type: string
@@ -38,6 +53,7 @@ search:
 
 filter:
   description: Filter by service-specific query language
+  kind: query
   params:
     query:
       type: string
@@ -51,6 +67,7 @@ filter:
 
 get:
   description: Get a single item by ID
+  kind: query
   params:
     id:
       type: string
@@ -60,6 +77,7 @@ get:
 
 read:
   description: Read/fetch content from a URL or path
+  kind: query
   params:
     url:
       type: string
@@ -69,19 +87,21 @@ read:
 
 create:
   description: Create a new item
+  kind: action
+  label: New
   params:
     # Entity-specific params defined in entity schema
-    # Common ones might include: title, description, etc.
   returns: entity
 
 update:
   description: Update an existing item
+  kind: action
+  label: Edit
   params:
     id:
       type: string
       required: true
       description: Item ID to update
-    # Additional params are entity-specific
   returns: entity
 
 # =============================================================================
@@ -90,6 +110,9 @@ update:
 
 delete:
   description: Delete an item
+  kind: action
+  label: Delete
+  confirm: true
   params:
     id:
       type: string
@@ -105,6 +128,10 @@ delete:
 
 complete:
   description: Mark an item as complete/done
+  kind: toggle
+  label: Completed
+  property: data.completed
+  pair: reopen
   params:
     id:
       type: string
@@ -114,6 +141,10 @@ complete:
 
 reopen:
   description: Reopen a completed item
+  kind: toggle
+  label: Completed
+  property: data.completed
+  pair: complete
   params:
     id:
       type: string
@@ -123,6 +154,10 @@ reopen:
 
 archive:
   description: Archive an item (soft delete)
+  kind: toggle
+  label: Archived
+  property: data.archived
+  pair: unarchive
   params:
     id:
       type: string
@@ -132,6 +167,10 @@ archive:
 
 unarchive:
   description: Restore an archived item
+  kind: toggle
+  label: Archived
+  property: data.archived
+  pair: archive
   params:
     id:
       type: string
@@ -141,12 +180,15 @@ unarchive:
 
 send:
   description: Send a message or communication
+  kind: action
+  label: Send
   params:
     # Entity-specific (to, content, etc.)
   returns: entity
 
 transcript:
   description: Get transcript/text content
+  kind: query
   params:
     id:
       type: string
