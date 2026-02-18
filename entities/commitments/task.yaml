@@ -21,3 +21,22 @@ display:
       null_last: true
     - field: name
       order: asc
+
+computed:
+  status: |
+    if .completed then "done"
+    elif (.blockers | length > 0) and (.blockers | any(.completed != true)) then "blocked"
+    else "ready"
+    end
+  priority_label: |
+    if .priority == 1 then "critical"
+    elif .priority == 2 then "high"
+    elif .priority == 3 then "medium"
+    else "low"
+    end
+
+computed_relationships:
+  blockers:
+    type: enables
+    direction: incoming
+    fields: [completed]
