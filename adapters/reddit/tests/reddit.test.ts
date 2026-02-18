@@ -79,6 +79,37 @@ describe('Reddit Adapter', () => {
   });
 
   // ===========================================================================
+  // post.comments
+  // ===========================================================================
+  describe('post.comments', () => {
+    it('returns flat comment list with parent references', async () => {
+      // Get a post ID first
+      const posts = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'post.list',
+        params: { subreddit: 'programming', limit: 1 },
+      }) as Array<{ id: string }>;
+
+      expect(posts.length).toBeGreaterThan(0);
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'post.comments',
+        params: { id: posts[0].id, comment_limit: 10 },
+      }) as Array<{ id: string; content: string; parent_id?: string }>;
+
+      expect(Array.isArray(results)).toBe(true);
+      // First item is the parent post
+      expect(results[0].id).toBe(posts[0].id);
+      // Comments follow (if any)
+      if (results.length > 1) {
+        expect(results[1].content).toBeDefined();
+        expect(results[1].parent_id).toBeDefined();
+      }
+    });
+  });
+
+  // ===========================================================================
   // forum.get
   // ===========================================================================
   describe('forum.get', () => {

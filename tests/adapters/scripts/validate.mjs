@@ -179,11 +179,12 @@ function checkEntities(frontmatter) {
       } else {
         errors.push(`'${opName}' returns unknown entity '${entityName}'`);
       }
-      // entity[] ops: rest/graphql must have response.root for top-level array
+      // entity[] ops: rest/graphql must have response.root or response.transform for top-level array
       if (op.returns.endsWith('[]') && (op.rest || op.graphql)) {
-        const hasRoot = op.rest?.response?.root || op.graphql?.response?.root;
-        if (!hasRoot) {
-          errors.push(`'${opName}' returns array — rest/graphql must have response.root pointing to the array`);
+        const resp = op.rest?.response || op.graphql?.response;
+        const hasArrayExtraction = resp?.root || resp?.transform;
+        if (!hasArrayExtraction) {
+          errors.push(`'${opName}' returns array — rest/graphql must have response.root or response.transform`);
         }
       }
     }

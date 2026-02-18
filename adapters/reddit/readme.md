@@ -60,29 +60,34 @@ adapters:
   post:
     terminology: Post
     mapping:
-      id: .data.id
-      title: .data.title
-      content: .data.selftext
-      url: '"https://reddit.com" + .data.permalink'
-      engagement.score: .data.score
-      engagement.comment_count: .data.num_comments
-      published_at: .data.created_utc | todate
+      id: .id
+      title: .title
+      content: .selftext // .body
+      url: '"https://reddit.com" + .permalink'
+      engagement.score: .score
+      engagement.comment_count: .num_comments
+      published_at: .created_utc | todate
       replies: .replies
       
       publish:
         forum:
-          id: .data.subreddit
-          name: .data.subreddit
-          url: '"https://reddit.com/r/" + .data.subreddit'
+          id: .subreddit
+          name: .subreddit
+          url: '"https://reddit.com/r/" + .subreddit'
           platform: '"reddit"'
 
       posted_by:
         account:
-          id: .data.author
+          id: .author
           platform: '"reddit"'
-          handle: .data.author
-          display_name: .data.author
-          url: '"https://reddit.com/u/" + .data.author'
+          handle: .author
+          display_name: .author
+          url: '"https://reddit.com/u/" + .author'
+
+      parent_id:
+        ref: post
+        value: .parent_id
+        rel: replies_to
   
   forum:
     terminology: Subreddit
@@ -119,7 +124,7 @@ operations:
         limit: .params.limit | tostring
         sort: .params.sort
       response:
-        root: "/data/children"
+        transform: '[.data.children[] | .data]'
 
   post.list:
     description: List posts from a subreddit
@@ -138,7 +143,7 @@ operations:
       query:
         limit: .params.limit | tostring
       response:
-        root: "/data/children"
+        transform: '[.data.children[] | .data]'
 
   post.get:
     description: Get a Reddit post with comments
@@ -156,9 +161,6 @@ operations:
       query:
         limit: .params.comment_limit | tostring
       response:
-        # Transform extracts post from .[0] and comments from .[1], mapping recursively
-        # Output: { data: {post fields}, replies: [comments] } to match adapter mapping
-        # Note: Reddit returns "" (empty string) for .replies when no nested replies exist
         transform: |
           def map_comment:
             {
@@ -177,10 +179,34 @@ operations:
               published_at: (.created_utc | todate),
               replies: [if .replies == "" then empty else (.replies.data.children[] | select(.kind == "t1") | .data | map_comment) end]
             };
-          {
-            data: .[0].data.children[0].data,
+          .[0].data.children[0].data + {
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
+
+  post.comments:
+    description: |
+      Get comments on a Reddit post as graph-native entities.
+      Returns a flat list: the parent post first, then all comments in parent-first order.
+      Each comment becomes a post entity with replies_to relationship to its parent.
+    returns: post[]
+    web_url: '"https://www.reddit.com/comments/" + .params.id'
+    params:
+      id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
+      comment_limit: { type: integer, default: 200, description: "Max comments to fetch" }
+    command:
+      binary: bash
+      args:
+        - "-c"
+        - |
+          curl -s -A "AgentOS/1.0" "https://www.reddit.com/comments/{{params.id}}.json?limit={{params.comment_limit}}" | jq '
+            def flatten_tree:
+              (. + {parent_id: (.parent_id | split("_") | .[1:] | join("_"))}),
+              (if .replies == "" then empty
+               else (.replies.data.children[] | select(.kind == "t1") | .data | flatten_tree)
+               end);
+            .[0].data.children[0].data as $post |
+            [$post] + [.[1].data.children[] | select(.kind == "t1") | .data | flatten_tree]'
+      timeout: 30
 
   forum.get:
     description: Get a subreddit with its top posts

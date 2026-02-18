@@ -51,7 +51,6 @@ adapters:
   post:
     terminology: Story
     mapping:
-      # Search results use objectID, item endpoint uses id
       id: .objectID
       title: .title
       content: .text
@@ -59,7 +58,6 @@ adapters:
       external_url: .url
       replies: .replies
       
-      # Engagement metrics
       engagement.score: .points
       engagement.comment_count: .num_comments
       published_at: .created_at
@@ -71,6 +69,11 @@ adapters:
           handle: .author
           display_name: .author
           url: '"https://news.ycombinator.com/user?id=" + .author'
+
+      parent_id:
+        ref: post
+        value: .parent_id
+        rel: replies_to
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -135,9 +138,6 @@ operations:
       method: GET
       url: '"https://hn.algolia.com/api/v1/items/" + .params.id'
       response:
-        # Transform reshapes to match adapter expectations
-        # Adapter expects .objectID, but items endpoint returns .id
-        # Output shape: fields adapter can map + pre-mapped replies
         transform: |
           def map_comment:
             {
@@ -166,6 +166,32 @@ operations:
             created_at: .created_at,
             replies: [.children[]? | map_comment]
           }
+
+  post.comments:
+    description: |
+      Get comments on a Hacker News story as graph-native entities.
+      Returns a flat list: the parent story first, then all comments in parent-first order.
+      Each comment becomes a post entity with replies_to relationship to its parent.
+    returns: post[]
+    web_url: '"https://news.ycombinator.com/item?id=" + .params.id'
+    params:
+      id:
+        type: string
+        required: true
+        description: "Story ID"
+    command:
+      binary: bash
+      args:
+        - "-c"
+        - |
+          curl -s "https://hn.algolia.com/api/v1/items/{{params.id}}" | jq '
+            def flatten_tree($parent_id):
+              {objectID: (.id | tostring), text: .text, author: .author, created_at: .created_at, parent_id: $parent_id},
+              (.children[]? | flatten_tree((.id | tostring)));
+            (.id | tostring) as $story_id |
+            [{objectID: $story_id, title: .title, text: .text, url: .url, author: .author, points: .points, num_comments: (.children | length), created_at: .created_at}]
+            + [.children[]? | flatten_tree($story_id)]'
+      timeout: 30
 ---
 
 # Hacker News

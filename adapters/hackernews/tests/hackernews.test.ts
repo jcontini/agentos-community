@@ -51,6 +51,37 @@ describe('Hacker News Adapter', () => {
   });
 
   // ===========================================================================
+  // post.comments
+  // ===========================================================================
+  describe('post.comments', () => {
+    it('returns flat comment list with parent references', async () => {
+      // Get a story ID from the front page
+      const stories = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'post.list',
+        params: { feed: 'front', limit: 1 },
+      }) as Array<{ id: string }>;
+
+      expect(stories.length).toBeGreaterThan(0);
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'post.comments',
+        params: { id: stories[0].id },
+      }) as Array<{ id: string; content: string; parent_id?: string }>;
+
+      expect(Array.isArray(results)).toBe(true);
+      // First item is the parent story
+      expect(results[0].id).toBe(stories[0].id);
+      // Comments follow (if any)
+      if (results.length > 1) {
+        expect(results[1].content).toBeDefined();
+        expect(results[1].parent_id).toBeDefined();
+      }
+    });
+  });
+
+  // ===========================================================================
   // post.get
   // ===========================================================================
   describe('post.get', () => {
