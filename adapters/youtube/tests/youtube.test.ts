@@ -10,6 +10,7 @@
  * - video.list
  * - video.get
  * - video.transcript
+ * - post.list (comments)
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -121,6 +122,28 @@ describe('YouTube Adapter', () => {
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
       // Transcript may be null if no captions available
+    });
+  });
+
+  // ===========================================================================
+  // post.list (comments)
+  // ===========================================================================
+  describe('post.list', () => {
+    it('lists comments on a video', async () => {
+      if (skipTests) return;
+
+      const results = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'post.list',
+        params: { url: 'https://www.youtube.com/watch?v=fNk_zzaMoSs', limit: 5 },
+      }) as Array<{ id: string; content: string; posted_by: unknown; parent_post: unknown }>;
+
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].id).toBeDefined();
+      expect(results[0].content).toBeDefined();
+      expect(results[0].posted_by).toBeDefined();
+      expect(results[0].parent_post).toBeDefined();
     });
   });
 });

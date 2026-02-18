@@ -85,7 +85,7 @@ adapters:
       transcript_segments: .transcript_segments
       duration_ms: (.duration // null) | if . != null then . * 1000 else null end
       thumbnail: .thumbnail
-      published_at: .upload_date
+      published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
       resolution: .resolution
       view_count: .view_count
       
@@ -156,6 +156,34 @@ adapters:
           type: '"add_to"'
           position: .playlist_index
           reverse: true
+
+  post:
+    terminology: Comment
+    mapping:
+      id: .id
+      content: .text
+      url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
+      published_at: .timestamp | todate
+      engagement.likes: .like_count
+
+      posted_by:
+        account:
+          id: .author_id
+          platform: '"youtube"'
+          handle: .author
+          display_name: .author
+          platform_id: .author_id
+          url: .author_url
+          avatar: .author_thumbnail
+        _rel:
+          type: '"post"'
+          reverse: true
+
+      parent_post:
+        post:
+          id: 'if .parent == "root" then .video_id + "_post" else .parent end'
+        _rel:
+          type: '"replies_to"'
 
 operations:
   video.search:
@@ -396,6 +424,35 @@ operations:
               }'
           fi
       timeout: 90
+
+  post.list:
+    description: |
+      List comments on a YouTube video.
+      Returns comments as post entities with account attribution and threading.
+      Top-level comments reply to the video's post entity. Replies reply to their parent comment.
+      Use limit to control how many comments to fetch (default 50, can be slow for popular videos).
+    returns: post[]
+    web_url: "{{params.url}}"
+    params:
+      url:
+        type: string
+        required: true
+        description: YouTube video URL
+      limit:
+        type: integer
+        default: 50
+        description: Maximum number of comments to fetch
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - |
+          yt-dlp --skip-download --write-comments --no-write-thumbnail \
+            --extractor-args "youtube:max_comments={{params.limit}},all,all,100" \
+            --dump-json "{{params.url}}" 2>/dev/null | \
+            jq '[.id as $vid | .comments[]? | . + {video_id: $vid}]'
+      timeout: 120
 ---
 
 # YouTube

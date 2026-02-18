@@ -64,7 +64,6 @@ adapters:
       engagement.comment_count: .num_comments
       published_at: .created_at
       
-      # Typed reference: creates account entity and posts relationship
       posted_by:
         account:
           id: .author
@@ -72,6 +71,9 @@ adapters:
           handle: .author
           display_name: .author
           url: '"https://news.ycombinator.com/user?id=" + .author'
+        _rel:
+          type: '"post"'
+          reverse: true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -151,7 +153,8 @@ operations:
                   handle: .author,
                   display_name: .author,
                   url: ("https://news.ycombinator.com/user?id=" + .author)
-                }
+                },
+                _rel: { type: "post", reverse: true }
               },
               published_at: .created_at,
               replies: [.children[]? | map_comment]

@@ -64,15 +64,21 @@ adapters:
       title: .data.title
       content: .data.selftext
       url: '"https://reddit.com" + .data.permalink'
-      community.name: .data.subreddit
-      community.url: '"https://reddit.com/r/" + .data.subreddit'
       engagement.score: .data.score
       engagement.comment_count: .data.num_comments
       published_at: .data.created_utc | todate
       replies: .replies
       
-      # Typed reference: creates account entity and posts relationship
-      # Uses raw API path — all mapping expressions reference raw data
+      posted_in:
+        forum:
+          id: .data.subreddit
+          name: .data.subreddit
+          url: '"https://reddit.com/r/" + .data.subreddit'
+          platform: '"reddit"'
+        _rel:
+          type: '"publish"'
+          reverse: true
+
       posted_by:
         account:
           id: .data.author
@@ -80,6 +86,9 @@ adapters:
           handle: .data.author
           display_name: .data.author
           url: '"https://reddit.com/u/" + .data.author'
+        _rel:
+          type: '"post"'
+          reverse: true
   
   forum:
     terminology: Subreddit
@@ -168,7 +177,8 @@ operations:
                   handle: .author,
                   display_name: .author,
                   url: ("https://reddit.com/u/" + .author)
-                }
+                },
+                _rel: { type: "post", reverse: true }
               },
               engagement: { score: .ups },
               published_at: (.created_utc | todate),
