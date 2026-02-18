@@ -89,8 +89,6 @@ adapters:
       resolution: .resolution
       view_count: .view_count
       
-      # Typed reference: creates account entity and post relationship
-      # Direction inferred from post schema: account(from) → video(to)
       posted_by:
         account:
           id: .channel_id
@@ -99,8 +97,6 @@ adapters:
           display_name: .channel
           platform_id: .channel_id
           url: .channel_url
-        _rel:
-          type: '"post"'
 
       # Typed reference: creates channel entity for the YouTube channel
       # Direction inferred from upload schema: channel/place(from) → video/work(to)

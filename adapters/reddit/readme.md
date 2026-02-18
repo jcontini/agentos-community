@@ -85,8 +85,6 @@ adapters:
           handle: .data.author
           display_name: .data.author
           url: '"https://reddit.com/u/" + .data.author'
-        _rel:
-          type: '"post"'
   
   forum:
     terminology: Subreddit
@@ -175,8 +173,7 @@ operations:
                   handle: .author,
                   display_name: .author,
                   url: ("https://reddit.com/u/" + .author)
-                },
-                _rel: { type: "post" }
+                }
               },
               engagement: { score: .ups },
               published_at: (.created_utc | todate),
