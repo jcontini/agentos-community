@@ -300,7 +300,6 @@ adapters:
           url: '"https://x.com/" + .core.user_results.result.legacy.screen_name'
         _rel:
           type: '"post"'
-          reverse: true
 
   account:
     terminology: Account

@@ -109,7 +109,6 @@ adapters:
           source_drive: '"icloud"'
         _rel:
           type: '"file_in"'
-          reverse: true
 
 operations:
   # --- Drive browsing ---

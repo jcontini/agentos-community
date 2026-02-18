@@ -153,7 +153,7 @@ operations:
                   display_name: .author,
                   url: ("https://news.ycombinator.com/user?id=" + .author)
                 },
-                _rel: { type: "post", reverse: true }
+                _rel: { type: "post" }
               },
               published_at: .created_at,
               replies: [.children[]? | map_comment]

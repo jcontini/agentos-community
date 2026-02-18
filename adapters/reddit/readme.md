@@ -176,7 +176,7 @@ operations:
                   display_name: .author,
                   url: ("https://reddit.com/u/" + .author)
                 },
-                _rel: { type: "post", reverse: true }
+                _rel: { type: "post" }
               },
               engagement: { score: .ups },
               published_at: (.created_utc | todate),

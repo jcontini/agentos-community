@@ -114,7 +114,6 @@ adapters:
         _rel:
           type: '"upload"'
 
-      # Post embeds the video. Both are works — direction ambiguous, reverse needed.
       video_post:
         post:
           id: '(.id) + "_post"'
@@ -124,9 +123,7 @@ adapters:
           published_at: .upload_date
         _rel:
           type: '"embed"'
-          reverse: true
 
-      # Transcript of the video. Both are works — direction ambiguous, reverse needed.
       transcript_doc:
         document:
           id: '(.id) + "_transcript"'
@@ -135,7 +132,6 @@ adapters:
           url: .webpage_url
         _rel:
           type: '"transcribe"'
-          reverse: true
 
       # Typed reference: creates playlist entity for YouTube playlists
       # Direction inferred from add_to schema: playlist/place(from) → video(to)

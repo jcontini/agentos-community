@@ -7,4 +7,7 @@ extends: mention
 
 is_relationship: true
 
+from_type: document
+to_type: [video, audio]
+
 properties: {}
