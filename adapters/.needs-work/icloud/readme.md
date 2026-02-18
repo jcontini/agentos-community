@@ -99,16 +99,12 @@ adapters:
       data.etag: .etag
       data.drive_path: .path
 
-      # Typed reference: creates folder entity + file_in relationship
-      # folder --file_in--> document (reverse: folder is the from side)
-      filed_in:
+      file_in:
         folder:
           id: .parent_id
           name: .parent_name
           path: .parent_path
           source_drive: '"icloud"'
-        _rel:
-          type: '"file_in"'
 
 operations:
   # --- Drive browsing ---

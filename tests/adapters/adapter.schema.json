@@ -247,19 +247,11 @@
               },
               {
                 "type": "object",
-                "description": "Typed reference: creates linked entity + relationship. Key is entity type, value is field mappings. Optional _rel controls relationship type, direction, and properties.",
+                "description": "Typed reference: creates linked entity + relationship. The field name in the parent mapping IS the relationship type. Must have exactly one key (entity type) mapping to field definitions.",
                 "minProperties": 1,
-                "maxProperties": 2,
-                "properties": {
-                  "_rel": {
-                    "type": "object",
-                    "description": "Relationship metadata: type override, role, reverse direction, and additional properties (all jaq expressions except reverse which is boolean)",
-                    "properties": {
-                      "type": { "type": "string", "description": "Relationship type override (jaq expression, e.g., '\"references\"')" },
-                      "reverse": { "type": "boolean", "description": "If true, the linked entity becomes the 'from' side of the relationship" }
-                    },
-                    "additionalProperties": { "type": "string", "description": "Additional relationship properties (jaq expressions, e.g., role: '\"embeds\"')" }
-                  }
+                "maxProperties": 1,
+                "not": {
+                  "required": ["_rel"]
                 },
                 "additionalProperties": {
                   "type": "object",

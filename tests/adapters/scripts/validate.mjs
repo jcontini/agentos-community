@@ -212,6 +212,20 @@ function checkMappings(frontmatter) {
       continue;
     }
     
+    // Reject _rel in typed references — relationship type comes from
+    // the field name, not a metadata block. Rename the field to match
+    // the relationship type (e.g., posted_in → upload).
+    for (const [fieldName, fieldValue] of Object.entries(adapter.mapping)) {
+      if (typeof fieldValue === 'object' && fieldValue !== null && '_rel' in fieldValue) {
+        total++;
+        errors.push(
+          `'${entityName}.${fieldName}' has _rel — remove it. ` +
+          `Rename the field to the relationship type (e.g., '${fieldName}' → the rel type), ` +
+          `the system infers the rest from entity types`
+        );
+      }
+    }
+    
     const validProps = entityProperties[entityName];
     if (!validProps) continue;
     

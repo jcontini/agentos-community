@@ -98,48 +98,35 @@ adapters:
           platform_id: .channel_id
           url: .channel_url
 
-      # Typed reference: creates channel entity for the YouTube channel
-      # Direction inferred from upload schema: channel/place(from) → video/work(to)
-      posted_in:
+      upload:
         channel:
           id: .channel_id
           name: .channel
           url: .channel_url
           subscriber_count: .channel_follower_count
           platform: '"youtube"'
-        _rel:
-          type: '"upload"'
 
-      video_post:
+      embed:
         post:
           id: '(.id) + "_post"'
           title: .title
           content: .description
           url: .webpage_url
           published_at: .upload_date
-        _rel:
-          type: '"embed"'
 
-      transcript_doc:
+      transcribe:
         document:
           id: '(.id) + "_transcript"'
           title: '"Transcript: " + .title'
           content: .transcript
           url: .webpage_url
-        _rel:
-          type: '"transcribe"'
 
-      # Typed reference: creates playlist entity for YouTube playlists
-      # Direction inferred from add_to schema: playlist/place(from) → video(to)
-      in_playlist:
+      add_to:
         playlist:
           id: .playlist_id
           name: .playlist
           url: .playlist_url
           platform: '"youtube"'
-        _rel:
-          type: '"add_to"'
-          position: .playlist_index
 
   post:
     terminology: Comment
@@ -159,14 +146,10 @@ adapters:
           platform_id: .author_id
           url: .author_url
           avatar: .author_thumbnail
-        _rel:
-          type: '"post"'
 
-      parent_post:
+      replies_to:
         post:
           id: 'if .parent == "root" then .video_id + "_post" else .parent end'
-        _rel:
-          type: '"replies_to"'
 
 operations:
   video.search:
@@ -260,7 +243,6 @@ operations:
             view_count: .view_count,
             playlist: (if (.playlist_id // "" | startswith("PL")) then .playlist else null end),
             playlist_id: (if (.playlist_id // "" | startswith("PL")) then .playlist_id else null end),
-            playlist_index: (if (.playlist_id // "" | startswith("PL")) then .playlist_index else null end),
             playlist_url: (if (.playlist_id // "" | startswith("PL")) then "https://www.youtube.com/playlist?list=" + .playlist_id else null end)
           }]'
       timeout: 60

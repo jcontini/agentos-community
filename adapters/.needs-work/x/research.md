@@ -298,8 +298,6 @@ adapters:
           display_name: .core.user_results.result.legacy.name
           platform_id: .core.user_results.result.rest_id
           url: '"https://x.com/" + .core.user_results.result.legacy.screen_name'
-        _rel:
-          type: '"post"'
 
   account:
     terminology: Account

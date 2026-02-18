@@ -69,14 +69,12 @@ adapters:
       published_at: .data.created_utc | todate
       replies: .replies
       
-      posted_in:
+      publish:
         forum:
           id: .data.subreddit
           name: .data.subreddit
           url: '"https://reddit.com/r/" + .data.subreddit'
           platform: '"reddit"'
-        _rel:
-          type: '"publish"'
 
       posted_by:
         account:
