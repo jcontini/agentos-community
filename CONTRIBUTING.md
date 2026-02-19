@@ -47,7 +47,7 @@ node scripts/generate-manifest.js --check # Validate only
 
 ## Architecture Overview
 
-**Full taxonomy:** See [agentos/ARCHITECTURE.md](https://github.com/jcontini/agentos/blob/main/ARCHITECTURE.md) for entities, skills, adapters, vibes, client vs interface.
+**Full taxonomy:** See [agentos/ARCHITECTURE.md](https://github.com/jcontini/agentos/blob/main/ARCHITECTURE.md) for entities, skills, transformers, vibes, client vs interface.
 
 **Entity YAML files are the single source of truth for entity types.** Want a new entity type? Add a YAML file in `entities/`. The entity defines:
 
@@ -85,7 +85,7 @@ themes/            Visual styling (CSS)
 
 **The flow:** 
 1. Entity YAMLs define data types (schema + display hints)
-2. Adapters declare which entities they provide and how to map API data
+2. Transformers declare which entities they provide and how to map API data
 3. The Browser app renders any entity type using generic components that read display hints
 4. Custom apps (when needed) provide specialized views on top of entities
 
@@ -166,13 +166,13 @@ This enables:
 **For detailed skill writing guidance, read the skill:**
 
 ```bash
-skills/write-adapter.md
+skills/write-skill.md
 ```
 
 This covers:
 - Entity reuse patterns (use existing entities before creating new ones)
 - Entity-level utilities (e.g., `domain.dns_list` for DNS operations)
-- Adapters and mappings
+- Transformers and mappings
 - Expression syntax (jaq)
 - Testing requirements
 
@@ -192,7 +192,7 @@ skills/{name}/
 
 ### Mapping Field Types
 
-Adapter mappings support three field types, detected by structure:
+Transformer mappings support three field types, detected by structure:
 
 **String** — Simple jaq expression (stored as entity property):
 ```yaml
@@ -270,8 +270,8 @@ Utilities are operations that don't fit standard CRUD patterns. Unlike operation
 - AI agents need a predictable contract for downstream actions
 
 **Use inline schema when:**
-- The data is adapter-specific introspection (`get_workflow_states`, `get_cycles`)
-- The shape is unlikely to be reused across adapters
+- The data is skill-specific introspection (`get_workflow_states`, `get_cycles`)
+- The shape is unlikely to be reused across skills
 - It's configuration/setup data, not domain data
 
 **Use `void` when:**
@@ -292,7 +292,7 @@ utilities:
   dns_list:
     returns: dns_record[]  # Defined in entities/dns_record.yaml
 
-# Good: Inline for adapter-specific introspection
+# Good: Inline for skill-specific introspection
 utilities:
   get_workflow_states:
     returns:
@@ -365,10 +365,10 @@ vocabulary:
   url: source_url
 ```
 
-**`data: {}`** — Adapter-specific extensions. An open object property for adapter-specific fields that don't belong in the shared schema.
+**`data: {}`** — Skill-specific extensions. An open object property for skill-specific fields that don't belong in the shared schema.
 
 ```yaml
-# In adapter mapping — store adapter-specific fields
+# In transformer mapping — store skill-specific fields
 mapping:
   data.priority_label: .priority_label
   data.section_id: .section_id

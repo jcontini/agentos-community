@@ -1,8 +1,8 @@
 /**
  * Entity Operation Tests
  * 
- * Automatically tests any adapter that declares entity operations against
- * the expected entity schemas. No per-adapter test code needed.
+ * Automatically tests any skill that declares entity operations against
+ * the expected entity schemas. No per-skill test code needed.
  * 
  * Run: npm run test:capabilities
  */

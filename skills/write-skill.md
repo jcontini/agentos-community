@@ -69,7 +69,7 @@ website: https://todoist.com
 privacy_url: https://...
 
 auth: { ... }               # Authentication config
-adapters: { ... }           # How API data maps to entity schemas
+transformers: { ... }           # How API data maps to entity schemas
 operations: { ... }         # Entity CRUD (returns: entity, entity[], or void)
 utilities: { ... }          # Helpers with custom return shapes (optional)
 instructions: |             # AI notes
@@ -88,7 +88,7 @@ Human-readable documentation goes here...
 Map API fields to entity properties. Defined once, applied to all operations.
 
 ```yaml
-adapters:
+transformers:
   task:
     terminology: Task           # What the service calls it
     mapping:
@@ -104,7 +104,7 @@ adapters:
 For data shapes that aren't standalone entities (like DNS records), define adapters too:
 
 ```yaml
-adapters:
+transformers:
   domain:
     terminology: Domain
     mapping:

@@ -49,7 +49,7 @@ instructions: |
   - Recurring events: updates/deletes only affect the single occurrence
   - Times use system timezone
 
-adapters:
+transformers:
   calendar:
     terminology: Calendar
     mapping:

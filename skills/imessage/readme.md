@@ -48,7 +48,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   conversation:
     terminology: Chat
     mapping:

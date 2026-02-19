@@ -50,7 +50,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   webpage:
     terminology: Result
     mapping:

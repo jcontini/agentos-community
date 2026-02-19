@@ -198,25 +198,25 @@ function checkMappings(frontmatter) {
   let total = 0;
   let passed = 0;
   
-  if (!frontmatter.adapters) {
+  if (!frontmatter.transformers) {
     if (frontmatter.operations && Object.keys(frontmatter.operations).length > 0) {
-      errors.push('Has operations but no adapters section — data won\'t flow through entities');
+      errors.push('Has operations but no transformers section — data won\'t flow through entities');
       total = 1;
     }
     return { pass: errors.length === 0, passed, total, errors };
   }
   
-  for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
-    if (!adapter.mapping) {
+  for (const [entityName, transformer] of Object.entries(frontmatter.transformers)) {
+    if (!transformer.mapping) {
       total++;
-      errors.push(`'${entityName}' adapter has no mapping`);
+      errors.push(`'${entityName}' transformer has no mapping`);
       continue;
     }
     
     // Reject _rel in typed references — relationship type comes from
     // the field name, not a metadata block. Rename the field to match
     // the relationship type (e.g., posted_in → upload).
-    for (const [fieldName, fieldValue] of Object.entries(adapter.mapping)) {
+    for (const [fieldName, fieldValue] of Object.entries(transformer.mapping)) {
       if (typeof fieldValue === 'object' && fieldValue !== null && '_rel' in fieldValue) {
         total++;
         errors.push(
@@ -230,7 +230,7 @@ function checkMappings(frontmatter) {
     const validProps = entityProperties[entityName];
     if (!validProps) continue;
     
-    for (const [propName, propValue] of Object.entries(adapter.mapping)) {
+    for (const [propName, propValue] of Object.entries(transformer.mapping)) {
       if (propName.startsWith('_')) continue;
       if (typeof propValue === 'object' && propValue !== null) continue;
       
@@ -245,10 +245,10 @@ function checkMappings(frontmatter) {
   }
   
   // Check jaq expressions
-  if (frontmatter.adapters) {
-    for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
-      if (!adapter.mapping) continue;
-      for (const { path, expr } of collectJaqExpressions(adapter.mapping, entityName)) {
+  if (frontmatter.transformers) {
+    for (const [entityName, transformer] of Object.entries(frontmatter.transformers)) {
+      if (!transformer.mapping) continue;
+      for (const { path, expr } of collectJaqExpressions(transformer.mapping, entityName)) {
         total++;
         let exprOk = true;
         const singleQuoteMatches = expr.match(/== *'[^']*'|'[^']*' *==|'[^']*' *\?|: *'[^']*'/g);
@@ -311,7 +311,7 @@ function checkSeed(frontmatter) {
   if (connectsTo) {
     passed++;
   } else {
-    errors.push('Missing connects_to — adapter must declare which product it connects to');
+    errors.push('Missing connects_to — skill must declare which product it connects to');
   }
   
   // Check seed data exists
@@ -320,7 +320,7 @@ function checkSeed(frontmatter) {
   if (seed && seed.length > 0) {
     passed++;
   } else {
-    errors.push('Missing seed data — adapter must seed product and organization entities');
+    errors.push('Missing seed data — skill must seed product and organization entities');
   }
   
   // Check connects_to references exist in seed data

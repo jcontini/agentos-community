@@ -16,7 +16,7 @@ auth:
 
 connects_to: logo-dev
 
-adapters:
+transformers:
   image:
     terminology: Logo
     mapping:

@@ -167,7 +167,7 @@ The current adapter mapping pipeline assumes one entity type per `adapters.{type
 The YouTube adapter already produces **5 different entity types from a single API call** via typed references:
 
 ```yaml
-adapters:
+transformers:
   video:          # Primary entity type
     mapping:
       # ... video fields ...

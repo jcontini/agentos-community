@@ -96,7 +96,7 @@ function extractSkillMetadata(skillDir) {
   
   const updatedAt = getLatestModTime(skillDir);
   
-  const entities = metadata.adapters ? Object.keys(metadata.adapters) : [];
+  const entities = metadata.transformers ? Object.keys(metadata.transformers) : [];
   
   return {
     id: metadata.id || basename(skillDir),

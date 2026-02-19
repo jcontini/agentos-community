@@ -52,7 +52,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   webpage:
     terminology: Page
     # Note: Firecrawl uses different field names for search vs read

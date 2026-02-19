@@ -37,7 +37,7 @@ requires:
     install:
       all: npx playwright install chromium
 
-adapters:
+transformers:
   webpage:
     mapping:
       url: .url

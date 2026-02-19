@@ -71,7 +71,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   person:
     terminology: Contact
     mapping:

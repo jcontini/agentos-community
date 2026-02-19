@@ -73,7 +73,7 @@ sources:
     - https://www.youtube.com          # Embedded video player
     - https://www.youtube-nocookie.com  # Privacy-enhanced embed (better webview compat)
 
-adapters:
+transformers:
   video:
     terminology: Video
     mapping:

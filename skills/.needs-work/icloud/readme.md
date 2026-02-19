@@ -84,7 +84,7 @@ requires:
 # yet supported by the engine. Interim: map everything as document with
 # data.file_type for the actual type. Migrate when engine supports it.
 
-adapters:
+transformers:
   document:
     terminology: File
     mapping:

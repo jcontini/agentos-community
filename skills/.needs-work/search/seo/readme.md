@@ -20,7 +20,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   webpage:
     terminology: Page
     mapping:

@@ -56,7 +56,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   forum:
     terminology: Group
     mapping:

@@ -27,7 +27,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   domain:
     terminology: Domain
     mapping:

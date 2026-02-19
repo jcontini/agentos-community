@@ -278,7 +278,7 @@ seed:
 ### Entity Mappings
 
 ```yaml
-adapters:
+transformers:
   post:
     terminology: Post
     mapping:

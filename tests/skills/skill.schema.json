@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://agentos.dev/schemas/adapter.schema.json",
-  "title": "AgentOS Adapter",
-  "description": "Schema for AgentOS adapter readme.md frontmatter",
+  "$id": "https://agentos.dev/schemas/skill.schema.json",
+  "title": "AgentOS Skill",
+  "description": "Schema for AgentOS skill readme.md frontmatter",
   "type": "object",
   "required": ["id", "name", "description"],
   "properties": {
@@ -17,7 +17,7 @@
     },
     "description": {
       "type": "string",
-      "description": "One-line description of what this adapter does"
+      "description": "One-line description of what this skill does"
     },
     "icon": {
       "type": "string",
@@ -67,11 +67,11 @@
         }
       ]
     },
-    "adapters": {
+    "transformers": {
       "type": "object",
-      "description": "Entity adapters that transform API data into universal entity format. Each key is an entity type.",
+      "description": "Entity transformers that transform API data into universal entity format. Each key is an entity type.",
       "additionalProperties": {
-        "$ref": "#/definitions/adapter"
+        "$ref": "#/definitions/transformer"
       }
     },
     "operations": {
@@ -96,7 +96,7 @@
     },
     "instructions": {
       "type": "string",
-      "description": "Free-form instructions for AI about how to use this adapter"
+      "description": "Free-form instructions for AI about how to use this skill"
     },
     "requires": {
       "type": "array",
@@ -119,7 +119,7 @@
       }
     },
     "sources": {
-      "$ref": "#/definitions/adapterSources"
+      "$ref": "#/definitions/skillSources"
     },
     "connects_to": {
       "oneOf": [
@@ -133,11 +133,11 @@
           "description": "Product seed entity IDs this adapter connects to"
         }
       ],
-      "description": "Product(s) this adapter connects to — references seed entity IDs (e.g., 'youtube', 'whatsapp')"
+      "description": "Product(s) this skill connects to — references seed entity IDs (e.g., 'youtube', 'whatsapp')"
     },
     "seed": {
       "type": "array",
-      "description": "Seed entities to create on startup (products, organizations this adapter connects to)",
+      "description": "Seed entities to create on startup (products, organizations this skill connects to)",
       "items": {
         "$ref": "#/definitions/seedEntity"
       }
@@ -180,7 +180,7 @@
         }
       }
     },
-    "adapterSources": {
+    "skillSources": {
       "type": "object",
       "description": "External sources for Content Security Policy",
       "properties": {
@@ -216,14 +216,14 @@
         },
         "image_headers": {
           "type": "object",
-          "description": "Custom HTTP headers for the image proxy when fetching from this adapter's image domains",
+          "description": "Custom HTTP headers for the image proxy when fetching from this skill's image domains",
           "additionalProperties": { "type": "string" }
         }
       }
     },
-    "adapter": {
+    "transformer": {
       "type": "object",
-      "description": "Entity adapter that transforms API data into universal entity format",
+      "description": "Entity transformer that transforms API data into universal entity format",
       "required": ["mapping"],
       "additionalProperties": false,
       "properties": {
@@ -339,9 +339,9 @@
               "description": "Model/entity reference (e.g., 'dns_record', 'dns_record[]') or void",
               "pattern": "^([a-z_]+(\\[\\])?|void)$"
             },
-            {
-              "type": "object",
-              "description": "Inline schema for adapter-specific return shapes",
+              {
+                "type": "object",
+                "description": "Inline schema for skill-specific return shapes",
               "additionalProperties": {
                 "oneOf": [
                   { "type": "string", "description": "Property type (string, boolean, integer, array, etc.)" },
@@ -537,7 +537,7 @@
         },
         "database": {
           "type": "string",
-          "description": "Database path (overrides adapter-level)"
+          "description": "Database path (overrides skill-level)"
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
@@ -644,7 +644,7 @@
     },
     "seedEntity": {
       "type": "object",
-      "description": "A seed entity declared by an adapter for auto-creation",
+      "description": "A seed entity declared by a skill for auto-creation",
       "required": ["id", "types", "name"],
       "properties": {
         "id": {
@@ -708,7 +708,7 @@
         },
         "mapping": {
           "type": "object",
-          "description": "Field mappings for utilities (operations use adapters.{entity}.mapping instead)",
+          "description": "Field mappings for utilities (operations use transformers.{entity}.mapping instead)",
           "additionalProperties": true
         },
         "static": {

@@ -47,7 +47,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   post:
     terminology: Story
     mapping:

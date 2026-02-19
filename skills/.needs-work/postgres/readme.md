@@ -27,7 +27,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   table:
     terminology: Table
     mapping:

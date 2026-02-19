@@ -58,7 +58,7 @@ instructions: |
 # Entity adapters transform API data into universal entity format.
 # Mapping defined ONCE per entity — applied automatically to all operations.
 
-adapters:
+transformers:
   task:
     terminology: Task
     mapping:

@@ -29,7 +29,7 @@ instructions: |
 # Entity Adapters - Map GitHub to existing entities
 # =============================================================================
 
-adapters:
+transformers:
   task:
     list: issue.list
     get: issue.get

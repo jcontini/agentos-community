@@ -16,7 +16,7 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 
 | Skill | When to Use |
 |-------|-------------|
-| `write-adapter.md` | Creating or modifying skills |
+| `write-skill.md` | Creating or modifying skills |
 | `write-app.md` | Writing apps or entity components |
 | `shell-history.md` | Querying shell history |
 | `apple-biome.md` | Screen time, app usage, media playback, location, device activity |
@@ -70,7 +70,7 @@ skills/
   linear/
   exa/
   apple-calendar/    # Native macOS integrations
-  write-adapter.md   # Guide skills (markdown, no API binding)
+  write-skill.md     # Guide skills (markdown, no API binding)
   shell-history.md
   .needs-work/       # Skills that need completion
     communication/
@@ -158,7 +158,7 @@ url: "https://api.example.com/tasks/{{params.id}}"
 - Optional: `.due.date?`
 - Conditional: `'if .params.x == "y" then "a" else "b" end'`
 
-See CONTRIBUTING.md for detailed skill structure, adapters, executors, and transforms.
+See CONTRIBUTING.md for detailed skill structure, transformers, executors, and transforms.
 
 ---
 

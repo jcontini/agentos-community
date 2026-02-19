@@ -49,7 +49,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   webpage:
     terminology: Result
     # Default mapping for fetch operations (has full content)

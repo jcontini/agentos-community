@@ -26,7 +26,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   # Person adapter - maps PostHog person data
   person:
     terminology: Person

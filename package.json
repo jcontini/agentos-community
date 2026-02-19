@@ -13,7 +13,7 @@
     "validate:strict": "node tests/skills/scripts/validate.mjs --no-move",
     "validate:patterns": "node tests/skills/scripts/validate-patterns.mjs",
     "lint:tests": "npx tsx tests/skills/scripts/lint-tests.ts",
-    "new-skill": "npx tsx tests/skills/scripts/new-adapter.ts",
+    "new-skill": "npx tsx tests/skills/scripts/new-skill.ts",
     "test:changed": "./tests/test-changed.sh --staged",
     "prepare": "husky"
   },

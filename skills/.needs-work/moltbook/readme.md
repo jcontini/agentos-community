@@ -29,7 +29,7 @@ instructions: |
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
+transformers:
   post:
     terminology: Post
     mapping:
