@@ -1,7 +1,7 @@
 # Supersedes — A Newer Decision Replaces an Older One
 #
 # When a decision is revisited and a new one is made, the new
-# decision supersedes the old. The relationship lives on the graph,
+# decision supersedes the old. The relationship lives in the Memex,
 # not as a property on the old decision — no need to edit the old entity.
 
 id: supersedes

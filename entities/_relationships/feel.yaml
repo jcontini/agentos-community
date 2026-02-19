@@ -2,7 +2,7 @@
 #
 # Extends claim. An actor asserts they feel an emotion.
 # Creates the connection between the actor and the emotion
-# entity in the graph.
+# entity in the Memex.
 
 id: feel
 name: Feel

@@ -44,7 +44,7 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 
 | Concern | Directory | What it is |
 |---------|-----------|-----------|
-| **Entities** | `entities/` | The graph model — what things ARE |
+| **Entities** | `entities/` | The Memex model — what things ARE |
 | **Skills** | `skills/` | The capability layer — service connections + agent instructions |
 | **Apps** | `apps/` | The visual layer — UI experiences (optional) |
 
@@ -55,7 +55,7 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 | Path | Purpose |
 |------|---------|
 | `skills/` | Skills — service connections + agent context (API bindings + guides) |
-| `entities/` | Entity schemas — the graph model |
+| `entities/` | Entity schemas — the Memex model |
 | `apps/` | Visual apps — UI experiences (Videos, Browser, Settings, etc.) |
 | `themes/` | Visual styling (CSS) |
 | `agents/` | Setup instructions for AI clients (Cursor, Claude, etc.) |

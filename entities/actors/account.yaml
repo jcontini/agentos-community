@@ -1,7 +1,7 @@
 # Account Entity — Universal Platform Identifier
 #
 # ANY way of identifying or reaching a person on ANY platform.
-# A phone number is no different from a Twitter handle in the graph.
+# A phone number is no different from a Twitter handle in the Memex.
 #
 # NOT a person — an account is a platform identity that a person
 # claims. One person can have many accounts. One account can be
@@ -13,7 +13,7 @@
 # We don't assert "this IS the same person" — we say "here's evidence
 # this person controls this account."
 #
-# This is the universal identity graph:
+# This is the universal identity Memex:
 #   Person → claims → Account (phone, email, twitter, youtube, ...)
 #                       └── owns/moderates → Community (channel/sub/server)
 #

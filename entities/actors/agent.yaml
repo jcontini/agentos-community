@@ -1,7 +1,7 @@
 # Agent — AI Agents and Bots
 #
 # Extends actor. AI assistants, automated bots, and autonomous
-# agents that can act in the graph. Cursor, Claude, GPT — they're
+# agents that can act in the Memex. Cursor, Claude, GPT — they're
 # all agents.
 #
 # The system itself is an agent. When AgentOS auto-creates

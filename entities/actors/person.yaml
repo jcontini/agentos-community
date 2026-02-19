@@ -1,4 +1,4 @@
-# Person Entity — the human in the graph
+# Person Entity — the human in the Memex
 #
 # A person is the human being. NOT their phone number, email, or
 # social handle — those are account entities linked via `claims`.

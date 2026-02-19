@@ -2,7 +2,7 @@
 #
 # Commissive speech act — the actor promises to achieve
 # a commitment. This is how tasks get their assignees
-# in the graph (beyond the assign relationship).
+# in the Memex (beyond the assign relationship).
 
 id: commit
 name: Commit

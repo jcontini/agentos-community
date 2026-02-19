@@ -7,10 +7,10 @@
 # Design principle: Comments ARE posts — just posts with a replies_to
 # relationship. A YouTube comment, Reddit comment, HN reply — they're
 # all post entities that reply_to another post. Threading lives in the
-# graph, not in properties.
+# Memex, not in properties.
 #
 # The `replies` array is a denormalized convenience for API responses
-# (rendering comment trees). The graph (replies_to edges) is the
+# (rendering comment trees). The Memex (replies_to edges) is the
 # source of truth for threading.
 
 id: post
@@ -64,10 +64,10 @@ properties:
     type: array
     description: |
       Denormalized reply tree for API responses and rendering.
-      NOT the source of truth — the graph (replies_to relationships)
+      NOT the source of truth — the Memex (replies_to relationships)
       is the source of truth for threading. This array is populated
       by adapters for rendering convenience and may be computed from
-      the graph in the future.
+      the Memex in the future.
     items:
       type: post
 

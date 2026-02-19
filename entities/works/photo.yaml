@@ -68,7 +68,7 @@ properties:
   # Organization
   album:
     references: place
-    description: Photo album this belongs to (a place in the graph)
+    description: Photo album this belongs to (a place in the Memex)
 
 # Inherit identifiers from image (hash)
 

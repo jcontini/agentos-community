@@ -2,7 +2,7 @@
 #
 # People, organizations, accounts, AI agents. The subject
 # of every relationship edge — actors are always the ones
-# acting in the graph.
+# acting in the Memex.
 #
 # Design: "Actor is always the subject." Every edge was created
 # by an actor. Accounts link to people via `claim` relationships,

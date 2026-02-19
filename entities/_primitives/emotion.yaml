@@ -4,7 +4,7 @@
 # nor World→Word. Emotions express a psychological state without
 # asserting truth or committing to action.
 #
-# Emotions in the graph are first-class entities — not just
+# Emotions in the Memex are first-class entities — not just
 # properties on other entities. "I feel anxious about this
 # project" creates an emotion entity with a `feel` relationship
 # to the actor and the project.

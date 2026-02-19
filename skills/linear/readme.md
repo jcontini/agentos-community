@@ -545,7 +545,7 @@ instructions: |
 
 Project management integration for engineering teams.
 
-Linear issues map to **tasks** and projects map to **projects** in the AgentOS entity graph.
+Linear issues map to **tasks** and projects map to **projects** in the AgentOS Memex.
 
 ## Setup
 

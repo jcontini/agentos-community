@@ -2,7 +2,7 @@
 #
 # Extends software. A theme contains CSS, icons, sounds, wallpapers, and
 # chrome configuration (titlebar, menubar, taskbar). Part of the
-# "system as entities" pattern — themes are entities in the graph,
+# "system as entities" pattern — themes are entities in the Memex,
 # not just config files on disk.
 #
 # The entity holds metadata. The filesystem holds assets (CSS, icons, sounds).

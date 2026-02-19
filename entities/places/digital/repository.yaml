@@ -4,7 +4,7 @@
 # wherever code lives. The foundational link between software and the
 # people/organizations that create it.
 #
-# In the meta-entity graph, repositories connect adapters to their
+# In the meta-entity Memex, repositories connect adapters to their
 # source code and organizations to their open-source presence:
 #   repository → owned_by → person/organization
 #   repository → derived_from → repository (forks)

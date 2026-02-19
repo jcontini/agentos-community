@@ -2,7 +2,7 @@
 
 Everything lives here — entities, skills, apps, and themes. Core is a generic engine; this repo is the ecosystem.
 
-**Three concerns:** Entities define the graph model (`entities/`). Skills connect to services and provide agent context (`skills/`). Apps are optional UI experiences (`apps/`).
+**Three concerns:** Entities define the Memex model (`entities/`). Skills connect to services and provide agent context (`skills/`). Apps are optional UI experiences (`apps/`).
 
 **Schema reference:** `tests/skills/skill.schema.json` — the source of truth for skill structure.
 
@@ -105,7 +105,7 @@ Person (the human) → claims → Account (with epistemic provenance)
 **Why this matters:**
 1. **You don't know it's a person** — @3blue1brown could be one person, a team, or a brand account
 2. **Navigation is the point** — Click a username in a comment → jump to that account → see all their posts across platforms → discover it's the same person you follow elsewhere
-3. **The graph enables discovery** — "Oh, patio11 on HackerNews is the same person as patio11 on Twitter? Worth following."
+3. **The Memex enables discovery** — "Oh, patio11 on HackerNews is the same person as patio11 on Twitter? Worth following."
 4. **Governance is via accounts** — An account owns a channel, not a person directly. Brand accounts can have multiple person-owners.
 
 ### When to Use Person vs Account
