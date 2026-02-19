@@ -20,6 +20,8 @@ sources:
     - external-preview.redd.it
     - a.thumbs.redditmedia.com
     - b.thumbs.redditmedia.com
+  image_headers:
+    Referer: "https://www.reddit.com/"
 
 seed:
   - id: reddit

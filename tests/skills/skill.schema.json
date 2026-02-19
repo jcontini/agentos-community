@@ -213,6 +213,11 @@
           "type": "array",
           "description": "Embeddable frame sources (video players) → CSP frame-src",
           "items": { "type": "string" }
+        },
+        "image_headers": {
+          "type": "object",
+          "description": "Custom HTTP headers for the image proxy when fetching from this adapter's image domains",
+          "additionalProperties": { "type": "string" }
         }
       }
     },

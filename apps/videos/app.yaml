@@ -7,7 +7,7 @@ name: Videos
 description: Video player with channel info, actions, and metadata
 icon: icon.svg
 entities: ["video"]
-default_view: generic-detail
+default_view: generic-list
 
 views:
   generic-list:
@@ -46,7 +46,7 @@ views:
         props:
           entity: "{{activity.entity}}"
           operation: "{{activity.operation}}"
-          adapter: "{{activity.adapter}}"
+          skill: "{{activity.skill}}"
           request: "{{activity.request}}"
           response: "{{activity.response}}"
           pending: "{{activity.pending}}"

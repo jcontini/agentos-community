@@ -67,7 +67,8 @@ requires:
 sources:
   images:
     - ytimg.com            # Video thumbnails (all CDN subdomains)
-    - ggpht.com            # Channel avatars (yt3.ggpht.com, etc.)
+    - ggpht.com            # Channel avatars (legacy domain)
+    - googleusercontent.com # Channel avatars (yt3.googleusercontent.com)
   frames:
     - https://www.youtube.com          # Embedded video player
     - https://www.youtube-nocookie.com  # Privacy-enhanced embed (better webview compat)
@@ -88,6 +89,8 @@ adapters:
       published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
       resolution: .resolution
       view_count: .view_count
+      like_count: .like_count
+      comment_count: .comment_count
       
       posted_by:
         account:
@@ -127,6 +130,17 @@ adapters:
           name: .playlist
           url: .playlist_url
           platform: '"youtube"'
+
+  channel:
+    terminology: Channel
+    mapping:
+      id: .id
+      name: .name
+      url: .url
+      description: .description
+      subscriber_count: .subscriber_count
+      icon: .avatar
+      platform: .platform
 
   post:
     terminology: Comment
@@ -390,6 +404,57 @@ operations:
           fi
       timeout: 90
 
+  channel.get:
+    description: Get YouTube channel metadata (avatar, description, subscriber count)
+    returns: channel
+    handles_urls:
+      - "youtube.com/@*"
+      - "youtube.com/channel/*"
+      - "youtube.com/c/*"
+    params:
+      url:
+        type: string
+        required: true
+        description: YouTube channel URL
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - |
+          yt-dlp --dump-single-json --playlist-items 0 "{{params.url}}" 2>/dev/null | jq '{
+            id: .channel_id,
+            name: .channel,
+            url: .channel_url,
+            description: .description,
+            subscriber_count: .channel_follower_count,
+            avatar: ([.thumbnails[]? | select(.width == .height and .width > 0)] | sort_by(-.width) | .[0].url // null),
+            banner: ([.thumbnails[]? | select(.id == "banner_uncropped")] | .[0].url // null),
+            platform: "youtube"
+          }'
+      timeout: 30
+
+  channel.get_avatar:
+    description: Quick fetch of just the channel avatar URL (scrapes og:image from channel page, ~1s)
+    returns: channel
+    params:
+      url:
+        type: string
+        required: true
+        description: YouTube channel URL
+    command:
+      binary: bash
+      args:
+        - "-c"
+        - |
+          AVATAR=$(curl -sL "{{params.url}}" 2>/dev/null | sed -n 's/.*og:image" content="\([^"]*\)".*/\1/p' | head -1)
+          if [ -n "$AVATAR" ]; then
+            echo "{\"avatar\": \"$AVATAR\", \"url\": \"{{params.url}}\"}"
+          else
+            echo "{\"avatar\": null, \"url\": \"{{params.url}}\"}"
+          fi
+      timeout: 10
+
   post.list:
     description: |
       List comments on a YouTube video.
@@ -443,6 +508,7 @@ choco install yt-dlp   # Windows
 | `video.list` | List videos from a channel or playlist |
 | `video.get` | Get full metadata for a single video |
 | `video.transcript` | Get video transcript — plain text (default) or timestamped segments |
+| `channel.get` | Get channel metadata (avatar, description, subscriber count) |
 
 ## video.search
 
@@ -543,6 +609,35 @@ Get video transcript with optional timestamps. Powered by YouTube's JSON3 captio
 ```
 
 Segments are typically 2-5 seconds each. Timestamps are in milliseconds. Uses auto-generated captions when available, falls back to manually uploaded subtitles.
+
+## channel.get
+
+Get channel metadata including avatar, banner, description, and subscriber count. Used for lazy enrichment — when a video is opened and the channel entity is missing rich data, this operation fills it in.
+
+**Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `url` | string | YouTube channel URL |
+
+**Supported URL formats:**
+- `https://www.youtube.com/@channelname`
+- `https://www.youtube.com/channel/UCxxxxxxx`
+- `https://www.youtube.com/c/channelname`
+
+**Returns:**
+
+```json
+{
+  "id": "UCxxxxxxx",
+  "name": "Channel Name",
+  "url": "https://www.youtube.com/channel/UCxxxxxxx",
+  "description": "Channel description...",
+  "subscriber_count": 6100000,
+  "avatar": "https://yt3.googleusercontent.com/ytc/...",
+  "banner": "https://yt3.googleusercontent.com/...",
+  "platform": "youtube"
+}
+```
 
 ## Response Schema
 

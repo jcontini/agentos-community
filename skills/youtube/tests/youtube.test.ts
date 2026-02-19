@@ -10,6 +10,7 @@
  * - video.list
  * - video.get
  * - video.transcript
+ * - channel.get
  * - post.list (comments)
  */
 
@@ -122,6 +123,26 @@ describe('YouTube Adapter', () => {
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
       // Transcript may be null if no captions available
+    });
+  });
+
+  // ===========================================================================
+  // channel.get
+  // ===========================================================================
+  describe('channel.get', () => {
+    it('gets channel metadata with avatar', async () => {
+      if (skipTests) return;
+
+      const result = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'channel.get',
+        params: { url: 'https://www.youtube.com/@3blue1brown' },
+      }) as { id: string; name: string; subscriber_count: number; avatar: string };
+
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+      expect(result.name).toBeDefined();
+      expect(result.subscriber_count).toBeGreaterThan(0);
     });
   });
 

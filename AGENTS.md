@@ -16,7 +16,7 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 
 | Skill | When to Use |
 |-------|-------------|
-| `write-adapter.md` | Creating or modifying adapters |
+| `write-adapter.md` | Creating or modifying skills |
 | `write-app.md` | Writing apps or entity components |
 | `shell-history.md` | Querying shell history |
 | `apple-biome.md` | Screen time, app usage, media playback, location, device activity |
@@ -25,7 +25,7 @@ Skills contain detailed guidance for specific tasks. If the user asks you to do 
 
 ## Second: Read CONTRIBUTING.md
 
-**CONTRIBUTING.md is the source of truth** for adapter structure, entity schemas, component rules, and testing. Read it before making changes.
+**CONTRIBUTING.md is the source of truth** for skill structure, entity schemas, component rules, and testing. Read it before making changes.
 
 This file (AGENTS.md) adds agent-specific workflow guidance.
 
@@ -33,12 +33,20 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 
 ## What This Repo Is
 
-**Community content for AgentOS** — adapters, entities, themes, and components that users install via the App Store.
+**The AgentOS ecosystem.** Everything lives here — skills, entities, apps, themes, and components.
 
-- **Core repo** (`agentos`) — the Rust/React app itself
-- **This repo** (`agentos-community`) — installable content
+- **Core repo** (`agentos`) — the Rust/React engine (generic, knows nothing about specific entities or services)
+- **This repo** (`agentos-community`) — all content: skills, entities, apps (including system apps), themes
 
-**In development, the server points directly at this repo** (`~/dev/agentos-community`). There is no `~/.agentos/installed/` folder. Edits here are live after a server restart. In production, the App Store will download from this repo to the user's machine.
+**In development, the server points directly at this repo** (`~/dev/agentos-community`). Edits here are live after a server restart. Core embeds a snapshot at build time for fresh installs; the community version overrides the bundled copy.
+
+**Three concerns, one home:**
+
+| Concern | Directory | What it is |
+|---------|-----------|-----------|
+| **Entities** | `entities/` | The graph model — what things ARE |
+| **Skills** | `skills/` | The capability layer — service connections + agent instructions |
+| **Apps** | `apps/` | The visual layer — UI experiences (optional) |
 
 ---
 
@@ -46,25 +54,25 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 
 | Path | Purpose |
 |------|---------|
-| `adapters/` | Service adapters (Reddit → post, YouTube → video, etc.) |
-| `entities/` | Entity schemas + views + components (apps spawn from entities at runtime) |
-| `skills/` | Workflow guides (how to use entities for specific domains) |
+| `skills/` | Skills — service connections + agent context (API bindings + guides) |
+| `entities/` | Entity schemas — the graph model |
+| `apps/` | Visual apps — UI experiences (Videos, Browser, Settings, etc.) |
 | `themes/` | Visual styling (CSS) |
 | `agents/` | Setup instructions for AI clients (Cursor, Claude, etc.) |
 | `tests/` | Test utilities and fixtures |
 | `scripts/` | Manifest generation, setup scripts |
 
-### Adapter Organization
-
-Adapters are organized by category:
+### Skill Organization
 
 ```
-adapters/
-  todoist/           # Top-level for common adapters
+skills/
+  todoist/           # Top-level for common skills
   linear/
   exa/
   apple-calendar/    # Native macOS integrations
-  .needs-work/       # Adapters that need completion
+  write-adapter.md   # Guide skills (markdown, no API binding)
+  shell-history.md
+  .needs-work/       # Skills that need completion
     communication/
     databases/
     government/
@@ -78,17 +86,17 @@ adapters/
 
 ```bash
 # 1. Edit directly in the community repo (this is the live source)
-vim ~/dev/agentos-community/adapters/reddit/readme.md
+vim ~/dev/agentos-community/skills/reddit/readme.md
 
 # 2. Restart AgentOS server and test
 cd ~/dev/agentos && ./restart.sh
-curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
+curl -X POST http://localhost:3456/api/skills/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
 # 3. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
-git add -A && git commit -m "Update Reddit adapter"
+git add -A && git commit -m "Update Reddit skill"
 ```
 
 **Why this workflow:**
@@ -103,8 +111,8 @@ git add -A && git commit -m "Update Reddit adapter"
 ```bash
 npm run validate              # Schema validation + test coverage (run first!)
 npm test                      # Functional tests (excludes .needs-work)
-npm run test:needs-work       # Test adapters in .needs-work
-npm test adapters/exa/tests    # Test specific adapter
+npm run test:needs-work       # Test skills in .needs-work
+npm test skills/exa/tests     # Test specific skill
 ```
 
 ### Validation vs Tests
@@ -118,9 +126,9 @@ npm test adapters/exa/tests    # Test specific adapter
 
 ---
 
-## Adapter Checklist
+## Skill Checklist
 
-Before committing a adapter:
+Before committing a skill:
 
 - [ ] `icon.svg` or `icon.png` exists
 - [ ] `npm run validate` passes
@@ -129,7 +137,7 @@ Before committing a adapter:
 
 ## Expression Syntax
 
-Adapters use **jaq expressions** (jq syntax), not template strings:
+Skills use **jaq expressions** (jq syntax), not template strings:
 
 ```yaml
 # Correct — jaq expressions
@@ -146,11 +154,11 @@ url: "https://api.example.com/tasks/{{params.id}}"
 - String concat: `'"https://example.com/" + .params.id'`
 - To string: `.params.limit | tostring`
 - URL encode: `.params.query | @uri`
-- Unix → ISO: `.created_utc | todate`
+- Unix -> ISO: `.created_utc | todate`
 - Optional: `.due.date?`
 - Conditional: `'if .params.x == "y" then "a" else "b" end'`
 
-See CONTRIBUTING.md for detailed adapter structure, adapters, executors, and transforms.
+See CONTRIBUTING.md for detailed skill structure, adapters, executors, and transforms.
 
 ---
 
@@ -188,16 +196,16 @@ See CONTRIBUTING.md for full component guidelines.
 
 ## The `.needs-work` Folder
 
-Adapters that fail validation are moved to `adapters/.needs-work/`:
+Skills that fail validation live in `skills/.needs-work/`:
 
 - Missing `icon.svg`
 - Schema validation errors
 - Missing tests for operations
 
-**To fix a adapter:**
+**To fix a skill:**
 1. Fix the issues
 2. Run `npm run validate`
-3. Move to working folder: `mv adapters/.needs-work/my-adapter adapters/my-adapter`
+3. Move to working folder: `mv skills/.needs-work/my-skill skills/my-skill`
 
 ---
 
@@ -218,7 +226,7 @@ node scripts/generate-manifest.js --check  # Validate only
 
 | File | Purpose |
 |------|---------|
-| `CONTRIBUTING.md` | Complete technical reference — adapter structure, entities, components |
-| `tests/adapters/adapter.schema.json` | Schema source of truth for adapter YAML |
+| `CONTRIBUTING.md` | Complete technical reference — skill structure, entities, components |
+| `tests/skills/skill.schema.json` | Schema source of truth for skill YAML |
 | `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
 | `entities/{entity}.yaml` | Entity schema — what properties to map |

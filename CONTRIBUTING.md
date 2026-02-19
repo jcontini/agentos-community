@@ -1,8 +1,10 @@
 # Contributing to the AgentOS Community
 
-Declarative YAML for entities, adapters, apps, skills, and themes.
+Everything lives here — entities, skills, apps, and themes. Core is a generic engine; this repo is the ecosystem.
 
-**Schema reference:** `tests/adapters/adapter.schema.json` — the source of truth for adapter structure.
+**Three concerns:** Entities define the graph model (`entities/`). Skills connect to services and provide agent context (`skills/`). Apps are optional UI experiences (`apps/`).
+
+**Schema reference:** `tests/skills/skill.schema.json` — the source of truth for skill structure.
 
 **Using an AI agent?** Have it read `AGENTS.md` for operational guidance and workflow patterns.
 
@@ -14,17 +16,17 @@ Declarative YAML for entities, adapters, apps, skills, and themes.
 
 ```bash
 # 1. Edit directly in the community repo (this is the live source)
-vim ~/dev/agentos-community/adapters/reddit/readme.md
+vim ~/dev/agentos-community/skills/reddit/readme.md
 
 # 2. Restart AgentOS server and test
 cd ~/dev/agentos && ./restart.sh
-curl -X POST http://localhost:3456/api/adapters/reddit/post.list \
+curl -X POST http://localhost:3456/api/skills/reddit/post.list \
   -d '{"subreddit": "programming", "limit": 1}'
 
 # 3. Validate and commit
 cd ~/dev/agentos-community
 npm run validate
-git add -A && git commit -m "Update Reddit adapter"
+git add -A && git commit -m "Update Reddit skill"
 ```
 
 ---
@@ -53,7 +55,7 @@ node scripts/generate-manifest.js --check # Validate only
 - **Relationships** — what this entity connects to (via references or relationship types)
 - **Display** — how it appears in generic components (primary field, image, icon, sort)
 
-Adapters map external APIs to these entity types. Apps provide visual experiences on the desktop. Both are separate from the entity definitions.
+Skills map external APIs to these entity types. Apps provide optional visual experiences on the desktop. Both are separate from the entity definitions.
 
 ```
 entities/          Entity type definitions (single source of truth)
@@ -65,14 +67,18 @@ entities/          Entity type definitions (single source of truth)
   video.yaml
   ...
 
-adapters/          Adapters (how services map to entities)
+skills/            Skills — service connections + agent context
   reddit/          Maps Reddit API → post entity
   todoist/         Maps Todoist API → task entity
   youtube/         Maps YouTube API → video, community, account entities
-  ...
+  write-adapter.md Workflow guide (AI context, no API binding)
+  shell-history.md Agent instructions (no adapter)
 
-skills/            Workflow guides (AI context, not visual)
-  write-adapter/   How to build an adapter
+apps/              Visual apps (UI experiences)
+  videos/          Video player with channel info and embed
+  browser/         Universal entity viewer (migrating from core)
+  settings/        System preferences (migrating from core)
+  ...
 
 themes/            Visual styling (CSS)
 ```
@@ -155,9 +161,9 @@ This enables:
 
 ---
 
-## Writing Adapters
+## Writing Skills
 
-**For detailed adapter writing guidance, read the skill:**
+**For detailed skill writing guidance, read the skill:**
 
 ```bash
 skills/write-adapter.md
@@ -172,9 +178,9 @@ This covers:
 
 ### Quick Reference
 
-**Adapter structure:**
+**Skill structure:**
 ```
-adapters/{name}/
+skills/{name}/
   readme.md     # YAML front matter + docs
   icon.svg      # Required
   tests/        # Functional tests
@@ -377,12 +383,12 @@ mapping:
 ```bash
 npm run validate              # Schema + test coverage (run first!)
 npm test                      # Functional tests
-npm test adapters/exa/tests    # Single adapter
+npm test skills/exa/tests     # Single skill
 ```
 
 **Validation checks:** Schema structure, test coverage, required files (icon).
 
-**`.needs-work/`** — Adapters that fail validation are auto-moved here.
+**`.needs-work/`** — Skills that fail validation live here until fixed.
 
 **Every operation needs at least one test.** Include `tool: "operation.name"` references even in skipped tests.
 
@@ -391,7 +397,7 @@ npm test adapters/exa/tests    # Single adapter
 ## Commands
 
 ```bash
-npm run new-adapter <name>    # Create adapter scaffold
+npm run new-skill <name>     # Create skill scaffold
 npm run validate             # Schema validation (run first!)
 npm test                     # Functional tests
 ```

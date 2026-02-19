@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * Adapter validation — validate, report, enforce.
+ * Skill validation — validate, report, enforce.
  * 
- * Checks per adapter:
- *   1. Schema  — YAML frontmatter matches adapter.schema.json
+ * Checks per skill:
+ *   1. Schema  — YAML frontmatter matches skill.schema.json
  *   2. Entity  — All operations return valid entity types
  *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
  *   4. Icon    — icon.svg or icon.png exists
  *   5. Seed    — connects_to + seed data (product/org entities)
  *   6. Tests   — Every operation has a test file
  * 
- * Adapters in .needs-work/ are shown separately but never auto-moved.
- * Fix errors, then manually move to adapters/ when ready.
+ * Skills in .needs-work/ are shown separately but never auto-moved.
+ * Fix errors, then manually move to skills/ when ready.
  * 
  * Usage:
  *   node validate.mjs                     # Full validation + enforce
- *   node validate.mjs --filter exa        # Filter to specific adapter
+ *   node validate.mjs --filter exa        # Filter to specific skill
  *   node validate.mjs --verbose           # Show uncovered entities
  *   node validate.mjs --pre-commit        # Quick structural check only (no table, no move)
  */
@@ -29,10 +29,10 @@ import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');
-const ADAPTERS_DIR = join(ROOT, 'adapters');
+const SKILLS_DIR = join(ROOT, 'skills');
 const ENTITIES_DIR = join(ROOT, 'entities');
-const NEEDS_WORK_DIR = join(ADAPTERS_DIR, '.needs-work');
-const SCHEMA_PATH = join(__dirname, '..', 'adapter.schema.json');
+const NEEDS_WORK_DIR = join(SKILLS_DIR, '.needs-work');
+const SCHEMA_PATH = join(__dirname, '..', 'skill.schema.json');
 
 // ============================================================================
 // ARGS
@@ -209,7 +209,7 @@ function checkMappings(frontmatter) {
   for (const [entityName, adapter] of Object.entries(frontmatter.adapters)) {
     if (!adapter.mapping) {
       total++;
-      errors.push(`Adapter '${entityName}' has no mapping`);
+      errors.push(`'${entityName}' adapter has no mapping`);
       continue;
     }
     
@@ -371,21 +371,21 @@ function checkTests(adapterDir, frontmatter) {
 // DISCOVER ADAPTERS
 // ============================================================================
 
-function findAdapters(dir, relativePath = '') {
-  const adapters = [];
-  if (!existsSync(dir)) return adapters;
+function findSkills(dir, relativePath = '') {
+  const skills = [];
+  if (!existsSync(dir)) return skills;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === 'node_modules' || entry.name === 'tests') continue;
     if (entry.name.startsWith('.')) continue;
     const fullPath = join(dir, entry.name);
     const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
     if (existsSync(join(fullPath, 'readme.md'))) {
-      adapters.push({ name: entry.name, path: rel, dir: fullPath });
+      skills.push({ name: entry.name, path: rel, dir: fullPath });
     } else {
-      adapters.push(...findAdapters(fullPath, rel));
+      skills.push(...findSkills(fullPath, rel));
     }
   }
-  return adapters;
+  return skills;
 }
 
 // ============================================================================
@@ -427,7 +427,7 @@ function renderTable(sections) {
   }
   
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Adapter', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Seed', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Seed', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
   
   const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
   const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
@@ -544,18 +544,18 @@ function parseFrontmatter(content) {
   return parseYaml(content.slice(4, endIndex));
 }
 
-function validateAdapter(adapter) {
-  const readmePath = join(adapter.dir, 'readme.md');
+function validateSkill(skill) {
+  const readmePath = join(skill.dir, 'readme.md');
   const content = readFileSync(readmePath, 'utf-8');
   const frontmatter = parseFrontmatter(content);
   
   if (!frontmatter) {
     return {
-      name: adapter.name,
+      name: skill.name,
       schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No YAML frontmatter'] },
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
-      icon: checkIcon(adapter.dir),
+      icon: checkIcon(skill.dir),
       seed: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },
     };
@@ -565,12 +565,12 @@ function validateAdapter(adapter) {
   const canCheck = schemaResult.structureValid;
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
-  const iconResult = checkIcon(adapter.dir);
+  const iconResult = checkIcon(skill.dir);
   const seedResult = canCheck ? checkSeed(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
-  const testsResult = canCheck ? checkTests(adapter.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
+  const testsResult = canCheck ? checkTests(skill.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
   
   return {
-    name: adapter.name,
+    name: skill.name,
     schema: schemaResult,
     entity: entityResult,
     mapping: mappingResult,
@@ -582,9 +582,9 @@ function validateAdapter(adapter) {
 
 // --- Pre-commit mode: quick structural check, no table, no move ---
 if (preCommit) {
-  const adapters = findAdapters(ADAPTERS_DIR);
-  const filtered = filterValue ? adapters.filter(a => a.name.includes(filterValue)) : adapters;
-  const results = filtered.map(a => validateAdapter(a));
+  const skills = findSkills(SKILLS_DIR);
+  const filtered = filterValue ? skills.filter(a => a.name.includes(filterValue)) : skills;
+  const results = filtered.map(a => validateSkill(a));
   const failures = results.filter(r => !r.schema.structureValid || !r.entity.pass);
   if (failures.length > 0) {
     for (const r of failures) {
@@ -599,17 +599,17 @@ if (preCommit) {
 // --- Full validation ---
 
 // 1. Discover
-let activeAdapters = findAdapters(ADAPTERS_DIR);
-let needsWorkAdapters = findAdapters(NEEDS_WORK_DIR);
+let activeSkills = findSkills(SKILLS_DIR);
+let needsWorkSkills = findSkills(NEEDS_WORK_DIR);
 
 if (filterValue) {
-  activeAdapters = activeAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
-  needsWorkAdapters = needsWorkAdapters.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
+  activeSkills = activeSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
+  needsWorkSkills = needsWorkSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
 }
 
 // 2. Validate
-const activeResults = activeAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
-const needsWorkResults = needsWorkAdapters.map(a => ({ ...validateAdapter(a), _adapter: a }));
+const activeResults = activeSkills.map(a => ({ ...validateSkill(a), _skill: a }));
+const needsWorkResults = needsWorkSkills.map(a => ({ ...validateSkill(a), _skill: a }));
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
@@ -626,7 +626,7 @@ const knownEntities = [...validEntityIds].sort();
 const coveredEntities = new Set();
 for (const result of activeResults) {
   try {
-    const content = readFileSync(join(result._adapter.dir, 'readme.md'), 'utf-8');
+    const content = readFileSync(join(result._skill.dir, 'readme.md'), 'utf-8');
     const fm = parseFrontmatter(content);
     if (fm?.operations) {
       for (const op of Object.values(fm.operations)) {
@@ -640,7 +640,7 @@ for (const result of activeResults) {
 
 // 4. Render table
 const sections = [
-  { label: `Adapters (${activeResults.length})`, icon: '📦', results: activeResults },
+  { label: `Skills (${activeResults.length})`, icon: '📦', results: activeResults },
 ];
 if (needsWorkResults.length > 0) {
   sections.push({ label: `Needs Work (${needsWorkResults.length})`, icon: '🔧', results: needsWorkResults });
@@ -660,7 +660,7 @@ if (promotable.length > 0) {
 }
 
 // 7. Summary
-console.log(`📊 Entity coverage: ${coveredEntities.size}/${knownEntities.length} entity types have adapters`);
+console.log(`📊 Entity coverage: ${coveredEntities.size}/${knownEntities.length} entity types have skills`);
 if (verbose) {
   const uncovered = knownEntities.filter(e => !coveredEntities.has(e));
   if (uncovered.length > 0) {
@@ -671,12 +671,12 @@ console.log();
 
 const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass);
 if (allPassing) {
-  console.log('✅ All adapters fully valid');
+  console.log('✅ All skills fully valid');
 } else if (activeResults.length === 0) {
-  console.log('📭 No adapters in adapters/');
+  console.log('📭 No skills in skills/');
 } else {
   const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
-  console.log(`⚠️  ${passing}/${activeResults.length} adapters fully valid — fix errors and run again`);
+  console.log(`⚠️  ${passing}/${activeResults.length} skills fully valid — fix errors and run again`);
 }
 
 // Exit with error if any active adapters have critical failures

@@ -19,7 +19,7 @@ import { parse as parseYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');
-const ADAPTERS_DIR = join(ROOT, 'adapters');
+const SKILLS_DIR = join(ROOT, 'skills');
 
 // =============================================================================
 // Types
@@ -115,7 +115,7 @@ function parseFrontmatter(content: string): any | null {
   return parseYaml(yaml);
 }
 
-function parseAdapterYaml(adapterDir: string): AdapterMeta | null {
+function parseSkillYaml(adapterDir: string): AdapterMeta | null {
   const readmePath = join(adapterDir, 'readme.md');
   if (!existsSync(readmePath)) return null;
   
@@ -191,8 +191,8 @@ function getRequiredChecks(meta: AdapterMeta): Check[] {
 }
 
 function lintAdapter(adapterName: string): LintResult {
-  const adapterDir = join(ADAPTERS_DIR, adapterName);
-  const meta = parseAdapterYaml(adapterDir);
+  const adapterDir = join(SKILLS_DIR, adapterName);
+  const meta = parseSkillYaml(adapterDir);
   
   if (!meta) {
     return {
@@ -341,7 +341,7 @@ Adapters can exempt themselves in readme.md:
   // Get adapters to lint
   const adapters = args.length > 0
     ? args
-    : readdirSync(ADAPTERS_DIR, { withFileTypes: true })
+    : readdirSync(SKILLS_DIR, { withFileTypes: true })
         .filter(d => d.isDirectory())
         .map(d => d.name);
   

@@ -40,41 +40,40 @@ if [ -z "$CHANGED_FILES" ]; then
   exit 0
 fi
 
-# Extract unique adapters from changed files (adapters/{adapter}/...)
-AFFECTED_APPS=$(echo "$CHANGED_FILES" | grep -oE '^adapters/[^/]+' | sort -u | cut -d/ -f2 || true)
+# Extract unique skills from changed files (skills/{skill}/...)
+AFFECTED_SKILLS=$(echo "$CHANGED_FILES" | grep -oE '^skills/[^/]+' | sort -u | cut -d/ -f2 || true)
 
-if [ -z "$AFFECTED_APPS" ]; then
-  echo "✅ No adapter files changed"
+if [ -z "$AFFECTED_SKILLS" ]; then
+  echo "✅ No skill files changed"
   exit 0
 fi
 
-echo "📦 Testing adapters: $AFFECTED_APPS"
+echo "📦 Testing skills: $AFFECTED_SKILLS"
 echo ""
 
 # First, run schema validation
 echo "📋 Schema validation..."
-node tests/adapters/scripts/validate.mjs $AFFECTED_APPS || exit 1
+node tests/skills/scripts/validate.mjs $AFFECTED_SKILLS || exit 1
 echo ""
 
 TESTED=0
 SKIPPED=0
 
-# Run tests for each affected adapter that has tests
-for app in $AFFECTED_APPS; do
-  APP_TEST_DIR="adapters/$app/tests"
+for skill in $AFFECTED_SKILLS; do
+  SKILL_TEST_DIR="skills/$skill/tests"
   
-  if [ -d "$APP_TEST_DIR" ]; then
-    TEST_COUNT=$(find "$APP_TEST_DIR" -name "*.test.ts" 2>/dev/null | wc -l | tr -d ' ')
+  if [ -d "$SKILL_TEST_DIR" ]; then
+    TEST_COUNT=$(find "$SKILL_TEST_DIR" -name "*.test.ts" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$TEST_COUNT" -gt 0 ]; then
-      echo "🧪 Testing adapters/$app..."
-      npm test -- "$APP_TEST_DIR" --run || exit 1
+      echo "🧪 Testing skills/$skill..."
+      npm test -- "$SKILL_TEST_DIR" --run || exit 1
       TESTED=$((TESTED + 1))
     else
-      echo "⏭️  adapters/$app: no test files"
+      echo "⏭️  skills/$skill: no test files"
       SKIPPED=$((SKIPPED + 1))
     fi
   else
-    echo "⏭️  adapters/$app: no tests/ directory"
+    echo "⏭️  skills/$skill: no tests/ directory"
     SKIPPED=$((SKIPPED + 1))
   fi
 done

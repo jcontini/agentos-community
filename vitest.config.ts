@@ -8,16 +8,14 @@ export default defineConfig({
     },
   },
   test: {
-    // Look for tests in adapters and tests directories
     include: [
-      'adapters/**/tests/**/*.test.ts',
+      'skills/**/tests/**/*.test.ts',
       'tests/**/*.test.ts',
-      'tests/adapters/**/*.test.ts',
+      'tests/skills/**/*.test.ts',
       'tests/entities/**/*.test.ts',
     ],
-    // Exclude adapters in .needs-work folder
     exclude: [
-      'adapters/.needs-work/**',
+      'skills/.needs-work/**',
       'node_modules/**',
     ],
     

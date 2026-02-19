@@ -35,7 +35,6 @@ import { parse as parseYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');
-const ADAPTERS_DIR = join(ROOT, 'adapters');
 const SKILLS_DIR = join(ROOT, 'skills');
 
 // ============================================================================
@@ -100,8 +99,8 @@ function parseFrontmatter(content) {
   return parseYaml(yaml);
 }
 
-function findAdapters(dir, relativePath = '') {
-  const adapters = [];
+function findSkills(dir, relativePath = '') {
+  const skills = [];
   const entries = readdirSync(dir, { withFileTypes: true });
   
   for (const entry of entries) {
@@ -114,13 +113,13 @@ function findAdapters(dir, relativePath = '') {
     const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
     
     if (existsSync(join(fullPath, 'readme.md'))) {
-      adapters.push({ name: entry.name, path: entryRelativePath, dir: fullPath });
+      skills.push({ name: entry.name, path: entryRelativePath, dir: fullPath });
     } else {
-      adapters.push(...findAdapters(fullPath, entryRelativePath));
+      skills.push(...findSkills(fullPath, entryRelativePath));
     }
   }
   
-  return adapters;
+  return skills;
 }
 
 /**
@@ -225,58 +224,57 @@ const filterValue = args.includes('--filter')
 const strictMode = args.includes('--strict');
 const verbose = args.includes('--verbose');
 
-let adapters = findAdapters(ADAPTERS_DIR);
+let skills = findSkills(SKILLS_DIR);
 
 if (filterValue) {
-  adapters = adapters.filter(p => p.name.includes(filterValue) || p.path.includes(filterValue));
+  skills = skills.filter(p => p.name.includes(filterValue) || p.path.includes(filterValue));
 }
 
-console.log('🔍 Pattern validation for adapter best practices\n');
+console.log('🔍 Pattern validation for skill best practices\n');
 
 let totalErrors = 0;
 let totalWarnings = 0;
 let adaptersWithTypedRefs = 0;
 
-for (const adapter of adapters) {
-  const readmePath = join(adapter.dir, 'readme.md');
+for (const skill of skills) {
+  const readmePath = join(skill.dir, 'readme.md');
   const content = readFileSync(readmePath, 'utf-8');
   const frontmatter = parseFrontmatter(content);
   
   if (!frontmatter || !frontmatter.adapters) continue;
   
-  let adapterHasIssues = false;
-  let adapterHasTypedRefs = false;
-  const adapterResults = [];
+  let skillHasIssues = false;
+  let skillHasTypedRefs = false;
+  const skillResults = [];
   
-  for (const [entityType, adapter] of Object.entries(frontmatter.adapters)) {
-    const result = validateAdapter(adapter.path, entityType, adapter);
+  for (const [entityType, adapterConfig] of Object.entries(frontmatter.adapters)) {
+    const result = validateAdapter(skill.path, entityType, adapterConfig);
     
     if (result.info.length > 0) {
-      adapterHasTypedRefs = true;
+      skillHasTypedRefs = true;
     }
     
     if (result.errors.length > 0 || result.warnings.length > 0) {
-      adapterHasIssues = true;
-      adapterResults.push({ entityType, ...result });
+      skillHasIssues = true;
+      skillResults.push({ entityType, ...result });
     } else if (verbose && result.info.length > 0) {
-      adapterResults.push({ entityType, ...result });
+      skillResults.push({ entityType, ...result });
     }
     
     totalErrors += result.errors.length;
     totalWarnings += result.warnings.length;
   }
   
-  if (adapterHasTypedRefs) {
+  if (skillHasTypedRefs) {
     adaptersWithTypedRefs++;
   }
   
-  // Print results for this adapter
-  if (adapterHasIssues || (verbose && adapterResults.length > 0)) {
-    const icon = adapterResults.some(r => r.errors.length > 0) ? '❌' : 
-                 adapterResults.some(r => r.warnings.length > 0) ? '⚠️' : '✓';
-    console.log(`${icon} adapters/${adapter.path}`);
+  if (skillHasIssues || (verbose && skillResults.length > 0)) {
+    const icon = skillResults.some(r => r.errors.length > 0) ? '❌' : 
+                 skillResults.some(r => r.warnings.length > 0) ? '⚠️' : '✓';
+    console.log(`${icon} skills/${skill.path}`);
     
-    for (const result of adapterResults) {
+    for (const result of skillResults) {
       for (const err of result.errors) {
         console.log(`   ❌ ${result.entityType}: ${err}`);
       }
@@ -295,8 +293,8 @@ for (const adapter of adapters) {
 
 // Summary
 console.log('─'.repeat(60));
-console.log(`Checked ${adapters.length} adapters`);
-console.log(`${adaptersWithTypedRefs} adapters have typed references`);
+console.log(`Checked ${skills.length} skills`);
+console.log(`${adaptersWithTypedRefs} skills have typed references`);
 
 if (totalErrors > 0) {
   console.log(`\n❌ ${totalErrors} error(s) — missing required patterns`);

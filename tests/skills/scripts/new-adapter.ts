@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../..');
-const ADAPTERS_DIR = join(ROOT, 'adapters');
+const SKILLS_DIR = join(ROOT, 'skills');
 
 // =============================================================================
 // Argument Parsing
@@ -60,9 +60,9 @@ if (!/^[a-z][a-z0-9-]*$/.test(adapterName)) {
   process.exit(1);
 }
 
-const adapterDir = join(ADAPTERS_DIR, adapterName);
+const adapterDir = join(SKILLS_DIR, adapterName);
 if (existsSync(adapterDir)) {
-  console.error(`❌ Adapter already exists: ${adapterDir}`);
+  console.error(`❌ Skill already exists: ${adapterDir}`);
   process.exit(1);
 }
 
@@ -574,12 +574,12 @@ writeFileSync(join(adapterDir, 'readme.md'), generateReadme());
 writeFileSync(join(adapterDir, 'icon.svg'), ICON_SVG);
 writeFileSync(join(adapterDir, 'tests', `${adapterName}.test.ts`), generateTestFile());
 
-console.log(`✓ Created adapters/${adapterName}/`);
+console.log(`✓ Created skills/${adapterName}/`);
 console.log(`  - readme.md`);
 console.log(`  - icon.svg`);
 console.log(`  - tests/${adapterName}.test.ts`);
 console.log();
 console.log('Next steps:');
-console.log(`  1. Edit adapters/${adapterName}/readme.md with your API details`);
+console.log(`  1. Edit skills/${adapterName}/readme.md with your API details`);
 console.log(`  2. Run: npm run lint:tests -- ${adapterName}`);
-console.log(`  3. Run: npm test -- adapters/${adapterName}`);
+console.log(`  3. Run: npm test -- skills/${adapterName}`);

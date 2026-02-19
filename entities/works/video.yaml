@@ -93,6 +93,14 @@ properties:
     type: integer
     description: Number of views (if available from source)
 
+  like_count:
+    type: integer
+    description: Number of likes (if available from source)
+
+  comment_count:
+    type: integer
+    description: Number of comments (if available from source)
+
   # Metadata
   fetched_at:
     type: datetime
@@ -110,4 +118,5 @@ display:
   meta:
     - duration_ms
     - view_count
+    - like_count
     - published_at

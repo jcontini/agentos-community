@@ -3380,7 +3380,7 @@ progress:not([value])::-webkit-progress-value {
   font-size: 12px;
 }
 
-.setting-handler-adapter {
+.setting-handler-skill {
   font-weight: bold;
   font-size: 12px;
   color: var(--content-fg);
@@ -3423,7 +3423,7 @@ progress:not([value])::-webkit-progress-value {
 }
 
 /* Rank number for ordered items */
-.setting-handler-pattern .adapter-rank {
+.setting-handler-pattern .skill-rank {
   color: var(--content-fg-secondary);
   font-weight: 500;
 }

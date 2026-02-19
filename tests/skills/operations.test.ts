@@ -102,24 +102,22 @@ const ENTITY_SCHEMAS: Record<string, {
   // Add more entity schemas as needed
 };
 
-// Recursively scan adapters directory to find all adapters with entity operations
-function findAdaptersWithOperations(): Array<{
-  adapter: string;
+function findSkillsWithOperations(): Array<{
+  skill: string;
   tool: string;
-  entityOperation: string; // format: "entity.operation"
+  entityOperation: string;
 }> {
-  const adaptersDir = path.join(__dirname, '../..', 'adapters');
+  const skillsDir = path.join(__dirname, '../..', 'skills');
   const results: Array<{
-    adapter: string;
+    skill: string;
     tool: string;
     entityOperation: string;
   }> = [];
   
-  if (!fs.existsSync(adaptersDir)) return results;
+  if (!fs.existsSync(skillsDir)) return results;
   
-  // Recursively find all adapter directories (ones with readme.md)
-  const findAdapterDirs = (dir: string): string[] => {
-    const adapters: string[] = [];
+  const findSkillDirs = (dir: string): string[] => {
+    const skills: string[] = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     
     for (const entry of entries) {
@@ -130,60 +128,53 @@ function findAdaptersWithOperations(): Array<{
       
       const fullPath = path.join(dir, entry.name);
       
-      // Check if this directory is a adapter (has readme.md)
       if (fs.existsSync(path.join(fullPath, 'readme.md'))) {
-        adapters.push(fullPath);
+        skills.push(fullPath);
       } else {
-        // It's a category folder, recurse into it
-        adapters.push(...findAdapterDirs(fullPath));
+        skills.push(...findSkillDirs(fullPath));
       }
     }
     
-    return adapters;
+    return skills;
   };
   
-  const adapterPaths = findAdapterDirs(adaptersDir);
+  const skillPaths = findSkillDirs(skillsDir);
   
-  for (const adapterPath of adapterPaths) {
-    const readmePath = path.join(adapterPath, 'readme.md');
+  for (const skillPath of skillPaths) {
+    const readmePath = path.join(skillPath, 'readme.md');
     const content = fs.readFileSync(readmePath, 'utf-8');
     
-    // Extract YAML frontmatter
     const match = content.match(/^---\n([\s\S]*?)\n---/);
     if (!match) continue;
     
     try {
       const config = yaml.parse(match[1]);
-      const adapterName = path.basename(adapterPath);
+      const skillName = path.basename(skillPath);
       
-      // Look for operations: block (current format)
       if (config.operations) {
         for (const operationName of Object.keys(config.operations)) {
-          // Operation names are in format "entity.operation" (e.g., "task.list")
           results.push({
-            adapter: config.id || adapterName,
+            skill: config.id || skillName,
             tool: operationName,
             entityOperation: operationName,
           });
         }
       }
     } catch (e) {
-      console.warn(`Failed to parse ${adapterPath}/readme.md:`, e);
+      console.warn(`Failed to parse ${skillPath}/readme.md:`, e);
     }
   }
   
   return results;
 }
 
-// Filter to only run specific adapter if specified
-const targetAdapter = process.env.TEST_ADAPTER;
+const targetSkill = process.env.TEST_SKILL;
 
 describe('Entity Operation Schema Validation', () => {
-  const adapters = findAdaptersWithOperations();
+  const skills = findSkillsWithOperations();
   
-  // Group by entity.operation for organized output
-  const byEntityOp = new Map<string, typeof adapters>();
-  for (const p of adapters) {
+  const byEntityOp = new Map<string, typeof skills>();
+  for (const p of skills) {
     const list = byEntityOp.get(p.entityOperation) || [];
     list.push(p);
     byEntityOp.set(p.entityOperation, list);
@@ -199,15 +190,14 @@ describe('Entity Operation Schema Validation', () => {
     
     describe(entityOp, () => {
       for (const provider of providers) {
-        // Skip if filtering to specific adapter
-        if (targetAdapter && provider.adapter !== targetAdapter) {
+        if (targetSkill && provider.skill !== targetSkill) {
           continue;
         }
         
-        it(`${provider.adapter} → ${schema.description}`, async () => {
+        it(`${provider.skill} → ${schema.description}`, async () => {
           try {
-            const result = await aos().call('UseAdapter', {
-              adapter: provider.adapter,
+            const result = await aos().call('UseSkill', {
+              skill: provider.skill,
               tool: provider.tool,
               params: schema.testParams,
             });
@@ -215,16 +205,14 @@ describe('Entity Operation Schema Validation', () => {
             schema.validate(result);
           } catch (error: unknown) {
             const err = error as Error;
-            // Allow credential errors (adapter not configured)
             if (err.message?.includes('No credentials configured') ||
                 err.message?.includes('credentials')) {
-              console.log(`  ⏭ Skipped: ${provider.adapter} not configured`);
+              console.log(`  ⏭ Skipped: ${provider.skill} not configured`);
               return;
             }
-            // Allow response mapping errors (e.g., empty results from API)
             if (err.message?.includes('not found in response') ||
                 err.message?.includes('Path') && err.message?.includes('not found')) {
-              console.log(`  ⏭ Skipped: ${provider.adapter}.${provider.tool} returned empty/invalid response`);
+              console.log(`  ⏭ Skipped: ${provider.skill}.${provider.tool} returned empty/invalid response`);
               return;
             }
             throw error;

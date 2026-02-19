@@ -71,10 +71,10 @@ function walkDirectory(dir, depth = 0, maxDepth = 3) {
 }
 
 /**
- * Extract metadata from a adapter directory
+ * Extract metadata from a skill directory
  */
-function extractAdapterMetadata(adapterDir) {
-  const readmePath = join(adapterDir, 'readme.md');
+function extractSkillMetadata(skillDir) {
+  const readmePath = join(skillDir, 'readme.md');
   
   if (!existsSync(readmePath)) return null;
   
@@ -91,21 +91,18 @@ function extractAdapterMetadata(adapterDir) {
   
   const metadata = yaml.load(frontMatterMatch[1]);
   
-  // Get relative path from adapters/ directory (e.g., "tasks/todoist")
-  const adaptersRoot = join(REPO_ROOT, 'adapters');
-  const relativePath = adapterDir.replace(adaptersRoot + '/', '');
+  const skillsRoot = join(REPO_ROOT, 'skills');
+  const relativePath = skillDir.replace(skillsRoot + '/', '');
   
-  // Get the most recent file modification time in this adapter's folder
-  const updatedAt = getLatestModTime(adapterDir);
+  const updatedAt = getLatestModTime(skillDir);
   
-  // Extract entities from adapters keys (e.g., { post: {...}, group: {...} } → ["post", "group"])
   const entities = metadata.adapters ? Object.keys(metadata.adapters) : [];
   
   return {
-    id: metadata.id || basename(adapterDir),
-    name: metadata.name || basename(adapterDir),
+    id: metadata.id || basename(skillDir),
+    name: metadata.name || basename(skillDir),
     description: metadata.description || '',
-    icon: `adapters/${relativePath}/icon.svg`,
+    icon: `skills/${relativePath}/icon.svg`,
     color: metadata.color || null,
     entities,
     version: metadata.version || '1.0.0',
@@ -213,16 +210,16 @@ function generateManifest() {
   const manifest = {
     version: '1.0.0',
     updated_at: new Date().toISOString(),
-    adapters: [],
+    skills: [],
     apps: [],
     themes: [],
     components: [],
   };
   
-  // Scan adapters recursively (handles both flat and nested structures)
-  const adaptersDir = join(REPO_ROOT, 'adapters');
+  // Scan skills recursively (handles both flat and nested structures)
+  const skillsDir = join(REPO_ROOT, 'skills');
   
-  function scanAdaptersRecursive(dir, depth = 0, maxDepth = 3) {
+  function scanSkillsRecursive(dir, depth = 0, maxDepth = 3) {
     if (depth > maxDepth) return;
     
     try {
@@ -234,14 +231,12 @@ function generateManifest() {
         const entryPath = join(dir, entry.name);
         
         if (entry.isDirectory()) {
-          // Check if this directory is a adapter (has readme.md)
           const readmePath = join(entryPath, 'readme.md');
           if (existsSync(readmePath)) {
-            const metadata = extractAdapterMetadata(entryPath);
-            if (metadata) manifest.adapters.push(metadata);
+            const metadata = extractSkillMetadata(entryPath);
+            if (metadata) manifest.skills.push(metadata);
           } else {
-            // It's a category folder, recurse into it
-            scanAdaptersRecursive(entryPath, depth + 1, maxDepth);
+            scanSkillsRecursive(entryPath, depth + 1, maxDepth);
           }
         }
       }
@@ -251,9 +246,9 @@ function generateManifest() {
   }
   
   try {
-    scanAdaptersRecursive(adaptersDir);
+    scanSkillsRecursive(skillsDir);
   } catch (err) {
-    console.warn(`No adapters directory: ${err.message}`);
+    console.warn(`No skills directory: ${err.message}`);
   }
   
   // Scan models (apps are spawned from models at runtime)
@@ -309,7 +304,7 @@ function generateManifest() {
   }
   
   // Sort each category by id
-  manifest.adapters.sort((a, b) => a.id.localeCompare(b.id));
+  manifest.skills.sort((a, b) => a.id.localeCompare(b.id));
   manifest.apps.sort((a, b) => a.id.localeCompare(b.id));
   manifest.themes.sort((a, b) => a.id.localeCompare(b.id));
   manifest.components.sort((a, b) => a.id.localeCompare(b.id));
@@ -327,7 +322,7 @@ function main() {
   const manifest = generateManifest();
   
   console.log(`Found:`);
-  console.log(`  - ${manifest.adapters.length} adapters`);
+  console.log(`  - ${manifest.skills.length} skills`);
   console.log(`  - ${manifest.apps.length} apps`);
   console.log(`  - ${manifest.themes.length} themes`);
   console.log(`  - ${manifest.components.length} components`);

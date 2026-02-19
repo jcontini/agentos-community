@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'adapters/**'
+      - 'skills/**'
       - 'models/**'
       - 'themes/**'
       - 'components/**'
