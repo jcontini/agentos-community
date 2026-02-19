@@ -18,10 +18,10 @@ views:
     layout:
       - component: entity-list
         props:
-          entity: "{{activity.entity}}"
-          items: "{{activity.response}}"
-          pending: "{{activity.pending}}"
-          error: "{{activity.error}}"
+          entity: "{{entity}}"
+          items: "{{entities}}"
+          pending: "{{loading}}"
+          error: "{{error}}"
 
   generic-detail:
     title: Video
@@ -31,10 +31,10 @@ views:
     layout:
       - component: video-detail
         props:
-          entity: "{{activity.entity}}"
-          item: "{{activity.response}}"
-          pending: "{{activity.pending}}"
-          error: "{{activity.error}}"
+          entity: "{{entity}}"
+          item: "{{entities}}"
+          pending: "{{loading}}"
+          error: "{{error}}"
 
   fallback:
     title: Response
@@ -44,10 +44,7 @@ views:
     layout:
       - component: request-response
         props:
-          entity: "{{activity.entity}}"
-          operation: "{{activity.operation}}"
-          skill: "{{activity.skill}}"
-          request: "{{activity.request}}"
-          response: "{{activity.response}}"
-          pending: "{{activity.pending}}"
-          error: "{{activity.error}}"
+          entity: "{{entity}}"
+          response: "{{entities}}"
+          pending: "{{loading}}"
+          error: "{{error}}"
