@@ -1,0 +1,23 @@
+# Raises — Something Raises a Question
+#
+# Anything can raise a question: a person, another question,
+# an outcome, a post, an event. This is the IBIS "responds-to" link.
+#
+# Enables five-whys chains (question raises question),
+# root cause analysis, and natural inquiry decomposition.
+
+id: raises
+extends: reference
+name: Raises
+inverse_name: Raised by
+description: Something raises a question — inquiry, decomposition, five whys
+
+is_relationship: true
+
+from_type: [question, person, commitment, post, event]
+to_type: question
+
+properties:
+  context:
+    type: string
+    description: Why this raised the question

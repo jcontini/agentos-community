@@ -1,0 +1,21 @@
+# Supersedes — A Newer Decision Replaces an Older One
+#
+# When a decision is revisited and a new one is made, the new
+# decision supersedes the old. The relationship lives in the Memex,
+# not as a property on the old decision — no need to edit the old entity.
+
+id: supersedes
+extends: govern
+name: Supersedes
+inverse_name: Superseded by
+description: A newer decision replaces an older one
+
+is_relationship: true
+
+from_type: decision
+to_type: decision
+
+properties:
+  reason:
+    type: string
+    description: Why the old decision was replaced

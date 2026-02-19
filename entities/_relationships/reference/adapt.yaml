@@ -1,0 +1,9 @@
+id: adapt
+name: Adapt
+inverse_name: Adaptation of
+description: Work adapted into a derivative work (FRBR)
+extends: reference
+
+is_relationship: true
+
+properties: {}

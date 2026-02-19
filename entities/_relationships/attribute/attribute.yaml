@@ -1,0 +1,18 @@
+# Attribute — Actors making claims about the world
+#
+# Assertive speech acts. The actor states how things are.
+# Claiming identity, believing stories, feeling emotions,
+# completing tasks, archiving, enabling, desiring.
+# From PROV-O: wasAttributedTo. CIDOC-CRM: E13 Attribute Assignment.
+#
+# Abstract — never used directly. Children: claim, believe, feel,
+# complete, archive, enables, desires.
+
+id: attribute
+is_relationship: true
+name: Attribute
+description: Actors making claims about the world — assertion, judgment, expression
+
+from_type:
+  - person
+  - organization

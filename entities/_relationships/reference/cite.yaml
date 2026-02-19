@@ -1,0 +1,9 @@
+id: cite
+name: Cite
+inverse_name: Cited in
+description: Formal citation of one work by another
+extends: reference
+
+is_relationship: true
+
+properties: {}

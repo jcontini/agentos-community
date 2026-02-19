@@ -1,0 +1,13 @@
+# Tag — Actor tagged an item with a tag
+
+id: tag
+name: Tag
+inverse_name: Tagged with
+description: Actor tagged an item with a tag
+extends: place
+
+is_relationship: true
+
+from_type: tag
+
+properties: {}

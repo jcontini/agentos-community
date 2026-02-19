@@ -1,0 +1,9 @@
+id: translate
+name: Translate
+inverse_name: Translation of
+description: Work translated into another language (FRBR)
+extends: reference
+
+is_relationship: true
+
+properties: {}

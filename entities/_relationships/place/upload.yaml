@@ -1,0 +1,15 @@
+id: upload
+name: Upload
+inverse_name: Uploaded by
+description: Actor uploaded content to a place
+extends: place
+anti: remove
+
+is_relationship: true
+
+from_type: place
+to_type: work
+
+properties:
+  platform:
+    type: string

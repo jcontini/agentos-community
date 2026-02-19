@@ -1,0 +1,11 @@
+id: set
+name: Set
+inverse_name: Set by
+description: Actor set a record/setting value (replace semantics)
+extends: place
+
+is_relationship: true
+
+to_type: record
+
+properties: {}

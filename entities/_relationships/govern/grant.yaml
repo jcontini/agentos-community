@@ -1,0 +1,13 @@
+id: grant
+extends: govern
+anti: revoke
+name: Grant
+inverse_name: Granted to
+description: Authority granted a right or entitlement
+
+is_relationship: true
+
+from_type: actor
+to_type: right
+
+properties: {}

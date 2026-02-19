@@ -1,0 +1,24 @@
+# Feel — Actor Claims Emotional State
+#
+# Extends claim. An actor asserts they feel an emotion.
+# Creates the connection between the actor and the emotion
+# entity in the Memex.
+
+id: feel
+name: Feel
+inverse_name: Felt by
+description: Actor claims an emotional state
+extends: attribute
+
+is_relationship: true
+
+to_type: emotion
+
+properties:
+  intensity:
+    type: number
+    description: Intensity on a 0-1 scale
+
+  context:
+    type: string
+    description: What triggered this feeling

@@ -1,0 +1,13 @@
+id: join
+extends: place
+anti: leave
+name: Join
+inverse_name: Joined by
+description: Actor joined a place
+
+is_relationship: true
+
+from_type: actor
+to_type: place
+
+properties: {}

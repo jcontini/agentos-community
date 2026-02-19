@@ -1,0 +1,60 @@
+# Enables Relationship - The Causal Link Between Outcomes
+#
+# One outcome enables another when requirements are met.
+# This is what makes true system dynamics modeling possible.
+#
+# Stored in the relationships table with type="enables".
+# Properties below are stored in the `data` JSON field.
+
+id: enables
+extends: attribute
+name: Enables
+inverse_name: Enabled by
+description: One outcome enables another when requirements are met
+
+# This is a relationship type, not an entity
+is_relationship: true
+
+# Connects outcome to outcome
+from_type: commitment
+to_type: commitment
+
+properties:
+  # Semantic role
+  role:
+    type: string
+    enum: [causal, assumption]
+    description: |
+      causal: Direct cause-effect relationship (A causes B)
+      assumption: External condition that must hold (context required)
+
+  # What's required for enablement? (supports ranges!)
+  requires:
+    type: object
+    description: Threshold requirements for enablement
+    properties:
+      metric:
+        type: string
+        description: What metric must be met
+      min:
+        type: number
+        description: Minimum value required (optional)
+      max:
+        type: number
+        description: Maximum value required (optional)
+      unit:
+        type: string
+
+  # Why does this enable that?
+  rationale:
+    type: string
+    description: Explanation of the causal link
+
+  # Strength of the relationship
+  strength:
+    type: string
+    enum: [necessary, sufficient, contributory]
+    description: |
+      necessary: Required but not enough alone
+      sufficient: This alone could enable it
+      contributory: Helps but not required

@@ -1,0 +1,35 @@
+# Includes — Curation
+#
+# A journey explicitly includes an outcome. Used for outcomes that
+# aren't inferred from the goal + enables graph.
+#
+# Most journeys don't need many includes — the enables graph does
+# the heavy lifting via the goal outcome. Includes is for:
+#   - Bucket lists (no goal, all explicit)
+#   - Optional detours (nice-to-haves)
+#   - Non-causal additions (things that don't causally enable the goal)
+#   - Overrides (explicitly including something the Memex wouldn't infer)
+#
+# Skills rename includes:
+#   Roadmap=Includes, Trip="Stops at", OKR=Measures,
+#   Bucket List="Dreams of", Story=Features, Sprint=Delivers
+
+id: includes
+extends: place
+name: Includes
+inverse_name: Included in
+description: A journey explicitly includes an outcome
+
+is_relationship: true
+from_type: narrative
+to_type: commitment
+
+properties:
+  optional:
+    type: boolean
+    default: false
+    description: Detour (nice-to-have) vs. essential
+
+  notes:
+    type: string
+    description: What this outcome means in the context of THIS journey

@@ -1,0 +1,12 @@
+id: add_to
+name: Add to
+inverse_name: Added to
+description: Actor added an item to a place
+extends: place
+anti: remove_from
+
+is_relationship: true
+
+from_type: place
+
+properties: {}

@@ -1,0 +1,9 @@
+id: link_to
+name: Link to
+inverse_name: Linked from
+description: A hyperlink from one entity to another
+extends: reference
+
+is_relationship: true
+
+properties: {}

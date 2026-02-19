@@ -1,0 +1,12 @@
+id: transcribe
+name: Transcribe
+inverse_name: Transcript of
+description: A video or audio transcribed into a document
+extends: reference
+
+is_relationship: true
+
+from_type: document
+to_type: [video, audio]
+
+properties: {}

@@ -1,0 +1,18 @@
+# Commit — Actor Commits to a Task/Outcome
+#
+# Commissive speech act — the actor promises to achieve
+# a commitment. This is how tasks get their assignees
+# in the Memex (beyond the assign relationship).
+
+id: commit
+extends: engage
+name: Commit
+inverse_name: Committed by
+description: Actor commits to achieving a task or outcome
+
+is_relationship: true
+
+from_type: [person, organization]
+to_type: commitment
+
+properties: {}

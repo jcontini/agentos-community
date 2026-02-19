@@ -1,0 +1,46 @@
+# Claim — Actor Claims Truth
+#
+# The foundational assertive relationship. A person claims something
+# is true — identity ownership, completion, belief, emotional state.
+# All other assertive relationships extend claim.
+#
+# Design: "Accounts, not people." The person → account identity
+# link uses claim. Person claims account ownership.
+
+id: claim
+extends: attribute
+name: Claim
+inverse_name: Claimed by
+description: Actor claims something is true
+
+is_relationship: true
+
+from_type: [person, organization]
+to_type: account
+
+properties:
+  confidence:
+    type: number
+    description: How sure we are (0.0 to 1.0)
+
+  method:
+    type: string
+    description: How we learned about this claim (contact_import, self_claimed, etc.)
+
+  context:
+    type: string
+    description: Usage context (e.g., "Colombian WhatsApp number", "work email")
+
+  primary:
+    type: boolean
+    description: Is this the preferred account for this platform?
+
+  started_at:
+    type: string
+    format: date
+    description: When the claim started
+
+  ended_at:
+    type: string
+    format: date
+    description: When the claim ended (historical claims preserve message links)

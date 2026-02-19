@@ -1,0 +1,12 @@
+id: declare
+extends: govern
+name: Declare
+inverse_name: Declared by
+description: Authority declared something into reality
+
+is_relationship: true
+
+from_type: actor
+to_type: declaration
+
+properties: {}

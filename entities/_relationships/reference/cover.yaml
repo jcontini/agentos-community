@@ -1,0 +1,9 @@
+id: cover
+name: Cover
+inverse_name: Cover of
+description: Work covered or performed as a new version (FRBR)
+extends: reference
+
+is_relationship: true
+
+properties: {}

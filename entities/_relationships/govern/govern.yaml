@@ -1,0 +1,15 @@
+# Govern — Actors exercising authority
+#
+# Acts where authority creates reality. Declaring, granting rights,
+# assigning tasks, resolving questions, superseding decisions.
+# From CIDOC-CRM: E8 Acquisition. Schema.org: OrganizeAction.
+#
+# Abstract — never used directly. Children: declare, grant, assign,
+# resolve, supersedes.
+
+id: govern
+is_relationship: true
+name: Govern
+description: Actors exercising authority — declaration, assignment, resolution
+
+from_type: actor

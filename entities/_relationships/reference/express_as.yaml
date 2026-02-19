@@ -1,0 +1,9 @@
+id: express_as
+name: Express as
+inverse_name: Expression of
+description: Work expressed as a specific realization (FRBR)
+extends: reference
+
+is_relationship: true
+
+properties: {}

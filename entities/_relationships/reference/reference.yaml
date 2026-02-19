@@ -1,0 +1,23 @@
+# Reference — Things pointing to things
+#
+# The universal citation/derivation pattern. Embedding, citing,
+# linking, transcribing, replying, measuring.
+# From PROV-O: wasDerivedFrom. CIDOC-CRM: P67 refers to.
+# Dublin Core: references.
+#
+# Abstract — never used directly. Children: embed, cite, link_to,
+# transcribe, express_as, adapt, translate, cover, replies_to,
+# measures, raises.
+
+id: reference
+is_relationship: true
+name: Reference
+description: Things pointing to things — citation, derivation, response
+
+from_type: work
+to_type: work
+
+properties:
+  context:
+    type: string
+    description: Context for the reference

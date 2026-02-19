@@ -1,0 +1,20 @@
+# Post — Content Attribution to Platform Account
+#
+# Account posted content to a platform. The observable fact.
+# The full attribution chain: Person --claim--> Account --post--> Work.
+
+id: post
+extends: place
+name: Post
+inverse_name: Posted by
+description: Account posted content to a platform
+
+is_relationship: true
+
+from_type: account
+to_type: work
+
+properties: {}
+
+references:
+  activity_streams: https://www.w3.org/ns/activitystreams#attributedTo
