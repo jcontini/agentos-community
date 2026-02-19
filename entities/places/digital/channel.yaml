@@ -39,7 +39,7 @@ properties:
     type: string
     description: Which platform (youtube, twitch, substack, etc.)
 
-identifiers: [name, url]
+identifiers: [url, name]
 operations: [list, get, search]
 
 display:

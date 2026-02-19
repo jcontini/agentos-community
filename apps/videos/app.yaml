@@ -1,0 +1,53 @@
+# Videos App
+# Entity-specific video player with channel byline, engagement stats, and actions.
+# First community app — establishes patterns for all custom apps.
+
+id: videos
+name: Videos
+description: Video player with channel info, actions, and metadata
+icon: icon.svg
+entities: ["video"]
+default_view: generic-detail
+
+views:
+  generic-list:
+    title: Videos
+    toolbar:
+      - component: url-bar
+      - component: action-bar
+    layout:
+      - component: entity-list
+        props:
+          entity: "{{activity.entity}}"
+          items: "{{activity.response}}"
+          pending: "{{activity.pending}}"
+          error: "{{activity.error}}"
+
+  generic-detail:
+    title: Video
+    toolbar:
+      - component: url-bar
+      - component: action-bar
+    layout:
+      - component: video-detail
+        props:
+          entity: "{{activity.entity}}"
+          item: "{{activity.response}}"
+          pending: "{{activity.pending}}"
+          error: "{{activity.error}}"
+
+  fallback:
+    title: Response
+    toolbar:
+      - component: url-bar
+      - component: action-bar
+    layout:
+      - component: request-response
+        props:
+          entity: "{{activity.entity}}"
+          operation: "{{activity.operation}}"
+          adapter: "{{activity.adapter}}"
+          request: "{{activity.request}}"
+          response: "{{activity.response}}"
+          pending: "{{activity.pending}}"
+          error: "{{activity.error}}"
