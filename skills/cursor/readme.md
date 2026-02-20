@@ -1,21 +1,35 @@
 ---
 id: cursor
 name: Cursor
-description: AI-first code editor with MCP support
-category: code
+description: AI-first code editor with built-in MCP support
 icon: icon.png
 color: "#3B82F6"
+platforms: [macos, windows, linux]
 
-platforms:
-  macos:
-    app_path: /Applications/Cursor.app
-    config_path: ~/.cursor/mcp.json
-  windows:
-    app_path: "%LOCALAPPDATA%/Programs/Cursor/Cursor.exe"
-    config_path: "%APPDATA%/Cursor/mcp.json"
-  linux:
-    app_path: /usr/share/cursor/cursor
-    config_path: ~/.cursor/mcp.json
+website: https://cursor.com
+
+auth: none
+
+instructions: >
+  You are running in Cursor. MCP config: ~/.cursor/mcp.json.
+  To reload without restart: rename mcp.json → mcp.json.bak → back to mcp.json, then sleep 1s.
+  Research archive: run extract-research.py in this skill's directory to save sub-agent research to .research/.
+
+connects_to: cursor-app
+
+seed:
+  - id: cursor-app
+    types: [software]
+    name: Cursor
+    data:
+      software_type: ai_client
+      url: https://cursor.com
+      platforms: [macos, windows, linux]
+    relationships: []
+
+testing:
+  exempt:
+    operations: Guide-only skill — no API operations
 ---
 
 # Cursor
@@ -28,12 +42,16 @@ AI-first code editor with built-in MCP support.
 2. Restart Cursor to load the MCP configuration
 3. Your apps will be available automatically
 
+MCP config locations:
+- macOS/Linux: `~/.cursor/mcp.json`
+- Windows: `%APPDATA%/Cursor/mcp.json`
+
 ## Instructions for AI
 
 You are running in Cursor.
 
-- MCP config: ~/.cursor/mcp.json
-- To reload MCP config: rename ~/.cursor/mcp.json → mcp.json.bak → then back to mcp.json (triggers hot reload without restart)
+- MCP config: `~/.cursor/mcp.json`
+- To reload MCP config: rename `~/.cursor/mcp.json` → `mcp.json.bak` → then back to `mcp.json` (triggers hot reload without restart)
 - If any apps are disconnected or inaccessible, reload the MCP config using the rename trick above, sleep exactly 1 second, then try again
 
 ## Recommended settings
@@ -124,28 +142,28 @@ urls_fetched:
 
 ### extract-research.py
 
-This directory contains `extract-research.py` — a script that scans Cursor's database for research-quality sub-agent outputs and saves them to `.research/`.
+`extract-research.py` (in this directory) scans Cursor's database for research-quality sub-agent outputs and saves them to `.research/`.
 
 **Usage:**
 
 ```bash
 # List new research (not yet saved)
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --workspace .
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace .
 
 # Save all new research to .research/
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --workspace . --save
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --save
 
 # Show all research including already-saved
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --workspace . --all
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --all
 
 # Extract a specific blob by hash prefix
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --blob f0bc9dd6
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --blob f0bc9dd6
 
 # Filter by keyword
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --filter "ontology"
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --filter "ontology"
 
 # Custom output directory
-python3 ~/dev/agentos-community/agents/cursor/extract-research.py --workspace . --save --research-dir /path/to/.research
+python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --save --research-dir /path/to/.research
 ```
 
 **What qualifies as "research":** A Task tool result with at least 3 web searches, 3000+ chars of output, and 5+ conversation steps. These thresholds can be overridden with `--min-searches` and `--min-chars`.

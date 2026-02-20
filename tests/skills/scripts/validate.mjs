@@ -140,12 +140,15 @@ function checkSchema(frontmatter) {
     };
   }
   
+  // Guide-only skills (auth: none, no operations) are exempt from the operations check
+  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
+
   const checks = [
     { name: 'valid structure', pass: true },
     { name: 'website', pass: !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
     { name: 'auth', pass: frontmatter.auth !== undefined },
-    { name: 'operations or utilities', pass: !!(frontmatter.operations || frontmatter.utilities) },
+    { name: 'operations or utilities', pass: isGuideOnly || !!(frontmatter.operations || frontmatter.utilities) },
     { name: 'instructions', pass: !!frontmatter.instructions },
   ];
   

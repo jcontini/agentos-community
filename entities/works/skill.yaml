@@ -69,6 +69,13 @@ properties:
         Capabilities: { entity_types: ["video", "post"], operations: ["list", "get", "search"] }
         Auth:         { auth_type: "oauth2", scopes: ["read", "write"] }
 
+  platforms:
+    type: array
+    items:
+      type: string
+      enum: [macos, windows, linux]
+    description: Platforms this skill has been tested on
+
   notes:
     type: string
     description: User notes about this skill
