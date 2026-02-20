@@ -4,10 +4,19 @@
 Commands:
   list [limit] [page]   - List recent meetings with metadata
   get <doc_id>          - Get a meeting with full transcript + AI summary
-  search <query>        - Semantic search across meetings
 
 Auth: reads ~/Library/Application Support/Granola/supabase.json
       Token auto-refreshed by the Granola app (~6hr lifetime)
+
+Internal API (api.granola.ai):
+  POST /v2/get-documents        {"limit": N, "offset": N}  → {"docs": [...]}
+  POST /v1/get-documents-batch  {"document_ids": [...]}    → {"docs": [...]}
+  POST /v1/get-document-transcript {"document_id": id}     → [utterance, ...]
+  POST /v1/get-document-panels  {"document_id": id}        → [panel, ...]
+
+Official Enterprise API (public-api.granola.ai):
+  GET  /v1/notes           cursor pagination, API key auth (Enterprise plan only)
+  GET  /v1/notes/{id}      ?include=transcript returns transcript + summary_markdown
 """
 
 import gzip
@@ -165,9 +174,8 @@ def normalize_meeting(doc: dict) -> dict:
 
 
 def cmd_list(token: str, limit: int, page: int) -> list:
-    # v1 API: respects limit/offset. v2 ignores page_size and returns everything.
-    result = api_post(token, "/v1/get-documents", {"limit": limit, "offset": page * limit})
-    docs = result if isinstance(result, list) else result.get("docs", [])
+    result = api_post(token, "/v2/get-documents", {"limit": limit, "offset": page * limit})
+    docs = result.get("docs", []) if isinstance(result, dict) else result
     return [normalize_meeting(d) for d in docs]
 
 
@@ -207,20 +215,6 @@ def cmd_get(token: str, doc_id: str) -> dict:
     return meeting
 
 
-def cmd_search(token: str, query: str) -> list:
-    try:
-        result = api_post(token, "/v1/search-embeddings", {"query": query, "limit": 10})
-    except SystemExit:
-        return []
-    items = result if isinstance(result, list) else result.get("results", [])
-    meetings = []
-    for item in items:
-        doc = item.get("document") or item
-        if doc.get("id"):
-            meetings.append(normalize_meeting(doc))
-    return meetings
-
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         die("Usage: granola.py <list|get|search> [args...]")
@@ -242,10 +236,6 @@ if __name__ == "__main__":
             if len(sys.argv) < 3:
                 die("Usage: granola.py get <doc_id>")
             result = cmd_get(token, sys.argv[2])
-        elif cmd == "search":
-            if len(sys.argv) < 3:
-                die("Usage: granola.py search <query>")
-            result = cmd_search(token, " ".join(sys.argv[2:]))
         else:
             die(f"Unknown command: {cmd}")
 

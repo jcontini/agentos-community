@@ -39,8 +39,7 @@ instructions: |
   - Token expires every ~6 hours; open Granola to auto-refresh if you get auth errors
   - meeting.list returns recent meetings with attendee metadata (no transcript, fast)
   - meeting.get returns a full meeting: transcript as a linked transcript entity, AI summary, attendees
-  - meeting.search uses Granola's semantic search across all meetings
-  - Transcripts are FTS5-indexed for full-text search after meeting.get is called
+  - Transcripts are FTS5-indexed for full-text search — use the local search API after ingesting
 
 requires:
   - name: Granola
@@ -104,19 +103,6 @@ operations:
         - "python3 ~/dev/agentos-community/skills/granola/granola.py get {{params.id}}"
       timeout: 60
 
-  meeting.search:
-    description: Semantic search across meetings using Granola's embeddings
-    returns: meeting[]
-    params:
-      query: { type: string, required: true, description: "Search query" }
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/granola/granola.py search {{params.query}}"
-      timeout: 30
-
 ---
 
 # Granola
@@ -169,17 +155,6 @@ Returns the full meeting including:
 - Transcript as a linked `transcript` entity (FTS5-indexed)
 - AI summary as the meeting `description`
 - All attendees with enrichment (name, avatar, job title)
-
-### `meeting.search` — Semantic search
-
-```bash
-curl -X POST http://localhost:3456/api/skills/granola/meeting.search \
-  -H "X-Agent: cursor" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Docker security vulnerability"}'
-```
-
-Uses Granola's server-side embedding search. Complementary to local FTS5 search once transcripts are ingested.
 
 ## Transcript format
 

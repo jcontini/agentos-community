@@ -6,7 +6,6 @@
  * Coverage:
  * - meeting.list
  * - meeting.get (with transcript)
- * - meeting.search
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -121,21 +120,4 @@ describe('Granola Skill', () => {
     });
   });
 
-  // ===========================================================================
-  // meeting.search
-  // ===========================================================================
-  describe('meeting.search', () => {
-    it('searches meetings by query', async () => {
-      if (skipTests) return;
-
-      const results = await aos().call('UseAdapter', {
-        adapter: skill,
-        tool: 'meeting.search',
-        params: { query: 'team sync' },
-      }) as Array<{ id: string; title: string }>;
-
-      // Search may return empty results if no matching meetings
-      expect(Array.isArray(results)).toBe(true);
-    });
-  });
 });
