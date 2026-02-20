@@ -64,8 +64,8 @@ transformers:
     mapping:
       id: .id
       title: .title
-      content: .selftext // .body
       url: '"https://reddit.com" + .permalink'
+      _body: .selftext // .body
       engagement.score: .score
       engagement.comment_count: .num_comments
       published_at: .created_utc | todate

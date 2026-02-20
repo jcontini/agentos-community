@@ -53,8 +53,8 @@ transformers:
     mapping:
       id: .objectID
       title: .title
-      content: .text
       url: '"https://news.ycombinator.com/item?id=" + .objectID'
+      _body: .text
       external_url: .url
       replies: .replies
       

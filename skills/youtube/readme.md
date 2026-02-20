@@ -82,8 +82,9 @@ transformers:
       url: .webpage_url
       title: .title
       description: .description
-      transcript: .transcript
       transcript_segments: .transcript_segments
+      _body: .transcript
+      _body_role: '"transcript"'
       duration_ms: (.duration // null) | if . != null then . * 1000 else null end
       thumbnail: .thumbnail
       published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'

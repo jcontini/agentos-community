@@ -52,3 +52,11 @@ properties:
   data:
     type: object
     description: Adapter-specific extensions
+
+identifiers: [id, url]
+operations: [list, get, create, update, delete, search, pull]
+
+display:
+  primary: title
+  secondary: url
+  icon: file-text

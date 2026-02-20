@@ -48,8 +48,8 @@ transformers:
     mapping:
       url: .url
       title: .title
-      content: .content
       content_type: .content_type
+      _body: .content
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

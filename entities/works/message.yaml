@@ -28,8 +28,8 @@ properties:
     description: Message content
 
   sender:
-    references: person
-    description: Who sent this message
+    references: actor
+    description: Who sent this message — a person or an agent
 
   conversation_id:
     type: string

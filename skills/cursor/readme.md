@@ -27,9 +27,38 @@ seed:
       platforms: [macos, windows, linux]
     relationships: []
 
+transformers:
+  document:
+    mapping:
+      id: .id
+      name: .title
+      data.source: .source
+      data.date: .date
+      data.searches: .searches
+      data.urls_fetched: .urls_fetched
+      data.conversation_steps: .conversation_steps
+      data.duration_ms: .duration_ms
+      data.agent_id: .agent_id
+      data.workspace: .workspace
+      data.blob_key: .blob_key
+      _body: .content
+
+operations:
+  document.pull:
+    description: Extract research reports from Cursor sub-agent conversations into the Memex
+    returns: document[]
+    params: {}
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/cursor/extract-research.py --json --all 2>/dev/null"
+      timeout: 120
+
 testing:
   exempt:
-    operations: Guide-only skill — no API operations
+    operations: Local command skill — requires local Cursor database
 ---
 
 # Cursor

@@ -51,6 +51,7 @@ transformers:
       id: .id
       name: .title
       description: .description
+      _body: .description
       data.remote_id: .identifier
       data.completed: '.state.type == "completed"'
       data.status: 'if .state.type == "completed" then "done" elif .state.type == "canceled" then "cancelled" elif .state.type == "started" then "in_progress" else "open" end'

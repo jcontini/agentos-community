@@ -91,8 +91,8 @@ operations:
         mapping:
           url: .metadata.sourceURL
           title: .metadata.title
-          content: .markdown
           content_type: '"text/markdown"'
+          _body: .markdown
 ---
 
 # Firecrawl

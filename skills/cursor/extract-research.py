@@ -441,6 +441,10 @@ def main():
         "--research-dir", type=str,
         help="Path to .research/ directory (default: cwd/.research/)"
     )
+    parser.add_argument(
+        "--json", action="store_true",
+        help="Output research as JSON array (for skill ingestion into Memex)"
+    )
 
     args = parser.parse_args()
 
@@ -574,6 +578,42 @@ def main():
         key=lambda r: len(r["parsed"]["final_text"] or r["parsed"]["result_text"]),
         reverse=True,
     )
+
+    # JSON output mode — emit structured data for Memex ingestion
+    if args.json:
+        items = []
+        for r in research_blobs:
+            if not args.all and not r["is_new"]:
+                continue
+            p = r["parsed"]
+            text = p["final_text"] or p["result_text"]
+            blob_hash = r["blob_key"].split(":")[-1]
+
+            date = datetime.date.today().isoformat()
+            workspace = ""
+            if r["conversation"]:
+                ts = r["conversation"].get("created_at", 0)
+                if ts:
+                    date = datetime.datetime.fromtimestamp(ts / 1000).date().isoformat()
+                workspace = r["conversation"].get("workspace", "")
+
+            items.append({
+                "id": blob_hash,
+                "title": r["title"],
+                "content": text,
+                "source": "cursor-subagent",
+                "date": date,
+                "searches": p["searches"],
+                "urls_fetched": p["urls_fetched"],
+                "conversation_steps": p["steps"],
+                "duration_ms": p["duration_ms"],
+                "agent_id": p["agent_id"],
+                "workspace": workspace,
+                "blob_key": r["blob_key"],
+            })
+        json.dump(items, sys.stdout, indent=None)
+        conn.close()
+        return
 
     # Display results
     shown = 0

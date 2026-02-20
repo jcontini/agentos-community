@@ -248,6 +248,27 @@ The optional `_rel` block:
 - Any other key — stored as relationship data (e.g., `role` for `references` relationships)
 - All `_rel` values are jaq expressions (use `'"literal"'` for string constants)
 
+**Body content** — Routes rich content to the `entity_bodies` table (indexed by FTS5):
+```yaml
+mapping:
+  _body: .content                # → stored in entity_bodies, indexed by FTS5
+  _body_role: '"transcript"'     # → optional role key (default: "body")
+```
+
+The extraction pipeline detects `_body`, strips it from entity data, and stores it in the `entity_bodies` table with SHA256 hashing and MIME type tracking. Content is automatically indexed by FTS5 for full-text search with BM25 ranking and highlighted excerpts.
+
+Use `_body` when content is too large for the JSON `data` column (transcripts, articles, full page text) or when you want body-specific search excerpts. Short text (descriptions, snippets) can stay in `data` — it's already FTS5-searchable via the data column.
+
+**Strategy for existing fields:** For content-first entities (webpages, documents), replace the `content` field with `_body`. For metadata entities with meaningful descriptions (tasks, issues), map both — keep `description` in data for display and add `_body` for enhanced search:
+
+```yaml
+mapping:
+  description: .description    # stays in entity data for list views
+  _body: .description          # also stored as body for FTS5 search
+```
+
+**Multiple body roles:** An entity can have multiple bodies keyed by role (`body`, `summary`, `transcript`, `excerpt`). Use `_body_role` to specify. Currently the extraction pipeline supports one `_body` per mapping; additional roles can be added via the body API directly.
+
 **Response flattening:** Typed reference data is automatically flattened in API responses for view consumption. The nested `{ entity_type: { fields }, _rel: { ... } }` structure becomes `{ _type: entity_type, ...fields }`. Views can then use dot notation: `{{posted_by.display_name}}`, `{{posted_in.name}}`.
 
 **Content attribution pattern:** Social content should use the `posts` relationship (`account --posts--> content`) rather than `creator: references: person`. An account posting content is what we can observe; the person behind the account is a separate inference via the `claims` relationship. See `entities/_relationships/posts.yaml` for details.

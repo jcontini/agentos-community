@@ -56,9 +56,9 @@ transformers:
     mapping:
       url: .url
       title: .title
-      content: .text
       favicon: .favicon
       published_at: .publishedDate
+      _body: .text
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
