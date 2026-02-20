@@ -1,0 +1,61 @@
+# Transcript — Timed Speaker-Attributed Text
+#
+# Extends document. A canonical entity for any source that produces
+# timestamped text segments: Granola meetings, YouTube captions,
+# Whisper transcriptions, podcast RSS, phone call recorders.
+#
+# The plain text body (stored via _body) is FTS5-indexed so searching
+# "Docker security" across all transcripts returns highlighted excerpts
+# showing exactly where in the conversation it was discussed.
+#
+# Linked to its source via the `transcribe` relationship:
+#   transcript --transcribe--> meeting | video | audio
+
+id: transcript
+plural: transcripts
+extends: document
+name: Transcript
+description: Timed text from a video, meeting, audio, or any recorded event
+
+references:
+  schema_org: https://schema.org/Transcript
+
+properties:
+  # Inherited from document: id, title, url, content, published_at, fetched_at, data
+
+  segments:
+    type: array
+    description: Timestamped text segments with optional speaker attribution
+
+  speakers:
+    type: array
+    description: Speaker manifest — who appears in this transcript
+
+  language:
+    type: string
+    description: BCP 47 language code (e.g., "en", "es", "fr")
+
+  duration_ms:
+    type: integer
+    description: Total duration of the source recording in milliseconds
+
+  source_type:
+    type: string
+    description: How this transcript was produced (auto_caption, realtime_asr, whisper, manual, diarized)
+
+  segment_count:
+    type: integer
+    description: Number of segments (for display without loading full body)
+
+identifiers: [id, url]
+operations: [list, get, search]
+
+display:
+  primary: title
+  secondary: source_type
+  description: content
+  icon: file-text
+  meta:
+    - duration_ms
+    - segment_count
+    - language

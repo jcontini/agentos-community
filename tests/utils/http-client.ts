@@ -213,7 +213,7 @@ export class HttpTestClient extends EventEmitter {
       
       this.log(`Calling ${adapter}/${adapterTool}:`, JSON.stringify(params).slice(0, 200));
 
-      const response = await fetch(`${BASE_URL}/api/adapters/${adapter}/${adapterTool}`, {
+      const response = await fetch(`${BASE_URL}/api/skills/${adapter}/${adapterTool}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

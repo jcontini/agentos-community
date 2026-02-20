@@ -34,6 +34,10 @@ properties:
     type: string
     description: Recurrence rule (RRULE format)
 
+  data:
+    type: object
+    description: Adapter-specific extensions
+
 operations: [list, get, create, update, delete]
 
 display:
