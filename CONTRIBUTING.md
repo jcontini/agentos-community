@@ -71,8 +71,8 @@ skills/            Skills — service connections + agent context
   reddit/          Maps Reddit API → post entity
   todoist/         Maps Todoist API → task entity
   youtube/         Maps YouTube API → video, community, account entities
-  write-adapter.md Workflow guide (AI context, no API binding)
-  shell-history.md Agent instructions (no adapter)
+  write-skill.md   Workflow guide (AI context, no API binding)
+  shell-history.md Agent instructions (no API binding)
 
 apps/              Visual apps (UI experiences)
   videos/          Video player with channel info and embed
@@ -261,11 +261,11 @@ Utilities are operations that don't fit standard CRUD patterns. Unlike operation
 | Return Type | When to Use | Example |
 |-------------|-------------|---------|
 | `void` | Side-effect only, or action confirmation | `delete`, `archive`, `add_blocker` |
-| Model reference | Structured data shared across adapters | `dns_list` → `dns_record[]` |
-| Inline schema | Adapter-specific introspection | `get_workflow_states` (Linear-only) |
+| Model reference | Structured data shared across skills | `dns_list` → `dns_record[]` |
+| Inline schema | Skill-specific introspection | `get_workflow_states` (Linear-only) |
 
 **Use a model reference when:**
-- Multiple adapters return the same shape (e.g., `dns_record` across Gandi, Porkbun)
+- Multiple skills return the same shape (e.g., `dns_record` across Gandi, Porkbun)
 - The UI needs to render the result consistently
 - AI agents need a predictable contract for downstream actions
 

@@ -58,7 +58,6 @@ This file (AGENTS.md) adds agent-specific workflow guidance.
 | `entities/` | Entity schemas — the Memex model |
 | `apps/` | Visual apps — UI experiences (Videos, Browser, Settings, etc.) |
 | `themes/` | Visual styling (CSS) |
-| `agents/` | Setup instructions for AI clients (Cursor, Claude, etc.) |
 | `tests/` | Test utilities and fixtures |
 | `scripts/` | Manifest generation, setup scripts |
 
