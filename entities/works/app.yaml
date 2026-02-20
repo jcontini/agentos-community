@@ -1,0 +1,49 @@
+# App — A Visual Application for AgentOS
+#
+# Extends software. Every app detected on disk becomes an entity in the
+# graph, completing the trilogy: skills, themes, and apps are all
+# first-class entities. The system models its own ecosystem.
+#
+# On server startup, the system creates an entity for each loaded app.
+# Idempotent — existing app entities are skipped.
+#
+# Richness lives in relationships:
+#   app → handles → entity_type (what entity types it renders)
+#   app → uses → skill (which skills it depends on)
+#
+# Apps are optional UI experiences on top of the graph. A headless
+# AgentOS (API + AI only) works without any apps. Preview is the
+# generic fallback — it renders any entity when no other app claims it.
+
+id: app
+plural: apps
+extends: software
+name: App
+description: A visual application for AgentOS — renders entities with custom UI
+
+properties:
+  app_id:
+    type: string
+    required: true
+    description: Filesystem slug (e.g., "videos", "preview", "settings")
+
+  standalone:
+    type: boolean
+    description: Whether this app manages its own data (not entity-backed)
+
+  entity_types:
+    type: array
+    items:
+      type: string
+    description: Entity types this app handles (e.g., ["video"], ["*"] for generic)
+
+identifiers: [app_id]
+operations: [list, get]
+
+display:
+  primary: title
+  secondary: description
+  icon: layout-grid
+  sort:
+    - field: title
+      order: asc
