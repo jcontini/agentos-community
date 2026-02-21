@@ -50,6 +50,9 @@ properties:
     type: string
     description: When the software was discontinued (year or date)
 
+  # NOTE: Prefer `discontinued` date over `status`. Status encodes
+  # epistemic opinion — if something was discontinued, record when (a fact).
+  # `status` kept for legacy compatibility but avoid in new seeds.
   status:
     type: string
     description: active, discontinued, beta, deprecated

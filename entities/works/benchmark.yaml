@@ -1,0 +1,70 @@
+# Benchmark — AI Evaluation Standards
+#
+# A named evaluation task used to measure AI model capabilities.
+# e.g., MMLU, HumanEval, GPQA, SWE-bench, HellaSwag, MATH, ARC.
+#
+# Benchmarks are reference data — they're seeded once and rarely change.
+# Scores live on the relationship: model → scored_on → benchmark
+# with `score`, `percentile`, and `evaluated_at` in the relationship data.
+#
+# This enables rich queries:
+#   "Which models score highest on coding benchmarks?"
+#   "How has Claude improved on MMLU across versions?"
+#   "Which models are best for math?"
+
+id: benchmark
+plural: benchmarks
+extends: work
+name: AI Benchmark
+description: A standardized evaluation task for measuring AI model capabilities
+
+references:
+  schema_org: https://schema.org/Dataset
+
+properties:
+  domain:
+    type: string
+    description: |
+      What it measures — common values:
+      coding, reasoning, math, science, language, knowledge,
+      instruction_following, safety, multimodal, long_context
+
+  task_type:
+    type: string
+    description: |
+      How it works — multiple_choice, code_generation, open_ended,
+      retrieval, classification, human_eval
+
+  max_score:
+    type: number
+    description: Maximum possible score (often 100 for percentages, or 1.0)
+
+  higher_is_better:
+    type: boolean
+    description: Whether higher scores indicate better performance (default true)
+
+  published:
+    type: string
+    format: date
+    description: When this benchmark was introduced/published
+
+  paper_url:
+    type: string
+    format: url
+    description: Link to the research paper defining this benchmark
+
+  leaderboard_url:
+    type: string
+    format: url
+    description: Link to the public leaderboard (e.g., HuggingFace)
+
+identifiers: [title]
+operations: [list, get, search, create, update]
+
+display:
+  primary: title
+  secondary: domain
+  icon: chart-bar
+  sort:
+    - field: title
+      order: asc

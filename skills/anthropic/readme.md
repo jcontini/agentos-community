@@ -18,6 +18,14 @@ auth:
 connects_to: anthropic-api
 
 seed:
+  - id: anthropic-inc
+    types: [organization]
+    name: Anthropic
+    data:
+      type: company
+      url: https://www.anthropic.com
+      founded: "2021"
+
   - id: anthropic-api
     types: [software]
     name: Anthropic Messages API
@@ -30,13 +38,83 @@ seed:
       - role: offered_by
         to: anthropic-inc
 
-  - id: anthropic-inc
-    types: [organization]
-    name: Anthropic
+  # Claude 4
+  - id: claude-4-opus-20250514
+    types: [model]
+    name: Claude 4 Opus
     data:
-      type: company
-      url: https://www.anthropic.com
-      founded: "2021"
+      provider: anthropic
+      model_type: llm
+      released: "2025-05-14"
+      api_id: claude-opus-4-5
+      context_window: 200000
+      capabilities: [vision, tool_use, extended_thinking, caching, streaming]
+      cost:
+        input_per_million: 15.00
+        output_per_million: 75.00
+        cache_write_per_million: 18.75
+        cache_read_per_million: 1.50
+    relationships:
+      - role: published_by
+        to: anthropic-inc
+
+  - id: claude-4-sonnet-20250514
+    types: [model]
+    name: Claude 4 Sonnet
+    data:
+      provider: anthropic
+      model_type: llm
+      released: "2025-05-14"
+      api_id: claude-sonnet-4-5
+      context_window: 200000
+      capabilities: [vision, tool_use, extended_thinking, caching, streaming]
+      cost:
+        input_per_million: 3.00
+        output_per_million: 15.00
+        cache_write_per_million: 3.75
+        cache_read_per_million: 0.30
+    relationships:
+      - role: published_by
+        to: anthropic-inc
+
+  # Claude 3.5
+  - id: claude-3-5-haiku-20241022
+    types: [model]
+    name: Claude 3.5 Haiku
+    data:
+      provider: anthropic
+      model_type: llm
+      released: "2024-10-22"
+      api_id: claude-3-5-haiku-20241022
+      context_window: 200000
+      capabilities: [vision, tool_use, caching, streaming]
+      cost:
+        input_per_million: 0.80
+        output_per_million: 4.00
+        cache_write_per_million: 1.00
+        cache_read_per_million: 0.08
+    relationships:
+      - role: published_by
+        to: anthropic-inc
+
+  - id: claude-3-5-sonnet-20241022
+    types: [model]
+    name: Claude 3.5 Sonnet
+    data:
+      provider: anthropic
+      model_type: llm
+      released: "2024-10-22"
+      api_id: claude-3-5-sonnet-20241022
+      context_window: 200000
+      capabilities: [vision, tool_use, caching, streaming]
+      cost:
+        input_per_million: 3.00
+        output_per_million: 15.00
+        cache_write_per_million: 3.75
+        cache_read_per_million: 0.30
+    relationships:
+      - role: published_by
+        to: anthropic-inc
 
 instructions: |
   Claude models via the Anthropic API.

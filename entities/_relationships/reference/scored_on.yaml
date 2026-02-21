@@ -1,0 +1,26 @@
+id: scored_on
+name: Scored on
+inverse_name: Has scores from
+description: A model achieved a score on a benchmark evaluation
+extends: reference
+
+is_relationship: true
+
+properties:
+  score:
+    type: number
+    description: The score achieved (e.g., 85.2 for 85.2%)
+
+  percentile:
+    type: number
+    description: Percentile rank among all models evaluated (0–100)
+
+  evaluated_at:
+    type: string
+    format: date
+    description: When this evaluation was run or published
+
+  source_url:
+    type: string
+    format: url
+    description: Source for this score (paper, leaderboard, provider announcement)

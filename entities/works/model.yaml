@@ -1,0 +1,105 @@
+# Model — AI Language Models and Foundation Models
+#
+# Extends work. A specific versioned release of an AI model — e.g.,
+# claude-3-5-haiku-20241022, gpt-4o-2024-11-20, llama-3.2-90b.
+#
+# Key design choices:
+#   - No `status` field — epistemic truth only. `released` is a date fact.
+#     If deprecated, `deprecated` records when that happened.
+#   - Cost reflects best-known-at-time. It changes; snapshot is still useful.
+#   - Benchmarks are separate entities (see benchmark.yaml) connected via
+#     `scored_on` relationships — not embedded here.
+#
+# Richness lives in relationships:
+#   model → published_by → organization
+#   model → successor_to → model (prior version)
+#   model → version_of → model (the family, e.g. "claude-3-5-haiku")
+#   model → scored_on → benchmark (with score + date in relationship data)
+#
+# Skills seed these — the anthropic skill seeds all Claude models. This way
+# the moment a new model is seeded (via skill update or auto-discovery),
+# every intelligence-aware feature automatically sees it.
+
+id: model
+plural: models
+extends: work
+name: AI Model
+description: A versioned AI model release — LLMs, image models, embedding models
+
+references:
+  schema_org: https://schema.org/SoftwareApplication
+
+properties:
+  provider:
+    type: string
+    description: Company or org that publishes this model (anthropic, openai, google, meta, mistral, ...)
+
+  model_type:
+    type: string
+    description: |
+      What kind of model — llm, embedding, image, audio, multimodal, code, reasoning
+
+  released:
+    type: string
+    format: date
+    description: Date this model version was publicly released (YYYY-MM-DD)
+
+  deprecated:
+    type: string
+    format: date
+    description: Date this model was deprecated or retired (omit if still active)
+
+  context_window:
+    type: integer
+    description: Maximum context window in tokens
+
+  capabilities:
+    type: array
+    items:
+      type: string
+    description: |
+      What the model can do — common values:
+      vision, tool_use, extended_thinking, caching, streaming,
+      function_calling, code_execution, image_generation
+
+  cost:
+    type: object
+    description: |
+      Pricing snapshot (USD per 1M tokens). May change — records best-known value.
+      Check provider docs for current pricing.
+    properties:
+      input_per_million:
+        type: number
+        description: USD per 1M input tokens
+      output_per_million:
+        type: number
+        description: USD per 1M output tokens
+      cache_write_per_million:
+        type: number
+        description: USD per 1M tokens written to cache (if supported)
+      cache_read_per_million:
+        type: number
+        description: USD per 1M tokens read from cache (if supported)
+
+  knowledge_cutoff:
+    type: string
+    description: Training data cutoff date (YYYY-MM or YYYY)
+
+  api_id:
+    type: string
+    description: The exact string used when calling the API (e.g., "claude-3-5-haiku-20241022")
+
+  open_weights:
+    type: boolean
+    description: Whether model weights are publicly available
+
+identifiers: [title, api_id]
+operations: [list, get, search, create, update]
+
+display:
+  primary: title
+  secondary: provider
+  icon: cpu
+  sort:
+    - field: released
+      order: desc
