@@ -99,6 +99,68 @@ Restart Cursor after changing settings for them to take effect.
 
 ---
 
+## Finding Past Conversations
+
+All Cursor workspace transcripts live under:
+```
+~/.cursor/projects/{workspace-slug}/agent-transcripts/*.txt
+```
+
+Key workspace slugs and what they hold:
+
+| Slug | Workspace | What's here |
+|------|-----------|-------------|
+| `Users-joe-dev-agentos` | `/Users/joe/dev/agentos` | Current AgentOS sessions |
+| `Users-joe-dev-agentos-AgentOS-code-workspace` | AgentOS code workspace | Older AgentOS sessions |
+| `Users-joe-dev-adavia-adavia-code-workspace` | Adavia main | Adavia + Granola reverse engineering, browser skills |
+
+To search for a past conversation by topic:
+```bash
+# Search across all workspaces for a keyword
+grep -rl "your keyword" ~/.cursor/projects/*/agent-transcripts/*.txt 2>/dev/null
+
+# Search within the current workspace
+grep -r "your keyword" ~/.cursor/projects/Users-joe-dev-agentos/agent-transcripts/
+```
+
+Transcripts are plain text with `user:`, `assistant:`, `[Tool call]`, `[Tool result]` markers.
+
+---
+
+## Cursor Tool Definitions
+
+Cursor's own tool schemas live inside its bundled extensions:
+
+```
+/Applications/Cursor.app/Contents/Resources/app/extensions/
+  cursor-agent/dist/main.js       (~2.9MB) — agent orchestration
+  cursor-agent-exec/dist/main.js  (~4.1MB) — tool execution engine
+```
+
+The `cursor-agent-exec` bundle contains the core file editing tools. Tool constants found there: `READ_FILE`, `EDIT_FILE`, `DELETE_FILE`, `LIST_DIR`, `WEB_SEARCH` (plus lowercase equivalents: `read_file`, `edit_file`, `delete_file`, `run_terminal`, `web_search`).
+
+To extract tool-related sections from these files:
+```bash
+# List all tool constants
+grep -oE '\b(READ_FILE|WRITE_FILE|EDIT_FILE|CREATE_FILE|DELETE_FILE|LIST_DIR|RUN_TERMINAL|GREP|WEB_SEARCH|STR_REPLACE)\b' \
+  /Applications/Cursor.app/Contents/Resources/app/extensions/cursor-agent-exec/dist/main.js | sort -u
+
+# Find tool schemas (look for name + description + parameters patterns)
+python3 -c "
+import re
+with open('/Applications/Cursor.app/Contents/Resources/app/extensions/cursor-agent-exec/dist/main.js', 'r', errors='ignore') as f:
+    content = f.read()
+# search for your pattern here
+"
+```
+
+The **full tool list I have access to in Cursor** (as of early 2026):
+`Read`, `Write`, `StrReplace`, `Delete`, `Shell`, `Grep`, `Glob`, `SemanticSearch`, `ReadLints`, `EditNotebook`, `TodoWrite`, `GenerateImage`, `AskQuestion`, `Task`, `SwitchMode`, `WebSearch`, `WebFetch`, `CallMcpTool`, `FetchMcpResource`
+
+These map to file operations: Read/Write/StrReplace/Delete cover all CRUD on files. Grep + Glob cover search and find. Shell covers anything else.
+
+---
+
 ## Research Archive System
 
 When Cursor's AI agent uses the Task tool to launch sub-agents for web research, those sub-agents produce rich markdown research reports. These reports are stored in Cursor's internal database and can be extracted into `.research/` directories for permanent reference.

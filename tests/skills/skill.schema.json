@@ -164,6 +164,39 @@
         }
       },
       "additionalProperties": false
+    },
+    "credits": {
+      "type": "array",
+      "description": "Relationships to other skills or entity capabilities. Unifies attribution and dependency declaration — if you need it, you credit it.",
+      "items": {
+        "type": "object",
+        "required": ["relationship"],
+        "properties": {
+          "skill": {
+            "type": "string",
+            "description": "Skill ID in the community repo (e.g., 'git', 'write-app')"
+          },
+          "entity": {
+            "type": "string",
+            "description": "Entity type for capability-based references (e.g., 'repository', 'webpage')"
+          },
+          "operations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Operations on the entity this skill uses (e.g., ['write', 'read'])"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": ["needs", "desires", "appreciates"],
+            "description": "'needs' = required to function, 'desires' = optional but better, 'appreciates' = attribution / inspiration"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Optional note explaining why (shown in credits UI)"
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,

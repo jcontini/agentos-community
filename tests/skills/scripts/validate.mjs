@@ -307,6 +307,12 @@ function checkSeed(frontmatter) {
   const errors = [];
   let total = 0;
   let passed = 0;
+
+  // Guide-only skills (auth: none, no operations) don't connect to external services
+  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
+  if (isGuideOnly) {
+    return { pass: true, passed: 0, total: 0, errors: [] };
+  }
   
   // Check connects_to exists
   total++;
