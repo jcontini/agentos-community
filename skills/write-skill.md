@@ -393,6 +393,40 @@ command:
 
 ---
 
+## How Data Flows: Graph-First
+
+AgentOS is **graph-first**. Skills sync data INTO the Memex; queries read FROM it.
+
+```
+Skill (API/command) → extract + transform → Memex (SQLite) → REST/MCP response
+```
+
+**Default list requests read from cache — they do NOT call skills.**
+
+| Request | What happens |
+|---------|-------------|
+| `GET /mem/conversations` | Reads cached graph. Fast (0ms). No skill execution. |
+| `GET /mem/conversations?refresh=true` | Syncs ALL conversation skills first, then reads graph. |
+| `GET /mem/conversations?refresh=true&skill=cursor` | Syncs only the Cursor skill, then reads graph. |
+
+**`?refresh=true` is how you trigger a live pull.** Without it, you only see what was previously synced.
+
+For testing a new skill during development:
+```bash
+# First sync: pulls data from your skill into the graph
+curl -H "X-Agent: test" "http://localhost:3456/mem/conversations?refresh=true&skill=cursor"
+
+# Subsequent reads: fast, from cache
+curl -H "X-Agent: test" "http://localhost:3456/mem/conversations?skill=cursor"
+
+# Search across everything (FTS — also reads from graph, no sync)
+curl -X POST -H "X-Agent: test" "http://localhost:3456/mem/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "provenance", "types": ["conversation"]}'
+```
+
+---
+
 ## Testing
 
 Every operation needs at least one test. Tests use the `aos()` helper:

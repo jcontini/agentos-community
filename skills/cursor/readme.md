@@ -43,6 +43,17 @@ transformers:
       data.blob_key: .blob_key
       _body: .content
 
+  session:
+    mapping:
+      id: .id
+      name: .name
+      client: '"cursor"'
+      workspace: .workspace
+      last_message: .last_message
+      last_message_at: .last_message_at
+      data.message_count: .message_count
+      _body: .transcript
+
 operations:
   document.pull:
     description: Extract research reports from Cursor sub-agent conversations into the Memex
@@ -55,6 +66,34 @@ operations:
         - "-c"
         - "python3 ~/dev/agentos-community/skills/cursor/extract-research.py --json --all 2>/dev/null"
       timeout: 120
+
+  session.list:
+    description: List all Cursor AI sessions from local transcripts
+    returns: session[]
+    params: {}
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json 2>/dev/null"
+      timeout: 60
+
+  session.get:
+    description: Get a Cursor session by UUID with full transcript
+    returns: session
+    params:
+      id:
+        type: string
+        required: true
+        description: Session UUID
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --id {{params.id}} --json 2>/dev/null"
+      timeout: 30
 
 testing:
   exempt:
@@ -96,6 +135,27 @@ When the user asks to configure Cursor or improve their setup, offer these setti
 | `cursor.experimental.reviewWorkflow.enabled` | `false` | Disable the forced review workflow; use Git for review instead |
 
 Restart Cursor after changing settings for them to take effect.
+
+---
+
+## Syncing Sessions to the Graph
+
+The Cursor skill pulls session transcripts into the Memex as session entities (session extends conversation). Each session has `client: "cursor"` and a `workspace` property from the directory path. **List requests read from cache by default** — you must use `?refresh=true` to trigger a live pull.
+
+```bash
+# First sync: reads JSONL transcripts, extracts to graph
+curl -H "X-Agent: test" "http://localhost:3456/mem/sessions?refresh=true&skill=cursor"
+
+# After sync: reads from graph (fast, no re-pull)
+curl -H "X-Agent: test" "http://localhost:3456/mem/sessions?skill=cursor"
+
+# Search sessions by content (FTS, reads from graph)
+curl -X POST -H "X-Agent: test" "http://localhost:3456/mem/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "provenance", "types": ["session"]}'
+```
+
+Via MCP: `list({ type: "session", skill: "cursor", refresh: true })`
 
 ---
 
