@@ -1,0 +1,65 @@
+# Job — Background Work Executed by AgentOS
+#
+# Agent loops, batch sync, workflows — things the system commits to doing.
+# Extends commitment: the system promises to execute this work.
+#
+# Agent jobs produce conversations (reasoning traces). Batch jobs (future)
+# produce execution logs. The job entity tracks lifecycle and cost.
+#
+# Relationships:
+#   job → requested_by (request) → account (who initiated)
+#   job → produced → conversation (agent jobs: reasoning trace)
+#   job → affected → [entities] (batch jobs: what was touched)
+
+id: job
+plural: jobs
+extends: commitment
+name: Job
+description: Background work executed by AgentOS — agent loops, batch sync, workflows
+
+properties:
+  id:
+    type: string
+    required: true
+
+  name:
+    type: string
+    required: true
+    description: Human-readable job name
+
+  status:
+    type: string
+    required: true
+    enum: [queued, running, paused, completed, failed, cancelled]
+
+  kind:
+    type: string
+    required: true
+    enum: [agent, batch, workflow]
+    description: What type of job this is
+
+  config:
+    type: object
+    description: Job-specific configuration (model, skill, tools, filter, etc.)
+
+  result:
+    type: object
+    description: Final result summary (set on completion)
+
+  error:
+    type: object
+    description: Error details (set on failure)
+
+  usage:
+    type: object
+    description: Token usage and cost tracking (agent jobs)
+
+operations: [list, get, create, update]
+
+display:
+  primary: name
+  status: status
+  icon: play-circle
+  sort:
+    - field: created_at
+      order: desc

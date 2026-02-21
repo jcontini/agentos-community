@@ -1,0 +1,12 @@
+id: request
+extends: govern
+name: Request
+inverse_name: Requested by
+description: Actor requested that work be done — initiated a job, asked for a task
+
+is_relationship: true
+
+from_type: actor
+to_type: commitment
+
+properties: {}
