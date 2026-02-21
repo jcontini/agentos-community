@@ -1,0 +1,41 @@
+# Establish — Actor Brings a Fiat Place Into Existence
+#
+# The founding act. An authority exercises power and a new fiat entity
+# comes into being: a country declares independence, a parliament
+# creates a new province, a city charter is signed.
+#
+# This is the relationship that replaces `valid_from` as a property
+# on fiat places. The founding date is not a stored field — it's the
+# `started_at` of this relationship. The founding authority is the
+# `from` actor. The founding document (Declaration of Independence,
+# a treaty, a constitution) is captured in `source`.
+#
+# Anti: abolish — the same authority (or a successor/conqueror) can
+# dissolve what was established.
+#
+# Examples:
+#   Continental Congress --establish--> United States
+#     started_at: 1776-07-04, source: "Declaration of Independence"
+#
+#   UN General Assembly --establish--> State of Israel
+#     started_at: 1948-05-14, source: "UN Resolution 181"
+#
+#   Parliament --establish--> Northern Territory
+#     started_at: 1978-07-01, source: "Northern Territory (Self-Government) Act 1978"
+
+id: establish
+extends: govern
+anti: abolish
+name: Establish
+inverse_name: Established by
+description: Authority brings a fiat place into existence — founding, declaring, chartering
+
+is_relationship: true
+
+from_type: actor
+to_type: [country, region, city]
+
+properties:
+  source:
+    type: string
+    description: The document, treaty, law, or declaration that effected this establishment

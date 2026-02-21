@@ -9,6 +9,28 @@
 # all places. The `add` relationship family puts things into
 # places; current membership is computed by netting anti-
 # relationships (add/remove).
+#
+# The four categories of place:
+#
+#   natural/        Bona fide — physical discontinuities draw the boundary.
+#                   Continents, landforms, bodies of water. Exist independent
+#                   of human declaration. Change on geological timescales.
+#
+#   administrative/ Fiat — legal declarations draw the boundary. Countries,
+#                   regions, cities-as-jurisdictions. Exist because an authority
+#                   says so. Can change overnight (new treaty, revolution, law).
+#                   Model claims, not truth. Use territorial_claim relationships
+#                   for contested places (Kashmir, Taiwan, Crimea).
+#
+#   built/          Anthropogenic physical. Human-made structures and
+#                   environments. Physically real, but named and purposed
+#                   by human decision. Venues, buildings, parks, airports.
+#
+#   digital/        Virtual containers. Channels, forums, repositories,
+#                   databases, playlists. Exist in information space.
+#
+# The bona fide / fiat distinction is from Casati, Smith & Varzi (1996).
+# "Fiat" is the same root as fiat currency — value/existence by declaration.
 
 id: place
 plural: places

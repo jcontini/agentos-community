@@ -1,0 +1,56 @@
+# Continent — A Major Landmass
+#
+# Mostly bona fide — large-scale physical geography. The landmasses
+# themselves are physically real. But: the divisions are partly fiat.
+# Eurasia is one continuous landmass. "Europe" and "Asia" are cultural
+# constructs — the Ural Mountains convention was a 18th-century decision
+# by Swedish military officer Philip Johan von Strahlenberg, not a
+# natural boundary.
+#
+# The continent count varies by culture:
+#   7 (Anglo-American model): Africa, Antarctica, Asia, Australia/Oceania,
+#     Europe, North America, South America
+#   6 (merged Americas): Africa, Antarctica, Australia/Oceania,
+#     Eurasia, America
+#   6 (merged Eurasia): Africa, Antarctica, America, Australia/Oceania,
+#     Europe, Asia
+#
+# For epistemic honesty: Eurasia is the bona fide physical entity.
+# Europe and Asia are cultural/historical divisions — closer to
+# administrative or narrative categories than physical ones.
+#
+# References: schema.org/Continent, Wikidata Q5107
+
+id: continent
+plural: continents
+extends: place
+name: Continent
+description: A major landmass — the large-scale physical geography of Earth
+
+references:
+  schema_org: https://schema.org/Continent
+  wikidata: Q5107
+
+properties:
+  area_km2:
+    type: number
+    description: Area in square kilometers
+
+  coordinates:
+    type: object
+    description: Approximate centroid coordinates
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name]
+
+display:
+  primary: name
+  icon: globe

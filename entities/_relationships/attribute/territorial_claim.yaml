@@ -1,0 +1,53 @@
+# Territorial Claim — Actor Claims Territory
+#
+# The foundational relationship for epistemic honesty about places.
+# We never assert that a country "owns" or "is" a territory.
+# We assert that an actor CLAIMS it, with what type of authority,
+# sourced to what document, valid for what period.
+#
+# This is how we model Kashmir (India, Pakistan, and China all have
+# territorial claims with different claim_types and sources),
+# Taiwan (self-determined de jure + de facto; PRC claims de jure only),
+# Crimea (Russia de facto since 2014; Ukraine de jure continuously),
+# and Bir Tawil (claimed_by nobody — neither Egypt nor Sudan wants it).
+#
+# Claim types:
+#   de_jure      — legal/constitutional assertion of sovereignty
+#   de_facto     — actual administrative control on the ground
+#   self_determined — what the local government/population claims for itself
+#   recognized   — formal international diplomatic recognition
+#
+# The source field should point to a specific document: a treaty, a
+# constitution, a UN resolution, a declaration of independence.
+# A claim without a source is opinion. A sourced claim is data.
+#
+# Temporal bounds come from the relationship's built-in started_at/ended_at.
+
+id: territorial_claim
+extends: attribute
+name: Territorial Claim
+inverse_name: Claimed by
+description: Actor claims jurisdiction or sovereignty over a place
+
+is_relationship: true
+
+from_type: [country, organization, person]
+to_type: [country, region, city, continent]
+
+properties:
+  claim_type:
+    type: string
+    enum: [de_jure, de_facto, self_determined, recognized]
+    description: >
+      de_jure = legal/constitutional claim;
+      de_facto = actual control on the ground;
+      self_determined = what the place claims for itself;
+      recognized = formal diplomatic recognition of another's claim
+
+  source:
+    type: string
+    description: The specific document, treaty, law, or declaration backing this claim
+
+  contested:
+    type: boolean
+    description: Whether this claim is actively disputed by another actor

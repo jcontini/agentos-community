@@ -1,0 +1,32 @@
+# Abolish — Authority Dissolves a Fiat Place
+#
+# The anti of establish. A fiat entity ceases to exist: a country
+# is dissolved (Soviet Union, 1991), a territory is absorbed into
+# another jurisdiction, a city is annexed.
+#
+# The `ended_at` of this relationship is when the entity ceased to
+# exist — the `valid_until` date as a graph fact rather than a
+# stored property.
+#
+# Examples:
+#   Gorbachev (Soviet government) --abolish--> Soviet Union
+#     started_at: 1991-12-25, source: "Alma-Ata Declaration"
+#
+#   Yugoslav Assembly --abolish--> Socialist Federal Republic of Yugoslavia
+#     started_at: 1992-04-28
+
+id: abolish
+extends: govern
+name: Abolish
+inverse_name: Abolished by
+description: Authority dissolves a fiat place — the anti of establish
+
+is_relationship: true
+
+from_type: actor
+to_type: [country, region, city]
+
+properties:
+  source:
+    type: string
+    description: The document, treaty, law, or event that effected this dissolution

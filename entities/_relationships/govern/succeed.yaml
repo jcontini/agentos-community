@@ -1,0 +1,47 @@
+# Succeed — A Fiat Place Succeeds Another
+#
+# Identity succession between fiat entities. When one jurisdiction
+# directly follows from another — through dissolution, partition,
+# merger, or independence — we record the succession as a graph
+# edge, not as stored arrays on each entity.
+#
+# This replaces the `replaces`/`replaced_by` property arrays that
+# would otherwise clutter fiat entity schemas. Everything is on
+# the graph, derivable by traversal.
+#
+# The direction is: the NEW entity succeeds the OLD entity.
+#   new_country --succeed--> old_country
+#
+# Examples:
+#   Russia --succeed--> Soviet Union
+#   Czech Republic --succeed--> Czechoslovakia
+#   Slovakia --succeed--> Czechoslovakia
+#   Germany (reunified) --succeed--> East Germany
+#   Germany (reunified) --succeed--> West Germany
+#   Myanmar --succeed--> Burma  (rename — same territory, new fiat identity)
+#
+# Note: "same place, different name" (Burma → Myanmar) and "new place
+# from old" (Yugoslavia → Serbia + others) are both succeed edges.
+# The distinction is in how many successors there are (1 = rename,
+# many = partition) and whether the geography is the same.
+
+id: succeed
+extends: govern
+name: Succeed
+inverse_name: Preceded by
+description: A fiat place succeeds another — partition, merger, independence, or rename
+
+is_relationship: true
+
+from_type: [country, region, city]
+to_type: [country, region, city]
+
+properties:
+  succession_type:
+    type: string
+    enum: [rename, partition, merger, independence, annexation]
+    description: How the succession happened
+
+  source:
+    type: string
+    description: Treaty, law, or event that effected the succession

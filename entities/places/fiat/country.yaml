@@ -1,0 +1,53 @@
+# Country — A Sovereign State or Territory
+#
+# Fiat entity. Countries exist because they're declared — by constitutions,
+# treaties, international recognition, or conquest. The boundary between
+# India and Pakistan in Kashmir isn't drawn by mountains; it's drawn by
+# competing claims with guns behind them.
+#
+# Epistemic honesty: we model claims about countries, not countries as
+# ground truth. The `territorial_claim` relationship expresses who claims
+# what, with what type of authority, sourced to what document.
+#
+# Temporal: a country's lifespan is graph-computed, not stored:
+#   - Founded: Actor --establish--> Country (started_at = founding date)
+#   - Dissolved: Actor --abolish--> Country (started_at = dissolution date)
+#   - Succession: NewCountry --succeed--> OldCountry
+# These are govern relationships, not properties. "When did this country
+# come into being?" is answered by traversal, not by reading valid_from.
+#
+# References: schema.org/Country, Wikidata Q6256
+
+id: country
+plural: countries
+extends: place
+name: Country
+description: A sovereign state or territory — a fiat entity defined by claims, not physical boundaries
+
+references:
+  schema_org: https://schema.org/Country
+  wikidata: Q6256
+  bona_fide_fiat: https://ontology.buffalo.edu/smith/articles/fiatobj.html
+
+properties:
+  iso_code:
+    type: string
+    description: ISO 3166-1 alpha-2 code (US, GB, ID, etc.)
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+  capital:
+    type: string
+    description: Capital city name (claim — may be disputed)
+
+  capital_source:
+    type: string
+    description: Source for the capital claim
+
+identifiers: [name, iso_code]
+
+display:
+  primary: name
+  icon: flag

@@ -1,0 +1,48 @@
+# Region — State, Province, Prefecture, Territory
+#
+# Fiat entity. Administrative subdivision of a country — exists because
+# a legal framework says it does. Can be renamed, merged, split, or
+# dissolved by the same authority that created it.
+#
+# The `region_type` field acknowledges that different jurisdictions use
+# different terms: US has states, UK has counties and nations, France
+# has départements, Japan has prefectures. They're all the same
+# ontological thing: a fiat administrative subdivision.
+#
+# Temporal: regions change. East and West Germany reunified. The Soviet
+# republics became independent. Temporal facts live on the graph:
+#   Actor --establish--> Region (started_at = creation date)
+#   Actor --abolish--> Region (started_at = dissolution date)
+#   NewRegion --succeed--> OldRegion
+#
+# References: schema.org/State, Wikidata Q10864048
+
+id: region
+plural: regions
+extends: place
+name: Region
+description: A state, province, prefecture, or territory — administrative subdivision of a country
+
+references:
+  schema_org: https://schema.org/State
+  wikidata: Q10864048
+
+properties:
+  region_type:
+    type: string
+    description: state, province, territory, prefecture, department, oblast, canton, etc.
+
+  iso_code:
+    type: string
+    description: ISO 3166-2 code (US-TX, GB-ENG, etc.)
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name, iso_code]
+
+display:
+  primary: name
+  secondary: region_type
+  icon: map

@@ -1,0 +1,70 @@
+# City — A Municipality or Urban Jurisdiction
+#
+# Fiat entity — specifically the administrative jurisdiction.
+# A city is simultaneously three things:
+#   1. An administrative unit (legal boundary, government, jurisdiction) ← this entity
+#   2. A physical settlement (the built environment of streets and buildings)
+#   3. A social concentration (people, culture, economic activity)
+#
+# These three often don't coincide. "The City of London" (administrative,
+# ~8,600 people) vs "London" (metropolitan settlement, ~9 million) is the
+# classic example. We model the administrative unit here; the settlement
+# and built environment are separate concerns.
+#
+# Population is always a claim — sourced from a census or estimate by
+# some authority at some point in time. Use population_source and
+# population_as_of to capture this.
+#
+# Temporal: city boundaries and names change. Königsberg became Kaliningrad.
+# Saigon became Ho Chi Minh City. These temporal facts live on the graph:
+#   Actor --establish--> City, Actor --abolish--> City
+#   NewCity --succeed--> OldCity (succession_type: rename)
+#
+# References: schema.org/City, Wikidata Q515
+
+id: city
+plural: cities
+extends: place
+name: City
+description: A municipality, town, or urban jurisdiction — the administrative unit
+
+references:
+  schema_org: https://schema.org/City
+  wikidata: Q515
+
+properties:
+  population:
+    type: integer
+    description: Population count (a claim, not a fact — see population_source)
+
+  population_source:
+    type: string
+    description: Who made this population claim (US Census Bureau, World Bank, etc.)
+
+  population_as_of:
+    type: string
+    format: date
+    description: When this population figure was measured
+
+  timezone:
+    type: string
+    description: IANA timezone (America/Chicago, Asia/Jakarta, etc.)
+
+  coordinates:
+    type: object
+    description: Approximate geographic coordinates of city center
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [name]
+
+display:
+  primary: name
+  icon: building-2

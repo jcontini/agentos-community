@@ -1,6 +1,15 @@
 # Venue — A Building, Park, Stadium, or Named Physical Location
 #
-# Extends place. Specific physical locations where things happen.
+# Bona fide-adjacent: venues are physically real — you can stand in them,
+# touch their walls. Unlike administrative places, a venue's existence
+# doesn't depend on legal declarations. The building exists even if the
+# city government that issued its permit dissolves.
+#
+# However, venues do have names and purposes that are socially assigned.
+# A stadium is a stadium because of what happens there and what we call it.
+# The physical structure is bona fide; the designation is fiat.
+#
+# References: schema.org/Place, Wikidata Q17350442
 
 id: venue
 plural: venues
@@ -15,7 +24,7 @@ references:
 properties:
   venue_type:
     type: string
-    description: restaurant, bar, office, park, stadium, museum, airport, etc.
+    description: restaurant, bar, office, park, stadium, museum, airport, theater, etc.
 
   address:
     type: string
