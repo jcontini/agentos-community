@@ -26,10 +26,10 @@ interface VideoDetailProps {
 function getProxiedSrc(src: string | undefined): string | undefined {
   if (!src) return undefined;
   if (src.startsWith('data:') || src.startsWith('blob:')) return src;
-  if (src.startsWith('//')) return `/api/proxy/image?url=${encodeURIComponent('https:' + src)}`;
+  if (src.startsWith('//')) return `/ui/proxy/image?url=${encodeURIComponent('https:' + src)}`;
   if (src.startsWith('/')) return src;
   if (src.startsWith('http://') || src.startsWith('https://'))
-    return `/api/proxy/image?url=${encodeURIComponent(src)}`;
+    return `/ui/proxy/image?url=${encodeURIComponent(src)}`;
   return src;
 }
 
@@ -110,7 +110,7 @@ export default function VideoDetail({ entity, item, pending, error }: VideoDetai
   React.useEffect(() => {
     if (channelUrl && !channelThumbnail) {
       // Fire and forget — the backend handles the entity update
-      fetch('/api/adapters/youtube/channel.get', {
+      fetch('/use/youtube/channel.get', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
