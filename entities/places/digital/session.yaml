@@ -1,0 +1,53 @@
+# Session entity — an AI agent's conversation with AgentOS
+#
+# A session IS a conversation. When Cursor connects via MCP, that's a session.
+# When Claude Desktop connects, that's a different session. Each session is a
+# place where messages are sent — same as iMessage or WhatsApp conversations.
+#
+# Why extend conversation:
+#   - Sessions have participants (agent account + user)
+#   - Sessions contain messages (tool calls, responses)
+#   - Sessions are searchable via FTS
+#   - Sessions appear in timeline queries
+#   - Observation jobs process sessions like any other conversation
+#
+# The session entity adds client metadata on top of conversation's messaging
+# primitives. Everything else (name, last_message, participants, etc.) is
+# inherited from conversation.
+
+id: session
+plural: sessions
+extends: conversation
+name: Session
+description: An AI agent's conversation with AgentOS — an MCP or HTTP connection
+
+properties:
+  client:
+    type: string
+    required: true
+    description: Client software identifier (e.g., "cursor", "claude-desktop")
+
+  client_version:
+    type: string
+    description: Client software version
+
+  workspace:
+    type: string
+    description: Workspace or project path the agent is operating in
+
+  status:
+    type: string
+    enum: [active, ended]
+    default: active
+    description: Whether the session is currently active
+
+  ended_at:
+    type: datetime
+    description: When the session ended (best-effort, detected via MCP disconnect or timeout)
+
+operations: [list, get, create, update]
+
+display:
+  primary: name
+  secondary: client
+  icon: terminal

@@ -91,6 +91,49 @@ themes/            Visual styling (CSS)
 
 ---
 
+## Entity Design Principles
+
+These principles govern how we model data in the Memex. They're not preferences — they're architectural decisions that compound. Getting them wrong creates tech debt that infects every feature built on top.
+
+### Computed, Not Stored
+
+**Properties that can be derived from the graph are never stored as fields.** They're computed at query time or inferred by traversal.
+
+```yaml
+# Good: status is computed from graph state
+computed:
+  status: |
+    if .completed then "done"
+    elif (.blockers | length > 0) then "blocked"
+    else "ready"
+    end
+
+# Bad: storing a derived property as a field
+properties:
+  status: { type: string, enum: [done, blocked, ready] }  # ← this is just a cache of graph state
+```
+
+Real examples in the codebase:
+- **Task status**: computed from completion + blockers
+- **Narrative positions**: inferred from the enables graph via a goal
+- **Contact cards**: views computed from graph traversals over a person's claimed accounts
+- **Place membership**: computed by netting add/remove relationships
+- **Reply counts**: computed by traversal
+
+**Corollary: Don't create entities for things that are just views over other entities.** The "stage" of a relationship between two people isn't an entity or a stored property. It's what the graph tells you when you look at the events, conversations, emotions, and engagement between them. A first date is a date entity. "We met on Hinge" is an event. Milestones are events. The graph stores atoms; intelligence computes molecules.
+
+### Everything on the Graph
+
+**No shadow tables, no side stores.** If something is worth tracking — provenance, observations, audit trails, agent memory — it's an entity with relationships. The 10 MCP tools work for everything because everything is an entity. If you find yourself designing a separate SQL table or JSON file for structured data, stop and model it as entities instead.
+
+### Entities Are Things, Not Relationships
+
+**If two entities have a connection, that's a relationship — not a new entity type.** Don't create a "Friendship" entity to link two people. The friendship IS the subgraph: the events, conversations, shared experiences, and edges between them. The relationship edges (`engage`, `reference`, etc.) capture the connection. Intelligence synthesizes the narrative.
+
+Relationships already have properties (`data` field), temporal bounds (`started_at`, `ended_at`), and provenance (`skill`, `account`). If you need richer connection data, add properties to the relationship — don't promote it to an entity.
+
+---
+
 ## Attribution Model — Accounts, Not People
 
 **CRITICAL:** When pulling content from social platforms (YouTube, Reddit, Twitter, HackerNews, etc.), create **account entities**, not person entities.
