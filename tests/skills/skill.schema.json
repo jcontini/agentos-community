@@ -165,6 +165,35 @@
       },
       "additionalProperties": false
     },
+    "agent": {
+      "type": "object",
+      "description": "Agent configuration — makes this skill an AI agent skill that runs an LLM loop instead of a single API call.",
+      "required": ["intelligence", "system_prompt"],
+      "properties": {
+        "intelligence": {
+          "type": "string",
+          "description": "Intelligence reference: 'skill/model' (e.g., 'anthropic/claude-3-5-haiku-20241022')"
+        },
+        "system_prompt": {
+          "type": "string",
+          "description": "System prompt for the agent"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Capabilities the agent can call. 'entity.operation' for runtime resolution, 'skill.entity.operation' for explicit binding."
+        },
+        "max_iterations": {
+          "type": "integer",
+          "description": "Maximum agent loop iterations (safety limit, default: 20)"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "LLM sampling temperature (default: 0)"
+        }
+      },
+      "additionalProperties": false
+    },
     "credits": {
       "type": "array",
       "description": "Relationships to other skills or entity capabilities. Unifies attribution and dependency declaration — if you need it, you credit it.",

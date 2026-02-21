@@ -118,21 +118,23 @@ describe('Schema Completeness', () => {
     }
   });
 
-  it('all skills have at least one operation, utility, or action', () => {
+  it('all skills have at least one operation, utility, action, or agent block', () => {
     for (const skillPath of getSkills()) {
       const content = readFileSync(join(SKILLS_DIR, skillPath, 'readme.md'), 'utf-8');
       const frontmatter = parseFrontmatter(content);
       const operations = frontmatter?.operations as Record<string, unknown> | undefined;
       const utilities = frontmatter?.utilities as Record<string, unknown> | undefined;
       const actions = frontmatter?.actions as Record<string, unknown> | undefined;
-      
+      const agent = frontmatter?.agent;
+
       const hasOperations = operations && Object.keys(operations).length > 0;
       const hasUtilities = utilities && Object.keys(utilities).length > 0;
       const hasActions = actions && Object.keys(actions).length > 0;
-      
+      const isAgentSkill = !!agent;
+
       expect(
-        hasOperations || hasUtilities || hasActions,
-        `${skillPath} must have either 'operations', 'utilities', or 'actions' (legacy) with at least one item`
+        hasOperations || hasUtilities || hasActions || isAgentSkill,
+        `${skillPath} must have 'operations', 'utilities', 'actions', or 'agent' block`
       ).toBe(true);
     }
   });

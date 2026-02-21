@@ -142,14 +142,16 @@ function checkSchema(frontmatter) {
   
   // Guide-only skills (auth: none, no operations) are exempt from the operations check
   const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
+  // Agent skills run an AI loop instead of a single API call — exempt from service-specific checks
+  const isAgentSkill = !!frontmatter.agent;
 
   const checks = [
     { name: 'valid structure', pass: true },
-    { name: 'website', pass: !!frontmatter.website },
+    { name: 'website', pass: isAgentSkill || isGuideOnly || !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
-    { name: 'auth', pass: frontmatter.auth !== undefined },
-    { name: 'operations or utilities', pass: isGuideOnly || !!(frontmatter.operations || frontmatter.utilities) },
-    { name: 'instructions', pass: !!frontmatter.instructions },
+    { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined },
+    { name: 'operations or utilities', pass: isAgentSkill || isGuideOnly || !!(frontmatter.operations || frontmatter.utilities) },
+    { name: 'instructions', pass: isAgentSkill || isGuideOnly || !!frontmatter.instructions },
   ];
   
   const passed = checks.filter(c => c.pass).length;
@@ -308,9 +310,10 @@ function checkSeed(frontmatter) {
   let total = 0;
   let passed = 0;
 
-  // Guide-only skills (auth: none, no operations) don't connect to external services
+  // Guide-only and agent skills don't connect to a single external service
   const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
-  if (isGuideOnly) {
+  const isAgentSkill = !!frontmatter.agent;
+  if (isGuideOnly || isAgentSkill) {
     return { pass: true, passed: 0, total: 0, errors: [] };
   }
   
