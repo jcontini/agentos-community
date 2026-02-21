@@ -1,16 +1,18 @@
 ---
 id: imessage
 name: iMessage
-description: Read iMessages and SMS from macOS Messages app
+description: Send and read iMessages and SMS from macOS Messages app
 icon: icon.svg
 color: "#34C759"
 
 website: https://support.apple.com/messages
 
 auth: none
+platforms: [macos]
 connects_to: imessage
 
 seed:
+  # Apple / iMessage
   - id: imessage
     types: [software]
     name: iMessage
@@ -35,7 +37,82 @@ seed:
       exchange: NASDAQ
       wikidata_id: Q312
 
+  # Peter Steinberger (@steipete) — creator of imsg, OpenClaw, gogcli, PSPDFKit
+  - id: steipete
+    types: [person]
+    name: Peter Steinberger
+    data:
+      nickname: steipete
+      location: Vienna, Austria
+      url: https://steipete.me
+      notes: Prolific open source developer. Creator of PSPDFKit, OpenClaw, imsg, gogcli, and dozens of CLI tools. Built the imsg tool that powers AgentOS iMessage sending.
+    relationships:
+      - role: claims
+        to: steipete-github
+
+  - id: steipete-github
+    types: [account]
+    name: steipete
+    data:
+      platform: github
+      handle: steipete
+      url: https://github.com/steipete
+      follower_count: 4500
+
+  - id: imsg-software
+    types: [software]
+    name: imsg
+    data:
+      software_type: cli
+      url: https://github.com/steipete/imsg
+      platforms: [macos]
+      pricing: open_source
+      launched: "2025"
+      notes: Native Swift CLI for sending and reading iMessages. Uses public macOS APIs and AppleScript — no private APIs. Powers AgentOS iMessage send capability.
+    relationships:
+      - role: created_by
+        to: steipete
+
+  - id: openclaw
+    types: [software]
+    name: OpenClaw
+    data:
+      software_type: platform
+      url: https://openclaw.ai
+      platforms: [macos, linux, web]
+      pricing: open_source
+      notes: Personal AI assistant platform. Runs on your own devices, integrates with WhatsApp, Telegram, Slack, Discord, Teams, Signal, iMessage. 200K+ GitHub stars.
+    relationships:
+      - role: created_by
+        to: steipete
+
+  - id: gogcli
+    types: [software]
+    name: gogcli
+    data:
+      software_type: cli
+      url: https://github.com/steipete/gogcli
+      platforms: [macos, linux, windows]
+      pricing: open_source
+      launched: "2025"
+      notes: Google Workspace CLI — Gmail, Calendar, Drive, Contacts, Tasks, Sheets, Docs from the terminal. JSON-first output. Potential future AgentOS Gmail/Google adapter.
+    relationships:
+      - role: created_by
+        to: steipete
+
+credits:
+  - skill: imsg
+    relationship: appreciates
+    reason: Native Swift CLI by Peter Steinberger (@steipete) that powers message.send. https://github.com/steipete/imsg
+
 database: "~/Library/Messages/chat.db"
+
+requires:
+  - name: imsg
+    install:
+      macos: brew tap steipete/tap && brew install imsg
+    url: https://github.com/steipete/imsg
+    description: Swift CLI for sending iMessages (used for message.send)
 
 instructions: |
   iMessage stores messages in a local SQLite database.
@@ -43,6 +120,9 @@ instructions: |
   - Convert with: date / 1000000000 + 978307200 → Unix timestamp
   - Phone numbers in E.164 format: +1XXXXXXXXXX
   - Handles can be phone or email
+  - Sending uses the imsg CLI (brew tap steipete/tap && brew install imsg)
+  - Recipients can be phone numbers (+14155551234) or email addresses
+  - Service options: imessage, sms, or auto (tries iMessage first, falls back to SMS)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -251,16 +331,55 @@ operations:
         limit: '.params.limit // 50'
       response:
         root: "/"
+
+  message.send:
+    description: Send an iMessage or SMS to a phone number or email
+    returns: void
+    params:
+      to: { type: string, required: true, description: "Recipient phone number (E.164 like +14155551234) or email address" }
+      text: { type: string, required: true, description: "Message body" }
+      service: { type: string, default: "imessage", description: "Service: imessage, sms, or auto" }
+      file: { type: string, description: "Path to file attachment" }
+    command:
+      binary: imsg
+      args:
+        - "send"
+        - "--to"
+        - "{{params.to}}"
+        - "--text"
+        - "{{params.text}}"
+        - "--service"
+        - "{{params.service}}"
+        - "--json"
+      timeout: 15
 ---
 
 # iMessage
 
-Read iMessages and SMS from the macOS Messages app. Read-only access to message history.
+Send and read iMessages and SMS from the macOS Messages app.
 
 ## Requirements
 
-- **macOS only** - Reads from local Messages database
-- **Full Disk Access required** - Grant in System Settings → Privacy & Security → Full Disk Access
+- **macOS only** — Reads from local Messages database, sends via Messages.app
+- **Full Disk Access** — System Settings → Privacy & Security → Full Disk Access (for reading)
+- **Automation permission** — System Settings → Privacy & Security → Automation → allow Terminal to control Messages.app (for sending)
+- **imsg CLI** — `brew tap steipete/tap && brew install imsg` (for sending)
+
+## Sending Messages
+
+Send uses [imsg](https://github.com/steipete/imsg) by [Peter Steinberger](https://github.com/steipete) — a native Swift CLI that talks to Messages.app via public macOS APIs and AppleScript. No private APIs, stable across macOS versions.
+
+Recipients can be:
+- Phone numbers in E.164 format: `+14155551234`
+- Email addresses registered with Apple ID: `user@example.com`
+
+```bash
+# Send via API
+curl -X POST http://localhost:3456/use/imessage/message.send \
+  -H "X-Agent: cursor" \
+  -H "Content-Type: application/json" \
+  -d '{"to": "+14155551234", "text": "Hello from AgentOS!"}'
+```
 
 ## Handles
 
@@ -269,7 +388,7 @@ This enables direct matching with WhatsApp contacts for social graph deduplicati
 
 ## Features
 
-- List all conversations
-- Get messages from a conversation  
-- Search across all messages
-- Read-only access (no sending)
+- **Send** messages via iMessage or SMS
+- **List** all conversations
+- **Get** messages from a conversation  
+- **Search** across all messages
