@@ -1,6 +1,6 @@
 ---
-id: anthropic
-name: Anthropic
+id: anthropic-api
+name: Anthropic API
 description: Claude AI models via Anthropic Messages API
 icon: icon.svg
 color: "#000000"
@@ -135,21 +135,21 @@ utilities:
 
 ---
 
-# Anthropic
+# Anthropic API
 
 Claude AI models via the [Anthropic Messages API](https://docs.anthropic.com/messages).
 
 ## Setup
 
 1. Get your API key from https://console.anthropic.com/settings/keys
-2. Add credential in AgentOS Settings → Skills → Anthropic
+2. Add credential in AgentOS Settings → Skills → Anthropic API
 
 ## Models
 
 Use `model.list` to discover available models:
 
 ```bash
-curl http://localhost:3456/mem/models?skill=anthropic -H "X-Agent: cursor"
+curl http://localhost:3456/mem/models?skill=anthropic-api -H "X-Agent: cursor"
 ```
 
 Models are pulled from the Anthropic API and stored as entities on the graph. Don't hardcode model IDs — query the graph for the latest.
@@ -159,7 +159,7 @@ Models are pulled from the Anthropic API and stored as entities on the graph. Do
 Call the `chat` utility to send a message to Claude:
 
 ```bash
-curl -X POST http://localhost:3456/api/skills/anthropic/chat \
+curl -X POST http://localhost:3456/api/skills/anthropic-api/chat \
   -H "X-Agent: cursor" \
   -H "Content-Type: application/json" \
   -d '{
@@ -191,7 +191,7 @@ Response:
 Pass tool definitions to enable function calling:
 
 ```bash
-curl -X POST http://localhost:3456/api/skills/anthropic/chat \
+curl -X POST http://localhost:3456/api/skills/anthropic-api/chat \
   -H "X-Agent: cursor" \
   -H "Content-Type: application/json" \
   -d '{
@@ -238,7 +238,7 @@ If the model wants to call a tool, the response will have:
 Pass a system prompt for context:
 
 ```bash
-curl -X POST http://localhost:3456/api/skills/anthropic/chat \
+curl -X POST http://localhost:3456/api/skills/anthropic-api/chat \
   -H "X-Agent: cursor" \
   -H "Content-Type: application/json" \
   -d '{
