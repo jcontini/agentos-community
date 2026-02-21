@@ -315,11 +315,81 @@ All values use jaq expressions (Rust jq). Access `.params.*`, `.auth.*`, do math
 
 | Executor | Use case | Example |
 |----------|----------|---------|
-| `rest` | HTTP APIs | `adapters/todoist/` |
-| `graphql` | GraphQL APIs | `adapters/linear/` |
-| `swift` | macOS native APIs | `adapters/apple-calendar/` |
-| `command` | Shell commands | `adapters/whois/` |
-| `sql` | Database queries | `adapters/postgres/` |
+| `rest` | HTTP APIs | `skills/todoist/` |
+| `graphql` | GraphQL APIs | `skills/linear/` |
+| `swift` | macOS native APIs | `skills/apple-calendar/` |
+| `command` | CLI tools, local scripts | `skills/youtube/`, `skills/granola/` |
+| `sql` | SQLite/Postgres queries | `skills/postgres/`, `skills/imessage/` |
+| `csv` | CSV file import | |
+| `applescript` | macOS automation | |
+
+### Command Executor
+
+Runs a local binary with arguments. Output is parsed as JSON (falls back to string). Security is handled by the firewall layer — the executor just runs what it's told.
+
+```yaml
+operations:
+  video.search:
+    description: Search YouTube videos
+    returns: video[]
+    params:
+      query: { type: string, required: true }
+    command:
+      binary: bash                    # Binary to execute
+      args:                           # Arguments (array, interpolated)
+        - "-l"
+        - "-c"
+        - |
+          yt-dlp --flat-playlist --dump-json "ytsearch10:{{params.query}}" 2>/dev/null | jq -s '...'
+      timeout: 60                     # Seconds (default: 60)
+```
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `binary` | string | Binary name (resolved via PATH + common dirs) |
+| `args` | string[] | Arguments array (each element interpolated with params) |
+| `args_string` | string | Alternative: single string split on whitespace |
+| `stdin` | string | Content piped to stdin (interpolated) |
+| `timeout` | integer | Timeout in seconds (default: 60) |
+| `working_dir` | string | Working directory (interpolated, supports `~/`) |
+| `response` | object | Response mapping (same as REST — transform, root, mapping) |
+
+**Common patterns:**
+
+```yaml
+# Run a Python script (like granola, cursor)
+command:
+  binary: bash
+  args:
+    - "-l"
+    - "-c"
+    - "python3 ~/dev/agentos-community/skills/my-skill/script.py --json {{params.limit}}"
+  timeout: 30
+
+# Run a binary directly (like yt-dlp)
+command:
+  binary: yt-dlp
+  args:
+    - "--dump-json"
+    - "--skip-download"
+    - "{{params.url}}"
+  timeout: 30
+
+# Pipe content via stdin
+command:
+  binary: jq
+  args: [".results[]"]
+  stdin: "{{params.data}}"
+```
+
+**Tips:**
+- Use `bash -l -c "..."` to get a login shell (loads PATH, homebrew, etc.)
+- Python scripts should `print(json.dumps(result))` — the executor parses stdout as JSON
+- Use `2>/dev/null` to suppress stderr noise from CLI tools
+- The `response:` block works the same as REST — apply transforms, root extraction, field mapping
+- For database queries, consider the `sql:` executor instead — it handles SQLite/Postgres natively with named params, glob paths, and attach
 
 ---
 
