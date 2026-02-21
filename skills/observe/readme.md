@@ -6,7 +6,7 @@ icon: icon.svg
 color: "#8B5CF6"
 
 agent:
-  intelligence: anthropic/claude-3-5-haiku-20241022
+  intelligence: claude-desktop/claude-haiku-4-5
   system_prompt: |
     You are an observation agent for AgentOS. Your job is to extract knowledge from
     conversations and persist it to the entity graph.
@@ -69,4 +69,4 @@ provenance relationships linking back to the source conversation.
 
 ## Cost
 
-Uses Claude 3.5 Haiku (~$0.03 per observation run of ~20 iterations).
+Uses Claude 3 Haiku via Claude Desktop (billed to your Pro/Max plan).

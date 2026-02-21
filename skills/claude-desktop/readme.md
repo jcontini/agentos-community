@@ -54,12 +54,13 @@ instructions: |
   Claude AI via your Claude Desktop subscription. Calls are billed to your Pro/Max plan —
   not a separate API account.
 
-  Supported models (OAuth-compatible):
-  - claude-3-haiku-20240307: Fast, cheap, great for most tasks
-  - claude-sonnet-4-5: More capable, use when haiku isn't enough
+  Current models (as of Feb 2026):
+  - claude-haiku-4-5: Fast, cheap ($1/$5 per MTok), great for most tasks
+  - claude-sonnet-4-6: Best balance of speed and intelligence ($3/$15 per MTok)
+  - claude-opus-4-6: Most capable, for complex reasoning ($5/$25 per MTok)
 
-  Default to claude-3-haiku-20240307 unless the task requires stronger reasoning.
-  Note: claude-3-5-haiku is NOT available on the OAuth endpoint (404).
+  Default to claude-haiku-4-5 unless the task requires stronger reasoning.
+  Note: claude-3-haiku-20240307 is deprecated (retiring April 2026).
 
   The token is read directly from Claude Desktop's encrypted config — no API key needed.
   If Claude Desktop is not installed or not signed in, this skill will fail.

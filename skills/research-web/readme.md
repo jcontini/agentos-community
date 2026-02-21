@@ -6,7 +6,7 @@ icon: icon.svg
 color: "#2563EB"
 
 agent:
-  intelligence: anthropic/claude-3-5-haiku-20241022
+  intelligence: claude-desktop/claude-haiku-4-5
   system_prompt: |
     You are a research agent. Your job is to thoroughly answer questions by searching
     the web and reading relevant pages.
