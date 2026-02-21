@@ -1,0 +1,38 @@
+# Observation — A fact or set of facts extracted from a conversation or document
+#
+# Agents create observations when they extract knowledge from conversations.
+# Provenance is captured through relationships:
+#   observation → extracted_from → conversation (source)
+#   observation → created_by → account (which agent)
+#   observation → produced → [entities] (what it created/updated)
+
+id: observation
+plural: observations
+extends: record
+name: Observation
+description: A fact or set of facts extracted from a conversation or document by an agent
+
+properties:
+  status:
+    type: string
+    enum: [pending, processed, reviewed, rejected]
+    description: Processing state of this observation
+
+  source_type:
+    type: string
+    description: What was analyzed — "conversation", "document", etc.
+
+  extracted_count:
+    type: integer
+    description: How many facts were extracted in this observation batch
+
+  confidence:
+    type: number
+    description: Overall confidence score from 0.0 to 1.0
+
+operations: [list, get, create, update, delete]
+
+display:
+  primary: name
+  secondary: status
+  icon: eye
