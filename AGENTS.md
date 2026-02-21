@@ -4,30 +4,29 @@
 
 ---
 
-## First: Check Skills
+## First: Read `write-skill.md`
 
-**Before starting work, check if there's a relevant skill:**
+**You are almost certainly doing skill development.** That is the primary work in this repo — writing new skills, updating existing ones, adding operations, fixing mappings. Before doing anything else:
 
-```bash
-ls skills/
+```
+Read: skills/write-skill.md
 ```
 
-Skills contain detailed guidance for specific tasks. If the user asks you to do something that matches a skill, **read the skill first** before proceeding.
+This is the comprehensive guide for skill structure, executors, transformers, testing, and entity reuse. It has live data — available models, existing adapters, everything you need. **Read it first, every time.**
+
+## Other Skills
+
+If the task isn't skill development, check if another guide skill applies:
 
 | Skill | When to Use |
 |-------|-------------|
-| `write-skill.md` | Creating or modifying skills |
 | `write-app.md` | Writing apps or entity components |
 | `shell-history.md` | Querying shell history |
 | `apple-biome.md` | Screen time, app usage, media playback, location, device activity |
 
----
+## Reference: CONTRIBUTING.md
 
-## Second: Read CONTRIBUTING.md
-
-**CONTRIBUTING.md is the source of truth** for skill structure, entity schemas, component rules, and testing. Read it before making changes.
-
-This file (AGENTS.md) adds agent-specific workflow guidance.
+**CONTRIBUTING.md is the source of truth** for skill structure, entity schemas, component rules, and testing. Read it when you need the detailed technical reference beyond what `write-skill.md` covers.
 
 ---
 
