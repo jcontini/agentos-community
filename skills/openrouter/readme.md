@@ -37,13 +37,33 @@ seed:
       - role: offered_by
         to: openrouter-inc
 
+transformers:
+  model:
+    terminology: Model
+    mapping:
+      api_id: .id
+      title: .name
+      description: .description
+      released: '.created | todate'
+      provider: '.id | split("/") | .[0]'
+      model_type: '"llm"'
+      context_window: '.context_length | if . then (. | floor) else null end'
+
+operations:
+  model.list:
+    description: List available AI models from all providers via OpenRouter
+    returns: model[]
+    rest:
+      method: GET
+      url: https://openrouter.ai/api/v1/models
+      response:
+        root: /data
+
 instructions: |
   OpenRouter provides one API key for many model providers.
 
-  Model IDs are provider-qualified, for example:
-  - anthropic/claude-3.5-haiku
-  - openai/gpt-4o-mini
-  - meta-llama/llama-3.1-70b-instruct
+  Use model.list to discover available models — don't hardcode model IDs.
+  Model IDs are provider-qualified (e.g., anthropic/claude-3.5-haiku, openai/gpt-4o-mini).
 
   For agent jobs, start with cheaper models and upgrade only when needed.
 

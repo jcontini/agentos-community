@@ -50,18 +50,35 @@ seed:
       url: https://www.anthropic.com
       founded: "2021"
 
+transformers:
+  model:
+    terminology: Model
+    mapping:
+      api_id: .id
+      title: .display_name
+      released: .created_at
+      provider: '"anthropic"'
+      model_type: '"llm"'
+
+operations:
+  model.list:
+    description: List available Claude models (via your Claude Desktop subscription)
+    returns: model[]
+    rest:
+      method: GET
+      url: https://api.anthropic.com/v1/models
+      query:
+        limit: '"1000"'
+      headers:
+        anthropic-version: '"2023-06-01"'
+      response:
+        root: /data
+
 instructions: |
   Claude AI via your Claude Desktop subscription. Calls are billed to your Pro/Max plan —
   not a separate API account.
 
-  Current models (as of Feb 2026):
-  - claude-haiku-4-5: Fast, cheap ($1/$5 per MTok), great for most tasks
-  - claude-sonnet-4-6: Best balance of speed and intelligence ($3/$15 per MTok)
-  - claude-opus-4-6: Most capable, for complex reasoning ($5/$25 per MTok)
-
-  Default to claude-haiku-4-5 unless the task requires stronger reasoning.
-  Note: claude-3-haiku-20240307 is deprecated (retiring April 2026).
-
+  Use model.list to discover available models — don't hardcode model IDs.
   The token is read directly from Claude Desktop's encrypted config — no API key needed.
   If Claude Desktop is not installed or not signed in, this skill will fail.
 

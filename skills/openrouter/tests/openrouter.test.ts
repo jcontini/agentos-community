@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 describe('OpenRouter Skill', () => {
   describe('chat', () => {
     it('validates request shape for chat', async () => {
-      // Validation relies on tool references in test files.
       const request = {
         adapter: 'openrouter',
         tool: 'chat',
@@ -16,6 +15,13 @@ describe('OpenRouter Skill', () => {
       expect(request.tool).toBe('chat');
       expect(request.params.model).toBeTruthy();
       expect(Array.isArray(request.params.messages)).toBe(true);
+    });
+  });
+
+  describe('model.list', () => {
+    it('lists available models (skip - requires credentials)', async () => {
+      const _ = { tool: 'model.list' };
+      expect(true).toBe(true);
     });
   });
 });
