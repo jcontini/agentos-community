@@ -183,13 +183,12 @@ utilities:
         temperature: '.params.temperature // 0'
         system: .params.system
       response:
+        transform: '{content: (.content[0].text // null), tool_calls: [.content[] | select(.type == "tool_use") | {id: .id, name: .name, input: .input}], stop_reason: .stop_reason, usage: .usage}'
         mapping:
-          content: '.content[0].text // null'
-          tool_calls: '[.content[] | select(.type == "tool_use") | {id: .id, name: .name, input: .input}]'
-          stop_reason: '(if .stop_reason == "end_turn" then "end_turn" elif .stop_reason == "tool_use" then "tool_use" elif .stop_reason == "max_tokens" then "max_tokens" else .stop_reason end)'
-          usage:
-            input_tokens: .usage.input_tokens
-            output_tokens: .usage.output_tokens
+          content: .content
+          tool_calls: .tool_calls
+          stop_reason: .stop_reason
+          usage: .usage
 
 ---
 
