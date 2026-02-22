@@ -1,21 +1,24 @@
 /**
  * Memex Detail View
  *
- * Universal entity renderer. Shows any entity's properties, content body,
- * and relationships — all driven by the entity schema. No entity-specific code.
+ * Universal entity renderer with inline property editing.
  *
  * Layout:
- *   1. Title + type badge
- *   2. Property panel (Obsidian-style key-value metadata)
- *   3. Content area (markdown body)
- *   4. Relationship panel (graph connections)
+ *   1. Title (editable) + type badge
+ *   2. Property panel — always-editable, type-aware controls
+ *   3. Source line (subtle: "via Todoist · 2h ago")
+ *   4. Content area (markdown body, read-only for now)
+ *   5. Relationship panel (graph connections)
  *
- * Properties are rendered with type-aware formatting: booleans as checkmarks,
- * enums as badges, URLs as links, dates as relative time, arrays as chips.
- * Provenance fields (skill, account, timestamps) shown last, muted.
+ * Properties are inline-editable with controls matched to schema types:
+ * booleans as toggles, enums as dropdowns, dates as date pickers,
+ * text/numbers as seamless inputs. Auto-saves on change via PATCH.
+ *
+ * No skill ownership — the user owns the graph. All properties are
+ * editable regardless of where the entity came from.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getEntitySchema,
   getNestedValue,
@@ -25,8 +28,6 @@ import {
   getInitials,
   getColorFromString,
   formatRelativeTime,
-  formatDuration,
-  formatCount,
   formatValue,
   getFieldLabel,
 } from '/lib/utils.js';
@@ -63,6 +64,8 @@ interface PropertyDef {
   references?: string;
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 // ─── Field Classification ────────────────────────────────────────────────────────
 
 const INTERNAL_FIELDS = new Set([
@@ -75,9 +78,19 @@ const CONTENT_FIELDS = new Set([
   'summary', 'snippet',
 ]);
 
-const PROVENANCE_FIELDS = new Set([
+const LIFECYCLE_FIELDS = new Set([
   'skill', 'account', 'created_at', 'updated_at',
 ]);
+
+const KNOWN_PLURALS: Record<string, string> = {
+  person: 'people', child: 'children', analysis: 'analyses',
+};
+
+function getPlural(type: string, schema: Record<string, unknown> | null): string {
+  if (schema && typeof (schema as any).plural === 'string') return (schema as any).plural;
+  if (KNOWN_PLURALS[type]) return KNOWN_PLURALS[type];
+  return type + 's';
+}
 
 // ─── Markdown Renderer ───────────────────────────────────────────────────────────
 
@@ -144,6 +157,15 @@ const S = {
   title: {
     fontSize: 24, fontWeight: 600, lineHeight: 1.3,
     margin: '0 0 6px', color: 'var(--content-fg)',
+    background: 'transparent', border: '1px solid transparent',
+    borderRadius: 4, padding: '2px 4px', marginLeft: -5,
+    width: '100%', boxSizing: 'border-box' as const,
+    fontFamily: 'inherit', outline: 'none',
+  } as React.CSSProperties,
+
+  titleFocused: {
+    borderColor: 'var(--accent-color, #6b9eff)',
+    background: 'var(--content-bg-secondary, rgba(128,128,128,0.06))',
   } as React.CSSProperties,
 
   typeBadge: {
@@ -167,8 +189,8 @@ const S = {
   } as React.CSSProperties,
 
   propRow: {
-    display: 'flex', alignItems: 'baseline', padding: '5px 0',
-    gap: 12, fontSize: 13, lineHeight: 1.5,
+    display: 'flex', alignItems: 'center', padding: '4px 0',
+    gap: 12, fontSize: 13, lineHeight: 1.5, minHeight: 30,
   } as React.CSSProperties,
 
   propLabel: {
@@ -178,17 +200,63 @@ const S = {
 
   propValue: {
     flex: 1, color: 'var(--content-fg)', wordBreak: 'break-word' as const,
+    display: 'flex', alignItems: 'center', gap: 6,
   } as React.CSSProperties,
 
-  divider: {
-    height: 1, background: 'var(--content-border-subtle, rgba(128,128,128,0.1))',
-    margin: '8px 0',
+  input: {
+    background: 'transparent',
+    border: '1px solid transparent',
+    borderRadius: 4,
+    padding: '3px 6px',
+    fontSize: 13,
+    fontFamily: 'inherit',
+    color: 'var(--content-fg)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.15s, background 0.15s',
+  } as React.CSSProperties,
+
+  inputHover: {
+    borderColor: 'var(--content-border-subtle, rgba(128,128,128,0.25))',
+  } as React.CSSProperties,
+
+  inputFocus: {
+    borderColor: 'var(--accent-color, #6b9eff)',
+    background: 'var(--content-bg-secondary, rgba(128,128,128,0.06))',
+  } as React.CSSProperties,
+
+  select: {
+    background: 'transparent',
+    border: '1px solid transparent',
+    borderRadius: 4,
+    padding: '3px 6px',
+    fontSize: 13,
+    fontFamily: 'inherit',
+    color: 'var(--content-fg)',
+    outline: 'none',
+    cursor: 'pointer',
+    transition: 'border-color 0.15s',
+  } as React.CSSProperties,
+
+  checkbox: {
+    width: 16, height: 16, cursor: 'pointer',
+    accentColor: 'var(--accent-color, #6b9eff)',
   } as React.CSSProperties,
 
   chip: {
     display: 'inline-block', fontSize: 11, padding: '1px 7px', borderRadius: 3,
     background: 'var(--content-bg-secondary, rgba(128,128,128,0.1))',
     color: 'var(--content-fg-muted)', marginRight: 4, marginBottom: 2,
+  } as React.CSSProperties,
+
+  saveIndicator: {
+    fontSize: 11, flexShrink: 0, width: 16, textAlign: 'center' as const,
+  } as React.CSSProperties,
+
+  sourceLine: {
+    fontSize: 11, color: 'var(--content-fg-muted)',
+    padding: '4px 0 0', marginBottom: 20,
   } as React.CSSProperties,
 
   link: { color: 'var(--link-color-subtle, #6b9eff)', textDecoration: 'none' } as React.CSSProperties,
@@ -219,72 +287,207 @@ const S = {
   } as React.CSSProperties,
 };
 
-// ─── Sub-Components ──────────────────────────────────────────────────────────────
+// ─── Editable Property Row ───────────────────────────────────────────────────────
 
-function PropertyRow({ label, value, fieldKey, propertyDef }: {
-  label: string; value: unknown; fieldKey: string; propertyDef?: PropertyDef;
+function EditablePropertyRow({ label, value, fieldKey, propertyDef, saveStatus, onSave }: {
+  label: string;
+  value: unknown;
+  fieldKey: string;
+  propertyDef?: PropertyDef;
+  saveStatus: SaveStatus;
+  onSave: (key: string, value: unknown) => void;
 }) {
-  if (typeof value === 'boolean') {
+  const [hover, setHover] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const inputStyle = { ...S.input, ...(focused ? S.inputFocus : hover ? S.inputHover : {}) };
+
+  const indicator = saveStatus === 'saving'
+    ? <span style={{ ...S.saveIndicator, color: 'var(--content-fg-muted)' }}>...</span>
+    : saveStatus === 'saved'
+    ? <span style={{ ...S.saveIndicator, color: 'var(--accent-color, #4caf50)' }}>{'\u2713'}</span>
+    : saveStatus === 'error'
+    ? <span style={{ ...S.saveIndicator, color: '#e57373' }}>!</span>
+    : null;
+
+  // Boolean → checkbox toggle
+  if (typeof value === 'boolean' || propertyDef?.type === 'boolean') {
     return (
       <div className="memex-property" style={S.propRow}>
         <span style={S.propLabel}>{label}</span>
         <span style={S.propValue}>
-          <span style={{ color: value ? 'var(--accent-color, #4caf50)' : 'var(--content-fg-muted)', fontWeight: 600 }}>
-            {value ? '\u2713 Yes' : '\u2717 No'}
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => onSave(fieldKey, e.target.checked)}
+            style={S.checkbox}
+          />
+          <span style={{ color: 'var(--content-fg-muted)', fontSize: 12 }}>
+            {value ? 'Yes' : 'No'}
           </span>
+          {indicator}
         </span>
       </div>
     );
   }
 
-  if (propertyDef?.enum && typeof value === 'string') {
-    return (
-      <div className="memex-property" style={S.propRow}>
-        <span style={S.propLabel}>{label}</span>
-        <span style={S.propValue}><span style={S.chip}>{value}</span></span>
-      </div>
-    );
-  }
-
-  if (isUrl(value)) {
-    const display = String(value).replace(/^https?:\/\/(www\.)?/, '');
+  // Enum → dropdown
+  if (propertyDef?.enum && propertyDef.enum.length > 0) {
     return (
       <div className="memex-property" style={S.propRow}>
         <span style={S.propLabel}>{label}</span>
         <span style={S.propValue}>
-          <a href={String(value)} target="_blank" rel="noopener noreferrer" style={S.link}>
-            {display.length > 60 ? display.slice(0, 57) + '...' : display}
-          </a>
+          <select
+            value={value != null ? String(value) : ''}
+            onChange={(e) => onSave(fieldKey, e.target.value)}
+            style={{ ...S.select, ...(hover ? S.inputHover : {}) }}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          >
+            <option value="">--</option>
+            {propertyDef.enum.map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+          {indicator}
         </span>
       </div>
     );
   }
 
-  if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+  // Date → date input
+  if (propertyDef?.type === 'date' || (propertyDef?.type === 'string' && /date/.test(fieldKey))) {
+    const dateStr = value ? String(value).slice(0, 10) : '';
     return (
       <div className="memex-property" style={S.propRow}>
         <span style={S.propLabel}>{label}</span>
-        <span style={{ ...S.propValue, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-          {(value as string[]).map((v, i) => <span key={i} style={S.chip}>{v}</span>)}
+        <span style={S.propValue}>
+          <input
+            type="date"
+            value={dateStr}
+            onChange={(e) => onSave(fieldKey, e.target.value || null)}
+            style={inputStyle}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          />
+          {indicator}
         </span>
       </div>
     );
   }
 
+  // Datetime → datetime-local input
+  if (propertyDef?.type === 'datetime') {
+    const dtStr = value ? String(value).slice(0, 16) : '';
+    return (
+      <div className="memex-property" style={S.propRow}>
+        <span style={S.propLabel}>{label}</span>
+        <span style={S.propValue}>
+          <input
+            type="datetime-local"
+            value={dtStr}
+            onChange={(e) => onSave(fieldKey, e.target.value || null)}
+            style={inputStyle}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          />
+          {indicator}
+        </span>
+      </div>
+    );
+  }
+
+  // Number → number input
+  if (propertyDef?.type === 'integer' || propertyDef?.type === 'number') {
+    return (
+      <div className="memex-property" style={S.propRow}>
+        <span style={S.propLabel}>{label}</span>
+        <span style={S.propValue}>
+          <input
+            type="number"
+            defaultValue={value != null ? Number(value) : ''}
+            onFocus={() => setFocused(true)}
+            onBlur={(e) => {
+              setFocused(false);
+              const v = e.target.value === '' ? null : Number(e.target.value);
+              if (v !== value) onSave(fieldKey, v);
+            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+            style={{ ...inputStyle, maxWidth: 120 }}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          />
+          {indicator}
+        </span>
+      </div>
+    );
+  }
+
+  // URL → text input with link
+  if (isUrl(value) || propertyDef?.format === 'url') {
+    return (
+      <div className="memex-property" style={S.propRow}>
+        <span style={S.propLabel}>{label}</span>
+        <span style={S.propValue}>
+          <input
+            type="url"
+            defaultValue={value != null ? String(value) : ''}
+            onFocus={() => setFocused(true)}
+            onBlur={(e) => {
+              setFocused(false);
+              if (e.target.value !== String(value ?? '')) onSave(fieldKey, e.target.value || null);
+            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+            style={inputStyle}
+            placeholder="https://..."
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          />
+          {value && (
+            <a href={String(value)} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 11, color: 'var(--content-fg-muted)', flexShrink: 0 }}
+              title="Open link"
+            >{'\u2197'}</a>
+          )}
+          {indicator}
+        </span>
+      </div>
+    );
+  }
+
+  // Default: string → text input
   return (
     <div className="memex-property" style={S.propRow}>
       <span style={S.propLabel}>{label}</span>
-      <span style={S.propValue}>{formatValue(value, fieldKey) || '\u2014'}</span>
+      <span style={S.propValue}>
+        <input
+          type="text"
+          defaultValue={value != null ? String(value) : ''}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => {
+            setFocused(false);
+            if (e.target.value !== String(value ?? '')) onSave(fieldKey, e.target.value || null);
+          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          style={inputStyle}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+        />
+        {indicator}
+      </span>
     </div>
   );
 }
 
-function PropertyPanel({ properties, provenanceFields, schema }: {
+// ─── Property Panel ──────────────────────────────────────────────────────────────
+
+function PropertyPanel({ properties, saveStatuses, onSave }: {
   properties: [string, unknown, PropertyDef | undefined][];
-  provenanceFields: [string, unknown][];
-  schema: { properties?: Record<string, PropertyDef> } | null;
+  saveStatuses: Record<string, SaveStatus>;
+  onSave: (key: string, value: unknown) => void;
 }) {
-  if (properties.length === 0 && provenanceFields.length === 0) return null;
+  if (properties.length === 0) return null;
   return (
     <div className="memex-section memex-section--properties" style={S.section}>
       <div style={S.sectionHeader}>
@@ -292,21 +495,35 @@ function PropertyPanel({ properties, provenanceFields, schema }: {
       </div>
       <div className="memex-properties">
         {properties.map(([key, value, propDef]) => (
-          <PropertyRow key={key} label={getFieldLabel(key)} value={value}
-            fieldKey={key} propertyDef={propDef} />
+          <EditablePropertyRow
+            key={key}
+            label={getFieldLabel(key)}
+            value={value}
+            fieldKey={key}
+            propertyDef={propDef}
+            saveStatus={saveStatuses[key] || 'idle'}
+            onSave={onSave}
+          />
         ))}
-        {provenanceFields.length > 0 && (
-          <>
-            <div style={S.divider} />
-            {provenanceFields.map(([key, value]) => (
-              <PropertyRow key={key} label={getFieldLabel(key)} value={value} fieldKey={key} />
-            ))}
-          </>
-        )}
       </div>
     </div>
   );
 }
+
+// ─── Source Line ──────────────────────────────────────────────────────────────────
+
+function SourceLine({ entityData }: { entityData: Record<string, unknown> }) {
+  const parts: string[] = [];
+  if (entityData.skill) parts.push(`via ${entityData.skill}`);
+  if (entityData.account) parts.push(String(entityData.account));
+  if (entityData.updated_at) parts.push(formatRelativeTime(entityData.updated_at));
+  else if (entityData.created_at) parts.push(formatRelativeTime(entityData.created_at));
+
+  if (parts.length === 0) return null;
+  return <div className="memex-source" style={S.sourceLine}>{parts.join(' \u00B7 ')}</div>;
+}
+
+// ─── Content Area ────────────────────────────────────────────────────────────────
 
 function ContentArea({ content, label }: { content: string; label?: string }) {
   return (
@@ -322,6 +539,8 @@ function ContentArea({ content, label }: { content: string; label?: string }) {
     </div>
   );
 }
+
+// ─── Relationship Panel ──────────────────────────────────────────────────────────
 
 function RelationshipPanel({ relationships }: {
   relationships: [string, Record<string, unknown>][];
@@ -381,18 +600,69 @@ export default function MemexDetail({
   entity_type, entity, entity_id, data, item, pending, error,
 }: MemexDetailProps) {
   const type = entity_type || entity || 'item';
-  const entityData = data || item;
+  const [entityData, setEntityData] = useState<Record<string, unknown> | null>(data || item || null);
+  const [schema, setSchema] = useState<any>(null);
+  const [saveStatuses, setSaveStatuses] = useState<Record<string, SaveStatus>>({});
+  const [titleFocused, setTitleFocused] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
 
-  const [schema, setSchema] = useState<{
-    display?: DisplayHints; properties?: Record<string, PropertyDef>;
-  } | null>(null);
+  useEffect(() => { setEntityData(data || item || null); }, [data, item]);
 
   useEffect(() => {
     if (!type || type === 'item') return;
     getEntitySchema(type).then(setSchema);
   }, [type]);
 
-  const hints = schema?.display || {};
+  const hints: DisplayHints = schema?.display || {};
+  const plural = getPlural(type, schema);
+
+  // Save a property change via PATCH
+  const handleSave = useCallback(async (fieldKey: string, newValue: unknown) => {
+    if (!entityData) return;
+    const id = entityData._entity_id || entityData.id;
+    if (!id) return;
+
+    setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'saving' }));
+
+    try {
+      const res = await fetch(`/mem/${plural}/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [fieldKey]: newValue }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => 'Save failed');
+        console.error(`Save failed for ${fieldKey}:`, errText);
+        setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'error' }));
+        setTimeout(() => setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'idle' })), 3000);
+        return;
+      }
+
+      setEntityData(prev => prev ? { ...prev, [fieldKey]: newValue } : prev);
+      setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'saved' }));
+      setTimeout(() => setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'idle' })), 1500);
+    } catch (err) {
+      console.error(`Save error for ${fieldKey}:`, err);
+      setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'error' }));
+      setTimeout(() => setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'idle' })), 3000);
+    }
+  }, [entityData, plural]);
+
+  // Save title
+  const handleTitleSave = useCallback((newTitle: string) => {
+    if (!entityData) return;
+    const primaryField = hints.primary || 'title';
+    const currentTitle = getNestedValue(entityData, primaryField) || entityData.title || entityData.name;
+    if (newTitle === String(currentTitle)) return;
+
+    const nameField = entityData.name !== undefined ? 'name' : 'title';
+    handleSave(nameField, newTitle);
+  }, [entityData, hints, handleSave]);
+
+  // ── States ──
 
   if (pending) {
     return <div className="memex-detail" style={S.container}>
@@ -410,6 +680,8 @@ export default function MemexDetail({
     </div>;
   }
 
+  // ── Resolve fields ──
+
   const primaryField = hints.primary || 'title';
   const primaryValue = getNestedValue(entityData, primaryField) || entityData.title || entityData.name;
   const title = primaryValue ? String(primaryValue) : 'Untitled';
@@ -423,7 +695,6 @@ export default function MemexDetail({
   const properties: [string, unknown, PropertyDef | undefined][] = [];
   const contentBlocks: [string, string][] = [];
   const relationships: [string, Record<string, unknown>][] = [];
-  const provenanceFields: [string, unknown][] = [];
 
   const titleFields = new Set([primaryField, 'title', 'name']);
   const hintFields = new Set(
@@ -432,11 +703,11 @@ export default function MemexDetail({
 
   for (const [key, value] of Object.entries(entityData)) {
     if (INTERNAL_FIELDS.has(key)) continue;
+    if (LIFECYCLE_FIELDS.has(key)) continue;
     if (titleFields.has(key) && String(value) === title) continue;
     if (hintFields.has(key)) continue;
     if (value === null || value === undefined) continue;
 
-    if (PROVENANCE_FIELDS.has(key)) { provenanceFields.push([key, value]); continue; }
     if (isTypedReference(value)) { relationships.push([key, value as Record<string, unknown>]); continue; }
     if (CONTENT_FIELDS.has(key) && typeof value === 'string' && value.length > 200) {
       contentBlocks.push([key, value]); continue;
@@ -446,6 +717,8 @@ export default function MemexDetail({
     properties.push([key, value, schema?.properties?.[key]]);
   }
 
+  // ── Render ──
+
   return (
     <div className="memex-detail" style={S.container}>
       {imageSrc && (
@@ -454,18 +727,46 @@ export default function MemexDetail({
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       )}
 
+      {/* Editable title */}
       <div className="memex-detail-header" style={S.header}>
-        <h1 className="memex-detail-title" style={S.title}>{title}</h1>
-        {type !== 'item' && <span style={S.typeBadge}>{type}</span>}
+        <input
+          ref={titleRef}
+          className="memex-detail-title"
+          type="text"
+          defaultValue={title}
+          style={{ ...S.title, ...(titleFocused ? S.titleFocused : {}) }}
+          onFocus={() => setTitleFocused(true)}
+          onBlur={(e) => { setTitleFocused(false); handleTitleSave(e.target.value.trim()); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {type !== 'item' && <span style={S.typeBadge}>{type}</span>}
+          {saveStatuses['name'] === 'saving' || saveStatuses['title'] === 'saving'
+            ? <span style={{ fontSize: 11, color: 'var(--content-fg-muted)' }}>saving...</span>
+            : saveStatuses['name'] === 'saved' || saveStatuses['title'] === 'saved'
+            ? <span style={{ fontSize: 11, color: 'var(--accent-color, #4caf50)' }}>saved</span>
+            : null
+          }
+        </div>
       </div>
 
-      <PropertyPanel properties={properties} provenanceFields={provenanceFields} schema={schema} />
+      {/* Property panel */}
+      <PropertyPanel
+        properties={properties}
+        saveStatuses={saveStatuses}
+        onSave={handleSave}
+      />
 
+      {/* Source line */}
+      <SourceLine entityData={entityData} />
+
+      {/* Content */}
       {contentBlocks.map(([key, text]) => (
         <ContentArea key={key} content={text}
           label={contentBlocks.length > 1 ? getFieldLabel(key) : undefined} />
       ))}
 
+      {/* Relationships */}
       <RelationshipPanel relationships={relationships} />
     </div>
   );

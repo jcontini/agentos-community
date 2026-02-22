@@ -210,7 +210,7 @@ export default function MemexBrowse({
     if (!typeDef) return;
     setLoading(true); setStatusHint('');
     try {
-      const res = await fetch(`/mem/${typeDef.plural}`, { headers: { 'X-Agent': 'memex-app' } });
+      const res = await fetch(`/mem/${typeDef.plural}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const items = Array.isArray(data) ? data : (data.data || []);
@@ -229,7 +229,7 @@ export default function MemexBrowse({
       if (types?.length) body.types = types;
       const res = await fetch('/mem/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Agent': 'memex-app' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

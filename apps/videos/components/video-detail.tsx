@@ -53,7 +53,6 @@ export default function VideoDetail({ entity, item, pending, error }: VideoDetai
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Agent': 'videos-app',
         },
         body: JSON.stringify({ url: channelUrl }),
       }).catch(() => {
