@@ -613,54 +613,297 @@ function ContentArea({ content, label, fieldKey, saveStatus, onSave }: {
 
 // ─── Relationship Panel ──────────────────────────────────────────────────────────
 
-function RelationshipPanel({ relationships }: {
+interface RawRelationship {
+  id: string;
+  type: string;
+  from_entity: string;
+  to_entity: string;
+  data?: Record<string, unknown>;
+}
+
+function RelationshipPanel({ entityId, plural, relationships }: {
+  entityId: string;
+  plural: string;
   relationships: [string, Record<string, unknown>][];
 }) {
-  if (relationships.length === 0) return null;
+  const [rawRels, setRawRels] = useState<RawRelationship[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [relType, setRelType] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<Record<string, unknown>>>([]);
+  const [searching, setSearching] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [addStatus, setAddStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch raw relationships for mutation IDs
+  useEffect(() => {
+    if (!entityId || !plural) return;
+    fetch(`/mem/${plural}/${entityId}/relationships`)
+      .then(r => r.ok ? r.json() : { relationships: [] })
+      .then(data => setRawRels(data.relationships || []))
+      .catch(() => {});
+  }, [entityId, plural]);
+
+  // Debounced entity search for the add form
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    searchTimeout.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch('/mem/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: searchQuery.trim() }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : (data.data || []));
+      } catch { setSearchResults([]); }
+      finally { setSearching(false); }
+    }, 300);
+    return () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); };
+  }, [searchQuery]);
+
+  const handleDelete = useCallback(async (relId: string) => {
+    setDeletingId(relId);
+    try {
+      await fetch(`/mem/${plural}/${entityId}/relationships/${relId}`, { method: 'DELETE' });
+      setRawRels(prev => prev.filter(r => r.id !== relId));
+    } catch (err) {
+      console.error('Failed to delete relationship:', err);
+    }
+    setDeletingId(null);
+  }, [entityId, plural]);
+
+  const handleAdd = useCallback(async (targetId: string) => {
+    if (!relType.trim()) return;
+    setAddStatus('saving');
+    try {
+      const res = await fetch(`/mem/${plural}/${entityId}/relationships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: relType.trim(), to: targetId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setAddStatus('saved');
+      setAdding(false);
+      setRelType('');
+      setSearchQuery('');
+      setSearchResults([]);
+      // Re-fetch relationships
+      const updated = await fetch(`/mem/${plural}/${entityId}/relationships`);
+      if (updated.ok) {
+        const data = await updated.json();
+        setRawRels(data.relationships || []);
+      }
+      setTimeout(() => setAddStatus('idle'), 1500);
+    } catch (err) {
+      console.error('Failed to create relationship:', err);
+      setAddStatus('error');
+      setTimeout(() => setAddStatus('idle'), 3000);
+    }
+  }, [entityId, plural, relType]);
+
+  // Find raw relationship ID for a displayed relationship (match by type)
+  const findRawRelId = (relType: string, targetEntityId?: string): string | undefined => {
+    return rawRels.find(r =>
+      r.type === relType && (
+        !targetEntityId ||
+        r.to_entity === targetEntityId ||
+        r.from_entity === targetEntityId
+      )
+    )?.id;
+  };
+
+  const hasRelationships = relationships.length > 0 || rawRels.length > 0;
+
   return (
     <div className="memex-section memex-section--relationships" style={S.section}>
       <div style={S.sectionHeader}>
         <span style={S.sectionTitle}>Relationships</span>
-        <span style={{ fontSize: 11, color: 'var(--content-fg-muted)' }}>
-          {relationships.length}
-        </span>
+        {hasRelationships && (
+          <span style={{ fontSize: 11, color: 'var(--content-fg-muted)' }}>
+            {relationships.length}
+          </span>
+        )}
+        <div style={{ flex: 1 }} />
+        {addStatus === 'saved' && (
+          <span style={{ fontSize: 11, color: 'var(--accent-color, #4caf50)' }}>linked</span>
+        )}
+        <button
+          onClick={() => setAdding(!adding)}
+          style={{
+            background: 'none', border: '1px solid var(--content-border-subtle, rgba(128,128,128,0.2))',
+            borderRadius: 4, padding: '2px 10px', fontSize: 11, fontWeight: 500,
+            color: 'var(--content-fg-muted)', cursor: 'pointer',
+          }}
+        >
+          {adding ? 'Cancel' : 'Link'}
+        </button>
       </div>
-      <div className="memex-relationships">
-        {relationships.map(([relType, relData]) => {
-          const entityKeys = Object.keys(relData).filter(k => !k.startsWith('_'));
-          return entityKeys.map(entityType => {
-            const entity = relData[entityType] as Record<string, unknown>;
-            if (!entity || typeof entity !== 'object') return null;
-            const name = String(
-              entity.display_name || entity.name || entity.title || entity.id || entityType
-            );
-            const image = (entity.icon || entity.avatar || entity.thumbnail) as string | undefined;
-            return (
-              <div key={`${relType}-${entityType}`} className="memex-relationship" style={S.relRow}>
-                <span style={S.relType}>{getFieldLabel(relType)}</span>
-                <span style={{ color: 'var(--content-fg-muted)', fontSize: 12 }}>&rarr;</span>
-                <div style={S.relEntity}>
-                  {image ? (
-                    <img src={getProxiedSrc(image)} alt="" style={S.relAvatar}
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  ) : (
-                    <span style={{ ...S.relInitials, backgroundColor: getColorFromString(name) }}>
-                      {getInitials(name)}
+
+      {/* Existing relationships */}
+      {relationships.length > 0 && (
+        <div className="memex-relationships">
+          {relationships.map(([relTypeKey, relData]) => {
+            const entityKeys = Object.keys(relData).filter(k => !k.startsWith('_'));
+            return entityKeys.map(entityType => {
+              const entity = relData[entityType] as Record<string, unknown>;
+              if (!entity || typeof entity !== 'object') return null;
+              const name = String(
+                entity.display_name || entity.name || entity.title || entity.id || entityType
+              );
+              const image = (entity.icon || entity.avatar || entity.thumbnail) as string | undefined;
+              const targetId = (entity._entity_id || entity.id) as string | undefined;
+              const rawRelId = findRawRelId(relTypeKey, targetId);
+
+              return (
+                <div key={`${relTypeKey}-${entityType}`} className="memex-relationship"
+                  style={{ ...S.relRow, justifyContent: 'space-between' }}>
+                  <span style={S.relType}>{getFieldLabel(relTypeKey)}</span>
+                  <span style={{ color: 'var(--content-fg-muted)', fontSize: 12 }}>&rarr;</span>
+                  <div style={S.relEntity}>
+                    {image ? (
+                      <img src={getProxiedSrc(image)} alt="" style={S.relAvatar}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    ) : (
+                      <span style={{ ...S.relInitials, backgroundColor: getColorFromString(name) }}>
+                        {getInitials(name)}
+                      </span>
+                    )}
+                    <span style={{ color: 'var(--content-fg)', fontWeight: 500,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      {name}
                     </span>
+                    <span style={{ fontSize: 11, color: 'var(--content-fg-muted)', flexShrink: 0 }}>
+                      {entityType}
+                    </span>
+                  </div>
+                  {rawRelId && (
+                    <button
+                      onClick={() => handleDelete(rawRelId)}
+                      disabled={deletingId === rawRelId}
+                      style={{
+                        background: 'none', border: 'none', padding: '2px 6px',
+                        fontSize: 12, color: 'var(--content-fg-muted)', cursor: 'pointer',
+                        opacity: deletingId === rawRelId ? 0.3 : 0.5,
+                        flexShrink: 0,
+                      }}
+                      title="Remove relationship"
+                    >{'\u00D7'}</button>
                   )}
-                  <span style={{ color: 'var(--content-fg)', fontWeight: 500,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                    {name}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--content-fg-muted)', flexShrink: 0 }}>
-                    {entityType}
-                  </span>
                 </div>
-              </div>
-            );
-          });
-        })}
-      </div>
+              );
+            });
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!hasRelationships && !adding && (
+        <div style={{ fontSize: 12, color: 'var(--content-fg-muted)', padding: '8px 0' }}>
+          No relationships yet
+        </div>
+      )}
+
+      {/* Add relationship form */}
+      {adding && (
+        <div className="memex-relationship-add" style={{
+          marginTop: 12, padding: 12,
+          background: 'var(--content-bg-secondary, rgba(128,128,128,0.04))',
+          borderRadius: 6, border: '1px solid var(--content-border-subtle, rgba(128,128,128,0.15))',
+        }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <input
+              type="text"
+              value={relType}
+              onChange={(e) => setRelType(e.target.value)}
+              placeholder="Relationship type (e.g. enables, references)"
+              list="memex-rel-types"
+              style={{
+                ...S.input,
+                borderColor: 'var(--content-border-subtle, rgba(128,128,128,0.2))',
+                flex: '0 0 220px',
+              }}
+            />
+            <datalist id="memex-rel-types">
+              {['enables', 'references', 'tag', 'assign', 'upload', 'cite',
+                'link_to', 'replies_to', 'add_to', 'includes'].map(t => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for entity to link..."
+              style={{
+                ...S.input,
+                borderColor: 'var(--content-border-subtle, rgba(128,128,128,0.2))',
+                flex: 1,
+              }}
+            />
+          </div>
+
+          {/* Search results */}
+          {searching && (
+            <div style={{ fontSize: 12, color: 'var(--content-fg-muted)', padding: '4px 0' }}>
+              Searching...
+            </div>
+          )}
+          {searchResults.length > 0 && (
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {searchResults.slice(0, 8).map((result, i) => {
+                const rName = String(result.name || result.title || result.id || 'Untitled');
+                const rId = (result._entity_id || result.id) as string;
+                const rType = (result._labels || '') as string;
+                return (
+                  <div
+                    key={rId || i}
+                    onClick={() => rId && handleAdd(rId)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '6px 8px', borderRadius: 4, cursor: 'pointer',
+                      fontSize: 12,
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--content-bg-secondary, rgba(128,128,128,0.08))'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                  >
+                    <span style={{
+                      ...S.relInitials,
+                      backgroundColor: getColorFromString(rName),
+                      width: 20, height: 20, fontSize: 8,
+                    }}>
+                      {getInitials(rName)}
+                    </span>
+                    <span style={{ fontWeight: 500, color: 'var(--content-fg)' }}>{rName}</span>
+                    {rType && <span style={{ color: 'var(--content-fg-muted)', fontSize: 10 }}>{rType}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {searchQuery && !searching && searchResults.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--content-fg-muted)', padding: '4px 0' }}>
+              No entities found for "{searchQuery}"
+            </div>
+          )}
+
+          {addStatus === 'saving' && (
+            <div style={{ fontSize: 12, color: 'var(--content-fg-muted)', padding: '4px 0' }}>
+              Linking...
+            </div>
+          )}
+          {addStatus === 'error' && (
+            <div style={{ fontSize: 12, color: '#e57373', padding: '4px 0' }}>
+              Failed to create link
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -840,7 +1083,11 @@ export default function MemexDetail({
       ))}
 
       {/* Relationships */}
-      <RelationshipPanel relationships={relationships} />
+      <RelationshipPanel
+        entityId={String(entityData._entity_id || entityData.id || '')}
+        plural={plural}
+        relationships={relationships}
+      />
     </div>
   );
 }
