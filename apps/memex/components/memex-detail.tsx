@@ -525,17 +525,88 @@ function SourceLine({ entityData }: { entityData: Record<string, unknown> }) {
 
 // ─── Content Area ────────────────────────────────────────────────────────────────
 
-function ContentArea({ content, label }: { content: string; label?: string }) {
+function ContentArea({ content, label, fieldKey, saveStatus, onSave }: {
+  content: string;
+  label?: string;
+  fieldKey: string;
+  saveStatus: SaveStatus;
+  onSave: (key: string, value: unknown) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { setDraft(content); }, [content]);
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.selectionStart = textareaRef.current.value.length;
+    }
+  }, [editing]);
+
+  const handleSave = () => {
+    setEditing(false);
+    if (draft !== content) onSave(fieldKey, draft);
+  };
+
+  const statusText = saveStatus === 'saving' ? 'saving...'
+    : saveStatus === 'saved' ? 'saved'
+    : saveStatus === 'error' ? 'error saving'
+    : null;
+
   return (
     <div className="memex-section memex-section--content" style={S.section}>
-      {label && (
-        <div style={S.sectionHeader}><span style={S.sectionTitle}>{label}</span></div>
+      <div style={S.sectionHeader}>
+        {label && <span style={S.sectionTitle}>{label}</span>}
+        {!label && <span style={S.sectionTitle}>Content</span>}
+        <div style={{ flex: 1 }} />
+        {statusText && (
+          <span style={{
+            fontSize: 11,
+            color: saveStatus === 'error' ? '#e57373' : saveStatus === 'saved' ? 'var(--accent-color, #4caf50)' : 'var(--content-fg-muted)',
+          }}>{statusText}</span>
+        )}
+        <button
+          onClick={() => { if (editing) handleSave(); else setEditing(true); }}
+          style={{
+            background: 'none', border: '1px solid var(--content-border-subtle, rgba(128,128,128,0.2))',
+            borderRadius: 4, padding: '2px 10px', fontSize: 11, fontWeight: 500,
+            color: 'var(--content-fg-muted)', cursor: 'pointer',
+          }}
+        >
+          {editing ? 'Done' : 'Edit'}
+        </button>
+      </div>
+
+      {editing ? (
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { setDraft(content); setEditing(false); }
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSave(); }
+          }}
+          style={{
+            width: '100%', minHeight: 200, padding: '12px',
+            fontSize: 13, lineHeight: 1.6, fontFamily: 'monospace',
+            color: 'var(--content-fg)',
+            background: 'var(--content-bg-secondary, rgba(128,128,128,0.04))',
+            border: '1px solid var(--content-border-subtle, rgba(128,128,128,0.2))',
+            borderRadius: 6, outline: 'none', resize: 'vertical',
+            boxSizing: 'border-box',
+          }}
+          spellCheck={false}
+        />
+      ) : (
+        <div
+          className="memex-content"
+          style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--content-fg)', cursor: 'text' }}
+          onClick={() => setEditing(true)}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+        />
       )}
-      <div
-        className="memex-content"
-        style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--content-fg)' }}
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-      />
     </div>
   );
 }
@@ -762,8 +833,10 @@ export default function MemexDetail({
 
       {/* Content */}
       {contentBlocks.map(([key, text]) => (
-        <ContentArea key={key} content={text}
-          label={contentBlocks.length > 1 ? getFieldLabel(key) : undefined} />
+        <ContentArea key={key} content={text} fieldKey={key}
+          label={contentBlocks.length > 1 ? getFieldLabel(key) : undefined}
+          saveStatus={saveStatuses[key] || 'idle'}
+          onSave={handleSave} />
       ))}
 
       {/* Relationships */}
