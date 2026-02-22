@@ -64,7 +64,7 @@ transformers:
       id: .id
       title: .title
       description: .description
-      _body: .description
+      content: .description
       start: .start
       end: .end
       all_day: .all_day

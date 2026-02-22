@@ -65,7 +65,7 @@ transformers:
       id: .id
       name: .content
       description: .description
-      _body: .description
+      content: .description
       data.completed: .checked
       data.priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
       target.date: .due.date?

@@ -49,7 +49,7 @@ transformers:
       url: .url
       title: .title
       content_type: .content_type
-      _body: .content
+      content: .content
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

@@ -235,8 +235,10 @@ function checkMappings(frontmatter) {
     const validProps = entityProperties[entityName];
     if (!validProps) continue;
     
+    const RESERVED_TRANSFORMER_KEYS = new Set(['content', 'content_role']);
     for (const [propName, propValue] of Object.entries(transformer.mapping)) {
       if (propName.startsWith('_')) continue;
+      if (RESERVED_TRANSFORMER_KEYS.has(propName)) continue;
       if (typeof propValue === 'object' && propValue !== null) continue;
       
       total++;

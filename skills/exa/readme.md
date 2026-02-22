@@ -58,7 +58,7 @@ transformers:
       title: .title
       favicon: .favicon
       published_at: .publishedDate
-      _body: .text
+      content: .text
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

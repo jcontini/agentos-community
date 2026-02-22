@@ -54,7 +54,7 @@ transformers:
       id: .objectID
       title: .title
       url: '"https://news.ycombinator.com/item?id=" + .objectID'
-      _body: .text
+      content: .text
       external_url: .url
       replies: .replies
       

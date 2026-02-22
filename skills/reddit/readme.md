@@ -65,7 +65,7 @@ transformers:
       id: .id
       title: .title
       url: '"https://reddit.com" + .permalink'
-      _body: .selftext // .body
+      content: .selftext // .body
       engagement.score: .score
       engagement.comment_count: .num_comments
       published_at: .created_utc | todate

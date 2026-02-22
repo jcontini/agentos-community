@@ -41,7 +41,7 @@ transformers:
       data.agent_id: .agent_id
       data.workspace: .workspace
       data.blob_key: .blob_key
-      _body: .content
+      content: .content
 
   session:
     mapping:
@@ -52,7 +52,7 @@ transformers:
       last_message: .last_message
       last_message_at: .last_message_at
       data.message_count: .message_count
-      _body: .transcript
+      content: .transcript
 
 operations:
   document.pull:

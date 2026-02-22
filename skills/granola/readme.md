@@ -68,8 +68,8 @@ transformers:
         transcript:
           id: '(.id) + "_transcript"'
           title: '"Transcript: " + .title'
-          _body: .transcript_text
-          _body_role: '"transcript"'
+          content: .transcript_text
+          content_role: '"transcript"'
           language: '"en"'
           source_type: '"realtime_asr"'
           segment_count: .segment_count

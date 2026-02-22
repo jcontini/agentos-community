@@ -92,7 +92,7 @@ operations:
           url: .metadata.sourceURL
           title: .metadata.title
           content_type: '"text/markdown"'
-          _body: .markdown
+          content: .markdown
 ---
 
 # Firecrawl
