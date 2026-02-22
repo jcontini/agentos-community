@@ -91,7 +91,7 @@ skills/            Skills — service connections + agent context
 
 apps/              Visual apps (UI experiences)
   videos/          Video player with channel info and embed
-  browser/         Universal entity viewer
+  memex/           Universal entity viewer and editor
   settings/        System preferences
   ...
 

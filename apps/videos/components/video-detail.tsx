@@ -15,82 +15,21 @@
  */
 
 import React, { useState } from 'react';
+import {
+  getProxiedSrc,
+  getInitials,
+  getColorFromString,
+  formatCount,
+  formatDuration,
+  formatRelativeTime,
+  getEmbedUrl,
+} from '/lib/utils.js';
 
 interface VideoDetailProps {
   entity?: string;
   item?: Record<string, unknown>;
   pending?: boolean;
   error?: string;
-}
-
-function getProxiedSrc(src: string | undefined): string | undefined {
-  if (!src) return undefined;
-  if (src.startsWith('data:') || src.startsWith('blob:')) return src;
-  if (src.startsWith('//')) return `/ui/proxy/image?url=${encodeURIComponent('https:' + src)}`;
-  if (src.startsWith('/')) return src;
-  if (src.startsWith('http://') || src.startsWith('https://'))
-    return `/ui/proxy/image?url=${encodeURIComponent(src)}`;
-  return src;
-}
-
-function getEmbedUrl(url: string): string | null {
-  const ytMatch = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|music\.youtube\.com\/watch\?v=)([\w-]{11})/
-  );
-  if (ytMatch) {
-    const origin = encodeURIComponent(window.location.origin);
-    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?origin=${origin}`;
-  }
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  return null;
-}
-
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (n >= 10_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-  return n.toLocaleString();
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(/[\s_-]+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || '')
-    .join('');
-}
-
-function getColorFromString(text: string): string {
-  const colors = [
-    '#e57373', '#f06292', '#ba68c8', '#9575cd',
-    '#7986cb', '#64b5f6', '#4fc3f7', '#4dd0e1',
-    '#4db6ac', '#81c784', '#aed581', '#dce775',
-  ];
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
 }
 
 export default function VideoDetail({ entity, item, pending, error }: VideoDetailProps) {
@@ -167,7 +106,7 @@ export default function VideoDetail({ entity, item, pending, error }: VideoDetai
   if (viewCount != null) stats.push(`${formatCount(viewCount)} views`);
   if (likeCount != null) stats.push(`${formatCount(likeCount)} likes`);
   if (durationMs != null) stats.push(formatDuration(durationMs));
-  if (publishedAt) stats.push(formatDate(publishedAt));
+  if (publishedAt) stats.push(formatRelativeTime(publishedAt));
 
   // Related entities
   const transcript = item.transcribe

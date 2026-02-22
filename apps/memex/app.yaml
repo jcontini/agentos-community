@@ -1,0 +1,43 @@
+# Memex — Browse, Read, and Edit Your Knowledge Graph
+#
+# The universal entity viewer/editor. Replaces Preview as the default
+# surface for any entity type not claimed by a specialized app.
+#
+# Two views:
+#   browse  — search and browse entities by type
+#   detail  — single entity: properties + content + relationships
+#
+# Schema-driven: no entity-specific code. The entity schema defines
+# property types, display hints, and relationships. This app renders
+# them generically.
+
+id: memex
+name: Memex
+icon: icon.svg
+description: Browse, read, and edit anything in your Memex
+
+default_view: browse
+
+views:
+  browse:
+    title: Memex
+    toolbar:
+      - component: url-bar
+    layout:
+      - component: memex-browse
+        props:
+          entity: "{{entity}}"
+          items: "{{entities}}"
+          pending: "{{loading}}"
+          error: "{{error}}"
+
+  detail:
+    title: "{{params.title}}"
+    toolbar:
+      - component: url-bar
+    layout:
+      - component: memex-detail
+        props:
+          entity_type: "{{params.entity}}"
+          entity_id: "{{params.id}}"
+          data: "{{params.data}}"
