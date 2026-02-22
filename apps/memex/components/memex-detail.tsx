@@ -83,14 +83,9 @@ const LIFECYCLE_FIELDS = new Set([
   'skill', 'account', 'created_at', 'updated_at',
 ]);
 
-const KNOWN_PLURALS: Record<string, string> = {
-  person: 'people', child: 'children', analysis: 'analyses',
-};
-
 function getPlural(type: string, schema: Record<string, unknown> | null): string {
   if (schema && typeof (schema as any).plural === 'string') return (schema as any).plural;
-  if (KNOWN_PLURALS[type]) return KNOWN_PLURALS[type];
-  return type + 's';
+  throw new Error(`No plural form in schema for entity type "${type}"`);
 }
 
 // ─── Markdown Renderer ───────────────────────────────────────────────────────────

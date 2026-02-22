@@ -44,16 +44,13 @@ interface DisplayHints {
 
 // ─── Entity Types ────────────────────────────────────────────────────────────────
 
-const ENTITY_TYPES = [
-  { id: 'task', plural: 'tasks', label: 'Tasks' },
-  { id: 'plan', plural: 'plans', label: 'Plans' },
-  { id: 'person', plural: 'people', label: 'People' },
-  { id: 'video', plural: 'videos', label: 'Videos' },
-  { id: 'document', plural: 'documents', label: 'Documents' },
-  { id: 'message', plural: 'messages', label: 'Messages' },
-  { id: 'webpage', plural: 'webpages', label: 'Webpages' },
-  { id: 'note', plural: 'notes', label: 'Notes' },
-];
+interface EntityType {
+  id: string;
+  plural: string;
+  label: string;
+}
+
+
 
 // ─── Styles ──────────────────────────────────────────────────────────────────────
 
@@ -195,7 +192,27 @@ export default function MemexBrowse({
   const [loading, setLoading] = useState(false);
   const [statusHint, setStatusHint] = useState('');
   const [schema, setSchema] = useState<{ display?: DisplayHints } | null>(null);
+  const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch all entity types from the schema registry
+  useEffect(() => {
+    apiFetch('/mem')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data?.entities) return;
+        const types: EntityType[] = data.entities
+          .filter((e: Record<string, unknown>) => e.id && e.plural && Array.isArray(e.actions) && (e.actions as Array<Record<string, unknown>>).length > 0)
+          .map((e: Record<string, unknown>) => ({
+            id: e.id as string,
+            plural: e.plural as string,
+            label: e.name as string || (e.id as string),
+          }))
+          .sort((a: EntityType, b: EntityType) => a.label.localeCompare(b.label));
+        if (types.length > 0) setEntityTypes(types);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!selectedType) { setSchema(null); return; }
@@ -207,7 +224,7 @@ export default function MemexBrowse({
   }, [propsItems]);
 
   const fetchByType = useCallback(async (type: string) => {
-    const typeDef = ENTITY_TYPES.find(t => t.id === type);
+    const typeDef = entityTypes.find(t => t.id === type);
     if (!typeDef) return;
     setLoading(true); setStatusHint('');
     try {
@@ -219,7 +236,7 @@ export default function MemexBrowse({
       setStatusHint(data.hint || `${items.length} ${typeDef.label.toLowerCase()}`);
     } catch { setResults([]); setStatusHint('Failed to load'); }
     finally { setLoading(false); }
-  }, []);
+  }, [entityTypes]);
 
   const doSearch = useCallback(async (q: string, types?: string[]) => {
     if (!q.trim() && !types?.length) return;
@@ -279,7 +296,7 @@ export default function MemexBrowse({
           style={S.searchInput} spellCheck={false} autoComplete="off" autoFocus
         />
         <div style={S.typeBar}>
-          {ENTITY_TYPES.map(t => (
+          {entityTypes.map(t => (
             <button key={t.id} style={S.typeChip(selectedType === t.id)}
               onClick={() => handleTypeClick(t.id)}>
               {t.label}
