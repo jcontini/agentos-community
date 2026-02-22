@@ -1,19 +1,17 @@
 # Plan — A Roadmap Item as a First-Class Entity
 #
 # Extends commitment. A plan is a feature, initiative, or roadmap
-# item — a commitment with dependency relationships. Plans live in
-# .ROADMAP/*.md files and are ingested by the roadmap migration skill.
+# item — a commitment with dependency relationships.
 #
-# Status is computed from location and dependencies:
-#   done    — file is in .ROADMAP/.archived/ (data.archived: true)
-#   blocked — has unresolved blocked_by dependencies
+# Status is computed from data and the enables graph:
+#   done    — done: true (explicitly marked complete)
+#   blocked — has incoming enables relationships where the blocker is not done
 #   ready   — no blocking dependencies
 #
-# Dependencies reuse the enables relationship (same as task blockers):
-#   plan_a → enables → plan_b means plan_b is blocked_by plan_a
+# Dependencies use the enables relationship:
+#   plan_a → enables → plan_b means plan_b cannot start until plan_a is done
 #
 # in_repository is stored as data.repository (slug) for v1.
-# Upgrade to a full graph relationship when traversal is needed.
 
 id: plan
 plural: plans
@@ -35,18 +33,20 @@ properties:
     type: datetime
     description: When work on this plan began
 
+  done:
+    type: boolean
+    description: True when this plan has been completed
+
   data:
     type: object
     description: |
-      Source file metadata:
+      Source metadata:
         repository: Repository slug (e.g., "agentos", "agentos-community")
-        filepath:   Absolute path to the source .md file
-        archived:   true if file lives in .ROADMAP/.archived/
 
 computed:
   status: |
-    if .data.archived then "done"
-    elif (.blocked_by | length > 0) and (.blocked_by | any(.status != "done")) then "blocked"
+    if .done then "done"
+    elif (.blocked_by | length > 0) and (.blocked_by | any(.done != true)) then "blocked"
     else "ready"
     end
 
@@ -54,11 +54,11 @@ computed_relationships:
   blocked_by:
     type: enables
     direction: incoming
-    fields: [status, name, priority]
+    fields: [done, name, service_id]
   blocks:
     type: enables
     direction: outgoing
-    fields: [status, name, priority]
+    fields: [done, name, service_id]
 
 identifiers: [id, name]
 operations: [list, get, create, update, archive, search]

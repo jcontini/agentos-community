@@ -4,6 +4,9 @@
 Queries plan entities from the AgentOS graph and outputs a dependency tree
 grouped by priority (NOW > HIGH > CONSIDERING).
 
+Dependencies come from the enables relationship, injected as blocked_by/blocks
+arrays by the computed_relationships system.
+
 Returns JSON: {"tree": "...formatted text..."}
 """
 
@@ -28,24 +31,25 @@ def slug(plan_id):
     return plan_id.split("--", 1)[1] if "--" in plan_id else plan_id
 
 
-def is_done(plan):
-    return (plan.get("data") or {}).get("archived", False) or plan.get("status") == "done"
-
-
 def build_tree(plans):
     by_id = {}
     for p in plans:
-        sid = p.get("service_id") or p.get("id")
+        sid = p.get("service_id") or p.get("_entity_id")
         by_id[sid] = p
 
-    active = [p for p in plans if not is_done(p)]
+    active = [p for p in plans if not p.get("done")]
 
-    # blocks_map: plan_id -> list of plan_ids it enables (that depend on it)
+    # Build blocks_map from the graph-sourced "blocks" array.
+    # plan["blocks"] = [{service_id, done, name}, ...] — plans that depend on this one.
     blocks_map = {}
     for p in active:
-        sid = p.get("service_id") or p.get("id")
-        for b in (p.get("data") or {}).get("blocked_by", []):
-            blocks_map.setdefault(b, []).append(sid)
+        sid = p.get("service_id") or p.get("_entity_id")
+        children = [
+            b["service_id"] for b in (p.get("blocks") or [])
+            if b.get("service_id") and not b.get("done")
+        ]
+        if children:
+            blocks_map[sid] = children
 
     now = [p for p in active if p.get("priority") == "now"]
     high = [p for p in active if p.get("priority") == "high"]
@@ -54,12 +58,12 @@ def build_tree(plans):
     lines = []
 
     def get_roots(plan_list):
+        """Plans with no active (undone) blockers."""
         roots = []
         for p in plan_list:
-            blocked_by = (p.get("data") or {}).get("blocked_by", [])
             active_blockers = [
-                b for b in blocked_by
-                if b in by_id and not is_done(by_id[b])
+                b for b in (p.get("blocked_by") or [])
+                if not b.get("done")
             ]
             if not active_blockers:
                 roots.append(p)
@@ -86,12 +90,11 @@ def build_tree(plans):
         roots = get_roots(plan_list)
         shown = set()
         for p in roots:
-            sid = p.get("service_id") or p.get("id")
+            sid = p.get("service_id") or p.get("_entity_id")
             lines.append(f"  {slug(sid)}")
-            children = blocks_map.get(sid, [])
             active_children = [
-                c for c in children
-                if c in by_id and not is_done(by_id[c])
+                c for c in blocks_map.get(sid, [])
+                if c in by_id and not by_id[c].get("done")
             ]
             for i, child in enumerate(active_children):
                 print_tree(child, "  ", i == len(active_children) - 1, shown)
@@ -103,8 +106,8 @@ def build_tree(plans):
         show_section("\033[2m\u25e6 CONSIDERING\033[0m", rest)
         standalone_in_rest = [
             p for p in rest
-            if not blocks_map.get(p.get("service_id") or p.get("id"), [])
-            and not (p.get("data") or {}).get("blocked_by", [])
+            if not blocks_map.get(p.get("service_id") or p.get("_entity_id"), [])
+            and not [b for b in (p.get("blocked_by") or []) if not b.get("done")]
         ]
         rooted = get_roots(rest)
         non_standalone_roots = [r for r in rooted if r not in standalone_in_rest]
