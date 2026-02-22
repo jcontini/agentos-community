@@ -5,8 +5,14 @@ description: AgentOS project roadmap — plans, priorities, and dependency graph
 icon: icon.svg
 color: "#6366F1"
 platforms: [macos]
+website: https://github.com/jcontini/agentos-community
 
 auth: none
+
+instructions: |
+  The roadmap lives on the graph as plan entities. Use get_tree to see the
+  dependency tree. Create, update, and archive plans via /mem/plans endpoints.
+  Read the skill readme for full API examples.
 
 utilities:
   get_tree:
