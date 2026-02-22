@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  apiFetch,
   getEntitySchema,
   getNestedValue,
   getProxiedSrc,
@@ -20,7 +21,7 @@ import {
   getColorFromString,
   inferImageVariant,
   formatValue,
-} from '/lib/utils.js';
+} from '/ui/lib/utils.js';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────────
 
@@ -210,7 +211,7 @@ export default function MemexBrowse({
     if (!typeDef) return;
     setLoading(true); setStatusHint('');
     try {
-      const res = await fetch(`/mem/${typeDef.plural}`);
+      const res = await apiFetch(`/mem/${typeDef.plural}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const items = Array.isArray(data) ? data : (data.data || []);
@@ -227,7 +228,7 @@ export default function MemexBrowse({
       const body: Record<string, unknown> = {};
       if (q.trim()) body.query = q.trim();
       if (types?.length) body.types = types;
-      const res = await fetch('/mem/search', {
+      const res = await apiFetch('/mem/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

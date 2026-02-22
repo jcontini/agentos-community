@@ -20,6 +20,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  apiFetch,
   getEntitySchema,
   getNestedValue,
   isTypedReference,
@@ -30,7 +31,7 @@ import {
   formatRelativeTime,
   formatValue,
   getFieldLabel,
-} from '/lib/utils.js';
+} from '/ui/lib/utils.js';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────────
 
@@ -639,7 +640,7 @@ function RelationshipPanel({ entityId, plural, relationships }: {
   // Fetch raw relationships for mutation IDs
   useEffect(() => {
     if (!entityId || !plural) return;
-    fetch(`/mem/${plural}/${entityId}/relationships`)
+    apiFetch(`/mem/${plural}/${entityId}/relationships`)
       .then(r => r.ok ? r.json() : { relationships: [] })
       .then(data => setRawRels(data.relationships || []))
       .catch(() => {});
@@ -652,7 +653,7 @@ function RelationshipPanel({ entityId, plural, relationships }: {
     searchTimeout.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch('/mem/search', {
+        const res = await apiFetch('/mem/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: searchQuery.trim() }),
@@ -669,7 +670,7 @@ function RelationshipPanel({ entityId, plural, relationships }: {
   const handleDelete = useCallback(async (relId: string) => {
     setDeletingId(relId);
     try {
-      await fetch(`/mem/${plural}/${entityId}/relationships/${relId}`, { method: 'DELETE' });
+      await apiFetch(`/mem/${plural}/${entityId}/relationships/${relId}`, { method: 'DELETE' });
       setRawRels(prev => prev.filter(r => r.id !== relId));
     } catch (err) {
       console.error('Failed to delete relationship:', err);
@@ -681,7 +682,7 @@ function RelationshipPanel({ entityId, plural, relationships }: {
     if (!relType.trim()) return;
     setAddStatus('saving');
     try {
-      const res = await fetch(`/mem/${plural}/${entityId}/relationships`, {
+      const res = await apiFetch(`/mem/${plural}/${entityId}/relationships`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: relType.trim(), to: targetId }),
@@ -693,7 +694,7 @@ function RelationshipPanel({ entityId, plural, relationships }: {
       setSearchQuery('');
       setSearchResults([]);
       // Re-fetch relationships
-      const updated = await fetch(`/mem/${plural}/${entityId}/relationships`);
+      const updated = await apiFetch(`/mem/${plural}/${entityId}/relationships`);
       if (updated.ok) {
         const data = await updated.json();
         setRawRels(data.relationships || []);
@@ -939,7 +940,7 @@ export default function MemexDetail({
     setSaveStatuses(prev => ({ ...prev, [fieldKey]: 'saving' }));
 
     try {
-      const res = await fetch(`/mem/${plural}/${id}`, {
+      const res = await apiFetch(`/mem/${plural}/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

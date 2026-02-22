@@ -119,7 +119,7 @@ url: "https://api.example.com/tasks/{{params.id}}"
 **Image proxy:** External images need proxying to bypass hotlink protection. Import the shared helper:
 
 ```tsx
-import { getProxiedSrc } from '/lib/utils.js';
+import { getProxiedSrc } from '/ui/lib/utils.js';
 
 // getProxiedSrc handles data:, blob:, protocol-relative, and external URLs
 // External URLs are rewritten to /ui/proxy/image?url=...

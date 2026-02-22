@@ -16,6 +16,7 @@
 
 import React, { useState } from 'react';
 import {
+  apiFetch,
   getProxiedSrc,
   getInitials,
   getColorFromString,
@@ -23,7 +24,7 @@ import {
   formatDuration,
   formatRelativeTime,
   getEmbedUrl,
-} from '/lib/utils.js';
+} from '/ui/lib/utils.js';
 
 interface VideoDetailProps {
   entity?: string;
@@ -49,7 +50,7 @@ export default function VideoDetail({ entity, item, pending, error }: VideoDetai
   React.useEffect(() => {
     if (channelUrl && !channelThumbnail) {
       // Fire and forget — the backend handles the entity update
-      fetch('/use/youtube/channel.get', {
+      apiFetch('/use/youtube/channel.get', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
