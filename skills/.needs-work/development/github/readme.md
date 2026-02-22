@@ -552,6 +552,36 @@ github.status
 github.run (command: "release list")
 ```
 
+## TODO: GitHub Pages → `website` entity
+
+GitHub Pages should map to the `website` entity (`entities/works/website.yaml`).
+The REST API is at `GET /repos/{owner}/{repo}/pages` and returns status, cname,
+source branch/path, and the public URL. Operations to add:
+
+- `website.list` — list all repos with Pages enabled (`gh api user/repos --jq '[.[] | select(.has_pages)]'`)
+- `website.get` — get Pages config for a specific repo (`gh api repos/{owner}/{repo}/pages`)
+- `website.create` — enable Pages for a repo
+- `website.delete` — disable Pages for a repo
+
+Mapping:
+```yaml
+transformers:
+  website:
+    mapping:
+      id: .url
+      name: .html_url | split("/") | last
+      url: .html_url
+      status: .status          # built | building | errored
+      custom_domain: .cname
+      source: '"git"'
+      data:
+        source_branch: .source.branch
+        source_path: .source.path
+        https_enforced: .https_enforced
+```
+
+---
+
 ## Why Entity Mapping?
 
 When GitHub issues map to `task`, they appear in the unified Tasks app:

@@ -1,0 +1,101 @@
+# Website — A Published, Hosted Website
+#
+# A website owned and managed by the user — static files deployed to a
+# hosting provider and served at a public URL. Not to be confused with
+# `webpage` (a page we discovered and read on the web). A website is
+# something we authored and deployed.
+#
+# One entity, many providers:
+#   here.now       → direct upload, anonymous or authenticated, slug.here.now
+#   Cloudflare Pages → wrangler deploy, project.pages.dev
+#   GitHub Pages   → git-backed, owner.github.io/repo
+#
+# Adapter-specific fields (claim_token, account_id, source_branch, etc.)
+# go in the `data` bag — they're stored in the graph and accessible to
+# agents, but don't pollute the shared schema.
+#
+# The `source_repo` reference creates a graph edge to the repository
+# backing a git-integrated deployment, enabling queries like
+# "what sites is this repo deployed to?"
+
+id: website
+plural: websites
+extends: document
+name: Website
+description: A published website — static files deployed to a hosting provider
+
+references:
+  schema_org: https://schema.org/WebSite
+  wikidata: Q35127  # website
+
+properties:
+  # Inherited from document: id, title, url, content, published_at, fetched_at, data
+
+  name:
+    type: string
+    description: Project or site name — the URL-addressable slug or identifier (e.g., "bright-canvas-a7k2", "my-portfolio")
+
+  status:
+    type: string
+    enum: [pending, building, active, errored, expired]
+    description: Deployment lifecycle state
+
+  custom_domain:
+    type: string
+    description: Custom domain if configured (e.g., "example.com")
+
+  environment:
+    type: string
+    description: Deployment environment — production or preview (branch name)
+
+  version_id:
+    type: string
+    description: Current deployment version identifier (version_id, deployment_id, or git commit SHA)
+
+  source:
+    type: string
+    enum: [direct, git]
+    description: How files were deployed — direct upload or from a git repository
+
+  source_repo:
+    references: repository
+    description: Repository backing this site (git-integrated deployments only)
+
+  expires_at:
+    type: datetime
+    description: When this site expires — null means permanent
+
+  files:
+    type: array
+    description: Files included in this publish (direct upload only)
+    items:
+      type: object
+      description: "{ path: string, size: integer, content_type: string }"
+
+  # data bag (inherited from document) stores adapter-specific fields:
+  #
+  # here.now:
+  #   data.anonymous       boolean  — published without authentication
+  #   data.claim_token     string   — one-time token to claim anonymous publish (returned once only)
+  #   data.claim_url       string   — URL the user visits to claim and keep permanently
+  #   data.ttl_seconds     integer  — time-to-live at publish time
+  #
+  # Cloudflare Pages:
+  #   data.account_id      string   — Cloudflare account ID
+  #   data.branch          string   — branch name for this deployment
+  #
+  # GitHub Pages:
+  #   data.source_branch   string   — which branch is published (gh-pages, main, etc.)
+  #   data.source_path     string   — "/" or "/docs"
+  #   data.https_enforced  boolean  — whether HTTPS is enforced
+
+identifiers: [url, name]
+operations: [list, get, create, update, delete]
+
+display:
+  primary: title
+  secondary: url
+  icon: globe-2
+  sort:
+    - field: published_at
+      order: desc

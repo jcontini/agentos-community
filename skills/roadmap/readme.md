@@ -8,117 +8,128 @@ platforms: [macos]
 
 auth: none
 
-transformers:
-  plan:
-    terminology: Roadmap Plan
-    mapping:
-      id: .id
-      name: .name
-      description: .description
-      status: .status
-      priority: .priority
-      content: .content
-      data.repository: .data.repository
-      data.slug: .data.slug
-      data.filepath: .data.filepath
-      data.archived: .data.archived
-      data.blocked_by: .data.blocked_by
-      data.blocks: .data.blocks
-
-operations:
-  plan.list:
-    description: List roadmap plans from a repository
-    returns: plan[]
-    params:
-      repository:
-        type: string
-        default: all
-        description: "Repository: agentos, agentos-community, entity-experiments, or all"
-      status:
-        type: string
-        description: "Filter by status: ready, blocked, done"
-      priority:
-        type: string
-        description: "Filter by priority: now, high"
+utilities:
+  get_tree:
+    description: Render the roadmap as a dependency tree grouped by priority (NOW > HIGH > CONSIDERING)
+    returns:
+      tree: string
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/roadmap/list-plans.py --repository {{params.repository}} --status {{params.status}} --priority {{params.priority}} --json 2>/dev/null"
-      timeout: 30
+        - "~/dev/agentos-community/skills/roadmap/tree-plans.py"
+      timeout: 15
 ---
 
 # Roadmap
 
-Reads `.ROADMAP/` directories and surfaces plan entities — features, initiatives, and specs with their dependency graph.
+The project roadmap lives on the graph as `plan` entities. Each plan represents a feature, initiative, or spec with priority, status, dependencies, and a markdown body.
 
-## How It Works
+Plans are namespaced by repository: `agentos--desk`, `agentos-community--chatgpt-skill-spec`.
 
-Plans live in `.ROADMAP/` directories across repositories. Each `.md` file becomes a plan entity, namespaced by repository (e.g. `agentos--desk`, `agentos-community--chatgpt-skill-spec`).
-
-```
-agentos/
-  .ROADMAP/
-    desk.md         → plan: agentos--desk (active)
-    homepage.md     → plan: agentos--homepage (active)
-    .archived/
-      old-spec.md   → plan: agentos--old-spec (status: done)
-```
-
-Each `.md` file has YAML frontmatter declaring its priority and dependency edges:
-
-```yaml
----
-priority: now
-blocked_by:
-  - plan-entity
-  - mcp-initialize-registration
-blocks:
-  - dynamic-docs
----
-
-# Plan Title
-
-Body text...
-```
-
-## Usage
+## View the Roadmap
 
 ```bash
-# Import plans to graph (first time or refresh)
-curl -H "X-Agent: cursor" "http://localhost:3456/mem/plans?refresh=true&skill=roadmap"
+# Dependency tree (NOW > HIGH > CONSIDERING)
+curl -s -X POST http://localhost:3456/use/roadmap/get_tree \
+  -H "Content-Type: application/json" -d '{}'
 
-# Query from graph (fast, no re-pull)
-curl -H "X-Agent: cursor" "http://localhost:3456/mem/plans"
+# List all plans
+curl -s http://localhost:3456/mem/plans
 
-# Filter by priority
-curl -H "X-Agent: cursor" -X POST "http://localhost:3456/use/roadmap/plan.list" \
+# Filter by status or priority
+curl -s "http://localhost:3456/mem/plans?status=ready&priority=now"
+
+# Full-text search over plan content
+curl -s -X POST http://localhost:3456/mem/search \
   -H "Content-Type: application/json" \
-  -d '{"repository": "agentos", "priority": "now"}'
+  -d '{"query": "homepage", "types": ["plan"]}'
 ```
 
-After entity import, run the migration script to create dependency relationships:
+## Create a Plan
 
 ```bash
-python3 ~/dev/agentos-community/scripts/roadmap-migrate.py --repository all --commit
+curl -s -X POST http://localhost:3456/mem/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service_id": "agentos--my-new-feature",
+    "name": "My New Feature",
+    "description": "Short summary of what this is",
+    "priority": "high",
+    "content": "# My New Feature\n\nFull markdown spec goes here...",
+    "data": {
+      "repository": "agentos",
+      "slug": "my-new-feature",
+      "blocked_by": ["agentos--some-dependency"],
+      "blocks": []
+    }
+  }'
 ```
+
+**Required fields:**
+- `service_id` — `{repository}--{slug}` format, must be unique
+- `name` — human-readable title
+
+**Optional fields:**
+- `description` — one-line summary
+- `priority` — `now` or `high` (omit for considering/unprioritized)
+- `content` — full markdown body (FTS-indexed)
+- `data.repository` — which roadmap this belongs to
+- `data.blocked_by` — list of plan service_ids this depends on
+- `data.blocks` — list of plan service_ids that depend on this
+
+## Update a Plan
+
+Use PATCH with the entity ID:
+
+```bash
+curl -s -X PATCH http://localhost:3456/mem/plans/<entity_id> \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My New Feature (Revised)",
+    "priority": "now"
+  }'
+```
+
+## Mark a Plan Done
+
+```bash
+curl -s -X PATCH http://localhost:3456/mem/plans/<entity_id> \
+  -H "Content-Type: application/json" \
+  -d '{ "data": { "archived": true } }'
+```
+
+Status is computed: `done` if archived, `blocked` if it has active blockers, `ready` otherwise.
+
+## Add Dependencies
+
+Dependencies use the `enables` relationship. If plan A must be done before plan B:
+
+```bash
+curl -s -X POST http://localhost:3456/mem/relate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "<entity_id of plan A>",
+    "to": "<entity_id of plan B>",
+    "type": "enables"
+  }'
+```
+
+Note: `from`/`to` use internal entity IDs (UUIDs), not service_ids. Query `/mem/plans` to find them.
 
 ## Plan Status
 
-Status is computed from filesystem location and dependency state:
-
 | Status | Meaning |
 |--------|---------|
-| `done` | File is in `.ROADMAP/.archived/` |
-| `blocked` | Has unresolved `blocked_by` dependencies |
-| `ready` | No blockers — can be worked on now |
+| `done` | Archived (`data.archived: true`) |
+| `blocked` | Has unresolved dependencies |
+| `ready` | No blockers — can be worked on |
 
 ## Repositories
 
-| Slug | Path |
-|------|------|
-| `agentos` | `~/dev/agentos` |
-| `agentos-community` | `~/dev/agentos-community` |
-| `entity-experiments` | `~/dev/entity-experiments` |
-| `all` | All three repositories |
+Plans are grouped by repository via `data.repository`:
+
+| Repository | Description |
+|------------|-------------|
+| `agentos` | Core engine roadmap |
+| `agentos-community` | Skills, entities, apps roadmap |
+| `entity-experiments` | Entity modeling experiments |

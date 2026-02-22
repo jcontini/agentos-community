@@ -163,13 +163,91 @@ instructions: |
         url: '"https://myservice.com/task/" + .id'
   ```
 
+  ### Mapping adapter-specific fields with `data.*`
+
+  Entity schemas have a `data` bag for adapter-specific fields that don't belong in the
+  shared schema. Map into it directly using dotted keys:
+
+  ```yaml
+  transformers:
+    task:
+      mapping:
+        id: .id
+        title: .title
+        data.remote_id: .identifier      # Service's own human-readable ID (e.g., "AGE-123")
+        data.status: .state.name         # Service-specific status label
+        data.url: .url                   # Deep link back into the service
+        data.assignee.id: '(.assignee // {}).id'    # Nested object in data bag
+        data.assignee.name: '(.assignee // {}).name'
+  ```
+
+  The `data.*` pattern stores the value at `entity.data.remote_id`, `entity.data.assignee`, etc.
+  Use this for anything that's useful for agents but not part of the cross-service entity schema.
+
+  ### Rich Content (entity bodies)
+
+  Use `content` to store long-form text (descriptions, transcripts, markdown) separately
+  from structured fields. It's indexed in full-text search.
+
+  ```yaml
+  transformers:
+    post:
+      mapping:
+        id: .id
+        title: .title
+        content: .body_html        # stored in entity_bodies, FTS-indexed
+  ```
+
+  If an entity can have multiple bodies (e.g. a video with description AND transcript):
+
+  ```yaml
+  transformers:
+    video:
+      mapping:
+        id: .id
+        title: .title
+        content: .transcript_text
+        content_role: '"transcript"'   # role key in entity_bodies (default: "body")
+  ```
+
+  **Rules:**
+  - `content` is reserved — not stored in entity data, routed to `entity_bodies`
+  - `content_role` sets the role (default `"body"`). Use when an entity has more than one body
+  - Both are stripped from entity data before storage — don't also map them to a schema property
+
+  ### Supporting Models
+
+  For data shapes returned by a skill that aren't standalone entities (like DNS records),
+  define a transformer without the entity needing its own operations:
+
+  ```yaml
+  transformers:
+    domain:
+      terminology: Domain
+      mapping:
+        fqdn: .domain
+        status: .status
+        registrar: '"porkbun"'
+        expires_at: .expireDate
+
+    dns_record:               # Not a standalone entity — just a data shape
+      terminology: DNS Record
+      mapping:
+        id: .id
+        name: .name
+        type: .type
+        values: '[.content]'
+        ttl: '.ttl | tonumber'
+  ```
+
+  Operations can then declare `returns: dns_record[]` and the transformer is applied.
+
   ### Choosing the right entity type
 
-  Always map to an existing entity before creating a new one. Existing entity types:
+  Always map to an existing entity before creating a new one. Check `entities/{type}.yaml`
+  in the community repo for exact property names. Common types:
   `task`, `person`, `message`, `conversation`, `post`, `video`, `channel`, `document`,
-  `meeting`, `forum`, `webpage`, `tag`
-
-  Check `entities/{type}.yaml` in the community repo for exact property names.
+  `meeting`, `forum`, `webpage`, `website`, `repository`, `domain`, `tag`
 
   Only create a new entity type if no existing type fits. Good reasons:
   - Fundamentally different properties (e.g., `pull_request` has `head`, `base`, `mergeable`)
@@ -222,19 +300,101 @@ instructions: |
   |--------|------|
   | `entity[]` | List / search operations |
   | `entity` | Get / create / update operations |
-  | `operation_result` | Actions that succeed or fail (`{ success, message?, id? }`) |
-  | `batch_result` | Bulk operations (`{ succeeded, failed, total, errors? }`) |
-  | `void` | No useful return value |
+  | `void` | Delete or mutation with no useful return value |
+
+  Use `void` for any operation that doesn't return an entity. For richer return shapes
+  (success flags, IDs, custom data), use `utilities:` instead — see the Utilities section.
+
+  ### Valid operation suffixes
+
+  The validator knows these suffixes and enforces their return types:
+  `list`, `get`, `create`, `update`, `delete`, `search`, `pull`, `archive`
+
+  **Any other suffix in `operations:` will be treated as a read and must return an entity.**
+  If you need an action like `claim`, `assign`, `transfer`, or `check` — put it in
+  `utilities:` (see below), not in `operations:`.
 
   ### Executors
 
-  | Executor | Use case |
-  |----------|----------|
-  | `rest` | HTTP REST APIs |
-  | `graphql` | GraphQL APIs |
-  | `sql` | SQLite databases |
-  | `command` | Shell commands / CLI tools |
-  | `swift` | macOS native frameworks (EventKit, Contacts, etc.) |
+  | Executor | Use case | Example skill |
+  |----------|----------|---------------|
+  | `rest` | HTTP REST APIs | `todoist`, `exa` |
+  | `graphql` | GraphQL APIs | `linear` |
+  | `sql` | SQLite/Postgres queries | `imessage`, `postgres` |
+  | `command` | CLI tools, local scripts | `youtube`, `granola` |
+  | `swift` | macOS native frameworks | `apple-calendar` |
+  | `applescript` | macOS automation | |
+
+  ### Command Executor
+
+  Runs a local binary with arguments. Output is parsed as JSON (falls back to string).
+
+  ```yaml
+  operations:
+    video.search:
+      description: Search YouTube videos
+      returns: video[]
+      params:
+        query: { type: string, required: true }
+      command:
+        binary: bash
+        args:
+          - "-l"
+          - "-c"
+          - "yt-dlp --flat-playlist --dump-json 'ytsearch10:{{params.query}}' 2>/dev/null | jq -s '.'"
+        timeout: 60
+  ```
+
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | `binary` | string | Binary name (resolved via PATH + common dirs) |
+  | `args` | string[] | Arguments array — each element interpolated with `{{params.x}}` |
+  | `args_string` | string | Alternative: single string split on whitespace |
+  | `stdin` | string | Content piped to stdin — use for large inputs instead of args |
+  | `timeout` | integer | Timeout in seconds (default: 60) |
+  | `working_dir` | string | Working directory (interpolated, supports `~/`) |
+  | `response` | object | Response mapping (same as REST — root, mapping) |
+
+  **Tips:**
+  - Use `bash -l -c "..."` to get a login shell (loads PATH, homebrew, pyenv, etc.)
+  - Python scripts should `print(json.dumps(result))` — executor parses stdout as JSON
+  - Pass large content (HTML, file data) via `stdin:` rather than args to avoid shell quoting
+  - Use `2>/dev/null` to suppress stderr noise from CLI tools
+  - Use `{{#if params.x}} --flag '{{params.x}}'{{/if}}` for optional string args
+  - Avoid `{{#if}}` for integer/boolean params — falsy values (`0`, `false`) may not skip
+
+  ---
+
+  ## How Data Flows: Graph-First
+
+  AgentOS is **graph-first**. Skills sync data INTO the Memex; queries read FROM it.
+
+  ```
+  Skill (API/command) → extract + transform → Memex (SQLite) → REST/MCP response
+  ```
+
+  **Default list requests read from cache — they do NOT call skills.**
+
+  | Request | What happens |
+  |---------|-------------|
+  | `GET /mem/tasks` | Reads cached graph. Fast (0ms). No skill execution. |
+  | `GET /mem/tasks?refresh=true` | Syncs ALL task skills first, then reads graph. |
+  | `GET /mem/tasks?refresh=true&skill=todoist` | Syncs only Todoist, then reads graph. |
+
+  **`?refresh=true` is how you trigger a live pull.** Without it, you only see what was previously synced.
+
+  ```bash
+  # First sync: pulls data from your skill into the graph
+  curl -H "X-Agent: test" "http://localhost:3456/mem/tasks?refresh=true&skill=my-service"
+
+  # Subsequent reads: fast, from cache
+  curl -H "X-Agent: test" "http://localhost:3456/mem/tasks"
+
+  # Direct skill call (bypasses graph, returns live data)
+  curl -X POST "http://localhost:3456/use/my-service/task.list" \
+    -H "Content-Type: application/json" \
+    -d '{"limit": 10}'
+  ```
 
   ---
 
@@ -334,24 +494,61 @@ instructions: |
 
   ## Utilities
 
-  For operations that don't fit standard entity CRUD — custom return shapes, introspection,
-  bulk actions:
+  For operations that don't fit standard entity CRUD — introspection, actions, setup flows,
+  custom return shapes. Use utilities when:
+  - The return isn't an entity (workflow states, org info, success flags)
+  - The action verb isn't in the standard operation set (`claim`, `assign`, `transfer`, `setup`)
+  - You need a mutation that returns a custom shape
 
   ```yaml
   utilities:
     get_workflow_states:
-      description: List available workflow states
+      description: List available workflow states for a team
+      params:
+        team_id: { type: string, required: true }
+      returns:
+        id: string
+        name: string
+        type: string
       rest:
         method: GET
-        url: https://api.myservice.com/states
+        url: '"https://api.myservice.com/teams/" + .params.team_id + "/states"'
+        response:
+          root: /states
+
+    add_blocker:
+      description: Add a blocking relationship between two issues
+      params:
+        id: { type: string, required: true }
+        blocker_id: { type: string, required: true }
+      returns: void
+      rest:
+        method: POST
+        url: https://api.myservice.com/relations
+        body:
+          issueId: .params.blocker_id
+          relatedIssueId: .params.id
+          type: '"blocks"'
+
+    setup:
+      description: Auto-configure account params after credential is added
       returns:
-        type: array
-        items:
-          id: .id
-          name: .name
+        org_name: string
+        teams: array
+      graphql:
+        query: "{ organization { name } teams { nodes { id name } } }"
+        response:
+          root: /data
   ```
 
-  Utility names are `verb_noun` (no dot). They appear in the API alongside operations.
+  **Naming rules (enforced by validator):** utility names must be `snake_case` — no dots,
+  no spaces. Pattern: `verb_noun` (`get_teams`, `add_blocker`, `claim_site`) or just a
+  noun (`setup`, `whoami`).
+
+  **`returns` in utilities** can be:
+  - `void` — mutation with no useful output
+  - An inline object schema — `{ id: string, name: string }` for custom shapes
+  - An array — `returns: array` for list-style utilities
 
   ---
 
@@ -438,12 +635,15 @@ instructions: |
   Before submitting a PR:
 
   - [ ] `skills/my-service/` folder exists with `readme.md` + `icon.svg`/`icon.png`
-  - [ ] All required front matter: `id`, `name`, `description`, `icon`
+  - [ ] All required front matter: `id`, `name`, `description`, `icon`, `website`
   - [ ] Auth configured correctly for the service
   - [ ] `transformers` map to existing entity types (checked `entities/*.yaml`)
-  - [ ] Operations use correct `entity.operation` naming
+  - [ ] Adapter-specific fields use `data.*` mapping (not polluting the entity schema)
+  - [ ] Operations use correct `entity.operation` naming with known suffixes only
+  - [ ] Actions that don't fit standard CRUD are in `utilities:` with snake_case names
+  - [ ] `returns: void` used for mutations/deletes; inline schema for custom shapes
   - [ ] Seed entities credit the upstream service + any CLI/library dependencies
-  - [ ] Tests cover all operations (even skipped destructive ones)
+  - [ ] Tests cover all operations AND utilities (even skipped destructive ones)
   - [ ] `npm run validate` passes
   - [ ] `npm test` passes (or gracefully skips if no credentials)
 
