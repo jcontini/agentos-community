@@ -39,10 +39,29 @@ Is it in the App Store?
 
 What framework?
 ├── Electron → SafeStorage (Keychain) → READABLE ✅
+├── Chromium-based (custom browser) → Chrome-style encrypted Cookies → READABLE ✅ (if Safe Storage key found)
 ├── Native Swift/SwiftUI → Keychain Group (team-signed) → BLOCKED ❌
 ├── Native Cocoa/ObjC → Varies (Keychain or plist) → INVESTIGATE
 └── Web wrapper (WKWebView) → WebKit cookie storage → INVESTIGATE
 ```
+
+## Two Questions Worth Asking Early
+
+**Can I just use Firefox?**
+If the service has a web login and the user can log in via Firefox, the session cookie
+is stored plaintext in `cookies.sqlite`. This is almost always easier than reverse
+engineering the desktop app. Check this first.
+
+**Is `securityd` pausing/modifying an option?**
+No. `securityd` is the macOS security daemon and is fully protected by SIP
+(System Integrity Protection). Even root cannot kill, pause, or inject into it.
+Attempting to do so would break all auth system-wide.
+
+**Can Keychain Scripting automate a single password reveal?**
+`Keychain Scripting.osax` (the AppleScript extension) was removed in macOS Catalina (10.15).
+The modern Keychain Access app does not support scripting. Its "Show Password" dialog
+specifically blocks UI automation — it requires real user interaction (Touch ID or password).
+One manual reveal is the only option, which you'd then paste into AgentOS credentials.
 
 ---
 
@@ -141,15 +160,51 @@ auth:
 
 ---
 
+### Chromium-Based Apps (Chrome-style Cookies) ✅ READABLE
+
+**Examples:** ChatGPT Atlas, Arc (also has Electron SafeStorage), any custom Chromium shell
+
+**How it works:**
+- Uses the same encrypted `Cookies` SQLite DB as Chrome
+- Cookies encrypted with AES-128-CBC, PBKDF2-derived key from a Keychain entry
+- Key is usually stored as `"{AppName} Safe Storage"` OR `"Chrome Safe Storage"` in Keychain
+- Cookie values start with `v10` prefix
+
+**Steps:**
+```bash
+# 1. Find the Cookies database (in the Chromium profile)
+ls ~/Library/Application\ Support/{bundle-id}/browser-data/host/Default/Cookies
+ls ~/Library/Application\ Support/{bundle-id}/browser-data/host/{profile}/Cookies
+
+# 2. Check cookie names
+sqlite3 /tmp/cookies-copy.db \
+  "SELECT host_key, name, length(encrypted_value) FROM cookies WHERE host_key LIKE '%target.com%'"
+
+# 3. Find the Safe Storage key - try AppName and "Chrome Safe Storage":
+security find-generic-password -s "{AppName} Safe Storage" -w
+security find-generic-password -s "Chrome Safe Storage" -w    # Chromium fallback
+
+# 4. Decrypt (v10 format):
+# PBKDF2-HMAC-SHA1(password=key, salt="saltysalt", iterations=1003, dklen=16)
+# AES-128-CBC(iv=b'\x20'*16), strip 3-byte "v10" prefix
+```
+
+**Important:** Always copy the Cookies DB to /tmp before querying — Chrome locks it while running.
+
+---
+
 ### Native macOS Apps (Keychain Groups) ❌ BLOCKED
 
 **Examples:** ChatGPT Desktop
 
 **How it works:**
+- Auth library: Auth0 + SimpleKeychain (same as iOS)
 - Token stored in Apple Keychain Sharing Group tied to Apple Developer Team ID
 - Format: `{TEAM_ID}.group.{bundle-id}` (e.g. `2DC432GLL2.group.com.openai.chat`)
-- Only apps signed with the same Team ID can access these entries
-- `security` CLI cannot read them — requires being in the same signing group
+- Actual token lives in `{TEAM_ID}.com.company.shared` (shared cross-app group)
+- Only apps signed with the same Team ID can access — enforced by Secure Enclave
+- `security` CLI uses legacy SecKeychain API and **cannot even see** data protection keychain items
+- Even root cannot bypass this — it's hardware-enforced, not permission-based
 
 **Detection:**
 ```bash
@@ -160,9 +215,30 @@ strings /Applications/AppName.app/Contents/Frameworks/AppName.framework/AppName 
 
 If you see `XXXXXXXXXX.group.com.company.app` → this is a Keychain Group → blocked.
 
+**Why even root can't help:**
+The Secure Enclave holds the encryption key for data protection class `ck` items.
+It only releases the key to processes presenting the correct team-signed entitlement.
+Root is a Unix concept; the Secure Enclave doesn't care about Unix permissions.
+
+**What CAN see these items:**
+- Keychain Access.app — has a private Apple `"*"` wildcard entitlement (only Apple-signed binaries can hold this)
+- The app itself — runs in its own process context with the correct entitlement
+- `lldb` attached to the app process (requires SIP disabled)
+
+**Keychain item names for ChatGPT Desktop** (for targeted prompts):
+```
+com.openai.chat.auth
+com.openai.chat.account_data_store
+com.openai.chat.user_data_store
+com.openai.chat.conversations_v2_cache
+com.openai.chat.desktop_context_keychain_service
+```
+
 **Alternatives:**
-- Use the official API with a user-provided API key instead
-- Check if the app has a web login in Firefox/Chrome → browser cookies
+- Use the official API with a user-provided API key
+- Check if the service has a web login in Firefox → browser cookies (cleanest)
+- SIP disable + `lldb -n AppName` → inject `SecItemCopyMatching` call inside process context
+- One manual Keychain Access reveal (user clicks "Show Password", approves Touch ID)
 
 ---
 
@@ -255,17 +331,26 @@ security find-generic-password -s "com.company.appname" -w 2>/dev/null
 
 ## Known App Auth Patterns
 
-| App | Type | Auth Storage | Readable? |
-|-----|------|-------------|-----------|
-| Claude Desktop | Electron | SafeStorage + Keychain | ✅ Yes |
-| Cursor | Electron | SafeStorage (`Cursor Safe Storage`) | ✅ Yes |
-| VS Code | Electron | SafeStorage (`Code Safe Storage`) | ✅ Yes |
-| Slack | Electron | SafeStorage (`Slack Safe Storage`) | ✅ Yes |
-| Discord | Electron | SafeStorage (`discord Safe Storage`) | ✅ Yes |
-| Arc | Electron | SafeStorage (`Arc Safe Storage`) | ✅ Yes |
-| ChatGPT Desktop | Native Swift | Keychain Group (`2DC432GLL2.group.com.openai.chat`) | ❌ No |
-| Firefox cookies | Browser | Plaintext SQLite | ✅ Yes |
-| Chrome cookies | Browser | Encrypted SQLite + Keychain | ⚠️ Needs Keychain |
+| App | Type | Auth Storage | Readable? | Safe Storage Key |
+|-----|------|-------------|-----------|-----------------|
+| Claude Desktop | Electron | SafeStorage JSON config | ✅ Yes | `Claude Safe Storage` |
+| Cursor | Electron | SafeStorage | ✅ Yes | `Cursor Safe Storage` |
+| VS Code | Electron | SafeStorage | ✅ Yes | `Code Safe Storage` |
+| Slack | Electron | SafeStorage | ✅ Yes | `Slack Safe Storage` |
+| Discord | Electron | SafeStorage | ✅ Yes | `discord Safe Storage` |
+| Arc | Electron | SafeStorage | ✅ Yes | `Arc Safe Storage` |
+| ChatGPT Atlas | Chromium | Chrome-style Cookies SQLite | ⚠️ Investigate | `ChatGPT Atlas Safe Storage` or `Chrome Safe Storage` |
+| ChatGPT Desktop | Native Swift | Keychain Group (Secure Enclave) | ❌ No | n/a — team-signed only |
+| Firefox cookies | Browser | Plaintext `cookies.sqlite` | ✅ Yes | n/a |
+| Chrome cookies | Browser | Encrypted `Cookies` SQLite | ⚠️ Needs Keychain | `Chrome Safe Storage` |
+
+**ChatGPT Desktop — what we know:**
+- Auth: Auth0 OAuth via `auth0.openai.com`, token type `Authorization-Id-Token`
+- API: `https://ios.chat.openai.com` (iOS endpoint), also `chatgpt.com/backend-api/`
+- Keychain group: `2DC432GLL2.com.openai.shared` (12 encrypted items found)
+- Cert pinning: 10 hardcoded SHA256 public key hashes, custom URLProtocol class
+- Hardened Runtime: YES — blocks dylib injection
+- Conversation files: AES-encrypted `.data` files, key in `com.openai.chat.conversations_v2_cache`
 
 ---
 
