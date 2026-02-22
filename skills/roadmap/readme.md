@@ -19,11 +19,12 @@ utilities:
     description: Render the roadmap as a dependency tree grouped by priority (NOW > HIGH > CONSIDERING)
     returns:
       tree: string
-    command:
-      binary: python3
-      args:
-        - "~/dev/agentos-community/skills/roadmap/tree-plans.py"
-      timeout: 15
+    memex:
+      type: plan
+      limit: 500
+      computed: true
+      relationships: true
+      format: markdown
 ---
 
 # Roadmap
