@@ -143,6 +143,46 @@ instructions: |
   auth: none
   ```
 
+  ### Optional auth (skill works anonymously, better with credentials)
+  ```yaml
+  auth:
+    type: api_key
+    header: Authorization
+    prefix: "Bearer "
+    optional: true    # Don't block operations if no credentials — anonymous mode
+    label: API Key
+    help_url: https://myservice.com/api-keys
+  ```
+
+  Use `optional: true` when a service has anonymous access but authenticated users get
+  higher rate limits, persistence, or additional features. Operations still run without
+  credentials — the auth header is simply omitted.
+
+  ### Per-operation `auth: none` override
+
+  For public endpoints inside an otherwise-authenticated skill — e.g. a signup utility
+  that sends a magic link before the user has credentials:
+
+  ```yaml
+  utilities:
+    signup:
+      auth: none    # Skip credential check for this operation only
+      params:
+        email: { type: string, required: true }
+      returns:
+        sent: boolean
+      rest:
+        method: POST
+        url: '"https://api.myservice.com/auth/magic-link"'
+        body:
+          email: .params.email
+  ```
+
+  `auth: none` works on both `operations:` and `utilities:` entries, for any executor
+  (rest, graphql, command, etc.). It completely skips credential resolution and header
+  injection for that one operation. Without it, any skill with `auth:` configured will
+  block all calls — including signup — until credentials exist.
+
   ---
 
   ## Transformers
@@ -355,6 +395,28 @@ instructions: |
   | `working_dir` | string | Working directory (interpolated, supports `~/`) |
   | `response` | object | Response mapping (same as REST — root, mapping) |
 
+  **Credentials in command args:** Use `{{auth.key}}` to inject the resolved credential
+  into args or stdin. The engine resolves it from the AgentOS credential store before
+  template rendering — it's available the same way as `{{params.x}}`:
+
+  ```yaml
+  operations:
+    website.create:
+      returns: website
+      params:
+        content: { type: string, required: true }
+      command:
+        binary: bash
+        args:
+          - "-l"
+          - "-c"
+          - "python3 ~/dev/skills/publish.py --token '{{auth.key}}'"
+        stdin: "{{params.content}}"
+  ```
+
+  If credentials aren't configured and the skill has `optional: true` auth, `{{auth.key}}`
+  renders as an empty string — scripts should handle that gracefully.
+
   **Tips:**
   - Use `bash -l -c "..."` to get a login shell (loads PATH, homebrew, pyenv, etc.)
   - Python scripts should `print(json.dumps(result))` — executor parses stdout as JSON
@@ -543,7 +605,8 @@ instructions: |
 
   **Naming rules (enforced by validator):** utility names must be `snake_case` — no dots,
   no spaces. Pattern: `verb_noun` (`get_teams`, `add_blocker`, `claim_site`) or just a
-  noun (`setup`, `whoami`).
+  noun (`setup`, `whoami`, `signup`). For credential acquisition flows, `signup` is the
+  conventional name — pair it with `auth: none` so it works before credentials exist.
 
   **`returns` in utilities** can be:
   - `void` — mutation with no useful output
@@ -636,7 +699,8 @@ instructions: |
 
   - [ ] `skills/my-service/` folder exists with `readme.md` + `icon.svg`/`icon.png`
   - [ ] All required front matter: `id`, `name`, `description`, `icon`, `website`
-  - [ ] Auth configured correctly for the service
+  - [ ] Auth configured correctly for the service (`optional: true` if service has anonymous access)
+  - [ ] Public endpoints (signup, etc.) use `auth: none` at the operation level
   - [ ] `transformers` map to existing entity types (checked `entities/*.yaml`)
   - [ ] Adapter-specific fields use `data.*` mapping (not polluting the entity schema)
   - [ ] Operations use correct `entity.operation` naming with known suffixes only
