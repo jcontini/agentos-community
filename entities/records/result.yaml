@@ -1,0 +1,63 @@
+# Result — A Search Engine's Record of a Web Resource
+#
+# A result is NOT a webpage. It's a record — a snapshot of what
+# a search engine knew about a URL at index time. The page may
+# have changed or may no longer exist. The result is the index
+# pointer, not the thing itself.
+#
+# Like a library catalog card: it describes where to find a book
+# and what it's about, but it's not the book.
+#
+# Extends record. Inherits: id, name, value.
+#
+# The URL connects results to webpages implicitly. When a result
+# at https://example.com exists and someone later does webpage.read
+# on that URL, the webpage entity shares the same URL. No explicit
+# relationship needed — the URL is the natural join key.
+#
+# Results live inside searches (via `includes` relationship with
+# position metadata for rank).
+
+id: result
+plural: results
+extends: record
+name: Search Result
+description: A search engine's record of a web resource — an index pointer, not the page itself
+
+properties:
+  url:
+    type: string
+    format: url
+    required: true
+    description: The URL this result points to
+
+  title:
+    type: string
+    description: Page title at index time
+
+  snippet:
+    type: string
+    description: Search engine's extracted description/excerpt
+
+  favicon:
+    references: image
+    description: Site favicon from the search index
+
+  indexed_at:
+    type: datetime
+    description: When the search engine last crawled/indexed this URL
+
+  position:
+    type: integer
+    description: Rank position in the search results
+
+identifiers: [url]
+
+operations: [list, get]
+
+display:
+  primary: title
+  secondary: url
+  description: snippet
+  icon: file-search
+  meta: [position]

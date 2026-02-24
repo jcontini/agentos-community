@@ -51,23 +51,25 @@ instructions: |
 # ═══════════════════════════════════════════════════════════════════════════════
 
 transformers:
-  webpage:
+  result:
     terminology: Result
     mapping:
+      id: .url
       url: .url
       title: .title
-      content: .description
+      snippet: .description
       favicon: .meta_url.favicon
-      published_at: .page_age
+      indexed_at: .page_age
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.search:
+  search.create:
     description: Search the web using Brave's independent index
-    returns: webpage[]
+    returns: result[]
+    wraps_as: search
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, default: 10, description: "Number of results (max 20)" }
@@ -100,7 +102,17 @@ Privacy-focused web search powered by Brave's independent index.
 - **Free tier** - 2,000 queries/month
 - **Search operators** - Quotes, exclusions, site: filters
 
-## Search Operators
+## Operations
+
+### search.create
+
+Create a web search. Returns search results (index records).
+
+```
+use({ skill: "brave", tool: "search.create", params: { query: "rust programming" } })
+```
+
+### Search Operators
 
 Include these in your query:
 - `"exact phrase"` - Match exact phrase
@@ -108,22 +120,9 @@ Include these in your query:
 - `site:github.com` - Limit to domain
 - `filetype:pdf` - Filter by file type
 
-## Freshness Filters
+### Freshness Filters
 
 - `pd` - Past day (24 hours)
 - `pw` - Past week
 - `pm` - Past month
 - `py` - Past year
-
-## Examples
-
-```bash
-# Basic search
-UseAdapter(adapter: "brave", tool: "webpage.search", params: {query: "rust programming"})
-
-# With freshness filter
-UseAdapter(adapter: "brave", tool: "webpage.search", params: {query: "AI news", freshness: "pw"})
-
-# Site-specific search
-UseAdapter(adapter: "brave", tool: "webpage.search", params: {query: "site:github.com rust web framework"})
-```

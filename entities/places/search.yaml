@@ -1,0 +1,59 @@
+# Search — A Query Executed Against a Source
+#
+# A search is a place where results were found. Like a playlist
+# contains songs or a folder contains files, a search contains
+# results — ordered by position (rank).
+#
+# Extends place. Inherits: id, name, description.
+#
+# The query is the identity. The results are related via
+# `includes` relationships with position metadata.
+#
+# Works for any search source:
+#   - Web search (Exa, Brave, Google)
+#   - File search (Google Drive, Dropbox)
+#   - Entity search (Memex)
+#   - Code search (GitHub)
+#
+# The search entity is a record of asking a question and getting
+# answers. Individual results are `result` entities (records of
+# what the search engine knew about each URL at index time).
+#
+# Ontological grounding:
+#   - PROV-O: Activity that generated a Collection
+#   - Schema.org: SearchAction (action) + SearchResultsPage (place)
+#   - OpenSearch: Response feed with Query metadata
+#   - People talk about searches as places: "I found it on Google",
+#     "it's the #1 spot", "go back to the search"
+
+id: search
+plural: searches
+extends: place
+name: Search
+description: A query executed against a source — a place where results were found
+
+references:
+  schema_org: https://schema.org/SearchAction
+  prov_o: https://www.w3.org/TR/prov-o/#Activity
+
+properties:
+  query:
+    type: string
+    required: true
+    description: The search query
+
+  result_count:
+    type: integer
+    description: Number of results returned
+
+  search_type:
+    type: string
+    description: Type of search performed (auto, neural, keyword)
+
+operations: [list, get, create]
+
+display:
+  primary: query
+  secondary: result_count
+  icon: search
+  meta: [search_type]

@@ -50,9 +50,20 @@ instructions: |
 # ═══════════════════════════════════════════════════════════════════════════════
 
 transformers:
-  webpage:
+  # Search results — index records, not full webpages
+  result:
     terminology: Result
-    # Default mapping for fetch operations (has full content)
+    mapping:
+      id: .url
+      url: .url
+      title: .title
+      snippet: .text
+      favicon: .favicon
+      indexed_at: .publishedDate
+
+  # Full webpage content (for read operations)
+  webpage:
+    terminology: Page
     mapping:
       url: .url
       title: .title
@@ -65,9 +76,10 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.search:
+  search.create:
     description: Search the web using neural/semantic search
-    returns: webpage[]
+    returns: result[]
+    wraps_as: search
     web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
@@ -81,14 +93,14 @@ operations:
         type: '"auto"'
       response:
         root: "/results"
-        # Search results have different shape than read (no .text field)
         mapping:
+          id: .url
           url: .url
           title: .title
-          published_at: .publishedDate
+          indexed_at: .publishedDate
 
   webpage.read:
-    description: Extract content from a URL
+    description: Extract full content from a URL
     returns: webpage
     web_url: .params.url
     params:
@@ -102,7 +114,7 @@ operations:
         text: true
       response:
         root: "/results/0"
-        # Uses adapter.mapping (default) — has .text for content
+        # Uses transformer.webpage.mapping (default) — has .text for content
 ---
 
 # Exa
@@ -121,20 +133,27 @@ Semantic web search and content extraction. Neural search finds content by meani
 - Find similar pages
 - Relevance scoring
 
-## When to Use
+## Operations
 
-- Research and concepts
-- "How to" queries
-- Finding related content
-- Fast searches (default provider)
+### search.create
+
+Create a web search. Returns search results (index records, not full page content).
+
+```
+use({ skill: "exa", tool: "search.create", params: { query: "rust programming" } })
+```
+
+Results are `result` entities — snapshots of what the search engine knew about each URL.
+To get full page content, follow up with `webpage.read` on a result's URL.
+
+### webpage.read
+
+Extract full content from a URL.
+
+```
+use({ skill: "exa", tool: "webpage.read", params: { url: "https://example.com" } })
+```
 
 ## Known Limitations
 
-**`fetch` action**: May fail for URLs that Exa can't crawl (e.g., `example.com`, pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`, but the current adapter doesn't surface this gracefully. Use `firecrawl.fetch` as fallback for problematic URLs.
-
-The Exa API returns:
-```json
-{ "results": [], "statuses": [{ "id": "url", "status": "error", "error": { "tag": "CRAWL_NOT_FOUND" } }] }
-```
-
-TODO: Enhance executor to handle empty array access and surface `statuses` errors.
+**`webpage.read`**: May fail for URLs that Exa can't crawl (e.g., pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`. Use `firecrawl` as fallback for problematic URLs.
