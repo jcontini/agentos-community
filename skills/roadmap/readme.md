@@ -1,7 +1,7 @@
 ---
 id: roadmap
 name: Roadmap
-description: AgentOS project roadmap — plans, priorities, and dependency graph
+description: AgentOS project roadmap — tasks, priorities, and dependency graph
 icon: icon.svg
 color: "#6366F1"
 platforms: [macos]
@@ -10,130 +10,85 @@ website: https://github.com/jcontini/agentos-community
 auth: none
 
 instructions: |
-  The roadmap lives on the graph as plan entities. Use get_tree to see the
-  dependency tree. Create, update, and complete plans via /mem/plans endpoints.
-  Read the skill readme for full API examples.
-
-utilities:
-  get_tree:
-    description: Render the roadmap as a dependency tree grouped by priority (NOW > HIGH > CONSIDERING)
-    returns:
-      tree: string
-    memex:
-      type: plan
-      limit: 500
-      computed: true
-      relationships: true
-      format: markdown
+  The roadmap lives on the graph as task entities. Use the Memex tools
+  (list, search, get) to browse tasks by priority, status, and dependencies.
+  Completion is a speech act — relate(from: actor_id, to: task_id, type: "completes").
 ---
 
 # Roadmap
 
-The project roadmap lives on the graph as `plan` entities. Each plan represents a feature, initiative, or spec with priority, status, dependencies, and a markdown body.
+The project roadmap lives on the graph as `task` entities. Each task represents a feature, initiative, or spec with priority, status, dependencies, and a markdown body.
 
-Plans are namespaced by repository: `agentos--desk`, `agentos-community--chatgpt-skill-spec`.
+## Browse the Roadmap
 
-## View the Roadmap
-
-```bash
-# Dependency tree (NOW > HIGH > CONSIDERING)
-curl -s -X POST http://localhost:3456/use/roadmap/get_tree \
-  -H "Content-Type: application/json" -d '{}'
-
-# List all plans
-curl -s http://localhost:3456/mem/plans
-
-# Filter by computed status or priority
-curl -s "http://localhost:3456/mem/plans?computed.status=ready&priority=now"
-
-# Full-text search over plan content
-curl -s -X POST http://localhost:3456/mem/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "homepage", "types": ["plan"]}'
+```
+list({ type: "task", priority: "now" })           What's active right now
+list({ type: "task", priority: "high" })          Up next
+list({ type: "task", done: false, limit: 50 })    All open tasks
+search({ query: "homepage", types: ["task"] })     Full-text search
+get({ id: "abc123", depth: 1 })                   Full detail + relationships
 ```
 
-## Create a Plan
+**Status** is computed from the graph — never set directly:
 
-```bash
-curl -s -X POST http://localhost:3456/mem/plans \
-  -H "Content-Type: application/json" \
-  -d '{
-    "service_id": "agentos--my-new-feature",
-    "name": "My New Feature",
-    "description": "Short summary of what this is",
-    "priority": "high",
-    "content": "# My New Feature\n\nFull markdown spec goes here...",
-    "data": {
-      "repository": "agentos"
-    }
-  }'
+| Status | Meaning |
+|--------|---------|
+| `done` | Has a `completes` relationship from an actor |
+| `blocked` | Has unfinished dependencies (incoming `enables` from undone tasks) |
+| `ready` | No blockers — can be worked on |
+
+## Create a Task
+
+```
+create({
+  type: "task",
+  name: "My New Feature",
+  description: "Short summary",
+  priority: "now",
+  content: "# My New Feature\n\nFull markdown spec goes here..."
+})
 ```
 
-**Required fields:**
-- `service_id` — `{repository}--{slug}` format, must be unique
-- `name` — human-readable title
+**Required:** `name`
+**Optional:** `description`, `priority` (`now` or `high`), `content` (full markdown body, FTS-indexed)
 
-**Optional fields:**
-- `description` — one-line summary
-- `priority` — `now` or `high` (omit for considering/unprioritized)
-- `content` — full markdown body (FTS-indexed)
-- `data.repository` — which repo this belongs to
+## Update a Task
 
-## Update a Plan
-
-Use PATCH with the entity ID:
-
-```bash
-curl -s -X PATCH http://localhost:3456/mem/plans/<entity_id> \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My New Feature (Revised)",
-    "priority": "now"
-  }'
+```
+update({ id: "abc123", name: "Revised Name", priority: "now" })
 ```
 
-## Mark a Plan Done
+## Mark a Task Done
 
-```bash
-curl -s -X PATCH http://localhost:3456/mem/plans/<entity_id> \
-  -H "Content-Type: application/json" \
-  -d '{ "done": true }'
+Completion is a speech act — an actor declares the task done:
+
+```
+relate({ from: "ddadc30e", to: "task_id", type: "completes" })
+```
+
+To reopen:
+
+```
+relate({ from: "ddadc30e", to: "task_id", type: "reopens" })
 ```
 
 ## Add Dependencies
 
-Dependencies use the `enables` relationship. If plan A must be done before plan B:
+If task A must be done before task B:
 
-```bash
-curl -s -X POST http://localhost:3456/mem/relate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from": "<entity_id of plan A>",
-    "to": "<entity_id of plan B>",
-    "type": "enables"
-  }'
+```
+relate({ from: "task_a_id", to: "task_b_id", type: "enables" })
 ```
 
-Note: `from`/`to` use internal entity IDs (`_entity_id`), not service_ids. Query `/mem/plans` to find them.
+The `blocked_by` and `blocks` arrays on each task are computed from the `enables` graph.
 
-## Plan Status
+## Roadmap in the README
 
-Status is computed from `done` and the enables graph — never set directly.
+The main README template renders the roadmap live using Bahasa:
 
-| Status | Meaning |
-|--------|---------|
-| `done` | Marked complete (`done: true`) |
-| `blocked` | Has unfinished dependencies (incoming enables from undone plans) |
-| `ready` | No blockers — can be worked on |
+```jinja
+{% set now_tasks = from("task", priority="now", limit=20) %}
+{% set high_tasks = from("task", priority="high", limit=10) %}
+```
 
-The response also includes `blocked_by` and `blocks` arrays (sourced from the enables graph) so you can see the full dependency chain.
-
-## Repositories
-
-Plans are grouped by repository via `data.repository`:
-
-| Repository | Description |
-|------------|-------------|
-| `agentos` | Core engine roadmap |
-| `agentos-community` | Skills, entities, apps roadmap |
-| `entity-experiments` | Entity modeling experiments |
+This pulls directly from the Memex — no bespoke code, no caching, always current.
