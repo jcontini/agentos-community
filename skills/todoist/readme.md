@@ -66,8 +66,8 @@ transformers:
       name: .content
       description: .description
       content: .description
-      data.completed: .checked
-      data.priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
+      priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
+      started_at: .added_at
       target.date: .due.date?
       created_at: .added_at
       project_id:

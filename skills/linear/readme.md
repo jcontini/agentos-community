@@ -52,11 +52,10 @@ transformers:
       name: .title
       description: .description
       content: .description
-      data.remote_id: .identifier
-      data.completed: '.state.type == "completed"'
-      data.status: 'if .state.type == "completed" then "done" elif .state.type == "canceled" then "cancelled" elif .state.type == "started" then "in_progress" else "open" end'
-      data.priority: .priority
+      priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
+      started_at: 'if .state.type == "started" then .updatedAt else null end'
       target.date: .dueDate
+      data.remote_id: .identifier
       data.url: .url
       created_at: .createdAt
       updated_at: .updatedAt
