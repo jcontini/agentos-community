@@ -123,8 +123,8 @@ transformers:
           content: .transcript
           content_role: '"transcript"'
           url: .webpage_url
-          language: '"en"'
-          source_type: '"auto_caption"'
+          language: .language
+          source_type: .source_type
           duration_ms: (.duration // null) | if . != null then . * 1000 else null end
           segment_count: (.transcript_segments // []) | length
 
@@ -323,11 +323,13 @@ operations:
           
           # Download subtitles as JSON3 (YouTube's richest caption format)
           # Try auto-generated first (available on ~85% of videos, has word-level timing)
+          SOURCE_TYPE="auto_caption"
           yt-dlp --skip-download --write-auto-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
           SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
           
           # Fallback: manually uploaded subtitles
           if [ -z "$SUBFILE" ]; then
+            SOURCE_TYPE="manual"
             yt-dlp --skip-download --write-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
             SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
           fi
@@ -362,11 +364,15 @@ operations:
             echo "$METADATA" | jq \
               --arg transcript "$TRANSCRIPT" \
               --argjson segments "$SEGMENTS" \
+              --arg source_type "$SOURCE_TYPE" \
+              --arg language "{{params.lang}}" \
               '{
                 title: .title,
                 description: .description,
                 transcript: $transcript,
                 transcript_segments: $segments,
+                source_type: $source_type,
+                language: $language,
                 duration: .duration,
                 thumbnail: .thumbnail,
                 channel: .channel,
@@ -390,10 +396,14 @@ operations:
             
             echo "$METADATA" | jq \
               --arg transcript "$TRANSCRIPT" \
+              --arg source_type "$SOURCE_TYPE" \
+              --arg language "{{params.lang}}" \
               '{
                 title: .title,
                 description: .description,
                 transcript: $transcript,
+                source_type: $source_type,
+                language: $language,
                 duration: .duration,
                 thumbnail: .thumbnail,
                 channel: .channel,
