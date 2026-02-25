@@ -1,31 +1,62 @@
-# Task — An Actionable Outcome
+# Task — The Universal Unit of Work
 #
-# The most common subtype of outcome. What task managers create.
-# Inherits all properties from outcome (name, description, value,
-# target, achieved, ended, output, indicators, data, etc.)
+# Extends commitment. A task is the fundamental work item — the most
+# universally understood unit of work across all domains: software
+# development, construction, military, government, personal productivity.
+#
+# Tasks can be lightweight (a one-liner from Todoist) or rich (a full
+# spec with markdown content and dependency chains). A task with a
+# detailed content body IS a spec — no separate entity type needed.
+#
+# Completion is a speech act, not a boolean:
+#   actor --completes--> task   (assertive: "I declare this done")
+#   actor --reopens-->   task   (directive: "this needs more work")
+#
+# The computed `done` field is derived from the most recent lifecycle
+# relationship — if the last speech act was `completes`, done is true.
+# If the last was `reopens`, done is false.
+#
+# Dependencies use the enables relationship:
+#   task_a --> enables --> task_b means task_b is blocked until task_a is done
+#
+# Status is computed from done + the enables graph:
+#   done    — most recent lifecycle act is `completes`
+#   blocked — has incoming enables where the blocker is not done
+#   ready   — not done and no blocking dependencies
 
 id: task
 plural: tasks
 name: Task
 extends: commitment
-description: An actionable outcome from task management tools
+description: A unit of work — from lightweight to-dos to rich specs with dependencies
 
-display:
-  primary: name
-  status: data.completed
-  icon: checkbox
-  sort:
-    - field: data.completed
-      completed_last: true
-    - field: target.date
-      null_last: true
-    - field: name
-      order: asc
+properties:
+  content:
+    type: string
+    description: Full markdown body (FTS-indexed). A task with rich content is a spec.
+
+  priority:
+    type: number
+    description: Urgency level (1=critical, 2=high, 3=medium, 4=low)
+
+  started_at:
+    type: datetime
+    description: When work on this task began
+
+identifiers: [id, name]
+operations: [list, get, create, update, archive, search, complete, reopen]
 
 computed:
+  done: |
+    if (.completed_by | length > 0) then
+      if (.reopened_by | length > 0) then
+        (.completed_by | max_by(.created_at) | .created_at) >
+        (.reopened_by | max_by(.created_at) | .created_at)
+      else true end
+    else false end
   status: |
-    if .completed then "done"
-    elif (.blockers | length > 0) and (.blockers | any(.completed != true)) then "blocked"
+    if .done then "done"
+    elif (.blocked_by | length > 0) and (.blocked_by | any(.done != true)) then "blocked"
     else "ready"
     end
   priority_label: |
@@ -36,7 +67,31 @@ computed:
     end
 
 computed_relationships:
-  blockers:
+  completed_by:
+    type: completes
+    direction: incoming
+    fields: [created_at]
+  reopened_by:
+    type: reopens
+    direction: incoming
+    fields: [created_at]
+  blocked_by:
     type: enables
     direction: incoming
-    fields: [completed]
+    fields: [done, name, service_id]
+  blocks:
+    type: enables
+    direction: outgoing
+    fields: [done, name, service_id]
+
+display:
+  primary: name
+  secondary: priority
+  icon: checkbox
+  sort:
+    - field: priority
+      order: asc
+    - field: status
+      order: asc
+    - field: name
+      order: asc

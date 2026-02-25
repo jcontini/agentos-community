@@ -1,0 +1,27 @@
+# Reopens — Directive Speech Act: "This commitment needs more work"
+#
+# An actor declares a previously completed commitment is not actually
+# done. This reverses the effect of a prior `completes` relationship.
+#
+# The task's computed `done` field checks whether the most recent
+# lifecycle act is `completes` or `reopens`. If the last act is
+# `reopens`, done is false.
+#
+# This follows Searle's speech act taxonomy: a directive act where
+# the speaker asks the world to change (more work is needed).
+
+id: reopens
+extends: govern
+name: Reopens
+inverse_name: Reopened by
+description: An actor declares a commitment needs more work — reverses a prior completion
+
+is_relationship: true
+
+from_type: actor
+to_type: commitment
+
+properties:
+  reason:
+    type: string
+    description: Why this was reopened (e.g., "regression found", "scope changed")

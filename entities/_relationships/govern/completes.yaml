@@ -1,0 +1,28 @@
+# Completes — Assertive Speech Act: "This commitment is fulfilled"
+#
+# An actor declares a commitment done. This is the source of truth
+# for completion — the task entity's `done` field is computed from
+# the presence (or absence) of this relationship.
+#
+# If a task is later reopened (via `reopens` relationship), done
+# flips back to false. The most recent speech act wins.
+#
+# This follows Searle's speech act taxonomy: an assertive act where
+# the speaker claims the world matches their words (the commitment
+# has been fulfilled).
+
+id: completes
+extends: govern
+name: Completes
+inverse_name: Completed by
+description: An actor declares a commitment fulfilled — the assertive speech act of completion
+
+is_relationship: true
+
+from_type: actor
+to_type: commitment
+
+properties:
+  note:
+    type: string
+    description: Optional note about completion (e.g., "shipped in v2.3")
