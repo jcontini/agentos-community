@@ -82,7 +82,6 @@ transformers:
       url: .webpage_url
       title: .title
       description: .description
-      transcript_segments: .transcript_segments
       duration_ms: (.duration // null) | if . != null then . * 1000 else null end
       thumbnail: .thumbnail
       published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
@@ -126,6 +125,7 @@ transformers:
           language: .language
           source_type: .source_type
           duration_ms: (.duration // null) | if . != null then . * 1000 else null end
+          segments: .transcript_segments
           segment_count: (.transcript_segments // []) | length
 
       add_to:
