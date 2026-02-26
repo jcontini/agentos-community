@@ -1,12 +1,12 @@
 id: transcribe
 name: Transcribe
 inverse_name: Transcript of
-description: A video, audio, or meeting transcribed into a document or transcript entity
+description: A video, audio, meeting, or conversation transcribed into a document or transcript entity
 extends: reference
 
 is_relationship: true
 
 from_type: [document, transcript]
-to_type: [video, audio, meeting]
+to_type: [video, audio, meeting, conversation, session]
 
 properties: {}

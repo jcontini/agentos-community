@@ -45,9 +45,21 @@ transformers:
       data.deletions: .deletions
       data.files_changed: .files_changed
 
+      content: .transcript_text
+
+  document:
+    mapping:
+      id: .id
+      name: .title
+      content: .content
+      data.source_session_id: .session_id
+      data.source_session_title: .session_title
+      data.content_length: .content_length
+      data.project: .project
+
 operations:
   session.list:
-    description: List OpenCode sessions, most recent first. Includes message counts and whether each session is a sub-agent.
+    description: List OpenCode sessions, most recent first. Includes message counts and whether each session is a sub-agent. Use parent_id to list sub-agent sessions spawned from a specific session.
     returns: session[]
     params:
       limit:
@@ -59,6 +71,9 @@ operations:
       subagents:
         type: boolean
         description: If true, only show sub-agent sessions (have a parent). If false, only top-level sessions.
+      parent_id:
+        type: string
+        description: List sub-agent sessions spawned from this parent session ID
     sql:
       query: |
         SELECT
@@ -82,6 +97,7 @@ operations:
           AND (:subagents IS NULL
                OR (:subagents = 1 AND s.parent_id IS NOT NULL)
                OR (:subagents = 0 AND s.parent_id IS NULL))
+          AND (:parent_id IS NULL OR s.parent_id = :parent_id)
           AND s.time_archived IS NULL
         ORDER BY s.time_created DESC
         LIMIT :limit
@@ -89,6 +105,7 @@ operations:
         limit: ".params.limit // 50"
         project: ".params.project // null"
         subagents: ".params.subagents // null"
+        parent_id: ".params.parent_id // null"
 
   session.get:
     description: Get a session with its full conversation transcript — all text parts in order.
@@ -153,36 +170,102 @@ operations:
         query: ".params.query"
         limit: ".params.limit // 20"
 
-utilities:
-  research:
+  session.import:
     description: >
-      Find sub-agent research output — the long text content produced by Task tool
-      sub-agents during web research, code exploration, etc. Searches across all
-      sub-agent sessions for text parts longer than a threshold. Returns the session
-      title, text content, and metadata.
-    returns: record[]
+      Import OpenCode sessions with their full conversation transcripts into the Memex.
+      Each session becomes a session entity, and its transcript becomes a transcript entity
+      linked via a transcribe relationship. Content is FTS5-indexed for full-text search.
+      Use since to import only recent sessions. Deduplicates via service_id — safe to run repeatedly.
+    returns: session[]
+    params:
+      since:
+        type: integer
+        description: Only import sessions from the last N days (default all)
+      project:
+        type: string
+        description: Filter by project worktree path
+      limit:
+        type: integer
+        description: Max sessions to import (default 100)
+      subagents:
+        type: boolean
+        description: If true, only import sub-agent sessions. If false, only top-level.
+    sql:
+      query: |
+        SELECT
+          s.id,
+          s.title,
+          s.slug,
+          s.directory,
+          s.parent_id,
+          p.worktree as project_worktree,
+          CASE WHEN s.parent_id IS NOT NULL THEN 1 ELSE 0 END as is_subagent,
+          s.summary_additions as additions,
+          s.summary_deletions as deletions,
+          s.summary_files as files_changed,
+          (SELECT count(*) FROM message m WHERE m.session_id = s.id) as message_count,
+          (SELECT count(*) FROM part pt WHERE pt.session_id = s.id AND json_extract(pt.data, '$.type') = 'text') as text_part_count,
+          (SELECT group_concat(
+            CASE json_extract(m2.data, '$.role')
+              WHEN 'user' THEN '## User' || char(10) || json_extract(pt2.data, '$.text')
+              WHEN 'assistant' THEN '## Assistant' || char(10) || json_extract(pt2.data, '$.text')
+              ELSE json_extract(pt2.data, '$.text')
+            END,
+            char(10) || char(10)
+          ) FROM part pt2
+           JOIN message m2 ON pt2.message_id = m2.id
+           WHERE pt2.session_id = s.id
+             AND json_extract(pt2.data, '$.type') = 'text'
+           ORDER BY pt2.time_created ASC
+          ) as transcript_text,
+          datetime(s.time_created / 1000, 'unixepoch') as created_at,
+          datetime(s.time_updated / 1000, 'unixepoch') as updated_at
+        FROM session s
+        JOIN project p ON s.project_id = p.id
+        WHERE s.time_archived IS NULL
+          AND (:project IS NULL OR p.worktree = :project)
+          AND (:subagents IS NULL
+               OR (:subagents = 1 AND s.parent_id IS NOT NULL)
+               OR (:subagents = 0 AND s.parent_id IS NULL))
+          AND (:since IS NULL
+               OR s.time_created >= (strftime('%s', 'now') - :since * 86400) * 1000)
+        ORDER BY s.time_created DESC
+        LIMIT :limit
+      params:
+        limit: ".params.limit // 100"
+        project: ".params.project // null"
+        subagents: ".params.subagents // null"
+        since: ".params.since // null"
+
+  research.import:
+    description: >
+      Import sub-agent research output as document entities on the Memex. Finds long text
+      content produced by Task tool sub-agents and creates searchable document entities.
+      Each research output gets its own entity with full FTS5 indexing.
+    returns: document[]
     params:
       query:
         type: string
-        description: Search term to match in session titles or text content
+        description: Search term to filter by session title or content
       min_length:
         type: integer
         description: Minimum text length to qualify as research (default 2000)
       limit:
         type: integer
-        description: Max results
-      session_id:
-        type: string
-        description: Get research from a specific session only
+        description: Max results to import
+      since:
+        type: integer
+        description: Only import research from the last N days
     sql:
       query: |
         SELECT
+          s.id || '_research_' || pt.id as id,
+          'Research: ' || s.title as title,
+          json_extract(pt.data, '$.text') as content,
           s.id as session_id,
           s.title as session_title,
-          s.parent_id,
-          p.worktree as project,
-          json_extract(pt.data, '$.text') as content,
           length(json_extract(pt.data, '$.text')) as content_length,
+          p.worktree as project,
           datetime(pt.time_created / 1000, 'unixepoch') as created_at
         FROM part pt
         JOIN message m ON pt.message_id = m.id
@@ -194,68 +277,15 @@ utilities:
           AND (:query IS NULL
                OR s.title LIKE '%' || :query || '%'
                OR json_extract(pt.data, '$.text') LIKE '%' || :query || '%')
-          AND (:session_id IS NULL OR s.id = :session_id)
-        ORDER BY length(json_extract(pt.data, '$.text')) DESC
+          AND (:since IS NULL
+               OR pt.time_created >= (strftime('%s', 'now') - :since * 86400) * 1000)
+        ORDER BY pt.time_created DESC
         LIMIT :limit
       params:
         query: ".params.query // null"
         min_length: ".params.min_length // 2000"
-        limit: ".params.limit // 10"
-        session_id: ".params.session_id // null"
-
-  transcript:
-    description: >
-      Get the full text transcript of a session — all text parts concatenated in
-      chronological order. Useful for reading what happened in a past conversation
-      or sub-agent research session.
-    returns: record[]
-    params:
-      session_id:
-        type: string
-        required: true
-        description: Session ID to get transcript for
-    sql:
-      query: |
-        SELECT
-          json_extract(pt.data, '$.text') as text,
-          json_extract(m.data, '$.role') as role,
-          datetime(pt.time_created / 1000, 'unixepoch') as time
-        FROM part pt
-        JOIN message m ON pt.message_id = m.id
-        WHERE pt.session_id = :session_id
-          AND json_extract(pt.data, '$.type') = 'text'
-        ORDER BY pt.time_created ASC
-      params:
-        session_id: ".params.session_id"
-
-  children:
-    description: >
-      List all sub-agent sessions spawned from a parent session.
-      Shows what Task tool calls were made and their titles.
-    returns: record[]
-    params:
-      parent_id:
-        type: string
-        required: true
-        description: Parent session ID
-    sql:
-      query: |
-        SELECT
-          s.id,
-          s.title,
-          (SELECT count(*) FROM part pt
-           WHERE pt.session_id = s.id
-             AND json_extract(pt.data, '$.type') = 'text') as text_part_count,
-          (SELECT max(length(json_extract(pt.data, '$.text')))
-           FROM part pt
-           WHERE pt.session_id = s.id
-             AND json_extract(pt.data, '$.type') = 'text') as longest_text,
-          datetime(s.time_created / 1000, 'unixepoch') as created_at
-        FROM session s
-        WHERE s.parent_id = :parent_id
-        ORDER BY s.time_created ASC
-      params:
-        parent_id: ".params.parent_id"
+        limit: ".params.limit // 50"
+        since: ".params.since // null"
 
 testing:
   exempt:
@@ -266,28 +296,43 @@ testing:
 
 CLI coding agent for Claude. Conversation history, sub-agent research, and session data are stored locally in a SQLite database at `~/.local/share/opencode/opencode.db`.
 
-## Finding Previous Research
+## Importing Data into the Memex
 
-When you or a previous agent used the Task tool to launch sub-agents for web research, code exploration, or deep analysis, that research is stored permanently in OpenCode's database. Use this skill to find and recover it.
+OpenCode sessions and research can be imported into the Memex as proper entities, making them searchable via FTS5. Once imported, "what did we talk about last week?" just works.
 
 ```
-# Search for research by topic
-use({ skill: "opencode", tool: "research", params: { query: "Coda formula language" } })
+# Import last 7 days of sessions with transcripts
+use({ skill: "opencode", tool: "session.import", params: { since: 7 } })
 
+# Import all sessions for a specific project
+use({ skill: "opencode", tool: "session.import", params: { project: "/Users/joe/dev/agentOS" } })
+
+# Import sub-agent research as searchable documents
+use({ skill: "opencode", tool: "research.import", params: { since: 7 } })
+
+# Import research matching a topic
+use({ skill: "opencode", tool: "research.import", params: { query: "Coda formula language" } })
+```
+
+Import is safe to run repeatedly — deduplicates via service_id. Each session becomes a session entity with the full conversation transcript as its body content, directly FTS5-indexed. Research outputs become document entities.
+
+## Browsing Sessions
+
+```
 # List recent sessions
 use({ skill: "opencode", tool: "session.list", params: { limit: 10 } })
 
 # List only sub-agent sessions
 use({ skill: "opencode", tool: "session.list", params: { subagents: true, limit: 20 } })
 
+# List sub-agents spawned from a specific session
+use({ skill: "opencode", tool: "session.list", params: { parent_id: "ses_..." } })
+
 # Search sessions by title
 use({ skill: "opencode", tool: "session.search", params: { query: "Bahasa" } })
 
-# Get full transcript of a specific session
-use({ skill: "opencode", tool: "transcript", params: { session_id: "ses_..." } })
-
-# See what sub-agents a session spawned
-use({ skill: "opencode", tool: "children", params: { parent_id: "ses_..." } })
+# Get a specific session with transcript
+use({ skill: "opencode", tool: "session.get", params: { id: "ses_..." } })
 
 # Filter sessions by project
 use({ skill: "opencode", tool: "session.list", params: { project: "/Users/joe/dev/agentos" } })
@@ -302,7 +347,7 @@ use({ skill: "opencode", tool: "session.list", params: { project: "/Users/joe/de
 | `part` | Parts of messages — text content, tool calls, tool results |
 | `project` | Workspace/project definitions — maps project IDs to directory paths |
 
-Sub-agent sessions have a `parent_id` pointing to the session that spawned them. The `research` utility finds the longest text outputs from sub-agent sessions — these are typically the synthesis/summary reports that contain the most valuable research.
+Sub-agent sessions have a `parent_id` pointing to the session that spawned them. Research import finds the longest text outputs from sub-agent sessions — these are typically the synthesis/summary reports that contain the most valuable research.
 
 ## Database Location
 
