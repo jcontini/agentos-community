@@ -11,6 +11,7 @@
  * - video.get
  * - video.transcript
  * - channel.get
+ * - channel.get_avatar
  * - post.list (comments)
  */
 
@@ -143,6 +144,25 @@ describe('YouTube Adapter', () => {
       expect(result.id).toBeDefined();
       expect(result.name).toBeDefined();
       expect(result.subscriber_count).toBeGreaterThan(0);
+    });
+  });
+
+  // ===========================================================================
+  // channel.get_avatar
+  // ===========================================================================
+  describe('channel.get_avatar', () => {
+    it('gets channel avatar url', async () => {
+      if (skipTests) return;
+
+      const result = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'channel.get_avatar',
+        params: { url: 'https://www.youtube.com/@3blue1brown' },
+      }) as { avatar: string | null; url: string };
+
+      expect(result).toBeDefined();
+      expect(result.url).toBeDefined();
+      expect(result.avatar).toBeDefined();
     });
   });
 
