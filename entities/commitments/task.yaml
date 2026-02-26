@@ -87,6 +87,7 @@ computed_relationships:
 display:
   primary: name
   secondary: priority
+  meta: [status, blocked_by, blocks]
   icon: checkbox
   sort:
     - field: priority
