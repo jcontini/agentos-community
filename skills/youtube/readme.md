@@ -182,7 +182,6 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
           yt-dlp --flat-playlist --dump-json "ytsearch10:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
@@ -211,7 +210,6 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
           yt-dlp --flat-playlist --dump-json "ytsearchdate10:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
@@ -245,7 +243,6 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
           yt-dlp --flat-playlist --dump-json --playlist-end 20 "{{params.url}}" 2>/dev/null | jq -s '[.[] | {
@@ -313,40 +310,51 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
-          set -e
           TMPDIR=$(mktemp -d)
           trap "rm -rf $TMPDIR" EXIT
           FORMAT="{{params.format}}"
-          
-          # Download subtitles as JSON3 (YouTube's richest caption format)
-          # Try auto-generated first (available on ~85% of videos, has word-level timing)
+
+          # Single yt-dlp call: fetch metadata + auto-captions together
+          # --write-info-json writes <id>.info.json; subtitle writes <id>.<lang>.json3
           SOURCE_TYPE="auto_caption"
-          yt-dlp --skip-download --write-auto-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
+          yt-dlp --skip-download \
+            --write-auto-subs --sub-format json3 --sub-langs "{{params.lang}}" \
+            --write-info-json \
+            -o "$TMPDIR/sub_%(id)s" \
+            "{{params.url}}" >/dev/null 2>&1
+
           SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
-          
-          # Fallback: manually uploaded subtitles
+
+          # Fallback: manually uploaded subtitles (separate call, only if needed)
           if [ -z "$SUBFILE" ]; then
             SOURCE_TYPE="manual"
-            yt-dlp --skip-download --write-subs --sub-format json3 --sub-langs "{{params.lang}}" -o "$TMPDIR/sub_%(id)s" "{{params.url}}" >/dev/null 2>&1
+            yt-dlp --skip-download \
+              --write-subs --sub-format json3 --sub-langs "{{params.lang}}" \
+              -o "$TMPDIR/sub_%(id)s" \
+              "{{params.url}}" >/dev/null 2>&1
             SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
           fi
-          
+
           if [ -z "$SUBFILE" ]; then
             echo '{"error": "No captions available for this video in language: {{params.lang}}"}'
             exit 0
           fi
-          
-          # Get video metadata
-          METADATA=$(yt-dlp --dump-json --skip-download "{{params.url}}" 2>/dev/null)
-          
+
+          # Metadata written by --write-info-json alongside the subtitle file
+          METAFILE=$(ls "$TMPDIR"/sub_*.info.json 2>/dev/null | head -1)
+          if [ -z "$METAFILE" ]; then
+            # Fallback: fetch metadata separately (should not normally happen)
+            METAFILE="$TMPDIR/meta.json"
+            yt-dlp --dump-json --skip-download "{{params.url}}" >"$METAFILE" 2>/dev/null
+          fi
+
           if [ "$FORMAT" = "segments" ]; then
             # Parse JSON3 into timestamped segments + plain text
-            # Each segment: { start_ms, end_ms, text }
-            # Filter out empty events and timing markers (events without segs)
-            SEGMENTS=$(jq '[
+            # Write to temp file to avoid null-byte truncation in shell variables
+            SEGFILE="$TMPDIR/segments.json"
+            jq '[
               .events[]
               | select(.segs != null and (.segs | length) > 0)
               | {
@@ -355,22 +363,20 @@ operations:
                   text: ([.segs[].utf8 // ""] | join("") | gsub("\n"; " ") | gsub("^ +| +$"; ""))
                 }
               | select(.text | length > 0)
-            ]' "$SUBFILE")
-            
-            # Derive plain text from segments
-            TRANSCRIPT=$(echo "$SEGMENTS" | jq -r '[.[].text] | join(" ") | gsub("  +"; " ")')
-            
-            # Combine: metadata + transcript + segments
-            echo "$METADATA" | jq \
+            ]' "$SUBFILE" >"$SEGFILE"
+
+            TRANSCRIPT=$(jq -r '[.[].text] | join(" ") | gsub("  +"; " ")' "$SEGFILE")
+
+            jq \
               --arg transcript "$TRANSCRIPT" \
-              --argjson segments "$SEGMENTS" \
+              --slurpfile segments "$SEGFILE" \
               --arg source_type "$SOURCE_TYPE" \
               --arg language "{{params.lang}}" \
               '{
                 title: .title,
                 description: .description,
                 transcript: $transcript,
-                transcript_segments: $segments,
+                transcript_segments: $segments[0],
                 source_type: $source_type,
                 language: $language,
                 duration: .duration,
@@ -383,7 +389,7 @@ operations:
                 webpage_url: .webpage_url,
                 upload_date: .upload_date,
                 resolution: .resolution
-              }'
+              }' "$METAFILE"
           else
             # Default: plain text only (fastest for AI consumption)
             TRANSCRIPT=$(jq -r '
@@ -393,8 +399,8 @@ operations:
               | gsub("  +"; " ")
               | gsub("^ +| +$"; "")
             ' "$SUBFILE")
-            
-            echo "$METADATA" | jq \
+
+            jq \
               --arg transcript "$TRANSCRIPT" \
               --arg source_type "$SOURCE_TYPE" \
               --arg language "{{params.lang}}" \
@@ -414,7 +420,7 @@ operations:
                 webpage_url: .webpage_url,
                 upload_date: .upload_date,
                 resolution: .resolution
-              }'
+              }' "$METAFILE"
           fi
       timeout: 90
 
@@ -433,7 +439,6 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
           yt-dlp --dump-single-json --playlist-items 0 "{{params.url}}" 2>/dev/null | jq '{
@@ -489,7 +494,6 @@ operations:
     command:
       binary: bash
       args:
-        - "-l"
         - "-c"
         - |
           yt-dlp --skip-download --write-comments --no-write-thumbnail \
