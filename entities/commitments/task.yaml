@@ -89,6 +89,8 @@ display:
   secondary: priority
   meta: [status, blocked_by, blocks]
   icon: checkbox
+  default_filters:
+    done: "false"
   sort:
     - field: priority
       order: asc
