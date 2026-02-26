@@ -86,11 +86,16 @@ computed_relationships:
 
 display:
   primary: name
-  secondary: priority
+  secondary: priority_label
   meta: [status, blocked_by, blocks]
   icon: checkbox
   default_filters:
     done: "false"
+  date:
+    field: deadline
+    label: due
+    fallback: updated_at
+    fallback_label: updated
   sort:
     - field: priority
       order: asc
