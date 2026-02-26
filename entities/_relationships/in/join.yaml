@@ -1,5 +1,5 @@
 id: join
-extends: place
+extends: in
 anti: leave
 name: Join
 inverse_name: Joined by

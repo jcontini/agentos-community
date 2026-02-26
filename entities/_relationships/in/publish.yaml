@@ -2,7 +2,7 @@ id: publish
 name: Publish
 inverse_name: Published in
 description: Actor published content to a place
-extends: place
+extends: in
 
 is_relationship: true
 

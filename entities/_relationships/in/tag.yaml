@@ -4,7 +4,7 @@ id: tag
 name: Tag
 inverse_name: Tagged with
 description: Actor tagged an item with a tag
-extends: place
+extends: in
 
 is_relationship: true
 

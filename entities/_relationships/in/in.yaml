@@ -1,0 +1,23 @@
+# In — Something belonging to a place
+#
+# The universal non-exclusive membership pattern. A song is in a playlist,
+# a video is in a channel, an actor is in a group — membership that doesn't
+# imply the thing is nowhere else.
+#
+# From PROV-O: hadMember. Dublin Core: hasPart.
+#
+# Abstract — never used directly. Children: upload, publish, add_to,
+# set, file_in, tag, post, join, includes.
+
+id: in
+is_relationship: true
+name: In
+inverse_name: Has
+description: Something belonging to a place — non-exclusive membership
+
+from_type: place
+
+properties:
+  position:
+    type: integer
+    description: Ordering position within the container

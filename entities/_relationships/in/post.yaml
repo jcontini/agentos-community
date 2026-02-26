@@ -4,7 +4,7 @@
 # The full attribution chain: Person --claim--> Account --post--> Work.
 
 id: post
-extends: place
+extends: in
 name: Post
 inverse_name: Posted by
 description: Account posted content to a platform

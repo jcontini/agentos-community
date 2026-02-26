@@ -2,7 +2,7 @@ id: upload
 name: Upload
 inverse_name: Uploaded by
 description: Actor uploaded content to a place
-extends: place
+extends: in
 anti: remove
 
 is_relationship: true

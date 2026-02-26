@@ -2,7 +2,7 @@ id: add_to
 name: Add to
 inverse_name: Added to
 description: Actor added an item to a place
-extends: place
+extends: in
 anti: remove_from
 
 is_relationship: true

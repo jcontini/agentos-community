@@ -15,7 +15,7 @@
 #   Bucket List="Dreams of", Story=Features, Sprint=Delivers
 
 id: includes
-extends: place
+extends: in
 name: Includes
 inverse_name: Included in
 description: A journey explicitly includes an outcome
