@@ -5,7 +5,8 @@
 # From PROV-O: wasAssociatedWith. CIDOC-CRM: E85 Joining.
 # Schema.org: InteractAction.
 #
-# Abstract — never used directly. Children: commit, send, subscribe.
+# Abstract — never used directly. Children: commit, send, subscribe,
+# address_to, address_cc, address_bcc.
 
 id: engage
 is_relationship: true

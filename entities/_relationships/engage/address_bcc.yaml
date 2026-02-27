@@ -1,0 +1,25 @@
+# Address BCC — Blind Carbon Copy Recipient of a Message
+#
+# The message is blind-copied to this actor. Other recipients
+# cannot see BCC recipients. The server strips BCC headers
+# before delivery.
+#
+# ActivityStreams 2.0: bcc property on Activity.
+# RFC 5322: Bcc header field.
+
+id: address_bcc
+extends: engage
+name: BCC
+inverse_name: BCC'd on
+description: Message is blind-copied to this actor (hidden from other recipients)
+
+is_relationship: true
+
+from_type: message
+to_type: actor
+
+properties: {}
+
+references:
+  activity_streams: https://www.w3.org/ns/activitystreams#bcc
+  rfc5322: https://www.rfc-editor.org/rfc/rfc5322#section-3.6.3

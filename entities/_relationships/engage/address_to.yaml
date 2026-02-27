@@ -1,0 +1,25 @@
+# Address To — Primary Recipient of a Message
+#
+# The message is addressed directly to this actor as a primary
+# recipient. Inverse of send: send goes actor → message (who sent it),
+# address_to goes message → actor (who it's sent to).
+#
+# ActivityStreams 2.0: to property on Activity.
+# RFC 5322: To header field.
+
+id: address_to
+extends: engage
+name: To
+inverse_name: Addressed to
+description: Message is addressed to this actor as a primary recipient
+
+is_relationship: true
+
+from_type: message
+to_type: actor
+
+properties: {}
+
+references:
+  activity_streams: https://www.w3.org/ns/activitystreams#to
+  rfc5322: https://www.rfc-editor.org/rfc/rfc5322#section-3.6.3

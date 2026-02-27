@@ -1,0 +1,119 @@
+# Email — An Email Message
+#
+# Extends message in the inheritance chain:
+#   work → document → post → message → email
+#
+# Email is a message with addressing semantics (to, cc, bcc),
+# a subject line (inherited as `title` from document), and
+# thread references. Chat messages go TO a conversation.
+# Emails go TO specific people with explicit roles.
+#
+# Addressing is modeled as relationships (ActivityStreams 2.0 pattern):
+#   actor  --send-------> email   (who sent it)
+#   email  --address_to-> actor   (primary recipient)
+#   email  --address_cc-> actor   (carbon copy)
+#   email  --address_bcc> actor   (blind carbon copy)
+#
+# The `recipients` property stores denormalized raw addressing data
+# from the source API (email addresses as strings). The relationships
+# link to resolved person entities when available.
+#
+# The conversation_id maps to the email thread (Gmail thread ID,
+# IMAP References/In-Reply-To chain). An email thread IS a
+# conversation — a place where messages are exchanged.
+#
+# Labels/folders are modeled as tag relationships:
+#   email --tag--> tag (e.g., "Inbox", "Important", "Work")
+
+id: email
+plural: emails
+extends: message
+name: Email
+description: An email message with recipients, subject, and thread semantics
+
+references:
+  schema_org: https://schema.org/EmailMessage
+  wikidata: Q9158
+
+properties:
+  # Subject line — aliases `title` from document for clarity.
+  # Gmail: message.payload.headers where name="Subject"
+  subject:
+    type: string
+    description: Email subject line (also stored as title)
+
+  # Denormalized recipient list from the source API.
+  # Canonical addressing is via address_to/address_cc/address_bcc relationships.
+  recipients:
+    type: array
+    description: Raw recipient data from source (denormalized; relationships are canonical)
+    items:
+      type: object
+      required: [address, role]
+      properties:
+        address:
+          type: string
+          format: email
+          description: Email address
+        name:
+          type: string
+          description: Display name (if known)
+        role:
+          type: string
+          enum: [to, cc, bcc]
+          description: Addressing role
+
+  # Sender as email address (supplements sender → actor reference)
+  from_address:
+    type: string
+    format: email
+    description: Sender email address
+
+  # Reply-to (often different from sender)
+  reply_to:
+    type: string
+    format: email
+    description: Reply-to address (if different from sender)
+
+  # Email-specific metadata
+  message_id:
+    type: string
+    description: RFC 2822 Message-ID header
+
+  in_reply_to:
+    type: string
+    description: RFC 2822 In-Reply-To header (parent message ID)
+
+  labels:
+    type: array
+    description: Gmail labels or IMAP folders
+    items:
+      type: string
+
+  snippet:
+    type: string
+    description: Short preview of the email body
+
+  is_starred:
+    type: boolean
+    default: false
+    description: Whether the email is starred/flagged
+
+  is_draft:
+    type: boolean
+    default: false
+    description: Whether this is a draft
+
+  size_estimate:
+    type: integer
+    description: Estimated size in bytes
+
+operations: [list, get, create, search, update, delete]
+
+display:
+  primary: subject
+  secondary: from_address
+  icon: mail
+  sort:
+    - field: timestamp
+      order: desc

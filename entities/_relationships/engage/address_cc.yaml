@@ -1,0 +1,24 @@
+# Address CC — Carbon Copy Recipient of a Message
+#
+# The message is copied to this actor as a secondary recipient.
+# Visible to all recipients, unlike BCC.
+#
+# ActivityStreams 2.0: cc property on Activity.
+# RFC 5322: Cc header field.
+
+id: address_cc
+extends: engage
+name: CC
+inverse_name: CC'd on
+description: Message is copied to this actor as a secondary recipient
+
+is_relationship: true
+
+from_type: message
+to_type: actor
+
+properties: {}
+
+references:
+  activity_streams: https://www.w3.org/ns/activitystreams#cc
+  rfc5322: https://www.rfc-editor.org/rfc/rfc5322#section-3.6.3
