@@ -117,14 +117,14 @@ params:
 Skills that build or modify files need `file.write` and `file.edit` capabilities:
 
 ```yaml
-# In write-skill/readme.md:
+# In a skill's readme.md credits section:
 credits:
   - entity: file
     operations: [read, write, edit]
     relationship: needs
 ```
 
-The install engine resolves this at install time: "write-skill needs file editing
+The install engine resolves this at install time: "this skill needs file editing
 — is code-editing (or equivalent) installed?"
 
 ## Implementation path

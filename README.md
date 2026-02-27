@@ -86,7 +86,7 @@ skills/            Skills — service connections + agent context
   reddit/          Maps Reddit JSON → post, forum entities
   youtube/         Maps yt-dlp → video, channel, post entities
   curl/            Fetches URLs → webpage entities
-  write-skill.md   Guide skills (AI context, no API binding)
+  CONTRIBUTING.md  Skill-building guide (auth, transformers, operations, testing)
   ...
 
 apps/              Visual apps (UI experiences)
