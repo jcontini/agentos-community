@@ -381,6 +381,16 @@ If you need an action like `claim`, `assign`, `transfer`, or `check` — put it 
 | `command` | CLI tools, local scripts | `youtube`, `granola` |
 | `swift` | macOS native frameworks | `apple-calendar` |
 | `applescript` | macOS automation | |
+| `csv` | Parse CSV files/data | |
+
+**Planned executors (not yet implemented):**
+
+| Executor | Use case |
+|----------|----------|
+| `steps` | Multi-step pipelines — chain executors sequentially |
+| `keychain` | Read/write macOS Keychain entries |
+| `crypto` | PBKDF2 key derivation, AES decryption |
+| `oauth` | OAuth2 authorization code flow, token refresh |
 
 ### Command Executor
 
@@ -441,6 +451,54 @@ renders as an empty string — scripts should handle that gracefully.
 - Use `2>/dev/null` to suppress stderr noise from CLI tools
 - Use `{{#if params.x}} --flag '{{params.x}}'{{/if}}` for optional string args
 - Avoid `{{#if}}` for integer/boolean params — falsy values (`0`, `false`) may not skip
+
+### Steps Executor (planned — not yet implemented)
+
+Multi-step pipelines that chain executors sequentially. Each step has an `id`, uses any
+executor, and can reference previous step outputs via `{{step_id.field}}`.
+
+```yaml
+operations:
+  credential.get:
+    description: Extract encrypted cookies from Chrome
+    params:
+      domain: { type: string, required: true }
+    returns: credential
+    steps:
+      - id: get_key
+        keychain:
+          service: "Chrome Safe Storage"
+
+      - id: derive
+        crypto:
+          algorithm: pbkdf2
+          password: "{{get_key.value}}"
+          salt: "saltysalt"
+          iterations: 1003
+          key_length: 16
+
+      - id: raw_cookies
+        sql:
+          database: "~/Library/Application Support/Google/Chrome/Default/Cookies"
+          query: "SELECT name, encrypted_value FROM cookies WHERE host_key LIKE :domain"
+          params:
+            domain: ".{{params.domain}}"
+
+      - id: decrypt
+        crypto:
+          algorithm: aes-128-cbc
+          key: "{{derive.key}}"
+          iv: "20202020202020202020202020202020"
+          data: "{{raw_cookies.rows}}"
+```
+
+**Step fields:**
+- `id` — required, used to reference this step's output in later steps
+- Any executor key (`rest`, `sql`, `command`, `keychain`, `crypto`, etc.)
+- `skip_if` — conditional skip (Handlebars expression)
+
+Each step's output is stored in a context map. Later steps access it via `{{step_id.field}}`.
+The final step's output becomes the operation's return value.
 
 ---
 
