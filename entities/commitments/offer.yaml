@@ -1,0 +1,118 @@
+# Offer — A Conditional Promise to Provide Something
+#
+# Extends commitment. An offer is a conditional commissive speech act —
+# the offeror commits to providing something IF the offeree accepts.
+# In Searle's framework, it's a hybrid: commissive (promise) +
+# directive (invites response) + declarative (creates a power in
+# the offeree to accept).
+#
+# Contract law (Restatement §24): "The manifestation of willingness
+# to enter into a bargain, so made as to justify another person in
+# understanding that his assent to that bargain is invited and will
+# conclude it."
+#
+# GoodRelations calls this a "promise to transfer some rights on
+# an object or provide a service for certain compensation."
+# Activity Streams 2.0 models Offer as an Activity (something
+# someone does), with Invite as a subtype.
+#
+# Offers are broader than commerce. They encompass:
+#   - Commercial: sell, lease, license, repair, provide service
+#   - Financial: stock option grants, investment terms
+#   - Social: invitations, gifts, favors
+#   - Political: deal proposals, trade agreements, conditional support
+#   - Exchange: barter, trade, reciprocal service
+#
+# Price/currency are optional — barter, gifts, political deals,
+# and invitations have no monetary price. The consideration field
+# captures what's asked in return (which may be nothing).
+#
+# Lifecycle: available → accepted | rejected | countered | revoked | expired
+# Acceptance creates a booking/contract (a binding commitment).
+# A counteroffer is simultaneously a rejection AND a new offer.
+#
+# Hohfeldian analysis: an offer creates a POWER in the offeree
+# (the power to accept and thus create a binding commitment).
+# If the offer is irrevocable (an option), the offeree also has
+# a CLAIM-RIGHT to the offer remaining open.
+#
+# References:
+#   Schema.org: Offer (Thing > Intangible > Offer)
+#   GoodRelations: gr:Offering (the "Agent-Promise-Object" model)
+#   Activity Streams 2.0: Offer (Activity type)
+#   FIBO: fibo-fnd-pas-pas:Offer
+#   Restatement (Second) of Contracts §24
+#   Searle: Hybrid speech act (commissive + directive + declarative)
+
+id: offer
+plural: offers
+extends: commitment
+name: Offer
+description: A conditional promise to provide something — flight offers, quotes, job offers, invitations, grants, deals
+
+references:
+  schema_org: https://schema.org/Offer
+  activity_streams: https://www.w3.org/ns/activitystreams#Offer
+  searle: Hybrid speech act (commissive + directive + declarative)
+
+properties:
+  offer_type:
+    type: string
+    description: >
+      Classification — open string, common values:
+      sell, lease, license, trade, gift, service, invite,
+      grant, repair, subscribe, employ
+
+  price:
+    type: number
+    description: Offered price (optional — barter, gifts, and invitations have no price)
+
+  currency:
+    type: string
+    description: Price currency code (ISO 4217, e.g., "USD", "EUR")
+
+  consideration:
+    type: string
+    description: >
+      What is asked in return. May be monetary ("$800"),
+      non-monetary ("your vote on HR-4821"), or nothing (a gift).
+      For priced offers, this is typically implied by price/currency.
+
+  offered_by:
+    references: organization
+    description: Who is making the offer (seller, employer, grantor)
+
+  expires_at:
+    type: datetime
+    description: When the offer lapses (minutes for flight offers, months for job offers)
+
+  valid_from:
+    type: datetime
+    description: When the offer becomes available
+
+  revocable:
+    type: boolean
+    default: true
+    description: >
+      Whether the offer can be withdrawn before acceptance.
+      Most offers are revocable. Irrevocable offers (options)
+      typically require consideration to keep them open.
+
+  data:
+    type: object
+    description: >
+      Domain-specific offer details. Examples:
+        Flight offers: flights[], layovers[], total_duration, carbon_emissions,
+                       departure_token, booking_token, airline_logo
+        Job offers: role, compensation, equity, benefits, start_date
+        Stock options: strike_price, shares, vesting_schedule, exercise_window
+        Invitations: event, venue, dress_code, rsvp_deadline
+        Political deals: bill_id, provisions, conditions
+
+identifiers: [name]
+operations: [list, get, search]
+
+display:
+  primary: name
+  secondary: price
+  icon: tag

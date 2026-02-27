@@ -1,0 +1,117 @@
+# Flight — A Scheduled Airline Flight Between Two Airports
+#
+# Extends event. A flight is a specific operation of an airline
+# service on a specific date — UA110 from SFO to LHR on 2026-04-15.
+#
+# A flight exists as a scheduled event independent of any passenger's
+# booking or any price quote. UA110 departs daily regardless of who
+# booked it or what they paid. Price belongs on the offer, not here.
+#
+# Identity: The industry-standard unique key for a flight is the
+# composite of carrier code + flight number + departure date + origin.
+# There's no single IATA-mandated format, but the de facto standard
+# is: UA110/2026-04-15/SFO. The flight_number alone (e.g., "UA 110")
+# identifies the route/service but not a specific day's operation.
+#
+# Codeshare: A single physical aircraft operation can have multiple
+# flight numbers. EK412 (Emirates, operating) may also be marketed
+# as QF8412 (Qantas, codeshare). The operating carrier's designator
+# is the canonical identity. Marketing carriers are related via the
+# marketed_by relationship.
+#
+# Ontological grounding:
+#   Schema.org: Flight (subclass of Trip)
+#   Wikidata: Q15921555 — "a distinct event"
+#   IATA: SSIM (Standard Schedules Information Manual)
+#   Searle: Ontological — not a speech act; a thing that happens
+
+id: flight
+plural: flights
+extends: event
+name: Flight
+description: A scheduled airline flight between two airports on a specific date
+
+references:
+  schema_org: https://schema.org/Flight
+  wikidata: Q15921555
+
+properties:
+  flight_number:
+    type: string
+    required: true
+    description: >
+      IATA flight designator — airline code + number.
+      e.g., "UA 110", "QF 1", "EK 412".
+      Format: 2-char airline designator + 1-4 digit number.
+
+  departure_airport:
+    references: airport
+    required: true
+    description: Origin airport (IATA code, e.g., "SFO")
+
+  arrival_airport:
+    references: airport
+    required: true
+    description: Destination airport (IATA code, e.g., "LHR")
+
+  departure_time:
+    type: datetime
+    description: Scheduled departure (local to departure airport)
+
+  arrival_time:
+    type: datetime
+    description: Scheduled arrival (local to arrival airport)
+
+  airline:
+    references: airline
+    description: Operating carrier
+
+  airline_logo:
+    type: string
+    format: url
+    description: URL to airline logo image
+
+  aircraft:
+    references: aircraft
+    description: Aircraft model (IATA code, e.g., "789" for Boeing 787-9, or name like "Boeing 787")
+
+  duration:
+    type: integer
+    description: Flight duration in minutes
+
+  travel_class:
+    type: string
+    description: Cabin class — Economy, Premium economy, Business, First Class
+
+  legroom:
+    type: string
+    description: Legroom measurement (e.g., "31 in")
+
+  status:
+    type: string
+    enum: [scheduled, boarding, departed, in_air, landed, arrived, cancelled, delayed, diverted]
+    description: Current flight status
+
+  overnight:
+    type: boolean
+    description: Whether the flight crosses midnight
+
+  data:
+    type: object
+    description: >
+      Adapter-specific extensions:
+        operated_by: Operating carrier if different from marketing carrier
+        ticket_also_sold_by: Array of codeshare marketing carriers
+        often_delayed: true if frequently delayed 30+ min
+        carbon_emissions: { this_flight: grams, typical: grams, difference_percent: int }
+        extensions: Array of feature strings (Wi-Fi, power, legroom notes)
+        plane_and_crew_by: Operating airline info for regional carriers
+
+operations: [list, get, search]
+
+identifiers: [flight_number]
+
+display:
+  primary: flight_number
+  secondary: airline
+  icon: plane

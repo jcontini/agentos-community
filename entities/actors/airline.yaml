@@ -1,0 +1,73 @@
+# Airline — An Organization That Provides Air Transport Services
+#
+# Extends organization (which extends actor). Airlines are organizations
+# with globally standardized identifiers from IATA and ICAO.
+#
+# The IATA 2-letter code is the universal consumer identifier —
+# what appears on boarding passes, booking confirmations, and flight
+# displays. The ICAO 3-letter code is guaranteed unique (IATA codes
+# have rare controlled duplicates for non-overlapping regional carriers).
+#
+# Airlines operate flights (operating carrier), market flights they
+# don't operate (codeshare/marketing carrier), and belong to alliances.
+#
+# References:
+#   IATA Resolution 762 (2-character designators)
+#   ICAO Doc 8585 (3-character designators)
+#   Schema.org: Airline (extends Organization)
+#   Wikidata: Q46970
+
+id: airline
+plural: airlines
+extends: organization
+name: Airline
+description: An airline — an organization that provides air transport services
+
+references:
+  schema_org: https://schema.org/Airline
+  wikidata: Q46970
+
+properties:
+  iata_code:
+    type: string
+    required: true
+    description: >
+      IATA 2-character airline designator (e.g., "UA", "BA", "EK").
+      Universal consumer identifier. May have rare controlled
+      duplicates for non-overlapping regional carriers.
+
+  icao_code:
+    type: string
+    description: >
+      ICAO 3-character airline designator (e.g., "UAL", "BAW", "UAE").
+      Guaranteed unique. Used in ATC and operational systems.
+
+  callsign:
+    type: string
+    description: >
+      Telephony callsign used in radio communications.
+      e.g., "UNITED", "SPEEDBIRD", "EMIRATES"
+
+  alliance:
+    type: string
+    description: >
+      Airline alliance membership.
+      Star Alliance, SkyTeam, Oneworld, or none.
+
+  hub_airports:
+    type: array
+    description: IATA codes of hub airports
+    items:
+      type: string
+
+  logo:
+    type: string
+    format: url
+    description: URL to airline logo
+
+identifiers: [iata_code, name]
+
+display:
+  primary: name
+  secondary: iata_code
+  icon: plane

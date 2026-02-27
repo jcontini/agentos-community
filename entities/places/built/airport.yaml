@@ -1,0 +1,87 @@
+# Airport — A Place Where Aircraft Take Off and Land
+#
+# Extends place (built/). Airports are physically real human-made
+# structures — they slot into places/built/ alongside venue. The
+# existing venue.yaml even lists "airport" as a venue_type example,
+# but airports warrant their own type because they have globally
+# standardized aviation identifiers (IATA/ICAO codes) that are
+# used as query parameters across every flight API.
+#
+# An airport's IATA code is its primary identifier in practice —
+# "JFK", "LAX", "NRT" are universally understood shorthand. The
+# ICAO code is more precise but less commonly used outside aviation
+# systems ("KJFK", "KLAX", "RJAA").
+#
+# References:
+#   - Schema.org: Airport (Place > CivicStructure > Airport)
+#   - Wikidata: Q1248784 (aerodrome subclass)
+#   - IATA: https://www.iata.org/en/publications/directories/code-search
+
+id: airport
+plural: airports
+extends: place
+name: Airport
+description: An airport — a place where aircraft take off and land
+
+references:
+  schema_org: https://schema.org/Airport
+  wikidata: Q1248784
+
+properties:
+  iata_code:
+    type: string
+    required: true
+    description: >
+      3-letter IATA airport code (e.g., "JFK", "LAX", "NRT").
+      The universal shorthand for airports.
+
+  icao_code:
+    type: string
+    description: >
+      4-letter ICAO airport code (e.g., "KJFK", "KLAX", "RJAA").
+      More precise but less commonly used outside aviation.
+
+  city:
+    type: string
+    description: City the airport serves (e.g., "New York", "Tokyo")
+
+  country:
+    type: string
+    description: Country name
+
+  country_code:
+    type: string
+    description: ISO 3166-1 alpha-2 country code (e.g., "US", "JP")
+
+  timezone:
+    type: string
+    description: IANA timezone (e.g., "America/New_York", "Asia/Tokyo")
+
+  coordinates:
+    type: object
+    description: Geographic coordinates
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+
+  elevation:
+    type: integer
+    description: Elevation in meters above sea level
+
+  url:
+    type: string
+    format: url
+    description: Airport website
+
+  wikidata_id:
+    type: string
+    description: Wikidata Q-ID
+
+identifiers: [iata_code, name]
+
+display:
+  primary: name
+  secondary: iata_code
+  icon: plane-landing

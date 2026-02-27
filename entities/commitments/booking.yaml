@@ -1,0 +1,96 @@
+# Booking — A Confirmed Reservation or Purchase Commitment
+#
+# Extends commitment. A booking is a binding commissive speech act —
+# both parties have committed. The provider commits to deliver the
+# service, the customer commits to pay. Unlike an offer (conditional),
+# a booking is a mutual promise already accepted.
+#
+# In aviation: a booking is a PNR (Passenger Name Record) — the
+# 6-character record locator that ties passengers to flight segments.
+# Created when an offer is accepted. Contains itinerary, passenger
+# details, ticketing deadline, and eventually ticket numbers.
+#
+# Beyond aviation: hotel reservations, restaurant bookings, car
+# rentals, event tickets, appointments. Any confirmed reservation
+# where both parties have committed.
+#
+# Lifecycle: confirmed → fulfilled | cancelled | no_show
+#
+# Identity: Booking references (PNR codes like "RXJ34P") are NOT
+# globally unique — they're unique within a given system (GDS, airline
+# CRS). The same code can exist in different systems. E-ticket numbers
+# (13-digit) ARE globally unique.
+#
+# Searle classification: Commissive (binding, mutual)
+#   Both parties committed — World fits Word from both sides
+
+id: booking
+plural: bookings
+extends: commitment
+name: Booking
+description: A confirmed reservation — flight bookings, hotel reservations, appointments
+
+references:
+  schema_org: https://schema.org/Reservation
+  searle: Binding commissive speech act (mutual)
+
+properties:
+  reference:
+    type: string
+    description: >
+      Booking reference / confirmation code (e.g., PNR "RXJ34P").
+      Not globally unique — unique within the issuing system.
+
+  booking_type:
+    type: string
+    description: >
+      Classification — open string, common values:
+      flight, hotel, rental_car, restaurant, event, appointment
+
+  booked_at:
+    type: datetime
+    description: When the booking was confirmed
+
+  provider:
+    references: organization
+    description: Who is providing the service
+
+  ticket_number:
+    type: string
+    description: >
+      Globally unique ticket/confirmation number.
+      For flights: 13-digit e-ticket (e.g., "176-1234567890").
+
+  passengers:
+    type: array
+    description: People this booking is for
+    items:
+      references: person
+
+  total_price:
+    type: number
+    description: Total price paid
+
+  currency:
+    type: string
+    default: USD
+    description: Currency code (ISO 4217)
+
+  data:
+    type: object
+    description: >
+      Domain-specific booking details. For flights:
+        flights: Array of flight segments with seat assignments
+        fare_class: Fare bucket code
+        cabin_class: Economy, Business, First
+        ticketing_deadline: Last date to issue ticket
+        bags: Baggage allowance
+        associated_records: PNR references across systems
+
+identifiers: [reference, ticket_number]
+operations: [list, get, create, update, archive]
+
+display:
+  primary: name
+  secondary: reference
+  icon: ticket

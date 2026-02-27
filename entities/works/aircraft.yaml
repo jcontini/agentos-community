@@ -1,0 +1,87 @@
+# Aircraft — A Model of Aircraft
+#
+# Extends hardware (which extends work). An aircraft is a
+# specific model — Boeing 737-800, Airbus A350-900, Embraer 175.
+# A product designed and manufactured by an organization.
+#
+# This is the model, not a specific airframe. A specific physical
+# aircraft (tail number N12345) would be an instance with a
+# registration number. For most consumer/travel use cases, the
+# model is what matters — you want to know you're on a 787, not
+# which specific 787.
+#
+# Identified by IATA 3-character equipment codes (used in
+# reservation systems and timetables) and ICAO 4-character type
+# designators (used in flight planning and ATC).
+#
+# References:
+#   IATA SSIM Appendix A (3-character type codes)
+#   ICAO Doc 8643 (4-character type designators)
+
+id: aircraft
+plural: aircraft
+extends: hardware
+name: Aircraft
+description: A model of aircraft — Boeing 787-9, Airbus A350-900, Embraer 175
+
+references:
+  wikidata: Q11436
+
+properties:
+  iata_code:
+    type: string
+    description: >
+      IATA 3-character equipment code (e.g., "789" for Boeing 787-9,
+      "359" for Airbus A350-900, "738" for Boeing 737-800).
+      Used in reservation systems and timetables.
+
+  icao_code:
+    type: string
+    description: >
+      ICAO 4-character type designator (e.g., "B789", "A359", "B738").
+      Used in flight planning and ATC.
+
+  manufacturer:
+    type: string
+    description: Aircraft manufacturer (e.g., "Boeing", "Airbus", "Embraer")
+
+  model:
+    type: string
+    description: Model designation (e.g., "787-9", "A350-900", "737-800")
+
+  variant:
+    type: string
+    description: >
+      Variant or sub-model (e.g., "Dreamliner", "MAX 8", "neo").
+      Commercial marketing name if different from model designation.
+
+  engine_count:
+    type: integer
+    description: Number of engines
+
+  range_km:
+    type: integer
+    description: Maximum range in kilometers
+
+  typical_seats:
+    type: integer
+    description: Typical passenger capacity in standard configuration
+
+  data:
+    type: object
+    description: >
+      Additional specifications:
+        first_flight: Date of first flight
+        in_service_since: When type entered commercial service
+        engine_type: Engine model/family
+        wingspan_m: Wingspan in meters
+        length_m: Length in meters
+        max_speed_kmh: Maximum cruising speed
+        category: narrow_body, wide_body, regional, turboprop
+
+identifiers: [iata_code, title]
+
+display:
+  primary: title
+  secondary: manufacturer
+  icon: plane
