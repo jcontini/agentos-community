@@ -356,8 +356,7 @@ name: USPTO
 icon: icon.png
 
 auth:
-  type: api_key
-  header: X-API-KEY
+  header: { X-API-KEY: "{token}" }
   label: USPTO API Key
   help_url: https://data.uspto.gov/myodp
   help_text: |

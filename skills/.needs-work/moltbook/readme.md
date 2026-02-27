@@ -11,9 +11,7 @@ privacy_url: https://www.moltbook.com/privacy
 terms_url: https://www.moltbook.com/terms
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header: { Authorization: "Bearer {token}" }
   label: API Key
   help_url: https://www.moltbook.com/skill.md
 

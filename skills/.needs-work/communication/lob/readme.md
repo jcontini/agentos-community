@@ -36,9 +36,7 @@ provides: [mail, physical-mail, letters, postcards, checks, address-verification
 
 
 auth:
-  type: api_key
-  header: Authorization
-  auth_type: Basic  # Lob uses Basic auth with API key as username
+  header: { Authorization: "Basic {token}" }
   label: Lob API Key
   help_url: https://dashboard.lob.com/settings/api-keys
 

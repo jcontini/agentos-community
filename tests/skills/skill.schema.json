@@ -447,103 +447,51 @@
     },
     "auth": {
       "type": "object",
-      "description": "Authentication configuration",
-      "required": ["type"],
+      "description": "Template-based auth injection. Declares where credential fields go in HTTP requests using {placeholder} syntax.",
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["api_key", "oauth", "cookies", "local_path", "connection_string", "keychain", "safestorage", "browser_session", "none"],
-          "description": "Authentication type"
-        },
-        "domain": {
-          "type": "string",
-          "description": "Cookie domain (for cookies / browser_session auth)"
-        },
-        "cookies": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Required cookie names (for cookies auth)"
-        },
         "header": {
-          "type": "string",
-          "description": "HTTP header name (e.g., Authorization)"
+          "type": "object",
+          "description": "Headers to inject. Values use {placeholder} for credential fields.",
+          "additionalProperties": { "type": "string" }
         },
-        "prefix": {
-          "type": "string",
-          "description": "Value prefix (e.g., 'Bearer ')"
+        "query": {
+          "type": "object",
+          "description": "Query params to inject. Values use {placeholder} for credential fields.",
+          "additionalProperties": { "type": "string" }
+        },
+        "body": {
+          "type": "object",
+          "description": "Body params to inject. Values use {placeholder} for credential fields.",
+          "additionalProperties": { "type": "string" }
         },
         "label": {
           "type": "string",
           "description": "Human-readable label for the credential input"
-        },
-        "placeholder": {
-          "type": "string",
-          "description": "Example value shown in input field"
         },
         "help_url": {
           "type": "string",
           "format": "uri",
           "description": "URL to documentation on how to get credentials"
         },
-        "service": {
-          "type": "string",
-          "description": "macOS Keychain service name (for keychain auth)"
+        "optional": {
+          "type": "boolean",
+          "description": "If true, skill works without credentials (anonymous mode)"
         },
-        "account": {
+        "placeholder": {
           "type": "string",
-          "description": "macOS Keychain account name; '$USER' expands to current user (for keychain auth)"
+          "description": "Example value shown in input field"
         },
-        "app": {
+        "help_text": {
           "type": "string",
-          "description": "Electron app name for safeStorage key lookup, e.g. 'Claude' (for safestorage auth)"
+          "description": "Additional help text for credential setup"
         },
-        "config": {
-          "type": "string",
-          "description": "Path to encrypted Electron config file; supports ~ (for safestorage auth)"
-        },
-        "key": {
-          "type": "string",
-          "description": "Top-level JSON key in the decrypted config, e.g. 'oauth:tokenCache' (for safestorage auth)"
-        },
-        "token_field": {
-          "type": "string",
-          "description": "Field name for the access token within the cache object (for safestorage auth)"
-        },
-        "refresh_field": {
-          "type": "string",
-          "description": "Field name for the refresh token (for safestorage auth)"
-        },
-        "expires_field": {
-          "type": "string",
-          "description": "Field name for the token expiry timestamp (unix ms) (for safestorage auth)"
-        },
-        "refresh_url": {
-          "type": "string",
-          "description": "URL to POST a refresh_token grant to (for safestorage auth)"
-        },
-        "refresh_client_id": {
-          "type": "string",
-          "description": "OAuth client_id for the refresh token request (for safestorage auth)"
-        },
-        "extra_headers": {
+        "account_params": {
           "type": "object",
-          "additionalProperties": { "type": "string" },
-          "description": "Extra headers sent with token refresh requests (for safestorage auth)"
-        },
-        "browser": {
-          "type": "string",
-          "enum": ["firefox", "chrome", "brave", "arc", "edge", "auto"],
-          "description": "Browser to read session cookies from (for browser_session auth)"
-        },
-        "cookie": {
-          "type": "string",
-          "description": "Cookie name to extract, e.g. 'sessionid' (for browser_session auth)"
-        },
-        "fallback": {
-          "type": "string",
-          "description": "Fallback auth type if browser session not found, e.g. 'cookies'"
+          "description": "Additional account parameters beyond credentials",
+          "additionalProperties": true
         }
-      }
+      },
+      "additionalProperties": false
     },
     "api": {
       "type": "object",

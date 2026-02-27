@@ -10,9 +10,7 @@ privacy_url: https://openrouter.ai/privacy
 terms_url: https://openrouter.ai/terms
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header: { Authorization: "Bearer {token}" }
   label: API Key
   help_url: https://openrouter.ai/keys
 

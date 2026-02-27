@@ -10,8 +10,7 @@ privacy_url: https://posthog.com/privacy
 terms_url: https://posthog.com/terms
 
 auth:
-  type: api_key
-  header: Authorization
+  header: { Authorization: "{token}" }
   label: Personal API Key
   help_url: https://posthog.com/docs/api/personal-api-keys
 

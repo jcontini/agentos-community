@@ -10,8 +10,8 @@ privacy_url: https://serpapi.com/privacy
 terms_url: https://serpapi.com/terms-and-conditions
 
 auth:
-  type: api_key
-  query: api_key
+  query:
+    api_key: "{token}"
   label: API Key
   help_url: https://serpapi.com/manage-api-key
 
@@ -220,19 +220,19 @@ operations:
         arrival_id: .params.arrival_id
         outbound_date: .params.outbound_date
         return_date: .params.return_date
-        type: '.params.type | tostring'
-        travel_class: '.params.travel_class | tostring'
-        adults: '.params.adults | tostring'
-        children: '.params.children | tostring'
-        stops: '.params.stops | tostring'
-        max_price: '.params.max_price | tostring'
-        sort_by: '.params.sort_by | tostring'
+        type: '.params.type | if . then tostring else null end'
+        travel_class: '.params.travel_class | if . then tostring else null end'
+        adults: '.params.adults | if . then tostring else null end'
+        children: '.params.children | if . then tostring else null end'
+        stops: '.params.stops | if . then tostring else null end'
+        max_price: '.params.max_price | if . then tostring else null end'
+        sort_by: '.params.sort_by | if . then tostring else null end'
         include_airlines: .params.include_airlines
         exclude_airlines: .params.exclude_airlines
         currency: .params.currency
         hl: .params.hl
         gl: .params.gl
-        deep_search: '.params.deep_search | tostring'
+        deep_search: '.params.deep_search | if . then tostring else null end'
       response:
         root: /other_flights
 

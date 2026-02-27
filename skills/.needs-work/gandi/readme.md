@@ -8,9 +8,7 @@ website: https://www.gandi.net
 privacy_url: https://www.gandi.net/en/contracts/privacy-policy
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header: { Authorization: "Bearer {token}" }
   label: Personal Access Token
   help_url: https://admin.gandi.net/organizations/account/pat
 

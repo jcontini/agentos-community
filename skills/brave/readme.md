@@ -10,8 +10,7 @@ privacy_url: https://search.brave.com/help/privacy-policy
 terms_url: https://brave.com/terms-of-use
 
 auth:
-  type: api_key
-  header: X-Subscription-Token
+  header: { X-Subscription-Token: "{token}" }
   label: API Key
   help_url: https://api-dashboard.search.brave.com/app/keys
 

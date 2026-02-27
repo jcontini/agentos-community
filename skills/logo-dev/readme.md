@@ -10,7 +10,7 @@ privacy_url: https://www.logo.dev/privacy
 terms_url: https://www.logo.dev/terms
 
 auth:
-  type: api_key
+  header: { Authorization: "Bearer {token}" }
   label: Publishable Key
   help_url: https://www.logo.dev/dashboard
 

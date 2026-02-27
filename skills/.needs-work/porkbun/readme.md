@@ -8,8 +8,10 @@ website: https://porkbun.com
 privacy_url: https://porkbun.com/products/privacy
 
 auth:
-  type: api_key
-  label: API Keys (apikey:secretapikey)
+  body:
+    apikey: "{apikey}"
+    secretapikey: "{secretapikey}"
+  label: API Keys
   help_url: https://porkbun.com/account/api
 
 instructions: |

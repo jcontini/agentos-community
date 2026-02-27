@@ -10,19 +10,12 @@ website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
 
+# TODO: Phase 2/3 — re-implement via steps executor (keychain → crypto → json parse)
+# The old safestorage resolver extracted OAuth tokens from Claude's encrypted config.
+# For now, auth is disabled until the steps/keychain/crypto executors exist.
 auth:
-  type: safestorage
-  app: "Claude"
-  config: "~/Library/Application Support/Claude/config.json"
-  key: "oauth:tokenCache"
-  token_field: "token"
-  refresh_field: "refreshToken"
-  expires_field: "expiresAt"
-  refresh_url: "https://api.anthropic.com/v1/oauth/token"
-  refresh_client_id: "89355bc3-cbfd-4382-905b-976645cad410"
-  extra_headers:
-    anthropic-beta: "oauth-2025-04-20"
-  headers:
+  header:
+    Authorization: "Bearer {token}"
     anthropic-version: "2023-06-01"
     anthropic-beta: "oauth-2025-04-20"
   label: Claude Desktop subscription

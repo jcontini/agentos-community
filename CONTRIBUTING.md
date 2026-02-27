@@ -107,65 +107,73 @@ instructions: |             # AI guidance for using this skill
 
 ## Auth
 
+The auth block is a template. It declares where credential fields go in HTTP requests
+using `{placeholder}` syntax. Three injection points: `header`, `query`, `body` — each
+is a map of name → value with placeholders.
+
+Placeholders are extracted to drive the UI form (one password input per unique placeholder).
+Credentials are stored as `{ fields: { "placeholder": "value" } }`.
+
 ### No auth
 ```yaml
 auth: none
 ```
 
-### API key (header)
+### Header auth (most common — Bearer token, API key header)
 ```yaml
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header:
+    Authorization: "Bearer {token}"
   label: API Key
   help_url: https://myservice.com/api-keys
 ```
 
-### API key (query param)
+Custom header names work too:
 ```yaml
 auth:
-  type: api_key
-  query: api_key
+  header:
+    X-API-Key: "{token}"
+```
+
+### Query param auth
+```yaml
+auth:
+  query:
+    api_key: "{token}"
   label: API Key
+  help_url: https://myservice.com/api-keys
 ```
 
-### OAuth2 browser flow
+### Body auth (multi-field)
+
+For APIs that require credentials in the request body. Each placeholder becomes
+a separate input field in the UI:
+
 ```yaml
 auth:
-  type: oauth2
-  flow: browser
-  authorize_url: https://myservice.com/oauth/authorize
-  token_url: https://myservice.com/oauth/token
-  scopes: [read, write]
-  client_id_env: MY_SERVICE_CLIENT_ID
+  body:
+    apikey: "{apikey}"
+    secretapikey: "{secretapikey}"
+  label: API Keys
+  help_url: https://myservice.com/api-keys
 ```
 
-### Keychain (macOS stored credentials)
+### Combined injection
+
+Header + query + body can be combined if needed:
 ```yaml
 auth:
-  type: keychain
-  service: my-service
-  fields:
-    - key: username
-      label: Username
-    - key: password
-      label: Password
-      secret: true
-```
-
-### SQLite database (no auth needed — read from local DB)
-```yaml
-database: "~/Library/Application Support/MyService/data.sqlite"
-auth: none
+  header:
+    Authorization: "Bearer {token}"
+  query:
+    org_id: "{org_id}"
 ```
 
 ### Optional auth (skill works anonymously, better with credentials)
 ```yaml
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header:
+    Authorization: "Bearer {token}"
   optional: true    # Don't block operations if no credentials — anonymous mode
   label: API Key
   help_url: https://myservice.com/api-keys
@@ -199,6 +207,13 @@ utilities:
 (rest, graphql, command, etc.). It completely skips credential resolution and header
 injection for that one operation. Without it, any skill with `auth:` configured will
 block all calls — including signup — until credentials exist.
+
+### Auth in command/jq templates
+
+For command and jq executors, credential fields are also available as template variables:
+- `{{auth.key}}` — the primary token (for single-field credentials)
+- `{{auth.fieldname}}` — a specific credential field by name
+- `.auth.key` / `.auth.fieldname` — same, in jq syntax
 
 ---
 

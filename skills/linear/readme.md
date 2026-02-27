@@ -13,9 +13,7 @@ api:
   graphql_endpoint: "https://api.linear.app/graphql"
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: ""
+  header: { Authorization: "{token}" }
   label: API Key
   help_url: https://linear.app/settings/api
   

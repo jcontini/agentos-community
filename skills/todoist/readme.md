@@ -13,9 +13,8 @@ terms_url: https://doist.com/terms-of-service
 # Note: REST API v2 and Sync API v9 are deprecated as of 2025
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header:
+    Authorization: "Bearer {token}"
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 

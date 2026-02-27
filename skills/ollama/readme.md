@@ -10,8 +10,7 @@ website: https://ollama.com
 privacy_url: https://ollama.com/privacy
 terms_url: https://ollama.com/terms
 
-auth:
-  type: none
+auth: none
 
 connects_to: ollama-daemon
 

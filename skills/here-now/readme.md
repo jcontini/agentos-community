@@ -10,9 +10,7 @@ privacy_url: https://here.now/privacy
 terms_url: https://here.now/terms
 
 auth:
-  type: api_key
-  header: Authorization
-  prefix: "Bearer "
+  header: { Authorization: "Bearer {token}" }
   label: API Key
   optional: true
   help_url: https://here.now
