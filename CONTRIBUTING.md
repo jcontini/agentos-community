@@ -215,6 +215,37 @@ For command and jq executors, credential fields are also available as template v
 - `{{auth.fieldname}}` — a specific credential field by name
 - `.auth.key` / `.auth.fieldname` — same, in jq syntax
 
+### Cookie-based auth (browser session extraction)
+
+For services that use cookie-based sessions (Amazon, Reddit, etc.), the skill
+can extract cookies directly from the user's browser. No API key entry needed — the
+browser IS the credential store.
+
+```yaml
+auth:
+  cookies:
+    domain: ".amazon.com"
+    names: ["x-main", "session-id", "session-token", "ubid-main"]
+    browser: firefox     # optional: "firefox" (default) or "chrome"
+```
+
+**How it works:**
+1. System reads cookies from Firefox (plaintext) or Chrome (encrypted, auto-decrypted)
+2. Filters to the specified domain and cookie names
+3. Injects them as a `Cookie` header on every HTTP request
+4. No refresh needed — session cookies persist for weeks/months
+
+**Fields:**
+- `domain` (required) — cookie domain to match (e.g., `.amazon.com`)
+- `names` (optional) — specific cookie names to extract. If omitted, all cookies for the domain are used.
+- `browser` (optional) — preferred browser. Default: tries Firefox first (plaintext = simpler), then Chrome (needs keychain + AES decryption).
+
+**When cookies expire:** the skill will get redirect responses (302 to login page).
+Tell the user: "Your session has expired. Please log into [service] in Firefox."
+
+Cookie auth and template auth (`header`/`query`/`body`) are mutually exclusive.
+Cookie auth takes precedence if both are defined.
+
 ---
 
 ## Transformers

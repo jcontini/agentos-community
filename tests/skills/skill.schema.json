@@ -465,7 +465,7 @@
     },
     "auth": {
       "type": "object",
-      "description": "Template-based auth injection. Declares where credential fields go in HTTP requests using {placeholder} syntax.",
+      "description": "Auth injection. Template-based ({placeholder} syntax) for API keys, or cookie-based for browser session auth.",
       "properties": {
         "header": {
           "type": "object",
@@ -481,6 +481,28 @@
           "type": "object",
           "description": "Body params to inject. Values use {placeholder} for credential fields.",
           "additionalProperties": { "type": "string" }
+        },
+        "cookies": {
+          "type": "object",
+          "description": "Cookie-based auth: extract cookies from browser databases for a domain. No user credential entry needed.",
+          "required": ["domain"],
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Cookie domain to match (e.g., '.amazon.com', '.reddit.com')"
+            },
+            "names": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Specific cookie names to extract. If omitted, all cookies for the domain are used."
+            },
+            "browser": {
+              "type": "string",
+              "enum": ["firefox", "chrome"],
+              "description": "Preferred browser. Default: tries firefox first (plaintext), then chrome (needs decryption)."
+            }
+          },
+          "additionalProperties": false
         },
         "label": {
           "type": "string",
