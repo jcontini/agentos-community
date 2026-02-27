@@ -246,6 +246,51 @@ Tell the user: "Your session has expired. Please log into [service] in Firefox."
 Cookie auth and template auth (`header`/`query`/`body`) are mutually exclusive.
 Cookie auth takes precedence if both are defined.
 
+### OAuth 2.0 Auth
+
+For services that use OAuth (Google Workspace, GitHub, Spotify, etc.), declare an
+`oauth` block. The server handles the entire Authorization Code Grant flow:
+
+```yaml
+auth:
+  oauth:
+    client_id: "xxx.apps.googleusercontent.com"
+    client_secret: "GOCSPX-xxx"
+    auth_url: "https://accounts.google.com/o/oauth2/v2/auth"
+    token_url: "https://oauth2.googleapis.com/token"
+    scopes:
+      - "https://www.googleapis.com/auth/gmail.modify"
+      - "https://www.googleapis.com/auth/calendar"
+    auth_params:
+      access_type: "offline"   # Gets a refresh token
+      prompt: "consent"        # Always show consent screen
+  label: Google Workspace
+  help_url: https://console.cloud.google.com/apis/credentials
+```
+
+**How it works:**
+1. User opens `GET /sys/oauth/authorize/{skill_id}` in browser
+2. Browser redirects to the provider's consent screen
+3. User grants access → provider redirects to `GET /sys/oauth/callback`
+4. Server exchanges the authorization code for tokens (access + refresh)
+5. Tokens stored as a credential (`access_token`, `refresh_token`, `expires_at`)
+6. On every API call: loads tokens, refreshes if expired, injects `Authorization: Bearer {token}`
+
+**Fields:**
+- `client_id` (required) — OAuth client ID
+- `client_secret` (required) — OAuth client secret (for Desktop/installed apps, not truly secret)
+- `auth_url` (required) — Authorization endpoint URL
+- `token_url` (required) — Token exchange endpoint URL
+- `scopes` (optional) — OAuth scopes to request
+- `auth_params` (optional) — Extra parameters for the authorization URL
+
+**Token refresh:** Access tokens expire (typically 1 hour). The system automatically
+uses the refresh token to get a new access token before each API call. If the refresh
+token is revoked, the user must re-authorize via the browser.
+
+OAuth auth, cookie auth, and template auth are mutually exclusive. OAuth takes
+precedence if multiple are defined.
+
 ---
 
 ## Transformers

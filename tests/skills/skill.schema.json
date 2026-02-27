@@ -465,7 +465,7 @@
     },
     "auth": {
       "type": "object",
-      "description": "Auth injection. Template-based ({placeholder} syntax) for API keys, or cookie-based for browser session auth.",
+      "description": "Auth injection. Template-based ({placeholder} syntax) for API keys, cookie-based for browser session auth, or OAuth 2.0 for third-party authorization.",
       "properties": {
         "header": {
           "type": "object",
@@ -500,6 +500,42 @@
               "type": "string",
               "enum": ["firefox", "chrome"],
               "description": "Preferred browser. Default: tries firefox first (plaintext), then chrome (needs decryption)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "oauth": {
+          "type": "object",
+          "description": "OAuth 2.0 Authorization Code flow. Server handles redirect, callback, token exchange, storage, and automatic refresh.",
+          "required": ["client_id", "client_secret", "auth_url", "token_url"],
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "description": "OAuth client ID"
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "OAuth client secret (for installed/desktop apps, this is shipped with the app)"
+            },
+            "auth_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Authorization endpoint URL"
+            },
+            "token_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Token exchange endpoint URL"
+            },
+            "scopes": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "OAuth scopes to request"
+            },
+            "auth_params": {
+              "type": "object",
+              "description": "Extra parameters for the authorization URL (e.g., access_type, prompt)",
+              "additionalProperties": { "type": "string" }
             }
           },
           "additionalProperties": false
