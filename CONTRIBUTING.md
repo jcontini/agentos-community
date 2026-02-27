@@ -397,14 +397,14 @@ If you need an action like `claim`, `assign`, `transfer`, or `check` — put it 
 | `swift` | macOS native frameworks | `apple-calendar` |
 | `applescript` | macOS automation | |
 | `csv` | Parse CSV files/data | |
+| `keychain` | macOS Keychain access | |
+| `crypto` | PBKDF2 key derivation, AES-128-CBC decryption | |
+| `steps` | Multi-step pipelines — chain executors | |
 
 **Planned executors (not yet implemented):**
 
 | Executor | Use case |
 |----------|----------|
-| `steps` | Multi-step pipelines — chain executors sequentially |
-| `keychain` | Read/write macOS Keychain entries |
-| `crypto` | PBKDF2 key derivation, AES decryption |
 | `oauth` | OAuth2 authorization code flow, token refresh |
 
 ### Command Executor
@@ -467,7 +467,65 @@ renders as an empty string — scripts should handle that gracefully.
 - Use `{{#if params.x}} --flag '{{params.x}}'{{/if}}` for optional string args
 - Avoid `{{#if}}` for integer/boolean params — falsy values (`0`, `false`) may not skip
 
-### Steps Executor (planned — not yet implemented)
+### Keychain Executor
+
+Reads entries from the macOS Keychain (or platform-native secure storage) via the `keyring` crate.
+Returns `{"value": "..."}`.
+
+```yaml
+operations:
+  key.get:
+    description: Get Chrome Safe Storage key
+    returns: credential
+    keychain:
+      service: "Chrome Safe Storage"
+      account: "Chrome"   # optional, defaults to $USER
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `service` | string | Keychain service name (e.g., "Chrome Safe Storage") |
+| `account` | string | Account name (optional, defaults to current user, supports `$USER`) |
+| `response` | object | Response mapping |
+
+### Crypto Executor
+
+Generic cryptographic primitives. Two algorithms:
+
+**PBKDF2-HMAC-SHA1** — key derivation:
+```yaml
+crypto:
+  algorithm: pbkdf2
+  password: "{{get_key.value}}"
+  salt: "saltysalt"
+  iterations: 1003
+  key_length: 16
+```
+
+**AES-128-CBC** — decryption with PKCS7 padding:
+```yaml
+crypto:
+  algorithm: aes-128-cbc
+  key: "{{derive.value}}"
+  iv: "20202020202020202020202020202020"
+  data: "{{raw_cookies.encrypted_value}}"
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `algorithm` | string | `"pbkdf2"` or `"aes-128-cbc"` |
+| `password` | string | PBKDF2: password input (template-interpolated) |
+| `salt` | string | PBKDF2: salt string |
+| `iterations` | integer | PBKDF2: iteration count |
+| `key_length` | integer | PBKDF2: output key length in bytes |
+| `key` | string | AES: hex-encoded 16-byte key (template-interpolated) |
+| `iv` | string | AES: hex-encoded 16-byte IV (template-interpolated) |
+| `data` | string | AES: hex-encoded ciphertext (template-interpolated) |
+| `response` | object | Response mapping |
+
+Both algorithms return `{"value": "hex_string"}`.
+
+### Steps Executor
 
 Multi-step pipelines that chain executors sequentially. Each step has an `id`, uses any
 executor, and can reference previous step outputs via `{{step_id.field}}`.

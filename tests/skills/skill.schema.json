@@ -380,6 +380,15 @@
         },
         "csv": {
           "$ref": "#/definitions/csvExecutor"
+        },
+        "keychain": {
+          "$ref": "#/definitions/keychainExecutor"
+        },
+        "crypto": {
+          "$ref": "#/definitions/cryptoExecutor"
+        },
+        "steps": {
+          "$ref": "#/definitions/stepsExecutor"
         }
       }
     },
@@ -442,6 +451,15 @@
         },
         "csv": {
           "$ref": "#/definitions/csvExecutor"
+        },
+        "keychain": {
+          "$ref": "#/definitions/keychainExecutor"
+        },
+        "crypto": {
+          "$ref": "#/definitions/cryptoExecutor"
+        },
+        "steps": {
+          "$ref": "#/definitions/stepsExecutor"
         }
       }
     },
@@ -679,6 +697,117 @@
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "keychainExecutor": {
+      "type": "object",
+      "description": "Read from macOS Keychain (or platform-native secure storage)",
+      "required": ["service"],
+      "properties": {
+        "service": {
+          "type": "string",
+          "description": "Keychain service name (e.g., 'Chrome Safe Storage')"
+        },
+        "account": {
+          "type": "string",
+          "description": "Keychain account name (default: current user). Supports $USER expansion."
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "cryptoExecutor": {
+      "type": "object",
+      "description": "Cryptographic primitives: PBKDF2 key derivation or AES-128-CBC decryption",
+      "required": ["algorithm"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["pbkdf2", "aes-128-cbc"],
+          "description": "Algorithm to use"
+        },
+        "password": {
+          "type": "string",
+          "description": "For PBKDF2: password input (supports template interpolation)"
+        },
+        "salt": {
+          "type": "string",
+          "description": "For PBKDF2: salt string"
+        },
+        "iterations": {
+          "type": "integer",
+          "description": "For PBKDF2: iteration count"
+        },
+        "key_length": {
+          "type": "integer",
+          "description": "For PBKDF2: output key length in bytes"
+        },
+        "key": {
+          "type": "string",
+          "description": "For AES-128-CBC: hex-encoded 16-byte key (supports template interpolation)"
+        },
+        "iv": {
+          "type": "string",
+          "description": "For AES-128-CBC: hex-encoded 16-byte IV (supports template interpolation)"
+        },
+        "data": {
+          "type": "string",
+          "description": "For AES-128-CBC: hex-encoded ciphertext (supports template interpolation)"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "stepsExecutor": {
+      "type": "object",
+      "description": "Chain multiple executors sequentially. Each step's output is available to later steps via {{step_id.field}} template interpolation.",
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/step"
+          },
+          "description": "Ordered list of steps to execute"
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "description": "A single step in a steps pipeline",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Step identifier — used as key in context map for referencing output"
+        },
+        "skip_if": {
+          "type": "string",
+          "description": "Condition to skip this step (template expression, skips if evaluates to 'true' or '1')"
+        },
+        "keychain": {
+          "$ref": "#/definitions/keychainExecutor"
+        },
+        "crypto": {
+          "$ref": "#/definitions/cryptoExecutor"
+        },
+        "rest": {
+          "$ref": "#/definitions/restExecutor"
+        },
+        "graphql": {
+          "$ref": "#/definitions/graphqlExecutor"
+        },
+        "sql": {
+          "$ref": "#/definitions/sqlExecutor"
+        },
+        "command": {
+          "$ref": "#/definitions/commandExecutor"
         }
       }
     },
