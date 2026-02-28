@@ -1,0 +1,21 @@
+# Reports To — Organizational authority chain
+#
+# An actor reports to another actor. Standard team/org terminology.
+# "opencode reports to Joe Contini" — the agent works under the
+# person's authority. Works for humans too: "intern reports to lead."
+#
+# This is how agents relate to their operators. The agent is the
+# subject (from), the person they report to is the target (to).
+
+id: reports_to
+extends: govern
+name: Reports To
+inverse_name: Manages
+description: Actor reports to another actor — organizational authority chain
+
+is_relationship: true
+
+from_type: actor
+to_type: actor
+
+properties: {}
