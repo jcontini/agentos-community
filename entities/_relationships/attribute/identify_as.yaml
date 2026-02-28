@@ -1,0 +1,40 @@
+# Identify As — Self-Identity Claims
+#
+# The actor claims an identity. "You identify as Joe Contini."
+# "You identify as a builder." "You identify as American."
+#
+# This is the deepest assertion — who you ARE, not what you DO.
+# The "You" entity is the persistent observer. Identities are
+# contextual and temporal. They start, they can end.
+#
+# Different from `claim` (which links to accounts/credentials).
+# identify_as links to people, roles, groups — representations
+# of self that may change across contexts or lifetimes.
+
+id: identify_as
+extends: attribute
+name: Identify As
+inverse_name: Identity of
+description: Actor claims an identity — who they are in this context
+
+is_relationship: true
+
+from_type: person
+to_type:
+  - person
+  - organization
+
+properties:
+  context:
+    type: string
+    description: The context of this identity (e.g., "this life", "at work", "online")
+
+  started_at:
+    type: string
+    format: date
+    description: When this identity began
+
+  ended_at:
+    type: string
+    format: date
+    description: When this identity ended (if it has)
