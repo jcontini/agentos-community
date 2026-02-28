@@ -1,0 +1,21 @@
+# Manages — Actor directs a narrative
+#
+# An actor manages a project, roadmap, or other narrative.
+# Stronger than "includes" (curation), weaker than "owns"
+# (property). The manager sets direction, makes decisions,
+# is accountable for the outcome.
+#
+# "You manage agentOS." "You manage the Q1 roadmap."
+
+id: manages
+extends: govern
+name: Manages
+inverse_name: Managed by
+description: Actor manages a narrative — ownership and direction of a body of work
+
+is_relationship: true
+
+from_type: actor
+to_type: narrative
+
+properties: {}

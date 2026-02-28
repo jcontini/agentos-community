@@ -14,9 +14,6 @@ is_relationship: true
 name: Reference
 description: Things pointing to things — citation, derivation, response
 
-from_type: work
-to_type: work
-
 properties:
   context:
     type: string

@@ -1,0 +1,20 @@
+# Hosts — A place hosts something
+#
+# Spatial containment with a service connotation. A folder hosts
+# a repository (the clone lives here). A platform hosts a
+# repository (GitHub hosts the remote).
+#
+# Different from generic "in" — hosting implies the place is
+# actively providing a home, not just containing a member.
+
+id: hosts
+extends: in
+name: Hosts
+inverse_name: Hosted on
+description: A place hosts something — a folder hosts a repo, a platform hosts a repo
+
+is_relationship: true
+
+from_type: place
+
+properties: {}

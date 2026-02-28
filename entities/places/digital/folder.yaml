@@ -1,0 +1,51 @@
+# Folder — A Directory on Disk
+#
+# A local place where files live. May host a git repository,
+# may not. The folder is the physical location; the repository
+# is what lives there.
+#
+# Folders are the entry point for project detection: a session
+# has a workspace path → look up the folder → follow includes
+# back to the project.
+
+id: folder
+plural: folders
+extends: place
+name: Folder
+description: A directory on disk — a local place where files and repositories live
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+    description: Folder name (e.g., "agentOS")
+
+  description:
+    type: string
+    description: What this folder contains or is used for
+
+  path:
+    type: string
+    required: true
+    description: Absolute filesystem path (e.g., "/Users/joe/dev/agentOS")
+
+  data:
+    type: object
+    description: Additional metadata
+
+  notes:
+    type: string
+    description: User notes about this folder
+
+identifiers: [path]
+operations: [list, get, create, update]
+
+display:
+  primary: name
+  secondary: path
+  icon: folder
