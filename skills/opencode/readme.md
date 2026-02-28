@@ -15,7 +15,9 @@ database: "~/.local/share/opencode/opencode.db"
 instructions: >
   You are running in OpenCode. Your conversation history and sub-agent research
   are stored locally in a SQLite database. Use this skill to search past sessions,
-  find previous research, and recover sub-agent output that would otherwise be lost.
+  find previous research, recover sub-agent output, and call other workspace agents.
+  Use agent.ask to call another project's agent when you need domain knowledge —
+  the agent wakes up in its workspace with full context and answers your question.
 
 connects_to: opencode-app
 
@@ -287,6 +289,42 @@ operations:
         limit: ".params.limit // 50"
         since: ".params.since // null"
 
+utilities:
+  ask:
+    description: |
+      Call another workspace agent via OpenCode's non-interactive mode.
+      Resolves a project name to a workspace path via the Memex, then
+      invokes `opencode run --dir <path>` with the question. The called
+      agent wakes up in its workspace with full context (AGENTS.md, MCP
+      servers, readme) and answers the question. Returns the text response.
+      The call creates a session in the target workspace's OpenCode history.
+
+      Use this when you need domain knowledge from another project —
+      like calling a colleague who works on that codebase.
+    params:
+      project:
+        type: string
+        required: true
+        description: Project name to call (e.g. "agentOS", "Pathway Agents")
+      question:
+        type: string
+        required: true
+        description: The question to ask the agent
+      model:
+        type: string
+        description: "Model override (e.g. anthropic/claude-sonnet-4-20250514). Defaults to caller's model."
+    returns:
+      answer: string
+      project_name: string
+      project_id: string
+      workspace_path: string
+    command:
+      binary: bash
+      args:
+        - "-c"
+        - "bash ~/dev/agentos-community/skills/opencode/agent-ask.sh '{{params.project}}' '{{params.question}}' '{{params.model}}'"
+      timeout: 120
+
 testing:
   exempt:
     operations: Local database skill — requires OpenCode installation
@@ -348,6 +386,27 @@ use({ skill: "opencode", tool: "session.list", params: { project: "/Users/joe/de
 | `project` | Workspace/project definitions — maps project IDs to directory paths |
 
 Sub-agent sessions have a `parent_id` pointing to the session that spawned them. Research import finds the longest text outputs from sub-agent sessions — these are typically the synthesis/summary reports that contain the most valuable research.
+
+## Calling Other Agents
+
+OpenCode can invoke agents in other workspaces non-interactively. Each project in the Memex is linked to a workspace folder — the skill resolves the project name, finds the path, and runs `opencode run --dir <path>` with your question.
+
+```
+# Ask the agentOS agent a question
+use({ skill: "opencode", tool: "ask", params: {
+  project: "agentOS",
+  question: "How do I add tasks to a project roadmap?"
+}})
+
+# Ask with a specific model
+use({ skill: "opencode", tool: "ask", params: {
+  project: "Pathway Agents",
+  question: "What countries does the pipeline support?",
+  model: "anthropic/claude-sonnet-4-20250514"
+}})
+```
+
+The called agent wakes up in its workspace with full context — AGENTS.md, MCP servers, readme — answers the question, and returns. Like calling a colleague at their desk.
 
 ## Database Location
 
