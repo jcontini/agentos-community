@@ -74,7 +74,6 @@ operations:
     params:
       limit:
         type: integer
-        default: 50
         description: Maximum number of results
     sql:
       query: >
@@ -87,7 +86,7 @@ operations:
         ORDER BY p.last_visit_date DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -101,7 +100,6 @@ operations:
         description: Search term (matches URL and title)
       limit:
         type: integer
-        default: 25
         description: Maximum number of results
     sql:
       query: >
@@ -116,7 +114,7 @@ operations:
         LIMIT :limit
       params:
         query: '"%" + .params.query + "%"'
-        limit: '.params.limit // 25'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -137,7 +135,6 @@ utilities:
         description: Filter by parent folder title (optional)
       limit:
         type: integer
-        default: 100
         description: Maximum number of results
     sql:
       database: '"~/Library/Application Support/Firefox/Profiles/*/places.sqlite"'
@@ -151,7 +148,7 @@ utilities:
         ORDER BY b.dateAdded DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 100'
+        limit: '.params.limit // 1000'
 
   list_cookies:
     description: >
@@ -172,7 +169,6 @@ utilities:
         description: Domain to get cookies for (e.g., "google.com")
       limit:
         type: integer
-        default: 100
         description: Maximum number of cookies
     sql:
       database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
@@ -185,7 +181,7 @@ utilities:
         LIMIT :limit
       params:
         domain: '"%" + .params.domain + "%"'
-        limit: '.params.limit // 100'
+        limit: '.params.limit // 1000'
 ---
 
 # Mozilla Firefox

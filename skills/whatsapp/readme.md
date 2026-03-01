@@ -111,7 +111,7 @@ operations:
     description: Get all WhatsApp contacts with profile info
     returns: person[]
     params:
-      limit: { type: integer, default: 500 }
+      limit: { type: integer }
     sql:
       attach:
         contacts: '"~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"'
@@ -144,7 +144,7 @@ operations:
         ORDER BY cs.ZLASTMESSAGEDATE DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 500'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -152,7 +152,7 @@ operations:
     description: List all WhatsApp conversations
     returns: conversation[]
     params:
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -171,7 +171,7 @@ operations:
         ORDER BY cs.ZLASTMESSAGEDATE DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -206,7 +206,7 @@ operations:
     returns: message[]
     params:
       conversation_id: { type: string, required: true }
-      limit: { type: integer, default: 100 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -229,7 +229,7 @@ operations:
         LIMIT :limit
       params:
         conversation_id: .params.conversation_id
-        limit: '.params.limit // 100'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -265,7 +265,7 @@ operations:
     returns: message[]
     params:
       query: { type: string, required: true }
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -286,7 +286,7 @@ operations:
         LIMIT :limit
       params:
         query: .params.query
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -298,7 +298,7 @@ utilities:
   get_unread:
     description: Get all unread messages
     params:
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     returns:
       id: string
       conversation_id: string
@@ -322,7 +322,7 @@ utilities:
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 

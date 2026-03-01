@@ -462,6 +462,40 @@ The validator knows these suffixes and enforces their return types:
 If you need an action like `claim`, `assign`, `transfer`, or `check` — put it in
 `utilities:` (see below), not in `operations:`.
 
+### Limits and pagination
+
+**Skills should NOT hardcode result limits.** The engine has its own pagination:
+
+- **Import path** (skill → engine → SQLite): unbounded, extracts everything
+- **Query path** (SQLite → view → MCP response): capped at 50 by ViewConfig, includes `total` count
+
+If your skill accepts a `limit` parameter, do NOT set a `default:` value on it.
+The engine will pass through whatever the caller specifies. In SQL templates,
+use a high fallback (1000) as a safety net:
+
+```yaml
+params:
+  limit: { type: integer }    # No default — engine controls this
+sql:
+  query: |
+    SELECT * FROM items
+    ORDER BY updated_at DESC
+    LIMIT :limit
+  params:
+    limit: '.params.limit // 1000'    # Safety net, not a real default
+```
+
+For REST APIs that require a limit parameter, pass through the caller's value
+with a reasonable fallback matching the API's max page size.
+
+For command executors, same principle — use a high default in the template:
+```yaml
+command: my-tool --limit {{params.limit | default:1000}}
+```
+
+**Never** hardcode limits like `LIMIT 50` or `ytsearch10:` without a corresponding
+overridable parameter. If the caller can't control it, it's a hidden cap.
+
 ### Executors
 
 | Executor | Use case | Example skill |

@@ -109,7 +109,7 @@ operations:
     returns: task[]
     web_url: '"https://linear.app/" + .params.workspace_slug'
     params:
-      limit: { type: integer, default: 50, description: "Max issues to return" }
+      limit: { type: integer, description: "Max issues to return" }
       team_id: { type: string, description: "Filter by team ID" }
       state_id: { type: string, description: "Filter by workflow state ID" }
     graphql:

@@ -80,7 +80,7 @@ operations:
     description: List recent meetings with metadata and attendees
     returns: meeting[]
     params:
-      limit: { type: integer, default: 20, description: "Number of meetings to return" }
+      limit: { type: integer, description: "Number of meetings to return" }
       page: { type: integer, default: 0, description: "Page number (0-indexed)" }
     command:
       binary: bash

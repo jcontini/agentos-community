@@ -91,7 +91,6 @@ operations:
         description: "Feed type: front, new, ask, show"
       limit:
         type: integer
-        default: 30
         description: "Number of stories (max 100)"
     rest:
       method: GET
@@ -113,7 +112,6 @@ operations:
         description: "Search query"
       limit:
         type: integer
-        default: 20
         description: "Number of results (max 100)"
     rest:
       method: GET

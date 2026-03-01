@@ -135,7 +135,7 @@ operations:
       past: { type: boolean, default: false, description: "Look backward instead of forward" }
       calendar_id: { type: string, description: "Filter by calendar name (partial match)" }
       query: { type: string, description: "Search title, location, or description" }
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
       exclude_all_day: { type: boolean, default: false, description: "Exclude all-day events" }
     swift:
       script: |

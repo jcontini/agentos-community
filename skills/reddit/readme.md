@@ -113,7 +113,7 @@ operations:
     web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
-      limit: { type: integer, default: 10, description: "Number of results (max 100)" }
+      limit: { type: integer, description: "Number of results (max 100)" }
       sort: { type: string, default: "relevance", description: "Sort by: relevance, hot, top, new, comments" }
     rest:
       method: GET
@@ -135,7 +135,7 @@ operations:
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
       sort: { type: string, default: "hot", description: "Sort by: hot, new, top, rising" }
-      limit: { type: integer, default: 25, description: "Number of posts (max 100)" }
+      limit: { type: integer, description: "Number of posts (max 100)" }
     rest:
       method: GET
       url: '"https://www.reddit.com/r/" + .params.subreddit + "/" + .params.sort + ".json"'
@@ -153,7 +153,7 @@ operations:
     web_url: '"https://www.reddit.com/comments/" + .params.id'
     params:
       id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
-      comment_limit: { type: integer, default: 100, description: "Max comments to fetch" }
+      comment_limit: { type: integer, description: "Max comments to fetch" }
     rest:
       method: GET
       url: '"https://www.reddit.com/comments/" + .params.id + ".json"'
@@ -194,7 +194,7 @@ operations:
     web_url: '"https://www.reddit.com/comments/" + .params.id'
     params:
       id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
-      comment_limit: { type: integer, default: 200, description: "Max comments to fetch" }
+      comment_limit: { type: integer, description: "Max comments to fetch" }
     command:
       binary: bash
       args:
@@ -216,7 +216,7 @@ operations:
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
-      limit: { type: integer, default: 25, description: "Number of posts to include" }
+      limit: { type: integer, description: "Number of posts to include" }
     command:
       binary: bash
       args:
@@ -257,7 +257,7 @@ operations:
     web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
-      limit: { type: integer, default: 10, description: "Number of results (max 100)" }
+      limit: { type: integer, description: "Number of results (max 100)" }
     rest:
       method: GET
       url: https://www.reddit.com/subreddits/search.json

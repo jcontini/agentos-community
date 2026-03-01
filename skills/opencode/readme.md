@@ -104,7 +104,7 @@ operations:
         ORDER BY s.time_created DESC
         LIMIT :limit
       params:
-        limit: ".params.limit // 50"
+        limit: ".params.limit // 1000"
         project: ".params.project // null"
         subagents: ".params.subagents // null"
         parent_id: ".params.parent_id // null"
@@ -170,7 +170,7 @@ operations:
         LIMIT :limit
       params:
         query: ".params.query"
-        limit: ".params.limit // 20"
+        limit: ".params.limit // 1000"
 
   session.import:
     description: >
@@ -234,7 +234,7 @@ operations:
         ORDER BY s.time_created DESC
         LIMIT :limit
       params:
-        limit: ".params.limit // 100"
+        limit: ".params.limit // 1000"
         project: ".params.project // null"
         subagents: ".params.subagents // null"
         since: ".params.since // null"
@@ -286,7 +286,7 @@ operations:
       params:
         query: ".params.query // null"
         min_length: ".params.min_length // 2000"
-        limit: ".params.limit // 50"
+        limit: ".params.limit // 1000"
         since: ".params.since // null"
 
 utilities:

@@ -174,7 +174,7 @@ operations:
     description: List all iMessage/SMS conversations
     returns: conversation[]
     params:
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -205,7 +205,7 @@ operations:
         ORDER BY updated_at DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -247,7 +247,7 @@ operations:
     returns: message[]
     params:
       conversation_id: { type: string, required: true }
-      limit: { type: integer, default: 100 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -269,7 +269,7 @@ operations:
         LIMIT :limit
       params:
         conversation_id: .params.conversation_id
-        limit: '.params.limit // 100'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 
@@ -305,7 +305,7 @@ operations:
     returns: message[]
     params:
       query: { type: string, required: true }
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       query: |
         SELECT 
@@ -328,7 +328,7 @@ operations:
         LIMIT :limit
       params:
         query: .params.query
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
       response:
         root: "/"
 

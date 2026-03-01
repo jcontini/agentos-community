@@ -71,14 +71,14 @@ operations:
     wraps_as: search
     params:
       query: { type: string, required: true, description: "Search query" }
-      limit: { type: integer, default: 10, description: "Number of results (max 20)" }
+      limit: { type: integer, description: "Number of results (max 20)" }
       freshness: { type: string, description: "Filter by date: pd (24h), pw (week), pm (month), py (year)" }
     rest:
       method: GET
       url: https://api.search.brave.com/res/v1/web/search
       query:
         q: "{{params.query}}"
-        count: "{{params.limit | default:10}}"
+        count: "{{params.limit | default:20}}"
         freshness: "{{params.freshness}}"
       response:
         root: "/web/results"

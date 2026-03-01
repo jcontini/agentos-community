@@ -179,12 +179,15 @@ operations:
         type: string
         required: true
         description: Search query
+      limit:
+        type: integer
+        description: Number of results
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json "ytsearch10:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json "ytsearch{{params.limit | default:50}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,
@@ -199,7 +202,7 @@ operations:
       timeout: 60
 
   video.search_recent:
-    description: Search YouTube videos by query (returns 10 results sorted by upload date, newest first)
+    description: Search YouTube videos by query sorted by upload date (newest first)
     returns: video[]
     web_url: "https://www.youtube.com/results?search_query={{params.query}}&sp=CAI"
     params:
@@ -207,12 +210,15 @@ operations:
         type: string
         required: true
         description: Search query
+      limit:
+        type: integer
+        description: Number of results
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json "ytsearchdate10:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json "ytsearchdate{{params.limit | default:50}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,
@@ -227,7 +233,7 @@ operations:
       timeout: 60
 
   video.list:
-    description: List the latest 20 videos from a YouTube channel or playlist
+    description: List videos from a YouTube channel or playlist
     returns: video[]
     web_url: "{{params.url}}"
     handles_urls:
@@ -240,12 +246,15 @@ operations:
         type: string
         required: true
         description: YouTube channel URL (e.g., youtube.com/@channelname) or playlist URL
+      limit:
+        type: integer
+        description: Number of videos to return
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json --playlist-end 20 "{{params.url}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json --playlist-end {{params.limit | default:50}} "{{params.url}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,

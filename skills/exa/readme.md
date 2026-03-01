@@ -82,7 +82,7 @@ operations:
     web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
-      limit: { type: integer, default: 5, description: "Number of results" }
+      limit: { type: integer, description: "Number of results" }
     rest:
       method: POST
       url: https://api.exa.ai/search

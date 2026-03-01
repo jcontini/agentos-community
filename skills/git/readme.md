@@ -123,7 +123,7 @@ operations:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log {{#if params.branch}}"{{params.branch}}"{{/if}} {{#if params.author}}--author="{{params.author}}"{{/if}} -{{params.limit | default:20}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          git log {{#if params.branch}}"{{params.branch}}"{{/if}} {{#if params.author}}--author="{{params.author}}"{{/if}} -{{params.limit | default:100}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -193,7 +193,7 @@ operations:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log --grep="{{params.query}}" -i -{{params.limit | default:20}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          git log --grep="{{params.query}}" -i -{{params.limit | default:100}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -414,7 +414,7 @@ utilities:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log {{#if params.branch}}"{{params.branch}}"{{/if}} -{{params.limit | default:20}} {{#if params.format}}--format="{{params.format}}"{{else}}--oneline{{/if}} 2>/dev/null
+          git log {{#if params.branch}}"{{params.branch}}"{{/if}} -{{params.limit | default:100}} {{#if params.format}}--format="{{params.format}}"{{else}}--oneline{{/if}} 2>/dev/null
       timeout: 30
 
 testing:

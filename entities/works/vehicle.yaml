@@ -1,0 +1,138 @@
+# Vehicle — A Specific Motor Vehicle
+#
+# Extends hardware (which extends work). Unlike aircraft (which
+# represents a model), a vehicle is a specific physical instance —
+# Joe's 2017 Honda Accord Hybrid, VIN ..., plate SMY9958.
+#
+# For personal use, a vehicle is something you own, have owned,
+# or are interested in buying. It has a VIN, a plate, an odometer,
+# and a history.
+#
+# For the TxDMV skill, vehicles need VIN, plate, year, make, model
+# to fill government forms (VTR-146 address change, VTR-60 transfer
+# notification, etc.).
+#
+# Richness lives in relationships:
+#   vehicle → owned_by → person
+#   vehicle → registered_in → place (state/county)
+#   vehicle → made_by → organization
+#   document (title, registration, insurance) → about → vehicle
+
+id: vehicle
+plural: vehicles
+extends: hardware
+name: Vehicle
+description: A specific motor vehicle — 2017 Honda Accord Hybrid EX-L, VIN 1HGCM...
+
+references:
+  schema_org: https://schema.org/Vehicle
+  wikidata: Q1420
+
+properties:
+  year:
+    type: integer
+    description: Model year (e.g., 2017)
+
+  make:
+    type: string
+    description: Manufacturer (e.g., "Honda", "Audi", "Acura")
+
+  model:
+    type: string
+    description: Model name (e.g., "Accord Hybrid", "A4 Quattro")
+
+  trim:
+    type: string
+    description: Trim level (e.g., "EX-L", "Premium", "SH")
+
+  vin:
+    type: string
+    description: >
+      Vehicle Identification Number — 17 characters.
+      Pattern: ^[A-HJ-NPR-Z0-9]{17}$
+
+  plate:
+    type: string
+    description: License plate number (e.g., "SMY9958")
+
+  registration_state:
+    type: string
+    description: State of registration (e.g., "TX", "NV", "CA")
+
+  color:
+    type: string
+    description: Exterior color
+
+  odometer:
+    type: integer
+    description: Last known mileage
+
+  body_style:
+    type: string
+    description: >
+      Body type — sedan, coupe, SUV, truck, hatchback,
+      wagon, convertible, van, crossover
+
+  drivetrain:
+    type: string
+    description: FWD, RWD, AWD, 4WD
+
+  engine:
+    type: string
+    description: Engine specification (e.g., "2.0T I4", "2.8L V6", "Hybrid")
+
+  transmission:
+    type: string
+    description: automatic, manual, CVT, DCT, e-CVT
+
+  fuel_type:
+    type: string
+    description: gasoline, diesel, hybrid, plug-in_hybrid, electric
+
+  status:
+    type: string
+    description: >
+      Ownership status:
+      active — currently owned
+      sold — previously owned, sold
+      totaled — previously owned, totaled/scrapped
+      interested — considering purchasing
+
+  acquired:
+    type: string
+    description: When acquired (date or year)
+
+  sold:
+    type: string
+    description: When sold (date or year)
+
+  purchase_price:
+    type: number
+    description: Purchase price in USD
+
+  data:
+    type: object
+    description: >
+      Additional details:
+        horsepower: Engine horsepower
+        torque_nm: Engine torque
+        mpg_city: EPA city fuel economy
+        mpg_highway: EPA highway fuel economy
+        cargo_volume_l: Cargo volume in liters
+        radio_code: Radio unlock code
+        key_code: Key code
+        interior_color: Interior color/material
+        seller: Who sold it to you
+        buyer: Who you sold it to
+
+  notes:
+    type: string
+    description: Free-text notes (used by AI for disambiguation)
+
+identifiers: [vin, title, model]
+operations: [list, get, search, create, update]
+
+display:
+  primary: title
+  secondary: make
+  icon: car

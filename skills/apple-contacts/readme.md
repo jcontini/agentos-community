@@ -186,7 +186,7 @@ operations:
       query: { type: string, description: "Search by name, email, phone, or organization" }
       organization: { type: string, description: "Filter by organization" }
       sort: { type: string, default: "modified", description: "Sort by: modified (default), created, name" }
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       database: '"~/Library/Application Support/AddressBook/Sources/" + .params.account + "/AddressBook-v22.abcddb"'
       query: |
@@ -224,7 +224,7 @@ operations:
         ORDER BY r.ZMODIFICATIONDATE DESC
         LIMIT :limit
       params:
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
 
   person.get:
     description: Get full contact details by ID including addresses, notes, birthday
@@ -349,7 +349,7 @@ operations:
     params:
       account: { type: string, required: true, description: "Account ID from accounts utility" }
       query: { type: string, required: true, description: "Search text" }
-      limit: { type: integer, default: 50 }
+      limit: { type: integer }
     sql:
       database: '"~/Library/Application Support/AddressBook/Sources/" + .params.account + "/AddressBook-v22.abcddb"'
       query: |
@@ -396,7 +396,7 @@ operations:
         LIMIT :limit
       params:
         query: .params.query
-        limit: '.params.limit // 50'
+        limit: '.params.limit // 1000'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UTILITIES
