@@ -1,0 +1,48 @@
+# Branch — A Named Location in a Repository
+#
+# A branch is a place where work happens. Code lives on a branch.
+# Commits land on a branch. You switch to a branch. It's a named
+# pointer — the simplest container in git.
+#
+# Only stores what a branch IS, not its current state. A branch's
+# ahead/behind count, HEAD commit, and dirty status are all
+# ephemeral — they change with every push, fetch, and commit.
+# Query those live via the git skill's status utility.
+#
+# Graph:
+#   branch → in → repository
+
+id: branch
+plural: branches
+extends: place
+name: Branch
+description: A named location in a git repository where work happens
+
+properties:
+  name:
+    type: string
+    required: true
+    description: Branch name (e.g., "main", "feature/auth", "origin/main")
+
+  is_remote:
+    type: boolean
+    default: false
+    description: Whether this is a remote-tracking branch (e.g., origin/main)
+
+  upstream:
+    type: string
+    description: The remote branch this tracks (e.g., "origin/main")
+
+  data:
+    type: object
+    description: Git-specific extensions
+
+identifiers: [name]
+operations: [list, get]
+
+display:
+  primary: name
+  icon: git-branch
+  sort:
+    - field: name
+      order: asc

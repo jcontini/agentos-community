@@ -1,0 +1,82 @@
+# Git Commit — A Message Sent Into a Repository
+#
+# "git commit -m" — you're sending a message. A commit has an author,
+# a timestamp, a body, and it goes into a place (the repository).
+# The commit message is the content; the first line is the subject.
+#
+# Extends message in the chain: work → document → post → message → git_commit.
+# Inherits content, sender, timestamp from message.
+#
+# Author identity uses the account model:
+#   person → claims → account (email) ← authored commit
+#
+# Git distinguishes author (who wrote the code) from committer
+# (who applied it). They differ for cherry-picks, rebases, and
+# GitHub merge buttons. Both are email accounts.
+#
+# Every property here is immutable — a commit's hash, message,
+# and diff stats never change once created.
+
+id: git_commit
+plural: git_commits
+extends: message
+name: Git Commit
+description: A message sent into a repository — code changes with context
+
+references:
+  wikidata: Q20058545
+
+properties:
+  hash:
+    type: string
+    required: true
+    description: Full SHA-1 hash (40 characters) — the commit's immutable identity
+
+  short_hash:
+    type: string
+    description: Abbreviated SHA (7 characters) for display
+
+  author_name:
+    type: string
+    description: Author's display name (denormalized from account for display)
+
+  author_email:
+    type: string
+    format: email
+    description: Author's email address (denormalized — the account identifier)
+
+  committer_name:
+    type: string
+    description: Committer's display name (differs from author for cherry-picks, rebases)
+
+  committer_email:
+    type: string
+    format: email
+    description: Committer's email address
+
+  files_changed:
+    type: integer
+    description: Number of files modified in this commit
+
+  insertions:
+    type: integer
+    description: Lines added
+
+  deletions:
+    type: integer
+    description: Lines removed
+
+  data:
+    type: object
+    description: Git-specific extensions (e.g., GPG signature, merge parents)
+
+identifiers: [hash]
+operations: [list, get, search]
+
+display:
+  primary: content
+  secondary: author_name
+  icon: git_commit
+  sort:
+    - field: timestamp
+      order: desc
