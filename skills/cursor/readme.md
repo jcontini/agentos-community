@@ -68,7 +68,10 @@ operations:
       timeout: 120
 
   session.list:
-    description: List all Cursor AI sessions from local transcripts
+    description: >
+      List Cursor AI sessions from local JSONL transcripts (fast, sub-second).
+      Only includes recent sessions — Cursor started writing JSONL transcripts around Feb 2026.
+      For full history including older sessions, use session.backfill.
     returns: session[]
     params: {}
     command:
@@ -79,8 +82,29 @@ operations:
         - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json 2>/dev/null"
       timeout: 60
 
+  session.backfill:
+    description: >
+      Import ALL Cursor sessions including full history from SQLite databases.
+      Reads both JSONL transcripts (recent) and Cursor's workspace/global SQLite
+      databases (going back months). This is the one-time import — run it once to
+      seed the graph with your full conversation history. Subsequent calls to
+      session.list will keep it current with new sessions.
+      Optionally filter to a specific workspace path.
+    returns: session[]
+    params:
+      workspace:
+        type: string
+        description: Filter to workspace path (e.g. /Users/joe/dev/agentos). Omit for all workspaces.
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json --backfill{{ ' --workspace ' + params.workspace if params.workspace else '' }} 2>/dev/null"
+      timeout: 300
+
   session.get:
-    description: Get a Cursor session by UUID with full transcript
+    description: Get a Cursor session by UUID with full transcript (checks both JSONL and SQLite sources)
     returns: session
     params:
       id:
@@ -140,50 +164,35 @@ Restart Cursor after changing settings for them to take effect.
 
 ## Syncing Sessions to the Graph
 
-The Cursor skill pulls session transcripts into the Memex as session entities (session extends conversation). Each session has `client: "cursor"` and a `workspace` property from the directory path. **List requests read from cache by default** — you must use `?refresh=true` to trigger a live pull.
+Cursor sessions become `session` entities on the Memex with `client: "cursor"`, a `workspace` slug, and the full conversation transcript as searchable body content.
 
-```bash
-# First sync: reads JSONL transcripts, extracts to graph
-curl -H "X-Agent: test" "http://localhost:3456/mem/sessions?refresh=true&skill=cursor"
+**Two data sources:**
 
-# After sync: reads from graph (fast, no re-pull)
-curl -H "X-Agent: test" "http://localhost:3456/mem/sessions?skill=cursor"
+1. **JSONL transcripts** (`~/.cursor/projects/*/agent-transcripts/*.jsonl`) — Recent sessions. Cursor started writing these around Feb 2026. Fast to read (sub-second). This is what `session.list` reads.
 
-# Search sessions by content (FTS, reads from graph)
-curl -X POST -H "X-Agent: test" "http://localhost:3456/mem/search" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "provenance", "types": ["session"]}'
+2. **SQLite databases** (`~/Library/Application Support/Cursor/User/workspaceStorage/*/state.vscdb` + `globalStorage/state.vscdb`) — Full history going back months. Composer metadata lives in each workspace DB; message blobs live in the 13+ GB global DB. This is what `session.backfill` reads.
+
+**Recommended workflow:**
+
+```
+# One-time: import full history (all workspaces, ~7 seconds)
+use({ skill: "cursor", tool: "session.backfill" })
+
+# Or import just one workspace
+use({ skill: "cursor", tool: "session.backfill", params: { workspace: "/Users/joe/dev/agentos" } })
+
+# Ongoing: session.list runs automatically via entity fan-out when anyone calls
+list({ type: "session" })
 ```
 
-Via MCP: `list({ type: "session", skill: "cursor", refresh: true })`
-
----
-
-## Finding Past Conversations
-
-All Cursor workspace transcripts live under:
+After import, all sessions are FTS5-searchable:
 ```
-~/.cursor/projects/{workspace-slug}/agent-transcripts/*.txt
+search({ query: "Langfuse pipeline", types: ["session"] })
 ```
 
-Key workspace slugs and what they hold:
+**Stats:** Run `python3 list-conversations.py --stats` to see how many sessions are available across both sources and all workspaces before importing.
 
-| Slug | Workspace | What's here |
-|------|-----------|-------------|
-| `Users-joe-dev-agentos` | `/Users/joe/dev/agentos` | Current AgentOS sessions |
-| `Users-joe-dev-agentos-AgentOS-code-workspace` | AgentOS code workspace | Older AgentOS sessions |
-| `Users-joe-dev-adavia-adavia-code-workspace` | Adavia main | Adavia + Granola reverse engineering, browser skills |
-
-To search for a past conversation by topic:
-```bash
-# Search across all workspaces for a keyword
-grep -rl "your keyword" ~/.cursor/projects/*/agent-transcripts/*.txt 2>/dev/null
-
-# Search within the current workspace
-grep -r "your keyword" ~/.cursor/projects/Users-joe-dev-agentos/agent-transcripts/
-```
-
-Transcripts are plain text with `user:`, `assistant:`, `[Tool call]`, `[Tool result]` markers.
+**Deduplication:** Sessions are deduplicated by UUID (service_id). Safe to run backfill multiple times — existing sessions won't be duplicated.
 
 ---
 
