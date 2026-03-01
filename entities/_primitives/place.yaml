@@ -51,3 +51,6 @@ properties:
   description:
     type: string
     description: What this place is
+
+identifiers: [name]
+operations: [list, get, search, create, update]
