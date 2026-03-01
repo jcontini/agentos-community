@@ -1,0 +1,513 @@
+---
+id: mimestream
+name: Mimestream
+description: Read and search email from Mimestream, a native macOS email client for Gmail
+icon: icon.svg
+color: "#3B82F6"
+
+website: https://mimestream.com
+privacy_url: https://mimestream.com/privacy
+
+auth: none
+platforms: [macos]
+connects_to: mimestream
+
+seed:
+  - id: mimestream
+    types: [software]
+    name: Mimestream
+    data:
+      software_type: app
+      url: https://mimestream.com
+      launched: "2021"
+      platforms: [macos]
+      pricing: paid
+      notes: Native macOS email client built on Apple frameworks. Uses Gmail API for sync. Stores local cache in Core Data SQLite database.
+    relationships:
+      - role: offered_by
+        to: mimestream-pty
+
+  - id: mimestream-pty
+    types: [organization]
+    name: Mimestream Pty Ltd
+    data:
+      type: company
+      url: https://mimestream.com
+      founded: "2020"
+      location: Melbourne, Australia
+
+instructions: |
+  Mimestream stores emails in a local Core Data SQLite database.
+
+  Accounts — the `account` param on operations takes the exact database display name, NOT an email address:
+  - "user@example.com" — personal Gmail
+  - "Adavia" — business Gmail (user@example.com)
+  Call list_accounts to discover accounts if unsure. The values above are the only valid account filter values.
+
+  Common workflows:
+  - "Show me my inbox" → email.list with mailbox: inbox
+  - "Find emails about X" → email.search with query: X
+  - "Show me a thread" → conversation.get with the conversation_id from an email
+  - "What attachments does this email have?" → file.list with email_id
+
+  Technical details:
+  - Date format: seconds since Apple epoch (2001-01-01). Convert with: timestamp + 978307200 -> Unix timestamp.
+  - From header format: "Display Name <email@example.com>" — parse with SQL string functions.
+  - Thread IDs map to conversation entities. A thread IS a conversation.
+  - Message content (body, to, cc, bcc, message-id, references) lives in ZMESSAGECONTENT, joined via ZCONTENT foreign key.
+  - This skill is read-only. Mimestream syncs with Gmail, so data reflects what's synced locally.
+  - Labels/folders are inferred from boolean flags (ZISININBOX, ZISSENT, ZISDRAFT, ZISTRASHED, ZISSPAM, ZISFLAGGED).
+
+database: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
+
+# ==============================================================================
+# TRANSFORMERS
+# ==============================================================================
+
+transformers:
+  email:
+    terminology: Email
+    mapping:
+      id: .id
+      subject: .subject
+      snippet: .snippet
+      from_address: .from_email
+      timestamp: .date_received
+      is_starred: '.is_flagged == 1'
+      is_draft: '.is_draft == 1'
+      message_id: .message_id
+      in_reply_to: .in_reply_to
+      conversation_id: '.thread_id | tostring'
+      content: .body_text
+      data.account_email: .account_email
+      data.is_unread: '.is_unread == 1'
+      data.has_attachments: '.has_attachments == 1'
+      data.is_sent: '.is_sent == 1'
+      data.is_trash: '.is_trash == 1'
+      data.is_spam: '.is_spam == 1'
+      data.to_raw: .to_raw
+      data.cc_raw: .cc_raw
+      data.bcc_raw: .bcc_raw
+      data.body_html: .body_html
+      data.size_estimate: .size_estimate
+
+      # Typed reference: resolve sender as an account entity
+      # Creates/deduplicates account by email handle, links via send relationship
+      # account --send--> email (engine infers direction from ontology)
+      # Expressions reference source fields directly (no two-pass evaluation)
+      from:
+        account:
+          handle: .from_email
+          platform: '"email"'
+          display_name: .from_name
+
+  conversation:
+    terminology: Thread
+    mapping:
+      id: '.id | tostring'
+      name: .subject
+      last_message: .snippet
+      last_message_at: .date_updated
+      data.account_email: .account_email
+      data.message_count: .message_count
+      data.has_unread: '.has_unread == 1'
+      data.has_attachments: '.has_attachments == 1'
+
+  # BLOCKED: file entity type not yet registered in engine type system (task eb14f8fa)
+  # Uncomment when _type creation via MCP lands data in the right column
+  # file:
+  #   terminology: Attachment
+  #   mapping:
+  #     id: '.id | tostring'
+  #     name: .filename
+  #     filename: .filename
+  #     mime_type: .mime_type
+  #     size: .size
+  #     is_inline: '.is_inline == 1'
+  #     data.downloaded: '.downloaded == 1'
+  #     email_id:
+  #       ref: email
+  #       value: '.email_id | tostring'
+  #       rel: attach
+
+# ==============================================================================
+# OPERATIONS
+# ==============================================================================
+
+operations:
+  email.list:
+    description: List emails, optionally filtered by mailbox, account, or flags
+    returns: email[]
+    params:
+      account: { type: string, description: "Account display name — use exact values from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
+      mailbox: { type: string, description: "Filter by mailbox: inbox, sent, drafts, trash, spam, flagged" }
+      is_unread: { type: boolean, description: "Filter to unread only" }
+      limit: { type: integer }
+    sql:
+      query: |
+        SELECT
+          m.Z_PK as id,
+          m.ZSUBJECT as subject,
+          m.ZSNIPPET as snippet,
+          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
+          datetime(m.ZDATESENT + 978307200, 'unixepoch') as date_sent,
+          m.ZISUNREAD as is_unread,
+          m.ZISFLAGGED as is_flagged,
+          m.ZISDRAFT as is_draft,
+          m.ZISSENT as is_sent,
+          m.ZISTRASHED as is_trash,
+          m.ZISSPAM as is_spam,
+          m.ZHASATTACHMENT as has_attachments,
+          t.Z_PK as thread_id,
+          a.ZNAME as account_email,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
+            ELSE NULL
+          END as from_name,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
+            ELSE trim(m.ZFROMHEADER)
+          END as from_email
+        FROM ZMESSAGE m
+        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
+        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
+        WHERE m.ZISTRASHED = 0
+          AND m.ZISSPAM = 0
+          AND (:account IS NULL OR a.ZNAME = :account)
+          AND (:is_unread IS NULL OR m.ZISUNREAD = :is_unread)
+          AND (:mailbox IS NULL OR (
+            (:mailbox = 'inbox' AND m.ZISININBOX = 1) OR
+            (:mailbox = 'sent' AND m.ZISSENT = 1) OR
+            (:mailbox = 'drafts' AND m.ZISDRAFT = 1) OR
+            (:mailbox = 'trash' AND m.ZISTRASHED = 1) OR
+            (:mailbox = 'spam' AND m.ZISSPAM = 1) OR
+            (:mailbox = 'flagged' AND m.ZISFLAGGED = 1)
+          ))
+        ORDER BY m.ZDATERECEIVED DESC
+        LIMIT :limit
+      params:
+        account: .params.account
+        is_unread: 'if .params.is_unread == true then 1 elif .params.is_unread == false then 0 else null end'
+        mailbox: .params.mailbox
+        limit: '.params.limit // 1000'
+
+  email.get:
+    description: Get a specific email with full body content and headers
+    returns: email
+    params:
+      id: { type: string, required: true }
+    sql:
+      query: |
+        SELECT
+          m.Z_PK as id,
+          m.ZSUBJECT as subject,
+          m.ZSNIPPET as snippet,
+          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
+          datetime(m.ZDATESENT + 978307200, 'unixepoch') as date_sent,
+          m.ZISUNREAD as is_unread,
+          m.ZISFLAGGED as is_flagged,
+          m.ZISDRAFT as is_draft,
+          m.ZISSENT as is_sent,
+          m.ZISTRASHED as is_trash,
+          m.ZISSPAM as is_spam,
+          m.ZHASATTACHMENT as has_attachments,
+          m.ZSIZEESTIMATE as size_estimate,
+          t.Z_PK as thread_id,
+          a.ZNAME as account_email,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
+            ELSE NULL
+          END as from_name,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
+            ELSE trim(m.ZFROMHEADER)
+          END as from_email,
+          c.ZTO as to_raw,
+          c.ZCC as cc_raw,
+          c.ZBCC as bcc_raw,
+          c.ZBODYTEXT as body_text,
+          c.ZBODYHTML as body_html,
+          c.ZMESSAGEID as message_id,
+          c.ZINREPLYTO as in_reply_to
+        FROM ZMESSAGE m
+        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
+        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
+        LEFT JOIN ZMESSAGECONTENT c ON m.ZCONTENT = c.Z_PK
+        WHERE m.Z_PK = :id
+      params:
+        id: .params.id
+      response:
+        root: "/0"
+
+  email.search:
+    description: Search emails by subject, snippet, body text, or sender
+    returns: email[]
+    params:
+      query: { type: string, required: true }
+      account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
+      limit: { type: integer }
+    sql:
+      query: |
+        SELECT
+          m.Z_PK as id,
+          m.ZSUBJECT as subject,
+          m.ZSNIPPET as snippet,
+          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
+          m.ZISUNREAD as is_unread,
+          m.ZISFLAGGED as is_flagged,
+          m.ZHASATTACHMENT as has_attachments,
+          t.Z_PK as thread_id,
+          a.ZNAME as account_email,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
+            ELSE NULL
+          END as from_name,
+          CASE
+            WHEN instr(m.ZFROMHEADER, '<') > 0
+            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
+            ELSE trim(m.ZFROMHEADER)
+          END as from_email
+        FROM ZMESSAGE m
+        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
+        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
+        LEFT JOIN ZMESSAGECONTENT c ON m.ZCONTENT = c.Z_PK
+        WHERE m.ZISTRASHED = 0
+          AND m.ZISSPAM = 0
+          AND (:account IS NULL OR a.ZNAME = :account)
+          AND (
+            m.ZSUBJECT LIKE '%' || :query || '%'
+            OR m.ZSNIPPET LIKE '%' || :query || '%'
+            OR c.ZBODYTEXT LIKE '%' || :query || '%'
+            OR m.ZFROMHEADER LIKE '%' || :query || '%'
+            OR c.ZTO LIKE '%' || :query || '%'
+          )
+        ORDER BY m.ZDATERECEIVED DESC
+        LIMIT :limit
+      params:
+        query: .params.query
+        account: .params.account
+        limit: '.params.limit // 1000'
+
+  conversation.list:
+    description: List email threads with latest message info
+    returns: conversation[]
+    params:
+      account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
+      limit: { type: integer }
+    sql:
+      query: |
+        SELECT
+          t.Z_PK as id,
+          a.ZNAME as account_email,
+          (SELECT ZSUBJECT FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as subject,
+          (SELECT ZSNIPPET FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as snippet,
+          (SELECT datetime(ZDATERECEIVED + 978307200, 'unixepoch') FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as date_updated,
+          (SELECT COUNT(*) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as message_count,
+          (SELECT MAX(ZISUNREAD) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as has_unread,
+          t.ZHASATTACHMENT as has_attachments
+        FROM ZMESSAGETHREAD t
+        LEFT JOIN ZACCOUNT a ON t.ZACCOUNT = a.Z_PK
+        WHERE (:account IS NULL OR a.ZNAME = :account)
+        ORDER BY date_updated DESC
+        LIMIT :limit
+      params:
+        account: .params.account
+        limit: '.params.limit // 1000'
+
+  conversation.get:
+    description: Get all messages in an email thread
+    returns: conversation
+    params:
+      id: { type: string, required: true }
+    sql:
+      query: |
+        SELECT
+          t.Z_PK as id,
+          a.ZNAME as account_email,
+          (SELECT ZSUBJECT FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED ASC LIMIT 1) as subject,
+          (SELECT ZSNIPPET FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as snippet,
+          (SELECT datetime(ZDATERECEIVED + 978307200, 'unixepoch') FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as date_updated,
+          (SELECT COUNT(*) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as message_count,
+          (SELECT MAX(ZISUNREAD) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as has_unread,
+          t.ZHASATTACHMENT as has_attachments
+        FROM ZMESSAGETHREAD t
+        LEFT JOIN ZACCOUNT a ON t.ZACCOUNT = a.Z_PK
+        WHERE t.Z_PK = :id
+      params:
+        id: .params.id
+      response:
+        root: "/0"
+
+  # BLOCKED: file entity type not yet registered (task eb14f8fa)
+  # file.list:
+  #   description: List email attachments, optionally filtered by email or account
+  #   returns: file[]
+  #   params:
+  #     email_id: { type: string, description: "Filter to attachments from a specific email" }
+  #     account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
+  #     limit: { type: integer }
+  #   sql:
+  #     query: |
+  #       SELECT
+  #         a.Z_PK as id, a.ZFILENAME as filename, a.ZMIMETYPE as mime_type,
+  #         a.ZSIZE as size, a.ZINLINE as is_inline, a.ZDOWNLOADED as downloaded,
+  #         m.Z_PK as email_id
+  #       FROM ZATTACHMENT a
+  #       JOIN ZMESSAGECONTENT c ON a.ZCONTENT = c.Z_PK
+  #       JOIN ZMESSAGE m ON m.ZCONTENT = c.Z_PK
+  #       LEFT JOIN ZACCOUNT acct ON m.ZACCOUNT = acct.Z_PK
+  #       WHERE m.ZISTRASHED = 0 AND m.ZISSPAM = 0
+  #         AND (:email_id IS NULL OR m.Z_PK = :email_id)
+  #         AND (:account IS NULL OR acct.ZNAME = :account)
+  #       ORDER BY m.ZDATERECEIVED DESC, a.Z_PK
+  #       LIMIT :limit
+  #     params:
+  #       email_id: .params.email_id
+  #       account: .params.account
+  #       limit: '.params.limit // 1000'
+  #
+  # file.get:
+  #   description: Get a specific attachment
+  #   returns: file
+  #   params:
+  #     id: { type: string, required: true }
+  #   sql:
+  #     query: |
+  #       SELECT
+  #         a.Z_PK as id, a.ZFILENAME as filename, a.ZMIMETYPE as mime_type,
+  #         a.ZSIZE as size, a.ZINLINE as is_inline, a.ZDOWNLOADED as downloaded,
+  #         m.Z_PK as email_id
+  #       FROM ZATTACHMENT a
+  #       JOIN ZMESSAGECONTENT c ON a.ZCONTENT = c.Z_PK
+  #       JOIN ZMESSAGE m ON m.ZCONTENT = c.Z_PK
+  #       WHERE a.Z_PK = :id
+  #     params:
+  #       id: .params.id
+  #     response:
+  #       root: "/0"
+
+# ==============================================================================
+# UTILITIES
+# ==============================================================================
+
+utilities:
+  list_accounts:
+    description: List configured email accounts
+    returns:
+      id: integer
+      email: string
+      color: string
+    sql:
+      query: |
+        SELECT
+          Z_PK as id,
+          ZNAME as email,
+          ZCOLOR as color
+        FROM ZACCOUNT
+        ORDER BY ZDISPLAYORDER
+
+  list_mailboxes:
+    description: List mailboxes/labels for an account
+    params:
+      account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
+    returns:
+      id: integer
+      name: string
+      role: string
+      unread_count: integer
+      total_count: integer
+      account_email: string
+    sql:
+      query: |
+        SELECT
+          m.Z_PK as id,
+          m.ZNAME as name,
+          m.ZROLE as role,
+          m.ZUNREADMESSAGECOUNT as unread_count,
+          m.ZTOTALMESSAGECOUNT as total_count,
+          m.ZTAGBACKGROUNDCOLOR as color,
+          a.Z_PK as account_id,
+          a.ZNAME as account_email
+        FROM ZMAILBOX m
+        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
+        WHERE m.ZROLE IS NOT NULL
+          AND (:account IS NULL OR a.ZNAME = :account)
+        ORDER BY
+          a.ZDISPLAYORDER,
+          CASE m.ZROLE
+            WHEN 'INBOX' THEN 1
+            WHEN 'INBOX_PRIMARY' THEN 2
+            WHEN 'DRAFT' THEN 3
+            WHEN 'SENT' THEN 4
+            WHEN 'IMPORTANT' THEN 5
+            WHEN 'TRASH' THEN 6
+            WHEN 'SPAM' THEN 7
+            ELSE 10
+          END
+      params:
+        account: .params.account
+
+
+---
+
+# Mimestream
+
+Read and search email from [Mimestream](https://mimestream.com/), a native macOS email client for Gmail.
+
+## Requirements
+
+- **macOS only** -- reads from Mimestream's local Core Data SQLite database
+- **Mimestream installed** -- the app must be installed and have synced at least once
+- **Full Disk Access** -- System Settings > Privacy & Security > Full Disk Access (for the process reading the database)
+
+## Database
+
+Mimestream stores emails in a Core Data SQLite database at:
+
+```
+~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite
+```
+
+Core Data timestamps use Apple's reference date (2001-01-01). The skill converts these automatically by adding 978307200 seconds.
+
+## Capabilities
+
+```
+OPERATION             ENTITY TYPE    DESCRIPTION
+--------------------  -------------  ----------------------------------------
+email.list            email          List emails with mailbox/account filters
+email.get             email          Full email with body, headers, recipients
+email.search          email          Full-text search across all fields
+conversation.list     conversation   List email threads
+conversation.get      conversation   Get thread metadata
+# file.list           file           List email attachments (blocked: file type not registered)
+# file.get            file           Get a specific attachment (blocked: file type not registered)
+list_accounts         (utility)      Show configured accounts
+list_mailboxes        (utility)      Show mailbox roles and unread counts
+```
+
+## Entity Mapping
+
+```
+person --claim--> account
+account --send--> email
+email --attach--> file
+```
+
+- `email` extends message (work > document > post > message > email)
+- `file` extends document (work > document > file)
+- `conversation` holds email threads
+- `account` (platform: email) represents sender/recipient addresses
+- Sender accounts are auto-created via typed references when emails sync
+- Files are linked to their source emails via the `attach` relationship
+
+## Notes
+
+- This skill is **read-only** -- it cannot send emails or modify state
+- Mimestream syncs with Gmail, so data reflects what has been synced locally
+- Search covers subject, snippet, body text, sender, and recipients

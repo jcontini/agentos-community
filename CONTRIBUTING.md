@@ -392,15 +392,21 @@ Operations can then declare `returns: dns_record[]` and the transformer is appli
 
 ### Choosing the right entity type
 
-Always map to an existing entity before creating a new one. Check `entities/{type}.yaml`
-in the community repo for exact property names. Common types:
-`task`, `person`, `message`, `conversation`, `post`, `video`, `channel`, `document`,
-`meeting`, `forum`, `webpage`, `website`, `repository`, `domain`, `tag`
+Always map to an existing entity before creating a new one. Entity types live on the
+graph — browse them with `list({ type: "_types" })` for an overview, or
+`get({ id: "type_id" })` for a specific type's full schema and properties.
+
+Common types:
+`task`, `person`, `message`, `email`, `conversation`, `post`, `video`, `channel`,
+`document`, `meeting`, `forum`, `webpage`, `website`, `repository`, `domain`, `tag`
 
 Only create a new entity type if no existing type fits. Good reasons:
 - Fundamentally different properties (e.g., `pull_request` has `head`, `base`, `mergeable`)
 - Needs different UI rendering
 - Has unique operations that don't fit existing patterns
+
+New types can be created directly on the graph via `create({ type: "_type", ... })`.
+No YAML files or server restarts required.
 
 ---
 
@@ -975,11 +981,20 @@ gh pr create --title "Add My Service skill" --body "Connects AgentOS to [service
 
 ## Entities
 
-Entity schemas live in `entities/` organized by primitive type. To browse all entity types and their schemas, use `memex()` (no arguments) for an overview, or `memex({ type: "task" })` for a specific type's full schema.
+Entity types live on the graph as `_type` entities — not as YAML files on disk. The
+`entities/` directory in this repo is legacy reference documentation; it is NOT read at
+runtime. The engine bootstraps core types from `seed.sql` and new types are created
+directly on the graph.
 
-**Always map to an existing entity type before creating a new one.** Only create a new type if the domain has genuinely different properties or needs different UI rendering.
+To browse types: `list({ type: "_types" })` for an overview, or `get({ id: "type_id" })`
+for a specific type's full schema. To create a new type:
+`create({ type: "_type", name: "My Type", ... })`.
 
-When building skills, use `data.*` mapping for adapter-specific fields that don't belong in the shared schema. See the Transformers section above for details.
+**Always map to an existing entity type before creating a new one.** Only create a new
+type if the domain has genuinely different properties or needs different UI rendering.
+
+When building skills, use `data.*` mapping for adapter-specific fields that don't belong
+in the shared schema. See the Transformers section above for details.
 
 ---
 
@@ -1021,7 +1036,7 @@ Before committing a skill:
 - [ ] All required front matter: `id`, `name`, `description`, `icon`, `website`
 - [ ] Auth configured correctly for the service (`optional: true` if service has anonymous access)
 - [ ] Public endpoints (signup, etc.) use `auth: none` at the operation level
-- [ ] `transformers` map to existing entity types (checked `entities/*.yaml`)
+- [ ] `transformers` map to existing entity types (check with `list({ type: "_types" })`)
 - [ ] Adapter-specific fields use `data.*` mapping (not polluting the entity schema)
 - [ ] Operations use correct `entity.operation` naming with known suffixes only
 - [ ] Actions that don't fit standard CRUD are in `utilities:` with snake_case names
@@ -1060,7 +1075,7 @@ node scripts/generate-manifest.js --check # Validate only
 |------|---------|
 | `tests/skills/skill.schema.json` | Schema source of truth for skill YAML |
 | `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
-| `entities/{entity}.yaml` | Entity schema — what properties to map |
+| `entities/` (legacy) | Reference docs only — types live on the graph as `_type` entities |
 
 ---
 

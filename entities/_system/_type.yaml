@@ -1,0 +1,62 @@
+# _type — Entity type definitions stored on the graph
+#
+# The bootstrap type: the type that describes types. This is the last entity
+# schema that should ever be defined as a YAML file. After this, all new
+# entity types are created as _type entities on the graph via:
+#
+#   create({ type: "_type", name: "Memory", id: "memory", ... })
+#
+# The Rust engine merges YAML-defined types with DB-defined _type entities.
+# DB wins on conflict (allows overriding YAML schemas from conversation).
+#
+# The full EntityDef struct is stored as JSON in the entity's data field.
+# All fields from entity YAML schemas are supported: properties, extends,
+# operations, computed, display, identifiers, vocabulary, views.
+
+id: _type
+name: Type
+plural: _types
+description: Entity type definitions — create new types from conversation without YAML files or restarts
+
+properties:
+  id:
+    type: string
+    required: true
+    description: Type identifier (e.g., "memory", "recipe"). Used as the type name in create/list/get calls.
+  plural:
+    type: string
+    description: Plural form for REST URLs (e.g., "memories"). Auto-generated if not specified.
+  extends:
+    type: string
+    description: Parent type to inherit properties from (e.g., "work", "commitment")
+  properties:
+    type: object
+    description: Property definitions — field names, types, defaults, validation
+  operations:
+    type: array
+    description: Supported operations (list, get, create, update, delete, search, etc.)
+  identifiers:
+    type: array
+    description: Fields used for cross-skill deduplication
+  display:
+    type: object
+    description: Display hints — primary field, sort order, icons, default filters
+  computed:
+    type: object
+    description: Computed fields — jaq expressions evaluated at query time
+  computed_relationships:
+    type: object
+    description: Relationship data injected into computed field context
+  vocabulary:
+    type: object
+    description: Rename inherited properties for domain-specific context
+  views:
+    type: object
+    description: View definitions per operation
+
+identifiers: [id]
+
+display:
+  primary: id
+  secondary: description
+  icon: box
