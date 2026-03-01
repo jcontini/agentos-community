@@ -39,6 +39,11 @@ properties:
     default: stdio
     description: How the client is connected
 
+  # Client skill (resolved at session creation via case-insensitive match)
+  client_skill:
+    type: string
+    description: Skill ID that corresponds to this client (e.g., "opencode", "cursor")
+
   # Workspace context
   workspace:
     type: string

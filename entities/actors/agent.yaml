@@ -1,39 +1,49 @@
-# Agent — AI Agents and Bots
+# Agent — AI Agents on the Graph
 #
-# Extends actor. AI assistants, automated bots, and autonomous
-# agents that can act in the Memex. Cursor, Claude, GPT — they're
-# all agents.
+# Extends actor. An agent is a first-class citizen of AgentOS,
+# just like a person. It has a persona (how it presents and operates),
+# works across projects, can own accounts, and can be called by
+# other agents or humans.
 #
-# The system itself is an agent. When AgentOS auto-creates
-# entities on startup, the actor is the system agent.
+# The persona field is the agent's identity — not instructions for
+# a specific workspace, but who this agent IS across all contexts.
+# Think of it like Jung's persona: the mask that shapes behavior.
+# Workspace-specific context comes from the graph (projects, tasks,
+# readme templates). The persona travels with the agent everywhere.
+#
+# When an agent is called:
+#   1. Load agent entity (persona, model, provider)
+#   2. Load context from the graph (projects it manages, tasks, etc.)
+#   3. Combine persona + graph context = system prompt
+#   4. Run with tools until answer
+#
+# Agents can manage multiple projects, own accounts on external
+# platforms, and communicate with each other via the runtime.
 
 id: agent
 plural: agents
 extends: actor
 name: Agent
-description: AI agents, bots, and autonomous actors
+description: AI agents — first-class actors that can think, act, and communicate
 
 properties:
-  agent_type:
+  persona:
     type: string
-    description: Type of agent — ai_assistant, bot, automation, system
-
-  provider:
-    type: string
-    description: Who provides this agent (anthropic, openai, cursor, etc.)
+    description: >
+      The agent's identity and disposition — who it is across all contexts.
+      Markdown. This is not workspace-specific instructions; it's the
+      enduring character that shapes how the agent operates everywhere.
 
   model:
     type: string
-    description: Underlying model if applicable (claude-4, gpt-4, etc.)
+    description: Preferred model (e.g. claude-3-5-haiku-20241022, claude-opus-4-6)
 
-  capabilities:
-    type: array
-    items:
-      type: string
-    description: What this agent can do (code, search, browse, etc.)
+  provider:
+    type: string
+    description: Model access skill (anthropic-api, openrouter, ollama)
 
 identifiers: [name]
-operations: [list, get]
+operations: [list, get, create, update, search]
 
 display:
   primary: name

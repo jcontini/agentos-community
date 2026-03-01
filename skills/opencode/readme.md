@@ -239,7 +239,7 @@ operations:
         subagents: ".params.subagents // null"
         since: ".params.since // null"
 
-  research.import:
+  document.import:
     description: >
       Import sub-agent research output as document entities on the Memex. Finds long text
       content produced by Task tool sub-agents and creates searchable document entities.
@@ -346,10 +346,10 @@ use({ skill: "opencode", tool: "session.import", params: { since: 7 } })
 use({ skill: "opencode", tool: "session.import", params: { project: "/Users/joe/dev/agentOS" } })
 
 # Import sub-agent research as searchable documents
-use({ skill: "opencode", tool: "research.import", params: { since: 7 } })
+use({ skill: "opencode", tool: "document.import", params: { since: 7 } })
 
 # Import research matching a topic
-use({ skill: "opencode", tool: "research.import", params: { query: "Coda formula language" } })
+use({ skill: "opencode", tool: "document.import", params: { query: "Coda formula language" } })
 ```
 
 Import is safe to run repeatedly — deduplicates via service_id. Each session becomes a session entity with the full conversation transcript as its body content, directly FTS5-indexed. Research outputs become document entities.

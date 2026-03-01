@@ -119,7 +119,7 @@ utilities:
         anthropic-version: '"2023-06-01"'
       body:
         model: .params.model
-        messages: .params.messages
+        messages: 'def to_anthropic_msg: if .role == "assistant" and .tool_calls then {role: "assistant", content: ([if .content then {type: "text", text: .content} else empty end] + [.tool_calls[] | {type: "tool_use", id: .id, name: .name, input: .input}])} elif .role == "tool" then {role: "user", content: [{type: "tool_result", tool_use_id: .tool_call_id, content: .content}]} else . end; [.params.messages[] | to_anthropic_msg]'
         tools: .params.tools
         max_tokens: '.params.max_tokens // 4096'
         temperature: '.params.temperature // 0'

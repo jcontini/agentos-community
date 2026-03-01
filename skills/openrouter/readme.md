@@ -109,7 +109,7 @@ utilities:
       url: https://openrouter.ai/api/v1/chat/completions
       body:
         model: .params.model
-        messages: 'if .params.system then ([{role: "system", content: .params.system}] + .params.messages) else .params.messages end'
+        messages: 'def to_openai_msg: if .role == "assistant" and .tool_calls then {role: "assistant", content: (.content // ""), tool_calls: [.tool_calls[] | {id: .id, type: "function", function: {name: .name, arguments: (.input | tojson)}}]} elif .role == "tool" then {role: "tool", tool_call_id: .tool_call_id, content: .content} else {role: .role, content: .content} end; (if .params.system then [{role: "system", content: .params.system}] else [] end) + [.params.messages[] | to_openai_msg]'
         tools: '(.params.tools // []) | map({type: "function", function: {name: .name, description: (.description // ""), parameters: (.input_schema // {type: "object", properties: {}})}})'
         max_tokens: '.params.max_tokens // 4096'
         temperature: '.params.temperature // 0'
