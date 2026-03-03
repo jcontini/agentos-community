@@ -181,13 +181,14 @@ operations:
         description: Search query
       limit:
         type: integer
+        default: 50
         description: Number of results
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json "ytsearch{{params.limit | default:50}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json "ytsearch{{params.limit}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,
@@ -212,13 +213,14 @@ operations:
         description: Search query
       limit:
         type: integer
+        default: 50
         description: Number of results
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json "ytsearchdate{{params.limit | default:50}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json "ytsearchdate{{params.limit}}:{{params.query}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,
@@ -248,13 +250,14 @@ operations:
         description: YouTube channel URL (e.g., youtube.com/@channelname) or playlist URL
       limit:
         type: integer
+        default: 50
         description: Number of videos to return
     command:
       binary: bash
       args:
         - "-c"
         - |
-          yt-dlp --flat-playlist --dump-json --playlist-end {{params.limit | default:50}} "{{params.url}}" 2>/dev/null | jq -s '[.[] | {
+          yt-dlp --flat-playlist --dump-json --playlist-end {{params.limit}} "{{params.url}}" 2>/dev/null | jq -s '[.[] | {
             title: .title,
             description: .description,
             duration: .duration,

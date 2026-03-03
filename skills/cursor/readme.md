@@ -100,7 +100,9 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json --backfill{{ ' --workspace ' + params.workspace if params.workspace else '' }} 2>/dev/null"
+        - |
+          WS="{{params.workspace}}"
+          python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json --backfill ${WS:+--workspace "$WS"} 2>/dev/null
       timeout: 300
 
   session.get:

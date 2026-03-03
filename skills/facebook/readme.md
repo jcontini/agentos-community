@@ -92,7 +92,7 @@ operations:
         - |
           set -e
           GROUP_PARAM="{{params.group}}"
-          INCLUDE_MEMBERS="{{params.include_members | default:true}}"
+          INCLUDE_MEMBERS="{{params.include_members}}"
           
           # Extract group name/ID from parameter
           # Handle: "becomingaportuguesecitizen", "23386646249", or full URL

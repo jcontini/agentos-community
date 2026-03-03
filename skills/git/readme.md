@@ -110,7 +110,8 @@ operations:
         description: Absolute path to the git repository
       limit:
         type: integer
-        description: Max commits to return (default 20)
+        default: 100
+        description: Max commits to return (default 100)
       branch:
         type: string
         description: Branch to list commits from (default current branch)
@@ -123,7 +124,9 @@ operations:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log {{#if params.branch}}"{{params.branch}}"{{/if}} {{#if params.author}}--author="{{params.author}}"{{/if}} -{{params.limit | default:100}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          BRANCH="{{params.branch}}"
+          AUTHOR="{{params.author}}"
+          git log ${BRANCH:+"$BRANCH"} ${AUTHOR:+--author="$AUTHOR"} -{{params.limit}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -186,14 +189,15 @@ operations:
         description: Search term to match in commit messages
       limit:
         type: integer
-        description: Max results (default 20)
+        default: 100
+        description: Max results (default 100)
     command:
       binary: bash
       args:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log --grep="{{params.query}}" -i -{{params.limit | default:100}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          git log --grep="{{params.query}}" -i -{{params.limit}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -388,7 +392,16 @@ utilities:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          {{#if params.ref1}}git diff "{{params.ref1}}"{{#if params.ref2}} "{{params.ref2}}"{{/if}}{{else}}{{#if params.staged}}git diff --cached{{else}}git diff{{/if}}{{/if}} 2>/dev/null
+          REF1="{{params.ref1}}"
+          REF2="{{params.ref2}}"
+          STAGED="{{params.staged}}"
+          if [ -n "$REF1" ]; then
+            git diff "$REF1" ${REF2:+"$REF2"} 2>/dev/null
+          elif [ "$STAGED" = "true" ]; then
+            git diff --cached 2>/dev/null
+          else
+            git diff 2>/dev/null
+          fi
       timeout: 30
 
   log:
@@ -404,7 +417,8 @@ utilities:
         description: Git log format string (default oneline)
       limit:
         type: integer
-        description: Max entries (default 20)
+        default: 100
+        description: Max entries (default 100)
       branch:
         type: string
         description: Branch to show log for
@@ -414,7 +428,9 @@ utilities:
         - "-c"
         - |
           cd "{{params.path}}" 2>/dev/null || exit 1
-          git log {{#if params.branch}}"{{params.branch}}"{{/if}} -{{params.limit | default:100}} {{#if params.format}}--format="{{params.format}}"{{else}}--oneline{{/if}} 2>/dev/null
+          BRANCH="{{params.branch}}"
+          FORMAT="{{params.format}}"
+          git log ${BRANCH:+"$BRANCH"} -{{params.limit}} --format="${FORMAT:-oneline}" 2>/dev/null
       timeout: 30
 
 testing:

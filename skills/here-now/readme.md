@@ -124,7 +124,15 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/here-now/publish.py --filename '{{params.filename}}' --content-type '{{params.content_type}}'{{#if params.title}} --title '{{params.title}}'{{/if}}{{#if params.description}} --description '{{params.description}}'{{/if}} --token '{{auth.key}}'"
+        - |
+          TITLE="{{params.title}}"
+          DESC="{{params.description}}"
+          python3 ~/dev/agentos-community/skills/here-now/publish.py \
+            --filename '{{params.filename}}' \
+            --content-type '{{params.content_type}}' \
+            ${TITLE:+--title "$TITLE"} \
+            ${DESC:+--description "$DESC"} \
+            --token '{{params.auth_key}}'
       stdin: "{{params.content}}"
       timeout: 60
 
@@ -153,7 +161,14 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/here-now/publish.py --slug '{{params.slug}}' --filename '{{params.filename}}' --content-type '{{params.content_type}}'{{#if params.title}} --title '{{params.title}}'{{/if}} --token '{{auth.key}}'"
+        - |
+          TITLE="{{params.title}}"
+          python3 ~/dev/agentos-community/skills/here-now/publish.py \
+            --slug '{{params.slug}}' \
+            --filename '{{params.filename}}' \
+            --content-type '{{params.content_type}}' \
+            ${TITLE:+--title "$TITLE"} \
+            --token '{{params.auth_key}}'
       stdin: "{{params.content}}"
       timeout: 60
 
