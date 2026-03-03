@@ -65,7 +65,17 @@ async function readStdinParams(): Promise<void> {
 }
 
 function getFlag(name: string): boolean {
-  if (name in stdinParams) return !!stdinParams[name];
+  // Check stdin params (both kebab-case and snake_case)
+  const snakeName = name.replace(/-/g, "_");
+  const key = name in stdinParams ? name : snakeName in stdinParams ? snakeName : null;
+  if (key) {
+    const val = stdinParams[key];
+    // Handle string "false"/"true" from template rendering
+    if (typeof val === "string") {
+      return val.toLowerCase() === "true";
+    }
+    return !!val;
+  }
   return process.argv.includes(`--${name}`);
 }
 
