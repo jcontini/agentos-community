@@ -106,10 +106,8 @@ operations:
         description: "Wait condition: load, domcontentloaded, networkidle (default: networkidle)"
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts goto '{{params.url}}' {{#if params.wait_until}}--wait-until '{{params.wait_until}}'{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts goto"]
+      stdin: '{"url": "{{params.url}}", "wait_until": "{{params.wait_until}}"}'
       timeout: 45
 
   webpage.read:
@@ -124,10 +122,8 @@ operations:
         description: "Output format: text or html (default: text)"
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts extract {{#if params.selector}}--selector '{{params.selector}}'{{/if}} {{#if params.format}}--format '{{params.format}}'{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts extract"]
+      stdin: '{"selector": "{{params.selector}}", "format": "{{params.format}}"}'
       timeout: 30
 
 utilities:
@@ -146,10 +142,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts start {{#if params.headless}}--headless{{/if}} {{#if params.port}}--port {{params.port}}{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts start"]
+      stdin: '{"headless": "{{params.headless}}", "port": "{{params.port}}"}'
       timeout: 30
 
   stop:
@@ -157,10 +151,8 @@ utilities:
     returns: void
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts stop {{#if params.port}}--port {{params.port}}{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts stop"]
+      stdin: '{"port": "{{params.port}}"}'
       timeout: 10
 
   status:
@@ -171,10 +163,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts status {{#if params.port}}--port {{params.port}}{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts status"]
+      stdin: '{"port": "{{params.port}}"}'
       timeout: 10
 
   screenshot:
@@ -193,10 +183,8 @@ utilities:
       path: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts screenshot {{#if params.selector}}--selector '{{params.selector}}'{{/if}} {{#if params.path}}--path '{{params.path}}'{{/if}} {{#if params.full_page}}--full-page{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts screenshot"]
+      stdin: '{"selector": "{{params.selector}}", "path": "{{params.path}}", "full_page": "{{params.full_page}}"}'
       timeout: 30
 
   click:
@@ -211,10 +199,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts click '{{params.selector}}' 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts click"]
+      stdin: '{"selector": "{{params.selector}}"}'
       timeout: 15
 
   fill:
@@ -233,10 +219,8 @@ utilities:
       value: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts fill '{{params.selector}}' '{{params.value}}' 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts fill"]
+      stdin: '{"selector": "{{params.selector}}", "value": "{{params.value}}"}'
       timeout: 15
 
   select:
@@ -255,10 +239,8 @@ utilities:
       value: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts select '{{params.selector}}' '{{params.value}}' 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts select"]
+      stdin: '{"selector": "{{params.selector}}", "value": "{{params.value}}"}'
       timeout: 15
 
   type:
@@ -277,10 +259,8 @@ utilities:
       text: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts type '{{params.selector}}' '{{params.text}}' 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts type"]
+      stdin: '{"selector": "{{params.selector}}", "text": "{{params.text}}"}'
       timeout: 30
 
   evaluate:
@@ -294,10 +274,8 @@ utilities:
       result: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts evaluate '{{params.script}}' 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts evaluate"]
+      stdin: '{"script": "{{params.script}}"}'
       timeout: 30
 
   url:
@@ -307,10 +285,7 @@ utilities:
       title: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts url 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts url"]
       timeout: 10
 
   inspect:
@@ -325,10 +300,8 @@ utilities:
       snapshot: object
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts inspect {{#if params.selector}}--selector '{{params.selector}}'{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts inspect"]
+      stdin: '{"selector": "{{params.selector}}"}'
       timeout: 15
 
   errors:
@@ -339,10 +312,7 @@ utilities:
       url: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts errors 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts errors"]
       timeout: 30
 
   wait:
@@ -358,10 +328,8 @@ utilities:
       status: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts wait {{#if params.selector}}--selector '{{params.selector}}'{{/if}} {{#if params.timeout}}--timeout {{params.timeout}}{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts wait"]
+      stdin: '{"selector": "{{params.selector}}", "timeout": "{{params.timeout}}"}'
       timeout: 60
 
   tabs:
@@ -371,10 +339,7 @@ utilities:
       count: integer
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts tabs 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts tabs"]
       timeout: 10
 
   new_tab:
@@ -388,10 +353,8 @@ utilities:
       title: string
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts new_tab {{#if params.url}}'{{params.url}}'{{/if}} 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts new_tab"]
+      stdin: '{"url": "{{params.url}}"}'
       timeout: 30
 
   close_tab:
@@ -399,9 +362,7 @@ utilities:
     returns: void
     command:
       binary: bash
-      args:
-        - "-l"
-        - "-c"
+      args: ["-l", "-c"
         - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts close_tab 2>/dev/null"
       timeout: 10
 ---

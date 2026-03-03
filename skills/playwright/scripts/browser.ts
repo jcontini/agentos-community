@@ -48,16 +48,43 @@ function getPort(): number {
   return DEFAULT_PORT;
 }
 
+// --- Stdin JSON support ---
+// When called from AgentOS, params arrive as JSON on stdin.
+// Falls back to argv parsing for direct CLI use.
+
+let stdinParams: Record<string, unknown> = {};
+
+async function readStdinParams(): Promise<void> {
+  if (process.stdin.isTTY) return;
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString().trim();
+  if (raw) {
+    try { stdinParams = JSON.parse(raw); } catch { /* not JSON, ignore */ }
+  }
+}
+
 function getFlag(name: string): boolean {
+  if (name in stdinParams) return !!stdinParams[name];
   return process.argv.includes(`--${name}`);
 }
 
 function getOption(name: string): string | undefined {
+  // stdin JSON takes precedence (snake_case and kebab-case)
+  const snakeName = name.replace(/-/g, "_");
+  if (snakeName in stdinParams && stdinParams[snakeName] != null) return String(stdinParams[snakeName]);
+  if (name in stdinParams && stdinParams[name] != null) return String(stdinParams[name]);
+  // Fall back to argv
   const idx = process.argv.indexOf(`--${name}`);
   if (idx !== -1 && process.argv[idx + 1] && !process.argv[idx + 1].startsWith("--")) {
     return process.argv[idx + 1];
   }
   return undefined;
+}
+
+function getPositional(index: number): string | undefined {
+  // For positional args (like url, selector, value), check stdin params by name
+  return process.argv[index] || undefined;
 }
 
 function out(data: unknown): void {
@@ -198,7 +225,7 @@ async function cmdStatus(): Promise<void> {
 
 async function cmdGoto(): Promise<void> {
   const port = getPort();
-  const url = process.argv[3];
+  const url = (stdinParams.url as string) || process.argv[3];
   if (!url) err("Usage: goto <url>");
   const waitUntil = (getOption("wait-until") || "networkidle") as
     | "load"
@@ -233,7 +260,7 @@ async function cmdScreenshot(): Promise<void> {
 
 async function cmdClick(): Promise<void> {
   const port = getPort();
-  const selector = process.argv[3];
+  const selector = (stdinParams.selector as string) || process.argv[3];
   if (!selector) err("Usage: click <selector>");
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
@@ -245,8 +272,8 @@ async function cmdClick(): Promise<void> {
 
 async function cmdFill(): Promise<void> {
   const port = getPort();
-  const selector = process.argv[3];
-  const value = process.argv[4];
+  const selector = (stdinParams.selector as string) || process.argv[3];
+  const value = (stdinParams.value as string) ?? process.argv[4];
   if (!selector || value === undefined) err("Usage: fill <selector> <value>");
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
@@ -257,8 +284,8 @@ async function cmdFill(): Promise<void> {
 
 async function cmdSelect(): Promise<void> {
   const port = getPort();
-  const selector = process.argv[3];
-  const value = process.argv[4];
+  const selector = (stdinParams.selector as string) || process.argv[3];
+  const value = (stdinParams.value as string) || process.argv[4];
   if (!selector || !value) err("Usage: select <selector> <value>");
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
@@ -269,8 +296,8 @@ async function cmdSelect(): Promise<void> {
 
 async function cmdType(): Promise<void> {
   const port = getPort();
-  const selector = process.argv[3];
-  const text = process.argv[4];
+  const selector = (stdinParams.selector as string) || process.argv[3];
+  const text = (stdinParams.text as string) ?? process.argv[4];
   if (!selector || text === undefined) err("Usage: type <selector> <text>");
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
@@ -281,7 +308,7 @@ async function cmdType(): Promise<void> {
 
 async function cmdEvaluate(): Promise<void> {
   const port = getPort();
-  const script = process.argv[3];
+  const script = (stdinParams.script as string) || process.argv[3];
   if (!script) err("Usage: evaluate <script>");
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
@@ -371,7 +398,7 @@ async function cmdTabs(): Promise<void> {
 
 async function cmdNewTab(): Promise<void> {
   const port = getPort();
-  const url = process.argv[3];
+  const url = (stdinParams.url as string) || process.argv[3];
   const browser = await connectBrowser(port);
   const context = browser.contexts()[0];
   const page = await context.newPage();
@@ -469,6 +496,7 @@ const commands: Record<string, () => Promise<void>> = {
 };
 
 async function main() {
+  await readStdinParams();
   const command = process.argv[2];
   if (!command || !commands[command]) {
     out({
