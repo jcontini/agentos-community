@@ -29,5 +29,8 @@
   "dependencies": {
     "js-yaml": "^4.1.1",
     "zod": "^4.3.5"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.58.2"
   }
 }
