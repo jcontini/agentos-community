@@ -128,11 +128,11 @@ operations:
 
 utilities:
   start:
-    description: Launch or connect to a persistent Chromium browser. If already running, returns immediately. Call this before any other operation.
+    description: "Launch or connect to a persistent Chromium browser. If already running, returns immediately. Mode: 'headed' (default) shows a visible window, 'headless' runs invisibly."
     params:
-      headless:
-        type: boolean
-        description: "Run headless — no visible window (default: false, headed)"
+      mode:
+        type: string
+        description: "'headed' (default) — visible browser window. 'headless' — no visible window, runs in background."
       port:
         type: integer
         description: "CDP port (default: 9222)"
@@ -143,7 +143,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts start"]
-      stdin: '{"headless": "{{params.headless}}", "port": "{{params.port}}"}'
+      stdin: '{"mode": "{{params.mode}}", "port": "{{params.port}}"}'
       timeout: 30
 
   stop:
@@ -431,7 +431,7 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 
 | Utility | What it does |
 |---------|-------------|
-| `start` | Launch browser (or confirm it's running). Optional — other operations auto-launch. |
+| `start` | Launch browser (or confirm it's running). Pass `mode: "headed"` (default, visible window) or `mode: "headless"` (invisible). Optional — other operations auto-launch. |
 | `stop` | Kill the browser process. |
 | `status` | Check if browser is running, get current URL. |
 

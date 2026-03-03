@@ -202,11 +202,13 @@ async function killBrowser(port: number): Promise<void> {
 
 async function cmdStart(): Promise<void> {
   const port = getPort();
-  const headless = getFlag("headless");
+  // Support both mode="headless"/"headed" and legacy headless=true/false
+  const mode = getOption("mode");
+  const headless = mode ? mode === "headless" : getFlag("headless");
   await ensureBrowser(port, headless);
   const browser = await connectBrowser(port);
   const page = await getPage(browser);
-  out({ status: "running", port, url: page.url() });
+  out({ status: "running", port, mode: headless ? "headless" : "headed", url: page.url() });
   await browser.close();
 }
 
