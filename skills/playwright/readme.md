@@ -362,8 +362,7 @@ utilities:
     returns: void
     command:
       binary: bash
-      args: ["-l", "-c"
-        - "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts close_tab 2>/dev/null"
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts close_tab 2>/dev/null"]
       timeout: 10
 ---
 
