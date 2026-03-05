@@ -2,7 +2,7 @@
 
 Everything lives here — entities, skills, apps, and themes. Core (`agentos`) is a generic Rust engine; this repo is the ecosystem.
 
-In development, the server points directly at this repo (`~/dev/agentos-community`). Edits are live after a server restart. Core embeds a snapshot at build time; the community version overrides it.
+In development, the server points directly at this repo (`~/dev/agentos-community`). **Skill edits are live immediately** — the server watches `skills/*/readme.md` and hot-reloads on save, no restart needed. If a skill fails to load (YAML error), the error is written to the skill's graph entity (`status: error`, `data.error`) and logged. Core embeds a snapshot at build time; the community version overrides it.
 
 | Concern | Directory | What it is |
 |---------|-----------|-----------|
@@ -31,14 +31,16 @@ Read the relevant guide before starting work:
 ```bash
 # 1. Edit directly in this repo (it's the live source)
 vim skills/my-skill/readme.md
+# Server hot-reloads instantly — no restart needed.
+# YAML errors appear in server logs and in the skill's graph entity.
 
-# 2. Restart AgentOS server and test
-cd ~/dev/agentos && ./restart.sh
+# 2. Test
 curl http://localhost:3456/mem/tasks?skill=my-skill
 
 # 3. Validate and commit
 npm run validate
 git add -A && git commit -m "Add my-skill"
+# Pre-commit hook validates YAML structure of changed skills automatically.
 ```
 
 ---
@@ -55,10 +57,11 @@ npm run new-skill <name>     # Create skill scaffold
 
 | Command | What it checks |
 |---------|----------------|
-| `npm run validate` | Schema structure, test coverage, required files (icon.svg) |
-| `npm test` | Actually calls APIs, verifies behavior |
+| `npm run validate` | Full validation: schema, entity refs, mappings, test coverage, icons |
+| `npm run validate whatsapp linear` | Validate specific skills only |
+| `npm test` | Functional tests — actually calls APIs, verifies behavior |
 
-**Always run `npm run validate` first** — it catches structural issues before you test.
+**Pre-commit hook** runs automatically on `git commit` and validates YAML structure of any changed skills. `npm run validate` is the full audit — run it before opening a PR.
 
 ---
 
