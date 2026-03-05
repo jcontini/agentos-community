@@ -14,10 +14,11 @@
  * Fix errors, then manually move to skills/ when ready.
  * 
  * Usage:
- *   node validate.mjs                     # Full validation + enforce
- *   node validate.mjs --filter exa        # Filter to specific skill
+ *   node validate.mjs                     # Full validation of all skills
+ *   node validate.mjs whatsapp linear     # Validate specific skills only
+ *   node validate.mjs --filter exa        # Filter by substring
  *   node validate.mjs --verbose           # Show uncovered entities
- *   node validate.mjs --pre-commit        # Quick structural check only (no table, no move)
+ *   node validate.mjs --pre-commit whatsapp  # Structural YAML check only (used by git hook)
  */
 
 import { readFileSync, readdirSync, existsSync } from 'fs';
@@ -42,6 +43,17 @@ const args = process.argv.slice(2);
 const filterValue = args.includes('--filter') ? args[args.indexOf('--filter') + 1] : null;
 const preCommit = args.includes('--pre-commit');
 const verbose = args.includes('--verbose');
+
+// Positional args (not flags, not --filter value) are skill names
+const flagsWithValues = new Set(['--filter']);
+const skillNames = [];
+for (let i = 0; i < args.length; i++) {
+  if (args[i].startsWith('--')) {
+    if (flagsWithValues.has(args[i])) i++; // skip next arg (the value)
+    continue;
+  }
+  skillNames.push(args[i]);
+}
 
 // ============================================================================
 // LOAD SCHEMA + ENTITIES
@@ -594,19 +606,29 @@ function validateSkill(skill) {
   };
 }
 
-// --- Pre-commit mode: quick structural check, no table, no move ---
+// --- Pre-commit mode: structural YAML check only, scoped to named skills ---
 if (preCommit) {
-  const skills = findSkills(SKILLS_DIR);
-  const filtered = filterValue ? skills.filter(a => a.name.includes(filterValue)) : skills;
+  const allSkills = findSkills(SKILLS_DIR);
+  const filtered = skillNames.length > 0
+    ? allSkills.filter(a => skillNames.includes(a.name))
+    : filterValue
+      ? allSkills.filter(a => a.name.includes(filterValue))
+      : allSkills;
+
+  if (filtered.length === 0) {
+    process.exit(0);
+  }
+
   const results = filtered.map(a => validateSkill(a));
-  const failures = results.filter(r => !r.schema.structureValid || !r.entity.pass);
+  // Pre-commit only blocks on structural YAML validity — not entity refs, not test coverage
+  const failures = results.filter(r => !r.schema.structureValid);
   if (failures.length > 0) {
     for (const r of failures) {
-      const errs = [...r.schema.errors, ...r.entity.errors];
-      console.error(`❌ ${r.name}: ${errs.join('; ')}`);
+      console.error(`❌ ${r.name}: ${r.schema.errors.join('; ')}`);
     }
     process.exit(1);
   }
+  console.log(`✅ ${filtered.map(r => r.name).join(', ')}`);
   process.exit(0);
 }
 
@@ -616,7 +638,10 @@ if (preCommit) {
 let activeSkills = findSkills(SKILLS_DIR);
 let needsWorkSkills = findSkills(NEEDS_WORK_DIR);
 
-if (filterValue) {
+if (skillNames.length > 0) {
+  activeSkills = activeSkills.filter(a => skillNames.includes(a.name));
+  needsWorkSkills = needsWorkSkills.filter(a => skillNames.includes(a.name));
+} else if (filterValue) {
   activeSkills = activeSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
   needsWorkSkills = needsWorkSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
 }

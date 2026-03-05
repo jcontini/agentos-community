@@ -39,10 +39,12 @@ seed:
 
 instructions: |
   WhatsApp stores messages in a local SQLite database.
-  - Date format: seconds since macOS epoch (2001-01-01)
-  - Convert with: date + 978307200 → Unix timestamp
-  - JID format: PHONENUMBER@s.whatsapp.net (DM) or ID@g.us (group)
+  - Conversation IDs are numeric (Z_PK integers like 880, 899). Always use the numeric ID from conversation.list.
+  - Date format: seconds since macOS epoch (2001-01-01). Convert with: date + 978307200 → Unix timestamp.
+  - Contact identifiers: JID format (phone@s.whatsapp.net) or LID format (opaque_id@lid). Both are used.
   - Session types: 0 = DM, 1 = group, 3 = broadcast/status
+  - To get unread messages, use message.list with unread=true (no conversation_id needed).
+  - To get group participants, use person.list with conversation_id param.
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -54,17 +56,24 @@ transformers:
     mapping:
       id: .jid
       name: '.real_name // .contact_name // .display_name // .phone // .jid'
-      phone: '.phone // (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end)'
+      phone: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end) else null end)'
       nickname: .username
       notes: .about
-      
-      # Display fields for views
-      avatar.path: .profile_photo
       
       # Typed reference: creates image entity for avatar
       avatar:
         image:
           path: .profile_photo
+
+      # Typed reference: person claims a WhatsApp account
+      claim:
+        account:
+          id: .jid
+          platform: '"whatsapp"'
+          handle: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | "+" + .) else .jid end)'
+          display_name: '.real_name // .contact_name // .display_name'
+          platform_id: .jid
+          bio: .about
 
   conversation:
     terminology: Chat
@@ -73,15 +82,20 @@ transformers:
       name: .name
       is_group: '.type == "group"'
       unread_count: .unread_count
+      participant_count: .participant_count
+      last_message_at: .updated_at
       updated_at: .updated_at
+      data.message_count: .message_count
       _contact_jid: .contact_jid
+      _contact_name: .name
       
-      # Typed reference: extract person from conversation partner (DMs only)
-      # JID format: "12125551234@s.whatsapp.net" → phone: "+12125551234"
+      # Typed reference: conversation partner's WhatsApp account (DMs only)
       participant:
-        person:
-          phone: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else null end'
-          name: .name
+        account:
+          id: ._contact_jid
+          platform: '"whatsapp"'
+          handle: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else ._contact_jid end'
+          display_name: ._contact_name
 
   message:
     terminology: Message
@@ -89,18 +103,21 @@ transformers:
       id: .id
       conversation_id: .conversation_id
       content: .content
-      sender: .sender_name
-      is_outgoing: .is_outgoing
+      is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
       timestamp: .timestamp
+      data.is_starred: .is_starred
+      data.conversation_name: .conversation_name
       _reply_to_id: .reply_to_id
-      _sender_handle: .sender_handle
+      _sender_jid: .sender_jid
+      _sender_name: .sender_name
       
-      # Typed reference: extract sender as person (incoming messages only)
-      # JID format: "12125551234@s.whatsapp.net" → phone: "+12125551234"
+      # Typed reference: sender's WhatsApp account (incoming messages only)
       from:
-        person:
-          phone: 'if (.is_outgoing != true and ._sender_handle != null and (._sender_handle | type == "string") and (._sender_handle | endswith("@s.whatsapp.net"))) then (._sender_handle | split("@") | .[0] | "+" + .) else null end'
-          name: .sender
+        account:
+          id: ._sender_jid
+          platform: '"whatsapp"'
+          handle: 'if (._sender_jid | type == "string" and endswith("@s.whatsapp.net")) then (._sender_jid | split("@") | .[0] | "+" + .) else ._sender_jid end'
+          display_name: ._sender_name
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -108,9 +125,10 @@ transformers:
 
 operations:
   person.list:
-    description: Get all WhatsApp contacts with profile info
+    description: Get WhatsApp contacts, or group participants when conversation_id is provided
     returns: person[]
     params:
+      conversation_id: { type: string, description: "Group conversation ID — returns participants instead of contacts" }
       limit: { type: integer }
     sql:
       attach:
@@ -118,32 +136,48 @@ operations:
       query: |
         SELECT DISTINCT
           -- Identity
-          cs.ZCONTACTJID as jid,
+          COALESCE(cs.ZCONTACTJID, gm.ZMEMBERJID) as jid,
           c.ZPHONENUMBER as phone,
           
-          -- Names (priority: push > contact > partner)
+          -- Names (priority: push > contact > partner > group member)
           pn.ZPUSHNAME as real_name,
           c.ZFULLNAME as contact_name,
-          cs.ZPARTNERNAME as display_name,
+          COALESCE(cs.ZPARTNERNAME, gm.ZCONTACTNAME, gm.ZFIRSTNAME) as display_name,
           
           -- Rich data
           c.ZABOUTTEXT as about,
           c.ZUSERNAME as username,
           pp.ZPATH as profile_photo
           
-        FROM ZWACHATSESSION cs
+        FROM (
+          -- Branch 1: contacts from chat sessions (default)
+          SELECT ZCONTACTJID, ZPARTNERNAME, NULL as ZMEMBERJID, NULL as ZCONTACTNAME, NULL as ZFIRSTNAME
+          FROM ZWACHATSESSION
+          WHERE ZSESSIONTYPE = 0 
+            AND ZREMOVED = 0
+            AND ZCONTACTJID IS NOT NULL
+            AND (:conversation_id IS NULL OR :conversation_id = '')
+          
+          UNION ALL
+          
+          -- Branch 2: group participants (when conversation_id provided)
+          SELECT gm.ZMEMBERJID, NULL, gm.ZMEMBERJID, gm.ZCONTACTNAME, gm.ZFIRSTNAME
+          FROM ZWAGROUPMEMBER gm
+          WHERE gm.ZCHATSESSION = :conversation_id
+            AND :conversation_id IS NOT NULL AND :conversation_id != ''
+        ) combined
+        LEFT JOIN ZWACHATSESSION cs ON combined.ZCONTACTJID = cs.ZCONTACTJID AND cs.ZSESSIONTYPE = 0
+        LEFT JOIN ZWAGROUPMEMBER gm ON combined.ZMEMBERJID = gm.ZMEMBERJID
         LEFT JOIN contacts.ZWAADDRESSBOOKCONTACT c ON (
-          cs.ZCONTACTJID = c.ZWHATSAPPID OR 
-          cs.ZCONTACTJID = c.ZLID
+          COALESCE(combined.ZCONTACTJID, combined.ZMEMBERJID) = c.ZWHATSAPPID OR 
+          COALESCE(combined.ZCONTACTJID, combined.ZMEMBERJID) = c.ZLID
         )
-        LEFT JOIN ZWAPROFILEPUSHNAME pn ON cs.ZCONTACTJID = pn.ZJID
-        LEFT JOIN ZWAPROFILEPICTUREITEM pp ON cs.ZCONTACTJID = pp.ZJID
-        WHERE cs.ZSESSIONTYPE = 0 
-          AND cs.ZREMOVED = 0
-          AND cs.ZCONTACTJID IS NOT NULL
-        ORDER BY cs.ZLASTMESSAGEDATE DESC
+        LEFT JOIN ZWAPROFILEPUSHNAME pn ON COALESCE(combined.ZCONTACTJID, combined.ZMEMBERJID) = pn.ZJID
+        LEFT JOIN ZWAPROFILEPICTUREITEM pp ON COALESCE(combined.ZCONTACTJID, combined.ZMEMBERJID) = pp.ZJID
+        ORDER BY real_name, contact_name, display_name
         LIMIT :limit
       params:
+        conversation_id: '.params.conversation_id // ""'
         limit: '.params.limit // 1000'
       response:
         root: "/"
@@ -193,7 +227,8 @@ operations:
           cs.ZARCHIVED as is_archived,
           datetime(cs.ZLASTMESSAGEDATE + 978307200, 'unixepoch') as updated_at,
           cs.ZCONTACTJID as contact_jid,
-          (SELECT COUNT(*) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = cs.Z_PK) as message_count
+          (SELECT COUNT(*) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = cs.Z_PK) as message_count,
+          (SELECT COUNT(*) FROM ZWAGROUPMEMBER gm WHERE gm.ZCHATSESSION = cs.Z_PK) as participant_count
         FROM ZWACHATSESSION cs
         WHERE cs.Z_PK = :id
       params:
@@ -202,33 +237,50 @@ operations:
         root: "/0"
 
   message.list:
-    description: List messages in a conversation
+    description: List messages in a conversation. Use unread=true without conversation_id to get all unread messages across conversations.
     returns: message[]
     params:
-      conversation_id: { type: string, required: true }
+      conversation_id: { type: string, description: "Conversation ID — numeric (897) or JID (251921615223@s.whatsapp.net). Get from conversation.list." }
+      unread: { type: boolean, description: "When true, returns unread incoming messages (conversation_id optional)" }
       limit: { type: integer }
     sql:
       query: |
         SELECT 
           m.Z_PK as id,
-          :conversation_id as conversation_id,
+          m.ZCHATSESSION as conversation_id,
+          cs.ZPARTNERNAME as conversation_name,
           m.ZTEXT as content,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
             WHEN 1 THEN NULL 
             ELSE m.ZFROMJID 
-          END as sender_handle,
-          m.ZPUSHNAME as sender_name,
+          END as sender_jid,
+          CASE m.ZISFROMME 
+            WHEN 1 THEN NULL 
+            ELSE COALESCE(pn.ZPUSHNAME, cs.ZPARTNERNAME) 
+          END as sender_name,
           datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp,
           m.ZSTARRED as is_starred,
           m.ZPARENTMESSAGE as reply_to_id
         FROM ZWAMESSAGE m
-        WHERE m.ZCHATSESSION = :conversation_id
-          AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
+        JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
+        LEFT JOIN ZWAPROFILEPUSHNAME pn ON m.ZFROMJID = pn.ZJID
+        WHERE m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
+          AND (
+            -- When unread=true: get unread incoming messages (optionally filtered by conversation)
+            (:unread = 1 AND cs.ZUNREADCOUNT > 0 AND m.ZISFROMME = 0
+              AND (:conversation_id IS NULL OR :conversation_id = '' 
+                OR m.ZCHATSESSION = :conversation_id
+                OR cs.ZCONTACTJID = :conversation_id))
+            OR
+            -- When unread is not set: require conversation_id (numeric or JID)
+            (:unread != 1 AND (m.ZCHATSESSION = :conversation_id OR cs.ZCONTACTJID = :conversation_id))
+          )
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT :limit
       params:
-        conversation_id: .params.conversation_id
+        conversation_id: '.params.conversation_id // ""'
+        unread: 'if .params.unread == true then 1 else 0 end'
         limit: '.params.limit // 1000'
       response:
         root: "/"
@@ -243,17 +295,23 @@ operations:
         SELECT 
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
+          cs.ZPARTNERNAME as conversation_name,
           m.ZTEXT as content,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
             WHEN 1 THEN NULL 
             ELSE m.ZFROMJID 
-          END as sender_handle,
-          m.ZPUSHNAME as sender_name,
+          END as sender_jid,
+          CASE m.ZISFROMME 
+            WHEN 1 THEN NULL 
+            ELSE COALESCE(pn.ZPUSHNAME, cs.ZPARTNERNAME) 
+          END as sender_name,
           datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp,
           m.ZSTARRED as is_starred,
           m.ZPARENTMESSAGE as reply_to_id
         FROM ZWAMESSAGE m
+        LEFT JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
+        LEFT JOIN ZWAPROFILEPUSHNAME pn ON m.ZFROMJID = pn.ZJID
         WHERE m.Z_PK = :id
       params:
         id: .params.id
@@ -275,78 +333,23 @@ operations:
           m.ZTEXT as content,
           m.ZISFROMME as is_outgoing,
           CASE m.ZISFROMME 
-            WHEN 1 THEN 'Me' 
-            ELSE COALESCE(m.ZPUSHNAME, m.ZFROMJID) 
+            WHEN 1 THEN NULL 
+            ELSE m.ZFROMJID 
+          END as sender_jid,
+          CASE m.ZISFROMME 
+            WHEN 1 THEN NULL 
+            ELSE COALESCE(pn.ZPUSHNAME, cs.ZPARTNERNAME) 
           END as sender_name,
           datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp
         FROM ZWAMESSAGE m
         LEFT JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
+        LEFT JOIN ZWAPROFILEPUSHNAME pn ON m.ZFROMJID = pn.ZJID
         WHERE m.ZTEXT LIKE '%' || :query || '%'
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT :limit
       params:
         query: .params.query
         limit: '.params.limit // 1000'
-      response:
-        root: "/"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
-# ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
-  get_unread:
-    description: Get all unread messages
-    params:
-      limit: { type: integer }
-    returns:
-      id: string
-      conversation_id: string
-      content: string
-      sender_name: string
-      timestamp: string
-    sql:
-      query: |
-        SELECT 
-          m.Z_PK as id,
-          m.ZCHATSESSION as conversation_id,
-          cs.ZPARTNERNAME as conversation_name,
-          m.ZTEXT as content,
-          COALESCE(m.ZPUSHNAME, m.ZFROMJID) as sender_name,
-          datetime(m.ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp
-        FROM ZWAMESSAGE m
-        JOIN ZWACHATSESSION cs ON m.ZCHATSESSION = cs.Z_PK
-        WHERE cs.ZUNREADCOUNT > 0
-          AND m.ZISFROMME = 0
-          AND m.ZTEXT IS NOT NULL AND m.ZTEXT != ''
-        ORDER BY m.ZMESSAGEDATE DESC
-        LIMIT :limit
-      params:
-        limit: '.params.limit // 1000'
-      response:
-        root: "/"
-
-  get_participants:
-    description: Get participants in a group conversation
-    params:
-      conversation_id: { type: string, required: true }
-    returns:
-      id: string
-      handle: string
-      name: string
-      is_admin: boolean
-    sql:
-      query: |
-        SELECT 
-          gm.Z_PK as id,
-          gm.ZMEMBERJID as handle,
-          COALESCE(gm.ZCONTACTNAME, gm.ZFIRSTNAME, gm.ZMEMBERJID) as name,
-          gm.ZISADMIN as is_admin,
-          gm.ZISACTIVE as is_active
-        FROM ZWAGROUPMEMBER gm
-        WHERE gm.ZCHATSESSION = :conversation_id
-      params:
-        conversation_id: .params.conversation_id
       response:
         root: "/"
 
@@ -358,53 +361,39 @@ Read WhatsApp messages from the local macOS database. Read-only access to messag
 
 ## Requirements
 
-- **macOS only** - Reads from local WhatsApp database
-- **WhatsApp desktop app** - Must be installed and logged in
+- **macOS only** — Reads from local WhatsApp database
+- **WhatsApp desktop app** — Must be installed and logged in
 
-## Database Structure
+## Conversation IDs
 
-### Key Tables
+Conversations use numeric IDs (SQLite primary keys like `880`, `899`). Always use the `id` returned by `conversation.list` — these are **not** JIDs.
 
-| Table | Description |
-|-------|-------------|
-| `ZWACHATSESSION` | Conversations (chats and groups) |
-| `ZWAMESSAGE` | Individual messages |
-| `ZWAGROUPMEMBER` | Group participants |
-| `ZWAGROUPINFO` | Group metadata |
-| `ZWAMEDIAITEM` | Media attachments |
+## Common Tasks
 
-### Session Types
+- **Get unread messages:** `message.list` with `unread: true` (no conversation_id needed)
+- **Get group participants:** `person.list` with `conversation_id` param
+- **Search messages:** `message.search` with `query` param
 
-| Value | Type |
-|-------|------|
-| 0 | Direct message (1:1) |
-| 1 | Group chat |
-| 3 | Broadcast/Status |
+## Contact Identifiers
 
-### Date Conversion
+WhatsApp uses two identifier formats:
+- **JID:** `12125551234@s.whatsapp.net` (phone-based, used for DMs)
+- **LID:** `opaque_id@lid` (server-assigned, newer format)
 
-WhatsApp uses seconds since macOS epoch (2001-01-01):
+The `person.list` operation resolves both formats to phone numbers when available via the contacts database.
 
-```sql
-datetime(ZMESSAGEDATE + 978307200, 'unixepoch') as timestamp
-```
+## Entity Model
 
-### JID Format
+- **person** — the human, with phone number and name from contacts
+- **account** — their WhatsApp identity (JID/LID), linked to person via `claim` relationship
+- **conversation** — a chat thread, with `participant` → account reference for the DM partner
+- **message** — a text message, with `from` → account reference for the sender
 
-- DM: `12125551234@s.whatsapp.net`
-- Group: `1234567890-1602721391@g.us`
-
-## Features
-
-- List all conversations
-- Get messages from a specific conversation
-- Search across all messages
-- Get group participants
-- Read-only access (no sending)
+This means: person → claims → account → sends → message. Traverse the graph to connect messages to people.
 
 ## Notes
 
-- `ZISFROMME = 1` indicates outgoing messages
-- `ZFROMJID` contains sender JID for incoming group messages
-- `ZPUSHNAME` contains sender's display name
-- Media messages may have NULL text content
+- `is_outgoing: true` indicates messages you sent
+- Incoming messages include a `from` account reference for the sender's WhatsApp identity
+- Media-only messages (images, voice notes) without text are excluded from message queries
+- All timestamps are ISO 8601 format

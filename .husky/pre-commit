@@ -1,52 +1,46 @@
-# Pre-commit: Fast structural validation (~1s), scoped to staged files only
+# Pre-commit: structural YAML validation + security checks, scoped to staged skills
 #
 # Checks (blocking):
-# - Schema validation — is the YAML structurally valid?
+# - Structural validation — is the YAML frontmatter valid?
 # - Security checks — no credential exposure patterns
 #
-# NOT checked here (belong in `npm run validate` / CI / pre-push):
-# - Test coverage (are all operations tested?)
-# - Test linting (do test files follow patterns?)
-# - Entity references (do operations return known entities?)
-# - Pattern validation (typed references, best practices)
+# NOT checked here (belong in `npm run validate` / CI):
+# - Entity references, test coverage, mapping validation, patterns
 
-STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^skills/[^/]+/readme\.md$' || true)
+# Detect which skills were touched (any file under skills/X/)
+SKILLS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^skills/[^/]+/' | cut -d/ -f2 | sort -u | tr '\n' ' ')
 
 # Nothing to check
-if [ -z "$STAGED_READMES" ]; then
+if [ -z "$SKILLS" ]; then
   exit 0
 fi
 
 ERRORS=0
-APPS=$(echo "$STAGED_READMES" | sed 's|skills/||' | sed 's|/readme.md||' | tr '\n' ' ')
 
-# === Schema Validation ===
-echo "📋 Schema validation..."
-node tests/skills/scripts/validate.mjs $APPS --no-move --no-coverage --no-refs || ERRORS=$((ERRORS + 1))
-echo ""
+# === Structural Validation ===
+node tests/skills/scripts/validate.mjs --pre-commit $SKILLS || ERRORS=$((ERRORS + 1))
 
 # === Security Checks ===
-echo "🔒 Security checks..."
+STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^skills/[^/]+/readme\.md$' || true)
 
-if echo "$STAGED_READMES" | xargs grep -l '\$AUTH_TOKEN\|\${AUTH_TOKEN}' 2>/dev/null; then
-  echo "❌ BLOCKED: \$AUTH_TOKEN found - use rest: or graphql: blocks instead"
-  ERRORS=$((ERRORS + 1))
+if [ -n "$STAGED_READMES" ]; then
+  if echo "$STAGED_READMES" | xargs grep -l '\$AUTH_TOKEN\|\${AUTH_TOKEN}' 2>/dev/null; then
+    echo "❌ \$AUTH_TOKEN found — use rest: or graphql: blocks instead"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  if echo "$STAGED_READMES" | xargs grep -l 'curl.*[Aa]uthorization\|wget' 2>/dev/null; then
+    echo "❌ curl/wget with auth — use AgentOS executors (rest:, graphql:, sql:)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
+  if echo "$STAGED_READMES" | xargs grep -l 'Bearer \$' 2>/dev/null; then
+    echo "❌ Bearer token interpolation — AgentOS handles auth automatically"
+    ERRORS=$((ERRORS + 1))
+  fi
 fi
 
-if echo "$STAGED_READMES" | xargs grep -l 'curl.*[Aa]uthorization\|wget' 2>/dev/null; then
-  echo "❌ BLOCKED: curl/wget with auth - use AgentOS executors (rest:, graphql:, sql:)"
-  ERRORS=$((ERRORS + 1))
-fi
-
-if echo "$STAGED_READMES" | xargs grep -l 'Bearer \$' 2>/dev/null; then
-  echo "❌ BLOCKED: Bearer token interpolation - AgentOS handles auth automatically"
-  ERRORS=$((ERRORS + 1))
-fi
-echo ""
-
-if [ $ERRORS -eq 0 ]; then
-  echo "✅ All checks passed"
-else
+if [ $ERRORS -gt 0 ]; then
   echo "❌ Fix $ERRORS error(s) before committing"
   exit 1
 fi

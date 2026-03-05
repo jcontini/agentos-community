@@ -1,5 +1,5 @@
 /**
- * WhatsApp Adapter Tests
+ * WhatsApp Skill Tests
  * 
  * Read-only tests against the local WhatsApp database.
  * Requires WhatsApp desktop app installed and logged in.
@@ -10,7 +10,7 @@ import { aos } from '@test/fixtures';
 
 const adapter = 'whatsapp';
 
-describe('WhatsApp Adapter', () => {
+describe('WhatsApp Skill', () => {
   describe('person.list', () => {
     it('returns contacts with person schema fields', async () => {
       const people = await aos().call('UseAdapter', {
@@ -29,16 +29,47 @@ describe('WhatsApp Adapter', () => {
         expect(person.name).toBeDefined();
         expect(person.adapter).toBe(adapter);
         
-        // Phone should be E.164 format (starts with +)
+        // Phone should be E.164 format (starts with +) when available
         if (person.phone) {
           expect(person.phone).toMatch(/^\+/);
         }
       }
     });
+
+    it('returns group participants when conversation_id is provided', async () => {
+      // Find a group conversation
+      const conversations = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'conversation.list',
+        params: { limit: 50 }
+      });
+
+      const group = conversations.find((c: any) => c.is_group === true || c.is_group === 1);
+
+      if (!group) {
+        console.log('  Skipping: no group conversations');
+        return;
+      }
+
+      const participants = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'person.list',
+        params: { conversation_id: String(group.id), limit: 50 }
+      });
+
+      expect(Array.isArray(participants)).toBe(true);
+      
+      if (participants.length > 0) {
+        const person = participants[0];
+        expect(person.id).toBeDefined();
+        expect(person.name).toBeDefined();
+        expect(person.adapter).toBe(adapter);
+      }
+    });
   });
 
   describe('conversation.list', () => {
-    it('returns conversations', async () => {
+    it('returns conversations with numeric IDs', async () => {
       const conversations = await aos().call('UseAdapter', {
         adapter,
         tool: 'conversation.list',
@@ -52,6 +83,8 @@ describe('WhatsApp Adapter', () => {
         expect(convo.id).toBeDefined();
         expect(convo.name).toBeDefined();
         expect(convo.adapter).toBe(adapter);
+        // IDs should be numeric (Z_PK)
+        expect(typeof convo.id).toBe('number');
       }
     });
   });
@@ -73,7 +106,7 @@ describe('WhatsApp Adapter', () => {
       const convo = await aos().call('UseAdapter', {
         adapter,
         tool: 'conversation.get',
-        params: { id: conversations[0].id }
+        params: { id: String(conversations[0].id) }
       });
 
       expect(convo.id).toBe(conversations[0].id);
@@ -98,7 +131,7 @@ describe('WhatsApp Adapter', () => {
       const messages = await aos().call('UseAdapter', {
         adapter,
         tool: 'message.list',
-        params: { conversation_id: conversations[0].id, limit: 10 }
+        params: { conversation_id: String(conversations[0].id), limit: 10 }
       });
 
       expect(Array.isArray(messages)).toBe(true);
@@ -107,6 +140,27 @@ describe('WhatsApp Adapter', () => {
         const msg = messages[0];
         expect(msg.id).toBeDefined();
         expect(msg.conversation_id).toBeDefined();
+        expect(msg.content).toBeDefined();
+        expect(msg.timestamp).toBeDefined();
+        expect(msg.adapter).toBe(adapter);
+      }
+    });
+
+    it('returns unread messages when unread=true', async () => {
+      const messages = await aos().call('UseAdapter', {
+        adapter,
+        tool: 'message.list',
+        params: { unread: true, limit: 10 }
+      });
+
+      expect(Array.isArray(messages)).toBe(true);
+      // May have no unread messages, just checking it returns message entities
+      
+      if (messages.length > 0) {
+        const msg = messages[0];
+        expect(msg.id).toBeDefined();
+        expect(msg.conversation_id).toBeDefined();
+        expect(msg.content).toBeDefined();
         expect(msg.adapter).toBe(adapter);
       }
     });
@@ -129,7 +183,7 @@ describe('WhatsApp Adapter', () => {
       const messages = await aos().call('UseAdapter', {
         adapter,
         tool: 'message.list',
-        params: { conversation_id: conversations[0].id, limit: 1 }
+        params: { conversation_id: String(conversations[0].id), limit: 1 }
       });
 
       if (messages.length === 0) {
@@ -140,7 +194,7 @@ describe('WhatsApp Adapter', () => {
       const msg = await aos().call('UseAdapter', {
         adapter,
         tool: 'message.get',
-        params: { id: messages[0].id }
+        params: { id: String(messages[0].id) }
       });
 
       expect(msg.id).toBe(messages[0].id);
@@ -157,45 +211,6 @@ describe('WhatsApp Adapter', () => {
 
       expect(Array.isArray(messages)).toBe(true);
       // May or may not find results, just checking it doesn't error
-    });
-  });
-
-  describe('get_unread', () => {
-    it('returns unread messages', async () => {
-      const messages = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'get_unread',
-        params: { limit: 10 }
-      });
-
-      expect(Array.isArray(messages)).toBe(true);
-      // May have no unread messages, just checking it works
-    });
-  });
-
-  describe('get_participants', () => {
-    it('returns participants for a group', async () => {
-      // Find a group conversation
-      const conversations = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'conversation.list',
-        params: { limit: 50 }
-      });
-
-      const group = conversations.find((c: any) => c.is_group === true || c.is_group === 1);
-
-      if (!group) {
-        console.log('  Skipping: no group conversations');
-        return;
-      }
-
-      const participants = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'get_participants',
-        params: { conversation_id: group.id }
-      });
-
-      expect(Array.isArray(participants)).toBe(true);
     });
   });
 });
