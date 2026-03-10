@@ -86,9 +86,9 @@
     },
     "utilities": {
       "type": "object",
-      "description": "Helper operations that return custom shapes (not entities). Naming: verb_noun",
+      "description": "Helper operations that return custom shapes (not entities). Naming: verb_noun or entity.verb for credential providers",
       "propertyNames": {
-        "pattern": "^[a-z_]+$"
+        "pattern": "^[a-z_]+(\\.[a-z_]+)?$"
       },
       "additionalProperties": {
         "$ref": "#/definitions/utility"
@@ -193,6 +193,34 @@
         }
       },
       "additionalProperties": false
+    },
+    "provides": {
+      "type": "array",
+      "description": "Credential provisions — declares that this skill can supply OAuth tokens sourced from local apps (keychain, SQLite, etc.). Consumer skills declare auth.oauth.service and the resolver matchmakes.",
+      "items": {
+        "type": "object",
+        "required": ["service"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service identifier (e.g., 'google', 'github', 'slack')"
+          },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "OAuth scopes this provider can supply"
+          },
+          "via": {
+            "type": "string",
+            "description": "Utility operation to call to get credentials (default: 'credential_get')"
+          },
+          "account_param": {
+            "type": "string",
+            "description": "Parameter name for passing the account (default: 'account')"
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "credits": {
       "type": "array",
@@ -506,26 +534,29 @@
         },
         "oauth": {
           "type": "object",
-          "description": "OAuth 2.0 Authorization Code flow. Server handles redirect, callback, token exchange, storage, and automatic refresh.",
-          "required": ["client_id", "client_secret", "auth_url", "token_url"],
+          "description": "OAuth 2.0 Authorization Code flow. When 'service' is set, auth is sourced from an installed provider skill (e.g., Mimestream for Google) — no client_id or secrets needed. For standalone OAuth, provide client_id, client_secret, auth_url, token_url.",
           "properties": {
+            "service": {
+              "type": "string",
+              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds an installed skill with a matching provides: entry and calls its credential_get utility. client_id, client_secret, auth_url, token_url are not needed."
+            },
             "client_id": {
               "type": "string",
-              "description": "OAuth client ID"
+              "description": "OAuth client ID (not needed when using service matchmaking)"
             },
             "client_secret": {
               "type": "string",
-              "description": "OAuth client secret (for installed/desktop apps, this is shipped with the app)"
+              "description": "OAuth client secret (not needed when using service matchmaking)"
             },
             "auth_url": {
               "type": "string",
               "format": "uri",
-              "description": "Authorization endpoint URL"
+              "description": "Authorization endpoint URL (not needed when using service matchmaking)"
             },
             "token_url": {
               "type": "string",
               "format": "uri",
-              "description": "Token exchange endpoint URL"
+              "description": "Token exchange endpoint URL (not needed when using service matchmaking)"
             },
             "scopes": {
               "type": "array",
@@ -776,6 +807,26 @@
         }
       }
     },
+    "plistExecutor": {
+      "type": "object",
+      "description": "Parse NSKeyedArchiver binary plists and extract fields by $objects index. Input is a hex string from a keychain step.",
+      "required": ["input", "extract"],
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "Hex-encoded binary plist (template-interpolated, typically {{step_id.value}} from a keychain step)"
+        },
+        "extract": {
+          "type": "object",
+          "description": "Fields to extract: map of output key name → $objects array index",
+          "additionalProperties": { "type": "integer" }
+        },
+        "response": {
+          "$ref": "#/definitions/responseMapping"
+        }
+      },
+      "additionalProperties": false
+    },
     "cryptoExecutor": {
       "type": "object",
       "description": "Cryptographic primitives: PBKDF2 key derivation or AES-128-CBC decryption",
@@ -851,6 +902,9 @@
         },
         "keychain": {
           "$ref": "#/definitions/keychainExecutor"
+        },
+        "plist": {
+          "$ref": "#/definitions/plistExecutor"
         },
         "crypto": {
           "$ref": "#/definitions/cryptoExecutor"

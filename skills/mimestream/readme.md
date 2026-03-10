@@ -12,6 +12,23 @@ auth: none
 platforms: [macos]
 connects_to: mimestream
 
+# Mimestream stores Google OAuth tokens in the macOS Keychain under
+# "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.
+# These tokens have full Google scopes (Gmail, Contacts, Calendar).
+# Any skill that needs Google OAuth can use Mimestream as an auth source.
+provides:
+  - service: google
+    scopes:
+      - https://mail.google.com/
+      - https://www.googleapis.com/auth/contacts
+      - https://www.googleapis.com/auth/contacts.other.readonly
+      - https://www.googleapis.com/auth/calendar.events
+      - https://www.googleapis.com/auth/directory.readonly
+      - https://www.googleapis.com/auth/gmail.settings.basic
+      - https://www.googleapis.com/auth/userinfo.profile
+    via: credential_get
+    account_param: account
+
 seed:
   - id: mimestream
     types: [software]
@@ -410,6 +427,55 @@ utilities:
           ZCOLOR as color
         FROM ZACCOUNT
         ORDER BY ZDISPLAYORDER
+
+  credential_get:
+    description: |
+      Get a live Google OAuth access token sourced from Mimestream's keychain.
+      Returns access_token, refresh_token, client_id, and token_url.
+      Used by consumer skills (gmail, google-calendar, etc.) as an auth source.
+    params:
+      account: { type: string, required: true, description: "Email address (e.g. 'user@example.com' or 'user@example.com')" }
+    returns:
+      access_token: string
+      refresh_token: string
+      client_id: string
+      token_url: string
+    steps:
+      steps:
+        # Step 1: Read the NSKeyedArchiver binary plist from the macOS Keychain.
+        # The keychain entry is stored as a hex string by the `security` CLI.
+        - id: raw
+          keychain:
+            service: "Mimestream: {{account}}"
+            account: "OAuth"
+
+        # Step 2: Decode the hex → binary plist → extract token fields by $objects index.
+        # These indices are stable across Mimestream versions (verified on both accounts).
+        - id: fields
+          plist:
+            input: "{{raw.value}}"
+            extract:
+              refresh_token: 32   # Google refresh token (1//01...)
+              client_id: 13       # OAuth client ID (1064022...apps.googleusercontent.com)
+              token_url: 10       # Token endpoint (https://www.googleapis.com/oauth2/v4/token)
+
+        # Step 3: Exchange the refresh token for a live access token.
+        - id: token_response
+          rest:
+            url: "{{fields.token_url}}"
+            method: POST
+            headers:
+              Content-Type: application/x-www-form-urlencoded
+            body: "grant_type=refresh_token&refresh_token={{fields.refresh_token}}&client_id={{fields.client_id}}"
+
+      response:
+        transform: |
+          {
+            access_token: .token_response.access_token,
+            refresh_token: .fields.refresh_token,
+            client_id: .fields.client_id,
+            token_url: .fields.token_url
+          }
 
   list_mailboxes:
     description: List mailboxes/labels for an account

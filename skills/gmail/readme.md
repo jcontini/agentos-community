@@ -1,0 +1,224 @@
+---
+id: gmail
+name: Gmail
+description: Read and search Gmail via the Gmail REST API. Auth sourced from Mimestream (no OAuth setup needed if Mimestream is installed).
+color: "#EA4335"
+
+website: https://mail.google.com
+privacy_url: https://policies.google.com/privacy
+
+# No client_id or client_secret needed — auth is sourced from Mimestream's keychain.
+# The system finds Mimestream's `provides: [{ service: google }]` declaration and
+# calls its `credential.get` utility to get a live access token automatically.
+auth:
+  oauth:
+    service: google
+    scopes:
+      - https://mail.google.com/
+
+api:
+  base_url: https://gmail.googleapis.com/gmail/v1/users/me
+
+seed:
+  - id: gmail
+    types: [software]
+    name: Gmail
+    data:
+      software_type: web_app
+      url: https://mail.google.com
+      launched: "2004"
+      pricing: free
+    relationships:
+      - role: offered_by
+        to: google
+
+instructions: |
+  Gmail skill — reads email via the Gmail REST API. Auth comes from Mimestream automatically.
+
+  Account param maps to the Gmail address:
+  - "user@example.com" — personal Gmail
+  - "user@example.com" — Adavia business Gmail
+  Call list_accounts (from the mimestream skill) to see configured accounts.
+
+  Key concepts:
+  - Messages have IDs (hex strings like "19cd96cdb6276b79") and thread IDs
+  - message.list returns metadata only; use message.get for full body
+  - message.search uses Gmail query syntax: "from:joe@example.com", "subject:invoice", "after:2026/01/01"
+  - Labels: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, UNREAD (system labels are uppercase)
+  - message.list with label_ids: [UNREAD, INBOX] for unread inbox messages
+
+# ==============================================================================
+# TRANSFORMERS
+# ==============================================================================
+
+transformers:
+  email:
+    terminology: Email
+    mapping:
+      id: .id
+      subject: '.payload.headers | map(select(.name == "Subject")) | .[0].value // "(no subject)"'
+      snippet: .snippet
+      from_address: '.payload.headers | map(select(.name == "From")) | .[0].value // ""'
+      timestamp: '.internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")'
+      is_starred: '.labelIds | contains(["STARRED"])'
+      is_unread: '.labelIds | contains(["UNREAD"])'
+      is_draft: '.labelIds | contains(["DRAFT"])'
+      message_id: '.payload.headers | map(select(.name == "Message-ID")) | .[0].value // ""'
+      conversation_id: .threadId
+      content: '.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | .[0].body.data // "" | @base64d'
+      data.label_ids: .labelIds
+      data.size_estimate: .sizeEstimate
+      data.history_id: .historyId
+
+# ==============================================================================
+# OPERATIONS
+# ==============================================================================
+
+operations:
+  email.list:
+    description: List emails, optionally filtered by label, search query, or account
+    returns: email[]
+    params:
+      account: { type: string, description: "Gmail address (e.g. 'user@example.com')" }
+      label_ids: { type: array, description: "Filter by label IDs (e.g. ['INBOX', 'UNREAD'])" }
+      query: { type: string, description: "Gmail search query (e.g. 'from:boss@company.com is:unread')" }
+      limit: { type: integer, description: "Max results (default: 20)" }
+      page_token: { type: string, description: "Token for next page of results" }
+    rest:
+      url: "{{base_url}}/messages"
+      method: GET
+      params:
+        maxResults: "{{params.limit || 20}}"
+        q: "{{params.query}}"
+        pageToken: "{{params.page_token}}"
+        labelIds: "{{params.label_ids}}"
+      response:
+        transform: ".messages // []"
+
+  email.get:
+    description: Get a specific email with full body content and headers
+    returns: email
+    params:
+      id: { type: string, required: true, description: "Message ID from email.list" }
+      account: { type: string, description: "Gmail address" }
+    rest:
+      url: "{{base_url}}/messages/{{params.id}}"
+      method: GET
+      params:
+        format: full
+
+  email.search:
+    description: Search emails using Gmail query syntax
+    returns: email[]
+    params:
+      query: { type: string, required: true, description: "Gmail search syntax: 'from:x@y.com', 'subject:invoice', 'after:2026/01/01', 'is:unread'" }
+      account: { type: string, description: "Gmail address" }
+      limit: { type: integer, description: "Max results (default: 20)" }
+    rest:
+      url: "{{base_url}}/messages"
+      method: GET
+      params:
+        q: "{{params.query}}"
+        maxResults: "{{params.limit || 20}}"
+      response:
+        transform: ".messages // []"
+
+  email.send:
+    description: Send an email
+    returns: email
+    params:
+      account: { type: string, description: "Gmail address to send from" }
+      to: { type: string, required: true, description: "Recipient email address" }
+      subject: { type: string, required: true, description: "Email subject" }
+      body: { type: string, required: true, description: "Email body (plain text)" }
+      cc: { type: string, description: "CC recipients (comma-separated)" }
+    rest:
+      url: "{{base_url}}/messages/send"
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "raw": "{{[\"To: \", params.to, \"\\r\\nSubject: \", params.subject, \"\\r\\nContent-Type: text/plain\\r\\n\\r\\n\", params.body] | join(\"\") | @base64}}"
+        }
+
+# ==============================================================================
+# UTILITIES
+# ==============================================================================
+
+utilities:
+  get_profile:
+    description: Get Gmail account profile (email address, message count, history ID)
+    params:
+      account: { type: string, description: "Gmail address" }
+    returns:
+      emailAddress: string
+      messagesTotal: integer
+      threadsTotal: integer
+      historyId: string
+    rest:
+      url: "{{base_url}}/profile"
+      method: GET
+
+  list_labels:
+    description: List all Gmail labels (system labels and user-created labels)
+    params:
+      account: { type: string, description: "Gmail address" }
+    returns:
+      id: string
+      name: string
+      type: string
+    rest:
+      url: "{{base_url}}/labels"
+      method: GET
+      response:
+        transform: ".labels // []"
+
+
+---
+
+# Gmail
+
+Read, search, and send email via the [Gmail REST API](https://developers.google.com/gmail/api).
+
+## Auth — No Setup Required (with Mimestream)
+
+If [Mimestream](https://mimestream.com/) is installed, this skill automatically borrows its Google OAuth tokens from the macOS Keychain. No OAuth app registration, no API keys to enter.
+
+How it works:
+1. Mimestream stores Google OAuth tokens in the Keychain under `"Mimestream: {email}"` / `"OAuth"`
+2. The `mimestream` skill reads those tokens via its `credential.get` utility
+3. This skill declares `auth: { oauth: { service: google } }`
+4. The resolver matches the provider → calls `credential.get` → injects `Authorization: Bearer {token}`
+
+**Without Mimestream:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
+
+## Capabilities
+
+```
+OPERATION          DESCRIPTION
+─────────────────  ───────────────────────────────────────────────
+email.list         List emails with label/query filters
+email.get          Full email with body, headers, attachments list
+email.search       Search with Gmail query syntax
+email.send         Send an email
+get_profile        Account info (email, total messages)
+list_labels        All labels (INBOX, SENT, custom labels)
+```
+
+## Gmail Query Syntax
+
+```
+is:unread                     Unread messages
+from:boss@company.com         From a specific sender
+subject:invoice               Subject contains "invoice"
+after:2026/01/01              Messages after a date
+before:2026/02/01             Messages before a date
+has:attachment                Messages with attachments
+label:INBOX is:unread         Unread inbox messages
+```
+
+## Accounts
+
+Each Gmail address is a separate account. Pass `account: "user@example.com"` to
+target a specific address. Without `account`, defaults to the first configured account.
