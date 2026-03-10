@@ -478,6 +478,7 @@ utilities:
         transform: |
           {
             access_token: .token_response.access_token,
+            expires_in: .token_response.expires_in,
             refresh_token: .fields.refresh_token,
             client_id: .fields.client_id,
             token_url: .fields.token_url
