@@ -443,17 +443,21 @@ utilities:
     steps:
       steps:
         # Step 1: Read the NSKeyedArchiver binary plist from the macOS Keychain.
-        # The keychain entry is stored as a hex string by the `security` CLI.
+        # The `security` CLI returns the value as a hex string (-x flag).
+        # We use a command here because the keyring crate returns raw bytes
+        # (which fail UTF-8 decode), while `security -x` gives us the hex we need.
         - id: raw
-          keychain:
-            service: "Mimestream: {{account}}"
-            account: "OAuth"
+          command:
+            binary: bash
+            args:
+              - "-c"
+              - "security find-generic-password -s 'Mimestream: {{params.account}}' -a 'OAuth' -w 2>/dev/null | tr -d '\\n'"
 
         # Step 2: Decode the hex → binary plist → extract token fields by $objects index.
         # These indices are stable across Mimestream versions (verified on both accounts).
         - id: fields
           plist:
-            input: "{{raw.value}}"
+            input: "{{params.raw}}"
             extract:
               refresh_token: 32   # Google refresh token (1//01...)
               client_id: 13       # OAuth client ID (1064022...apps.googleusercontent.com)
@@ -462,11 +466,13 @@ utilities:
         # Step 3: Exchange the refresh token for a live access token.
         - id: token_response
           rest:
-            url: "{{fields.token_url}}"
+            url: "{{params.fields.token_url}}"
             method: POST
-            headers:
-              Content-Type: application/x-www-form-urlencoded
-            body: "grant_type=refresh_token&refresh_token={{fields.refresh_token}}&client_id={{fields.client_id}}"
+            encoding: form
+            body:
+              grant_type: refresh_token
+              refresh_token: "{{params.fields.refresh_token}}"
+              client_id: "{{params.fields.client_id}}"
 
       response:
         transform: |

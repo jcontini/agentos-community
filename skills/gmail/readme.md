@@ -56,17 +56,17 @@ transformers:
     terminology: Email
     mapping:
       id: .id
-      subject: '.payload.headers | map(select(.name == "Subject")) | .[0].value // "(no subject)"'
-      snippet: .snippet
-      from_address: '.payload.headers | map(select(.name == "From")) | .[0].value // ""'
-      timestamp: '.internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")'
-      is_starred: '.labelIds | contains(["STARRED"])'
-      is_unread: '.labelIds | contains(["UNREAD"])'
-      is_draft: '.labelIds | contains(["DRAFT"])'
-      message_id: '.payload.headers | map(select(.name == "Message-ID")) | .[0].value // ""'
-      conversation_id: .threadId
-      content: '.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | .[0].body.data // "" | @base64d'
-      data.label_ids: .labelIds
+      subject: 'if .payload then .payload.headers | map(select(.name == "Subject")) | .[0].value // "(no subject)" else "(no subject)" end'
+      snippet: '.snippet // ""'
+      from_address: 'if .payload then .payload.headers | map(select(.name == "From")) | .[0].value // "" else "" end'
+      timestamp: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
+      is_starred: 'if .labelIds then .labelIds | contains(["STARRED"]) else false end'
+      is_unread: 'if .labelIds then .labelIds | contains(["UNREAD"]) else false end'
+      is_draft: 'if .labelIds then .labelIds | contains(["DRAFT"]) else false end'
+      message_id: 'if .payload then .payload.headers | map(select(.name == "Message-ID")) | .[0].value // "" else "" end'
+      conversation_id: '.threadId // ""'
+      content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | @base64d else "" end) else "" end'
+      data.label_ids: '.labelIds // []'
       data.size_estimate: .sizeEstimate
       data.history_id: .historyId
 
@@ -85,13 +85,13 @@ operations:
       limit: { type: integer, description: "Max results (default: 20)" }
       page_token: { type: string, description: "Token for next page of results" }
     rest:
-      url: "{{base_url}}/messages"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages"
       method: GET
-      params:
-        maxResults: "{{params.limit || 20}}"
-        q: "{{params.query}}"
-        pageToken: "{{params.page_token}}"
-        labelIds: "{{params.label_ids}}"
+      query:
+        maxResults: ".params.limit // 20"
+        q: ".params.query"
+        pageToken: ".params.page_token"
+        labelIds: ".params.label_ids"
       response:
         transform: ".messages // []"
 
@@ -102,9 +102,9 @@ operations:
       id: { type: string, required: true, description: "Message ID from email.list" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: "{{base_url}}/messages/{{params.id}}"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}"
       method: GET
-      params:
+      query:
         format: full
 
   email.search:
@@ -115,11 +115,11 @@ operations:
       account: { type: string, description: "Gmail address" }
       limit: { type: integer, description: "Max results (default: 20)" }
     rest:
-      url: "{{base_url}}/messages"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages"
       method: GET
-      params:
-        q: "{{params.query}}"
-        maxResults: "{{params.limit || 20}}"
+      query:
+        q: ".params.query"
+        maxResults: ".params.limit // 20"
       response:
         transform: ".messages // []"
 
@@ -133,10 +133,8 @@ operations:
       body: { type: string, required: true, description: "Email body (plain text)" }
       cc: { type: string, description: "CC recipients (comma-separated)" }
     rest:
-      url: "{{base_url}}/messages/send"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
       method: POST
-      headers:
-        Content-Type: application/json
       body: |
         {
           "raw": "{{[\"To: \", params.to, \"\\r\\nSubject: \", params.subject, \"\\r\\nContent-Type: text/plain\\r\\n\\r\\n\", params.body] | join(\"\") | @base64}}"
@@ -157,7 +155,7 @@ utilities:
       threadsTotal: integer
       historyId: string
     rest:
-      url: "{{base_url}}/profile"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/profile"
       method: GET
 
   list_labels:
@@ -169,7 +167,7 @@ utilities:
       name: string
       type: string
     rest:
-      url: "{{base_url}}/labels"
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/labels"
       method: GET
       response:
         transform: ".labels // []"
