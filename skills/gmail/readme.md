@@ -6,6 +6,7 @@ color: "#EA4335"
 
 website: https://mail.google.com
 privacy_url: https://policies.google.com/privacy
+connects_to: gmail
 
 # No client_id or client_secret needed — auth is sourced from Mimestream's keychain.
 # The system finds Mimestream's `provides: [{ service: google }]` declaration and
@@ -44,6 +45,9 @@ instructions: |
   - email.search uses Gmail query syntax: "from:sender@example.com", "subject:invoice", "after:2026/01/01"
   - Labels: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, UNREAD (system labels are uppercase)
   - email.list with query: "is:unread label:inbox" for unread inbox messages
+  - conversation.list returns thread stubs; conversation.get returns the full thread with all messages
+  - Every email has a conversation_id (threadId) linking it to its thread
+  - Sender accounts are auto-created as entities when emails are fetched (from: typed reference)
 
 # ==============================================================================
 # TRANSFORMERS
@@ -53,19 +57,45 @@ transformers:
   email:
     terminology: Email
     mapping:
+      # Helper pattern for headers: map+select can return [], so check length before .[0].value
       id: .id
-      subject: 'if .payload then .payload.headers | map(select(.name == "Subject")) | .[0].value // "(no subject)" else "(no subject)" end'
+      subject: 'if .payload then (.payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else "(no subject)" end'
       snippet: '.snippet // ""'
-      from_address: 'if .payload then .payload.headers | map(select(.name == "From")) | .[0].value // "" else "" end'
       timestamp: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
       is_starred: 'if .labelIds then .labelIds | contains(["STARRED"]) else false end'
       is_unread: 'if .labelIds then .labelIds | contains(["UNREAD"]) else false end'
       is_draft: 'if .labelIds then .labelIds | contains(["DRAFT"]) else false end'
-      message_id: 'if .payload then .payload.headers | map(select(.name == "Message-ID")) | .[0].value // "" else "" end'
+      message_id: 'if .payload then (.payload.headers | map(select(.name == "Message-ID")) | if length > 0 then .[0].value else "" end) else "" end'
+      in_reply_to: 'if .payload then (.payload.headers | map(select(.name == "In-Reply-To")) | if length > 0 then .[0].value else null end) else null end'
       conversation_id: '.threadId // ""'
       content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | @base64d else "" end) else "" end'
       data.label_ids: '.labelIds // []'
       data.size_estimate: .sizeEstimate
+      data.history_id: .historyId
+      data.to: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end) else null end'
+      data.cc: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end) else null end'
+      data.bcc: 'if .payload then (.payload.headers | map(select(.name == "Bcc")) | if length > 0 then .[0].value else null end) else null end'
+      data.references: 'if .payload then (.payload.headers | map(select(.name == "References")) | if length > 0 then .[0].value else null end) else null end'
+      data.reply_to: 'if .payload then (.payload.headers | map(select(.name == "Reply-To")) | if length > 0 then .[0].value else null end) else null end'
+      data.delivered_to: 'if .payload then (.payload.headers | map(select(.name == "Delivered-To")) | if length > 0 then .[0].value else null end) else null end'
+
+      # Typed reference: resolve sender as an account entity.
+      # Gmail returns From as a single string: "Display Name <email@example.com>" or just "email@example.com".
+      # Parse name and email with jaq split/trim, then auto-create/dedup account entity linked via send relationship.
+      from:
+        account:
+          handle: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end) else null end'
+          platform: '"email"'
+          display_name: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
+
+  conversation:
+    terminology: Thread
+    mapping:
+      id: .id
+      name: 'if .messages then (.messages | .[0].payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else .snippet // "" end'
+      last_message: '.snippet // ""'
+      last_message_at: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
+      data.message_count: 'if .messages then (.messages | length) else null end'
       data.history_id: .historyId
 
 # ==============================================================================
@@ -120,6 +150,38 @@ operations:
         maxResults: ".params.limit // 20"
       response:
         transform: ".messages // []"
+
+  conversation.list:
+    description: List email threads, optionally filtered by label or search query
+    returns: conversation[]
+    params:
+      account: { type: string, description: "Gmail address — see Configured Accounts in readme" }
+      query: { type: string, description: "Gmail search query (e.g. 'from:boss@company.com is:unread')" }
+      label_ids: { type: array, description: "Filter by label IDs (e.g. ['INBOX'])" }
+      limit: { type: integer, description: "Max results (default: 20)" }
+      page_token: { type: string, description: "Token for next page of results" }
+    rest:
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/threads"
+      method: GET
+      query:
+        maxResults: ".params.limit // 20"
+        q: ".params.query"
+        pageToken: ".params.page_token"
+        labelIds: ".params.label_ids"
+      response:
+        transform: ".threads // []"
+
+  conversation.get:
+    description: Get a full email thread with all messages
+    returns: conversation
+    params:
+      id: { type: string, required: true, description: "Thread ID from conversation.list or email's conversation_id" }
+      account: { type: string, description: "Gmail address" }
+    rest:
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/threads/{{params.id}}"
+      method: GET
+      query:
+        format: full
 
   email.send:
     description: Send an email
@@ -192,14 +254,16 @@ How it works:
 ## Capabilities
 
 ```
-OPERATION          DESCRIPTION
-─────────────────  ───────────────────────────────────────────────
-email.list         List emails with label/query filters
-email.get          Full email with body, headers, attachments list
-email.search       Search with Gmail query syntax
-email.send         Send an email
-get_profile        Account info (email, total messages)
-list_labels        All labels (INBOX, SENT, custom labels)
+OPERATION             DESCRIPTION
+────────────────────  ───────────────────────────────────────────────
+email.list            List emails with label/query filters
+email.get             Full email with body, headers, attachments list
+email.search          Search with Gmail query syntax
+email.send            Send an email
+conversation.list     List email threads with query/label filters
+conversation.get      Full thread with all messages
+get_profile           Account info (email, total messages)
+list_labels           All labels (INBOX, SENT, custom labels)
 ```
 
 ## Gmail Query Syntax
