@@ -39,15 +39,20 @@ instructions: |
   Available accounts are listed in the Configured Accounts section of this readme.
   Pass the email address as the `account` param (e.g. account: "user@example.com").
 
+  IMPORTANT — choosing the right operation:
+  - To browse emails: use conversation.list (returns thread snippets) then conversation.get for full content
+  - To read a specific email: use email.get with the message ID
+  - email.list and email.search return ID stubs ONLY (no subject, no sender, no body) — they are useful
+    for getting message IDs to pass to email.get, but do not contain readable content on their own.
+  - Prefer conversation.list over email.list for browsing — threads have snippets and subjects.
+
   Key concepts:
   - Messages have IDs (hex strings like "19cd96cdb6276b79") and thread IDs
-  - email.list returns stubs (id + threadId only); use email.get for full content
   - email.search uses Gmail query syntax: "from:sender@example.com", "subject:invoice", "after:2026/01/01"
   - Labels: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, UNREAD (system labels are uppercase)
-  - email.list with query: "is:unread label:inbox" for unread inbox messages
-  - conversation.list returns thread stubs; conversation.get returns the full thread with all messages
+  - conversation.get returns the full thread with all messages, headers, and body content
   - Every email has a conversation_id (threadId) linking it to its thread
-  - Sender accounts are auto-created as entities when emails are fetched (from: typed reference)
+  - Sender and recipient accounts are auto-created as entities (from/to/cc/bcc typed references)
 
 # ==============================================================================
 # TRANSFORMERS
@@ -68,25 +73,47 @@ transformers:
       message_id: 'if .payload then (.payload.headers | map(select(.name == "Message-ID")) | if length > 0 then .[0].value else "" end) else "" end'
       in_reply_to: 'if .payload then (.payload.headers | map(select(.name == "In-Reply-To")) | if length > 0 then .[0].value else null end) else null end'
       conversation_id: '.threadId // ""'
-      content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | @base64d else "" end) else "" end'
+      # Gmail uses URL-safe base64 (- instead of +, _ instead of /). Convert before decoding.
+      content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | gsub("-"; "+") | gsub("_"; "/") | @base64d else "" end) else "" end'
       data.label_ids: '.labelIds // []'
       data.size_estimate: .sizeEstimate
       data.history_id: .historyId
-      data.to: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end) else null end'
-      data.cc: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end) else null end'
-      data.bcc: 'if .payload then (.payload.headers | map(select(.name == "Bcc")) | if length > 0 then .[0].value else null end) else null end'
       data.references: 'if .payload then (.payload.headers | map(select(.name == "References")) | if length > 0 then .[0].value else null end) else null end'
       data.reply_to: 'if .payload then (.payload.headers | map(select(.name == "Reply-To")) | if length > 0 then .[0].value else null end) else null end'
       data.delivered_to: 'if .payload then (.payload.headers | map(select(.name == "Delivered-To")) | if length > 0 then .[0].value else null end) else null end'
 
       # Typed reference: resolve sender as an account entity.
-      # Gmail returns From as a single string: "Display Name <email@example.com>" or just "email@example.com".
-      # Parse name and email with jaq split/trim, then auto-create/dedup account entity linked via send relationship.
+      # Gmail returns From as "Display Name <email@example.com>" or just "email@example.com".
+      # Parses name/email with jaq, auto-creates/deduplicates account entity, links via send relationship.
       from:
         account:
           handle: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end) else null end'
           platform: '"email"'
           display_name: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
+
+      # Multi-value typed references: To, Cc, Bcc recipients.
+      # _source splits the header into {email, name} objects per address.
+      # Split on ">, " to avoid breaking names with commas (e.g. "Bernstein, David H.").
+      # Each address becomes an account entity linked to this email.
+      # account[] signals the engine to create one entity per array element.
+      to:
+        account[]:
+          _source: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+          handle: .email
+          platform: '"email"'
+          display_name: .name
+      cc:
+        account[]:
+          _source: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+          handle: .email
+          platform: '"email"'
+          display_name: .name
+      bcc:
+        account[]:
+          _source: 'if .payload then (.payload.headers | map(select(.name == "Bcc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+          handle: .email
+          platform: '"email"'
+          display_name: .name
 
   conversation:
     terminology: Thread
@@ -104,7 +131,7 @@ transformers:
 
 operations:
   email.list:
-    description: List emails, optionally filtered by label, search query, or account
+    description: "List email IDs (stubs only — no subject/body). Use conversation.list to browse with snippets, or email.get for full content."
     returns: email[]
     params:
       account: { type: string, description: "Gmail address — see Configured Accounts in readme" }
@@ -136,7 +163,7 @@ operations:
         format: full
 
   email.search:
-    description: Search emails using Gmail query syntax
+    description: "Search for email IDs using Gmail query syntax (stubs only — use email.get for full content)"
     returns: email[]
     params:
       query: { type: string, required: true, description: "Gmail search syntax: 'from:x@y.com', 'subject:invoice', 'after:2026/01/01', 'is:unread'" }
@@ -256,12 +283,12 @@ How it works:
 ```
 OPERATION             DESCRIPTION
 ────────────────────  ───────────────────────────────────────────────
-email.list            List emails with label/query filters
-email.get             Full email with body, headers, attachments list
-email.search          Search with Gmail query syntax
+conversation.list     List threads with snippets (best for browsing)
+conversation.get      Full thread with all messages and headers
+email.get             Full email with body, headers, recipients
+email.list            Email ID stubs only (use conversation.list to browse)
+email.search          Search for email IDs (use email.get for content)
 email.send            Send an email
-conversation.list     List email threads with query/label filters
-conversation.get      Full thread with all messages
 get_profile           Account info (email, total messages)
 list_labels           All labels (INBOX, SENT, custom labels)
 ```
