@@ -217,6 +217,14 @@
           "account_param": {
             "type": "string",
             "description": "Parameter name for passing the account (default: 'account')"
+          },
+          "accounts_via": {
+            "type": "string",
+            "description": "Utility to call to discover available accounts (e.g., 'list_accounts')"
+          },
+          "account_field": {
+            "type": "string",
+            "description": "Field name in the accounts_via response containing the account identifier (default: 'email')"
           }
         },
         "additionalProperties": false

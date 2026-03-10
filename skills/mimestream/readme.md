@@ -28,6 +28,8 @@ provides:
       - https://www.googleapis.com/auth/userinfo.profile
     via: credential_get
     account_param: account
+    accounts_via: list_accounts
+    account_field: email
 
 seed:
   - id: mimestream
@@ -414,19 +416,22 @@ operations:
 
 utilities:
   list_accounts:
-    description: List configured email accounts
+    description: List configured email accounts with their primary email address
     returns:
       id: integer
+      name: string
       email: string
       color: string
     sql:
       query: |
         SELECT
-          Z_PK as id,
-          ZNAME as email,
-          ZCOLOR as color
-        FROM ZACCOUNT
-        ORDER BY ZDISPLAYORDER
+          a.Z_PK as id,
+          a.ZNAME as name,
+          i.ZADDRESS as email,
+          a.ZCOLOR as color
+        FROM ZACCOUNT a
+        LEFT JOIN ZIDENTITY i ON i.ZACCOUNT = a.Z_PK AND i.ZPRIMARY = 1
+        ORDER BY a.ZDISPLAYORDER
 
   credential_get:
     description: |
