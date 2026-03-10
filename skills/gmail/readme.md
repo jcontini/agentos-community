@@ -33,19 +33,17 @@ seed:
         to: google
 
 instructions: |
-  Gmail skill — reads email via the Gmail REST API. Auth comes from Mimestream automatically.
+  Gmail skill — reads and sends email via the Gmail REST API. Auth is automatic when Mimestream is installed.
 
-  Account param maps to the Gmail address:
-  - "user@example.com" — personal Gmail
-  - "user@example.com" — Adavia business Gmail
-  Call list_accounts (from the mimestream skill) to see configured accounts.
+  Available accounts are listed in the Configured Accounts section of this readme.
+  Pass the email address as the `account` param (e.g. account: "user@example.com").
 
   Key concepts:
   - Messages have IDs (hex strings like "19cd96cdb6276b79") and thread IDs
-  - message.list returns metadata only; use message.get for full body
-  - message.search uses Gmail query syntax: "from:joe@example.com", "subject:invoice", "after:2026/01/01"
+  - email.list returns stubs (id + threadId only); use email.get for full content
+  - email.search uses Gmail query syntax: "from:sender@example.com", "subject:invoice", "after:2026/01/01"
   - Labels: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, UNREAD (system labels are uppercase)
-  - message.list with label_ids: [UNREAD, INBOX] for unread inbox messages
+  - email.list with query: "is:unread label:inbox" for unread inbox messages
 
 # ==============================================================================
 # TRANSFORMERS
@@ -79,7 +77,7 @@ operations:
     description: List emails, optionally filtered by label, search query, or account
     returns: email[]
     params:
-      account: { type: string, description: "Gmail address (e.g. 'user@example.com')" }
+      account: { type: string, description: "Gmail address — see Configured Accounts in readme" }
       label_ids: { type: array, description: "Filter by label IDs (e.g. ['INBOX', 'UNREAD'])" }
       query: { type: string, description: "Gmail search query (e.g. 'from:boss@company.com is:unread')" }
       limit: { type: integer, description: "Max results (default: 20)" }
@@ -219,4 +217,4 @@ label:INBOX is:unread         Unread inbox messages
 ## Accounts
 
 Each Gmail address is a separate account. Pass `account: "user@example.com"` to
-target a specific address. Without `account`, defaults to the first configured account.
+target a specific address. See the **Configured Accounts** section above for available accounts.
