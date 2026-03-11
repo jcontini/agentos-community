@@ -18,42 +18,26 @@ Usage:
   python3 claude-api.py --op conversations [--org ORG_UUID] [--limit 50] [--offset 0]
   python3 claude-api.py --op conversation --id CONV_UUID [--org ORG_UUID]
   python3 claude-api.py --op search --query TEXT [--org ORG_UUID]
+  python3 claude-api.py --op import [--org ORG_UUID] [--limit 5] [--offset 0]
 
-Accounts / Orgs for anthropic@contini.co:
-  c10a8db6-c2ed-4750-95ef-a0367a39362c  anthropic@contini.co's Organization  (chat, claude_pro)
-  6b0831ae-5799-43af-90c2-4dba40206d35  A Third Party                        (api, prepaid)
-
-Notes on the API:
-  GET /api/organizations
-    Returns list of all orgs the user has access to.
-
-  GET /api/organizations/{org_uuid}/chat_conversations?limit=N&offset=N
-    Lists conversations. Default limit 50. Sorted by updated_at desc.
-    Returns: [{uuid, name, updated_at, created_at, ...}]
-
-  GET /api/organizations/{org_uuid}/chat_conversations/{conv_uuid}
-    ?tree=True&rendering_mode=messages&render_all_tools=true
-    Returns full conversation with messages.
-    Message roles: human | assistant
-    Message content: [{type: "text", text: "..."}, {type: "tool_use", ...}]
-
-  There is no server-side search endpoint — search is done client-side by
-  fetching all conversations and filtering by name/content.
+Org discovery:
+  Run --op organizations to list all orgs the user has access to.
+  The org with "chat" in its capabilities is the one with web chat history.
+  If --org is omitted, uses the org_uuid from the saved session.
 """
 
 import argparse
 import json
 import os
 import sys
-import urllib.request
-import urllib.parse
+import httpx
 from pathlib import Path
 
 SESSION_PATH = Path.home() / ".config" / "agentos" / "claude-session.json"
 
 BASE_URL = "https://claude.ai"
 
-# Headers that match what a real Brave browser sends to bypass Cloudflare
+# Headers that match what a real browser sends to bypass Cloudflare
 HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
@@ -74,55 +58,61 @@ def load_session():
     if not SESSION_PATH.exists():
         raise FileNotFoundError(
             f"No session found at {SESSION_PATH}. "
-            "Run the claude skill login utility first."
+            "Run the claude skill login flow first."
         )
     return json.loads(SESSION_PATH.read_text())
 
 
 def make_request(path, session_key, method="GET", body=None):
-    """
-    Make a request to the claude.ai API using urllib (stdlib, no httpx needed).
-    Falls back to httpx if available for better error handling.
+    """Make a request to the claude.ai API using httpx.
 
-    Why urllib and not httpx?
-    - urllib is stdlib — zero dependencies
-    - httpx is better (connection pooling, HTTP/2, cleaner API) but requires install
-    - For a skill that runs in a subprocess, stdlib is more reliable
-
-    If httpx is available, it's used automatically for better performance.
+    httpx is required — urllib gets Cloudflare 403'd on claude.ai.
     """
     url = f"{BASE_URL}{path}"
     headers = dict(HEADERS)
     headers["Cookie"] = f"sessionKey={session_key}"
 
-    try:
-        import httpx
-        with httpx.Client(headers=headers, follow_redirects=True) as client:
-            if method == "GET":
-                resp = client.get(url)
-            else:
-                resp = client.request(method, url, json=body)
-            resp.raise_for_status()
-            return resp.json()
-    except ImportError:
-        pass
-
-    # Fallback: urllib
-    data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body_text = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {e.code} for {url}: {body_text}") from e
+    with httpx.Client(headers=headers, follow_redirects=True) as client:
+        if method == "GET":
+            resp = client.get(url)
+        else:
+            resp = client.request(method, url, json=body)
+        resp.raise_for_status()
+        return resp.json()
 
 
-# ── API operations ────────────────────────────────────────────────────────────
+# -- API operations ------------------------------------------------------------
 
 def get_organizations(session_key):
     """List all organizations the user has access to."""
     return make_request("/api/organizations", session_key)
+
+
+def resolve_org_uuid(session_key, org_uuid=None):
+    """Resolve the org UUID to use.
+
+    Priority: explicit --org > session default > auto-discover chat org from API.
+    """
+    if org_uuid:
+        return org_uuid
+
+    # Try session default
+    session = load_session()
+    saved_org = session.get("org_uuid")
+    if saved_org:
+        return saved_org
+
+    # Auto-discover: find the org with "chat" capability
+    orgs = get_organizations(session_key)
+    for org in orgs:
+        if "chat" in org.get("capabilities", []):
+            return org["uuid"]
+
+    # Fallback to first org
+    if orgs:
+        return orgs[0]["uuid"]
+
+    raise RuntimeError("No organizations found for this account")
 
 
 def get_conversations(session_key, org_uuid, limit=50, offset=0):
@@ -221,7 +211,7 @@ def search_conversations(session_key, org_uuid, query, limit=50):
     return results[:limit]
 
 
-# ── Formatting helpers ────────────────────────────────────────────────────────
+# -- Formatting helpers --------------------------------------------------------
 
 def format_conversation_list(convs, org_uuid):
     """Format conversation list for agentOS transformer consumption."""
@@ -238,21 +228,32 @@ def format_conversation_list(convs, org_uuid):
 
 
 def format_conversation(conv, org_uuid):
-    """Format a full conversation for agentOS transformer consumption."""
+    """Format a full conversation for agentOS transformer consumption.
+
+    Messages are serialized into a readable 'content' field so the
+    conversation transformer can map it — otherwise the messages array
+    gets dropped during transformation.
+    """
     messages = conv.get("chat_messages", [])
     formatted_messages = []
+    content_lines = []
     for msg in messages:
         content_blocks = msg.get("content", [])
         text_parts = [
             b.get("text", "") for b in content_blocks
             if b.get("type") == "text" and b.get("text")
         ]
+        text = "\n".join(text_parts)
+        role = msg.get("sender", "human")
         formatted_messages.append({
-            "role": msg.get("sender"),  # "human" or "assistant"
-            "text": "\n".join(text_parts),
+            "role": role,
+            "text": text,
             "created_at": msg.get("created_at"),
             "uuid": msg.get("uuid"),
         })
+        if text.strip():
+            label = "Human" if role == "human" else "Assistant"
+            content_lines.append(f"**{label}:**\n{text}")
 
     return {
         "uuid": conv.get("uuid"),
@@ -260,58 +261,44 @@ def format_conversation(conv, org_uuid):
         "org_uuid": org_uuid,
         "created_at": conv.get("created_at"),
         "updated_at": conv.get("updated_at"),
+        "content": "\n\n---\n\n".join(content_lines),
         "messages": formatted_messages,
         "message_count": len(formatted_messages),
     }
 
 
-# ── CLI entry point ───────────────────────────────────────────────────────────
+# -- CLI entry point -----------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="claude.ai API client")
     parser.add_argument("--op", required=True,
                         choices=["organizations", "conversations", "conversation", "search", "import"],
                         help="Operation to perform")
-    parser.add_argument("--org", help="Org UUID (default: use saved session org)")
+    parser.add_argument("--org", help="Org UUID (default: auto-resolve from session or API)")
     parser.add_argument("--id", help="Conversation UUID (for conversation op)")
     parser.add_argument("--query", help="Search query (for search op)")
     parser.add_argument("--limit", type=int, default=50, help="Max results")
     parser.add_argument("--offset", type=int, default=0, help="Pagination offset")
-    parser.add_argument("--account", help="Account name: 'personal' (default) or 'third-party'")
     args = parser.parse_args()
 
     session = load_session()
     session_key = session["session_key"]
 
-    # Resolve org UUID: --org takes precedence, then --account name lookup, then session default
-    ACCOUNT_ORGS = {
-        "personal": "c10a8db6-c2ed-4750-95ef-a0367a39362c",
-        "third-party": "6b0831ae-5799-43af-90c2-4dba40206d35",
-    }
-    if args.org:
-        org_uuid = args.org
-    elif args.account and args.account in ACCOUNT_ORGS:
-        org_uuid = ACCOUNT_ORGS[args.account]
-    else:
-        org_uuid = session.get("org_uuid")
-
     if args.op == "organizations":
         orgs = get_organizations(session_key)
         print(json.dumps(orgs))
+        return 0
 
-    elif args.op == "conversations":
-        if not org_uuid:
-            print(json.dumps({"error": "org UUID required"}))
-            return 1
+    # Resolve org UUID for all other operations
+    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None)
+
+    if args.op == "conversations":
         convs = get_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)
         print(json.dumps(format_conversation_list(convs, org_uuid)))
 
     elif args.op == "conversation":
         if not args.id:
             print(json.dumps({"error": "--id required for conversation op"}))
-            return 1
-        if not org_uuid:
-            print(json.dumps({"error": "org UUID required"}))
             return 1
         conv = get_conversation(session_key, org_uuid, args.id)
         print(json.dumps(format_conversation(conv, org_uuid)))
@@ -320,16 +307,10 @@ def main():
         if not args.query:
             print(json.dumps({"error": "--query required for search op"}))
             return 1
-        if not org_uuid:
-            print(json.dumps({"error": "org UUID required"}))
-            return 1
         results = search_conversations(session_key, org_uuid, args.query, limit=args.limit)
         print(json.dumps(format_conversation_list(results, org_uuid)))
 
     elif args.op == "import":
-        if not org_uuid:
-            print(json.dumps({"error": "org UUID required"}))
-            return 1
         rows = import_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)
         print(json.dumps(rows))
 

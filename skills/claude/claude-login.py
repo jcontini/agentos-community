@@ -1,52 +1,47 @@
 #!/usr/bin/env python3
 """
-claude-login.py — Full automated login flow for claude.ai
+claude-login.py — Browser helpers for claude.ai session extraction
 
-Flow:
-  1. Launch Playwright CDP browser (port 9222, must already be running)
-  2. Check if already logged in by hitting /api/organizations
-  3. If not → navigate to /login, fill email, submit
-  4. Poll Gmail (joe@contini.co catch-all) for the magic link email
-  5. Navigate to the magic link
-  6. Wait for redirect to /new (confirms login)
-  7. Extract sessionKey + lastActiveOrg via CDP Network.getAllCookies
-  8. Save to ~/.config/agentos/claude-session.json
-  9. Print JSON to stdout
+This script provides thin CDP (Chrome DevTools Protocol) helpers for:
+  1. Navigating to a magic link URL to complete login
+  2. Extracting the sessionKey HttpOnly cookie from a logged-in browser
+  3. Extracting a magic link URL from raw email content
+
+The agent orchestrates the full login flow — this script handles only the
+mechanical browser parts that require CDP access.
 
 Usage:
-  python3 claude-login.py [--email EMAIL] [--gmail-account GMAIL] [--force]
+  python3 claude-login.py --magic-link URL [--port 9222]    # Navigate + extract
+  python3 claude-login.py --extract-session [--port 9222]   # Just extract cookies
+  python3 claude-login.py --extract-link-from-raw BASE64    # Parse magic link from email
 
 Notes:
-  - joe@contini.co is a catch-all for *@contini.co — Anthropic emails sent to
-    anthropic@contini.co arrive in joe@contini.co inbox.
-  - Gmail search: use `from:noreply after:TODAY` with account joe@contini.co
   - The sessionKey cookie is HttpOnly — it CANNOT be read via JS document.cookie.
-    It must be extracted via CDP Network.getAllCookies (WebSocket to port 9222).
+    It must be extracted via CDP Network.getAllCookies (WebSocket).
   - After login, use claude-api.py (httpx) for all subsequent API calls.
-    DO NOT route API calls through Playwright evaluate — that's only for auth.
+  - Requires a browser running with CDP enabled on the specified port.
 """
 
 import argparse
 import base64
 import json
-import os
 import re
+import subprocess
 import sys
 import time
-import urllib.request
-import urllib.parse
-import email
-import quopri
 from datetime import datetime, timezone
 from pathlib import Path
 
+import httpx
 
-# ── CDP helpers (no external deps) ───────────────────────────────────────────
+
+# -- CDP helpers ---------------------------------------------------------------
 
 def cdp_get_targets(port=9222):
     """Return list of CDP targets from the running browser."""
-    resp = urllib.request.urlopen(f"http://localhost:{port}/json")
-    return json.loads(resp.read())
+    resp = httpx.get(f"http://localhost:{port}/json")
+    resp.raise_for_status()
+    return resp.json()
 
 
 def cdp_find_tab(targets, url_fragment="claude.ai"):
@@ -57,15 +52,55 @@ def cdp_find_tab(targets, url_fragment="claude.ai"):
     return targets[0] if targets else None
 
 
-# We use Node.js for the WebSocket call since Python stdlib has no WS support
-# and we don't want to require external packages.
-_WS_NODE = "/Users/joe/.nvm/versions/node/v20.15.0/lib/node_modules/@playwright/mcp/node_modules/ws"
+def _find_ws_module():
+    """Find the Node.js ws module. Checks common locations."""
+    candidates = [
+        # @playwright/mcp bundles ws
+        Path.home() / ".nvm" / "versions" / "node",
+        Path("/usr/local/lib/node_modules"),
+        Path("/opt/homebrew/lib/node_modules"),
+    ]
+
+    # Search nvm versions
+    nvm_dir = candidates[0]
+    if nvm_dir.exists():
+        for version_dir in sorted(nvm_dir.iterdir(), reverse=True):
+            ws_path = version_dir / "lib" / "node_modules" / "@playwright" / "mcp" / "node_modules" / "ws"
+            if ws_path.exists():
+                return str(ws_path)
+            # Also check global ws install
+            ws_path = version_dir / "lib" / "node_modules" / "ws"
+            if ws_path.exists():
+                return str(ws_path)
+
+    # Check global locations
+    for base in candidates[1:]:
+        for ws_path in [base / "@playwright" / "mcp" / "node_modules" / "ws", base / "ws"]:
+            if ws_path.exists():
+                return str(ws_path)
+
+    # Last resort: let Node resolve it
+    return "ws"
+
+
+_WS_NODE = _find_ws_module()
+
+
+def _run_node(script, timeout=15):
+    """Run a Node.js script and return stdout. Raises on failure."""
+    result = subprocess.run(
+        ["node", "-e", script],
+        capture_output=True, text=True, timeout=timeout
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Node.js failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
 
 def cdp_get_cookies(ws_url, domain_fragments=("claude", "anthropic")):
-    """
-    Extract all cookies from the browser via CDP Network.getAllCookies.
-    Returns list of cookie dicts. Filters to claude/anthropic domains by default.
-    Uses Node.js ws module (comes with @playwright/mcp).
+    """Extract cookies from the browser via CDP Network.getAllCookies.
+
+    Uses Node.js ws module since Python stdlib has no WebSocket support.
     """
     script = f"""
 const WebSocket = require('{_WS_NODE}');
@@ -80,11 +115,7 @@ ws.on('message', (data) => {{
   ws.close();
 }});
 """
-    import subprocess
-    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=10)
-    if result.returncode != 0:
-        raise RuntimeError(f"CDP cookie extraction failed: {result.stderr}")
-    return json.loads(result.stdout.strip())
+    return json.loads(_run_node(script, timeout=10))
 
 
 def cdp_navigate(ws_url, url):
@@ -97,15 +128,11 @@ ws.on('open', () => ws.send(JSON.stringify({{
 }})));
 ws.on('message', () => {{ ws.close(); }});
 """
-    import subprocess
-    subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=10)
+    _run_node(script, timeout=10)
 
 
 def cdp_evaluate(ws_url, expression):
-    """
-    Run JS in the browser tab and return the result.
-    Returns the raw value string.
-    """
+    """Run JS in the browser tab and return the result."""
     script = f"""
 const WebSocket = require('{_WS_NODE}');
 const ws = new WebSocket('{ws_url}');
@@ -120,78 +147,40 @@ ws.on('message', (data) => {{
   ws.close();
 }});
 """
-    import subprocess
-    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=15)
-    if result.returncode != 0:
-        raise RuntimeError(f"CDP evaluate failed: {result.stderr}")
-    return json.loads(result.stdout.strip())
+    return json.loads(_run_node(script, timeout=15))
 
 
-# ── Gmail helpers (via agentOS Gmail skill REST API) ─────────────────────────
+def cdp_get_current_url(ws_url):
+    """Get the current URL of the browser tab."""
+    return cdp_evaluate(ws_url, "window.location.href")
 
-def gmail_search_recent_anthropic(account="joe@contini.co", max_age_minutes=10):
-    """
-    Search Gmail for recent Anthropic magic link emails.
 
-    Key facts:
-    - joe@contini.co is a catch-all for *@contini.co
-    - Anthropic sends magic links from: noreply-*@mail.anthropic.com or support@mail.anthropic.com
-    - Subject: "Secure link to log in to Claude.ai"
-    - The magic link is in the HTML body as href="https://claude.ai/magic-link#..."
-    - Email arrives within ~30 seconds typically
-    - Raw email is base64url-encoded; body is quoted-printable HTML
-    - Use get_raw to get the full RFC 2822 message and extract the href
-
-    Returns the magic link URL string, or None if not found.
-    """
-    # This function is called from within the agentOS skill via command executor.
-    # For standalone use, we call the agentOS HTTP API directly.
-    # In practice, the skill readme documents this flow for the agent.
-    raise NotImplementedError(
-        "Use the agentOS gmail skill: "
-        'email.search(query="from:anthropic after:TODAY", account="joe@contini.co") '
-        "then email.get(id=...) with get_raw to extract the magic link href"
-    )
-
+# -- Magic link extraction from raw email -------------------------------------
 
 def extract_magic_link_from_raw_email(raw_b64):
-    """
-    Extract the claude.ai magic link from a raw RFC 2822 email (base64url-encoded).
+    """Extract the claude.ai magic link from a raw RFC 2822 email (base64url-encoded).
 
     The magic link appears as:
       href=3D"https://claude.ai/magic-link#TOKEN:BASE64EMAIL"
-    (quoted-printable encoded, =3D is =, soft line breaks with =\n)
-
-    Strategy:
-    1. base64url-decode the raw email
-    2. Find the quoted-printable HTML body part
-    3. Decode quoted-printable
-    4. Regex for https://claude.ai/magic-link#...
+    (quoted-printable encoded, =3D is =, soft line breaks with =\\n)
     """
     # Normalize base64url to base64
     raw_bytes = base64.urlsafe_b64decode(raw_b64 + "==")
     raw_str = raw_bytes.decode("utf-8", errors="replace")
 
-    # Find the magic link in quoted-printable encoded form
-    # Pattern: href=3D"https://claude.ai/magic-link#...  (may have soft line breaks =\n)
-    # First: decode QP for the whole body section
-    # Look for the href directly with QP soft-line-break handling
-    # The href value ends at the closing " which is also QP-encoded as a regular char
-    qp_pattern = r'href=3D"(https://claude\.ai/magic-link#[^"\\s]+)'
-    # Handle soft line breaks: =\r\n or =\n before continuing
-    # Remove soft line breaks first
+    # Remove QP soft line breaks, then search for the magic link
     cleaned = re.sub(r'=\r?\n', '', raw_str)
+    qp_pattern = r'href=3D"(https://claude\.ai/magic-link#[^"\\s]+)'
     match = re.search(qp_pattern, cleaned, re.IGNORECASE)
     if match:
-        # Decode any remaining QP entities in the URL (=3D -> =, etc.)
         url = match.group(1)
         url = url.replace('=3D', '=').replace('=3d', '=')
         return url
 
     # Fallback: try decoding QP body sections
+    import quopri
     for part in raw_str.split('--'):
-        if 'Content-Transfer-Encoding: quoted-printable' in part or \
-           'content-transfer-encoding: quoted-printable' in part.lower():
+        if 'content-transfer-encoding: quoted-printable' in part.lower():
             try:
                 body = quopri.decodestring(part.encode('utf-8', errors='replace')).decode('utf-8', errors='replace')
                 m = re.search(r'href="(https://claude\.ai/magic-link#[^"]+)"', body, re.IGNORECASE)
@@ -203,19 +192,18 @@ def extract_magic_link_from_raw_email(raw_b64):
     return None
 
 
-# ── Session persistence ───────────────────────────────────────────────────────
+# -- Session persistence -------------------------------------------------------
 
 SESSION_PATH = Path.home() / ".config" / "agentos" / "claude-session.json"
 
 
-def save_session(session_key, org_uuid, org_name, account_email):
+def save_session(session_key, org_uuid, org_name):
     """Save session to ~/.config/agentos/claude-session.json"""
     SESSION_PATH.parent.mkdir(parents=True, exist_ok=True)
     data = {
         "session_key": session_key,
         "org_uuid": org_uuid,
         "org_name": org_name,
-        "account_email": account_email,
         "saved_at": datetime.now(timezone.utc).isoformat(),
     }
     SESSION_PATH.write_text(json.dumps(data, indent=2))
@@ -223,27 +211,21 @@ def save_session(session_key, org_uuid, org_name, account_email):
 
 
 def load_session():
-    """Load saved session. Returns None if not found or expired."""
+    """Load saved session. Returns None if not found."""
     if not SESSION_PATH.exists():
         return None
     try:
-        data = json.loads(SESSION_PATH.read_text())
-        # Sessions last ~30 days; warn if older than 25 days
-        saved = datetime.fromisoformat(data["saved_at"])
-        age_days = (datetime.now(timezone.utc) - saved).days
-        if age_days > 25:
-            data["_warning"] = f"Session is {age_days} days old — may need refresh"
-        return data
+        return json.loads(SESSION_PATH.read_text())
     except Exception:
         return None
 
 
-# ── Main login flow ───────────────────────────────────────────────────────────
+# -- Browser login helpers -----------------------------------------------------
 
 def check_logged_in(ws_url):
-    """
-    Returns (is_logged_in, org_uuid, org_name) by calling /api/organizations
-    from within the browser context.
+    """Check if already logged in by calling /api/organizations in the browser.
+
+    Returns (is_logged_in, org_uuid, org_name).
     """
     result = cdp_evaluate(
         ws_url,
@@ -254,7 +236,6 @@ def check_logged_in(ws_url):
     try:
         orgs = json.loads(result)
         if isinstance(orgs, list) and orgs:
-            # Find chat-capable org (personal account)
             chat_org = next(
                 (o for o in orgs if "chat" in o.get("capabilities", [])), orgs[0]
             )
@@ -264,138 +245,96 @@ def check_logged_in(ws_url):
     return False, None, None
 
 
-def do_login_flow(ws_url, email_addr, verbose=False):
-    """
-    Perform the full magic-link login flow.
-    Returns sessionKey string on success, raises on failure.
-
-    Steps:
-    1. Navigate to /login
-    2. Fill email input (selector: input[type=email])
-    3. Click submit (selector: button[type=submit])
-    4. Wait for "Secure link" email in Gmail (joe@contini.co catch-all)
-    5. Extract magic link from raw email
-    6. Navigate to magic link
-    7. Wait for redirect to /new
-    8. Extract sessionKey via CDP
-    """
-    if verbose:
-        print(f"[login] Navigating to https://claude.ai/login", file=sys.stderr)
-
-    # Step 1: Navigate to login
-    cdp_navigate(ws_url, "https://claude.ai/login")
-    time.sleep(2)
-
-    # Step 2: Fill email
-    cdp_evaluate(ws_url, f"""
-      (function() {{
-        const el = document.querySelector('input[type=email]');
-        if (!el) throw new Error('email input not found');
-        el.value = '';
-        el.focus();
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype, 'value').set;
-        nativeInputValueSetter.call(el, '{email_addr}');
-        el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-        el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-        return 'filled';
-      }})()
-    """)
-    time.sleep(0.5)
-
-    # Step 3: Click submit
-    cdp_evaluate(ws_url, """
-      (function() {
-        const btn = document.querySelector('button[type=submit]');
-        if (!btn) throw new Error('submit button not found');
-        btn.click();
-        return 'clicked';
-      })()
-    """)
-
-    if verbose:
-        print("[login] Submitted email. Waiting for magic link email...", file=sys.stderr)
-
-    # Step 4: Poll Gmail for magic link
-    # NOTE: This step requires the agentOS Gmail skill to be available.
-    # The skill's command executor calls this script; Gmail access happens
-    # via the agentOS skill framework (not inline here).
-    # For standalone use, raise to prompt agent to use Gmail skill.
-    raise NotImplementedError(
-        "Step 4 requires Gmail access via agentOS skill. "
-        "The login utility in the claude skill readme orchestrates this."
-    )
-
-
-# ── Entry point ──────────────────────────────────────────────────────────────
+# -- Entry point ---------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Login to claude.ai and extract sessionKey")
-    parser.add_argument("--email", default="anthropic@contini.co",
-                        help="Email address to log in with (default: anthropic@contini.co)")
-    parser.add_argument("--gmail-account", default="joe@contini.co",
-                        help="Gmail account to check for magic link (catch-all)")
-    parser.add_argument("--magic-link", help="Provide magic link directly (skip email polling)")
-    parser.add_argument("--force", action="store_true", help="Force re-login even if session exists")
+    parser = argparse.ArgumentParser(description="Claude.ai browser login helpers")
+    parser.add_argument("--magic-link", help="Navigate to magic link URL and extract session")
+    parser.add_argument("--extract-session", action="store_true",
+                        help="Extract cookies from current browser (already logged in)")
+    parser.add_argument("--check-session", action="store_true",
+                        help="Check if a saved session exists and print it")
+    parser.add_argument("--extract-link-from-raw", metavar="BASE64",
+                        help="Extract magic link URL from base64url-encoded raw email")
     parser.add_argument("--port", type=int, default=9222, help="CDP port (default: 9222)")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
 
-    # Check saved session first
-    if not args.force:
+    # Mode: check saved session (no browser needed)
+    if args.check_session:
         session = load_session()
         if session:
             print(json.dumps(session))
             return 0
+        else:
+            print(json.dumps({"error": "No session found. Run the login flow to authenticate."}))
+            return 1
 
-    # Connect to browser
-    targets = cdp_get_targets(args.port)
+    # Mode: extract magic link from raw email (no browser needed)
+    if args.extract_link_from_raw:
+        link = extract_magic_link_from_raw_email(args.extract_link_from_raw)
+        if link:
+            print(json.dumps({"magic_link": link}))
+            return 0
+        else:
+            print(json.dumps({"error": "No magic link found in raw email content"}))
+            return 1
+
+    # All other modes need a browser
+    try:
+        targets = cdp_get_targets(args.port)
+    except Exception as e:
+        print(json.dumps({"error": f"Cannot connect to CDP on port {args.port}: {e}"}))
+        return 1
+
     tab = cdp_find_tab(targets, "claude.ai")
     if not tab:
-        # Navigate to claude.ai first
-        tab = targets[0]
+        tab = targets[0] if targets else None
+    if not tab:
+        print(json.dumps({"error": "No browser tabs found on CDP"}))
+        return 1
+
     ws_url = tab["webSocketDebuggerUrl"]
 
     if args.verbose:
         print(f"[login] Using tab: {tab['url']}", file=sys.stderr)
 
-    # Check if already logged in
-    is_logged_in, org_uuid, org_name = check_logged_in(ws_url)
-    if is_logged_in and not args.force:
+    if args.magic_link:
+        # Navigate to magic link, wait for redirect, extract session
         if args.verbose:
-            print(f"[login] Already logged in. Org: {org_name}", file=sys.stderr)
-    else:
-        # Need to login — if magic link provided, use it directly
-        if args.magic_link:
-            if args.verbose:
-                print(f"[login] Navigating to magic link...", file=sys.stderr)
-            cdp_navigate(ws_url, args.magic_link)
-            time.sleep(3)
-        else:
-            # Full flow — requires Gmail integration (see skill readme)
-            print(json.dumps({"error": "Not logged in. Run with --magic-link or use the claude skill login utility."}))
-            return 1
+            print(f"[login] Navigating to magic link...", file=sys.stderr)
+        cdp_navigate(ws_url, args.magic_link)
 
-        # Verify login
-        is_logged_in, org_uuid, org_name = check_logged_in(ws_url)
-        if not is_logged_in:
-            print(json.dumps({"error": "Login failed — /api/organizations returned no results"}))
-            return 1
+        # Wait for redirect to /new (login complete)
+        for i in range(10):
+            time.sleep(1)
+            current = cdp_get_current_url(ws_url)
+            if current and "/new" in current:
+                if args.verbose:
+                    print("[login] Redirected to /new — login successful!", file=sys.stderr)
+                break
+            if args.verbose and i > 0 and i % 3 == 0:
+                print(f"[login] Waiting for redirect... current: {current}", file=sys.stderr)
+
+    # Check if logged in (works for both --magic-link and --extract-session)
+    is_logged_in, org_uuid, org_name = check_logged_in(ws_url)
+    if not is_logged_in:
+        print(json.dumps({"error": "Not logged in — browser session has no valid auth"}))
+        return 1
 
     # Extract cookies
     cookies = cdp_get_cookies(ws_url)
     session_key = next((c["value"] for c in cookies if c["name"] == "sessionKey"), None)
-    last_active_org = next((c["value"] for c in cookies if c["name"] == "lastActiveOrg"), org_uuid)
 
     if not session_key:
-        print(json.dumps({"error": "sessionKey cookie not found after login"}))
+        print(json.dumps({"error": "sessionKey cookie not found"}))
         return 1
 
     if args.verbose:
         print(f"[login] Got sessionKey: {session_key[:30]}...", file=sys.stderr)
 
     # Save and output
-    session = save_session(session_key, last_active_org, org_name, args.email)
+    session = save_session(session_key, org_uuid, org_name)
     print(json.dumps(session))
     return 0
 

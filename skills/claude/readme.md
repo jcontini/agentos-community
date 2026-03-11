@@ -38,66 +38,70 @@ instructions: |
   Claude.ai web chat history. Conversations live server-side only — not in any local file.
   Access requires a valid sessionKey cookie from a logged-in claude.ai browser session.
 
-  ## Accounts
+  ## First-Time Setup
 
-  Two orgs are available under anthropic@contini.co:
+  Before using this skill, you need a session. Check with `session_check` first.
+  If no session exists, walk the user through login (see Login Flow below).
 
-  ```
-  ACCOUNT         ORG UUID                               CAPABILITIES
-  ──────────────  ─────────────────────────────────────  ──────────────
-  personal        c10a8db6-c2ed-4750-95ef-a0367a39362c  chat, claude_pro
-  third-party     6b0831ae-5799-43af-90c2-4dba40206d35  api (no chat history)
-  ```
+  ## Discovering the User's Account
 
-  Always use account="personal" (or omit — it's the default) for chat history.
-  "third-party" is the "A Third Party" API org — has no chat conversations.
+  DO NOT assume any email address, org UUID, or account name.
+
+  1. Ask the user: "What email do you use for claude.ai?"
+  2. After login, call `conversation.list` with no account param — the session's
+     default org is used automatically.
+  3. If you need to switch orgs, use `list_orgs` to discover available orgs and
+     their UUIDs, then pass `--org UUID` via the account param.
 
   ## Auth / Session
 
   The sessionKey is an HttpOnly cookie — JS document.cookie cannot read it.
-  It must be extracted via CDP Network.getAllCookies from a logged-in Playwright browser.
+  It must be extracted via CDP Network.getAllCookies from a logged-in browser.
 
   Session is saved to: ~/.config/agentos/claude-session.json
-  Sessions last ~30 days. If API calls return 401/403, run the login utility.
+  Sessions last ~30 days. If API calls return 401/403, re-run the login flow.
 
-  ## Login Flow (one-shot, for agents)
+  ## Login Flow (agent-orchestrated)
 
-  When you need to log in, do this sequence exactly:
+  The login requires a real browser and email access. You (the agent) orchestrate
+  the steps — the Python scripts handle only the mechanical browser parts.
 
-  1. Use Playwright to navigate to https://claude.ai/login
-  2. Fill the email input: selector = input[type=email], value = anthropic@contini.co
-     USE cdp_evaluate with the React-compatible filler (nativeInputValueSetter trick —
-     see claude-login.py do_login_flow() for the exact JS). A plain fill() works too.
-  3. Click: selector = button[type=submit]
-  4. Wait ~5 seconds for the email to arrive
-  5. Search Gmail for the magic link:
-       skill: gmail
-       tool: email.search
-       params: { query: "from:anthropic after:YYYY/MM/DD", account: "joe@contini.co" }
-       IMPORTANT: joe@contini.co is a CATCH-ALL for *@contini.co — ALL emails sent
-       to anthropic@contini.co arrive at joe@contini.co. Always use joe@contini.co.
-  6. Get the raw email to extract the magic link:
-       skill: gmail
-       tool: get_raw
-       params: { id: MESSAGE_ID, account: "joe@contini.co" }
-     The raw field is base64url-encoded RFC 2822. The magic link is in the HTML body,
-     quoted-printable encoded. Extract it with extract_magic_link_from_raw_email()
-     in claude-login.py. The pattern is: href=3D"https://claude.ai/magic-link#TOKEN"
-     after removing QP soft line breaks (=\r\n). Token format: HEX:BASE64EMAIL
-  7. Navigate Playwright to the magic link URL
-  8. Wait for URL to change to https://claude.ai/new (3-5 seconds)
-  9. Run the login utility to extract sessionKey via CDP and save session
+  1. Ask the user for their claude.ai email address.
+  2. Use Playwright to navigate to https://claude.ai/login
+   3. Fill the email input (selector: input[type=email]) with the user's email.
+     A plain Playwright fill() works. If React doesn't pick it up, use the
+     nativeInputValueSetter trick (set value via prototype setter, dispatch input event).
+  4. Click submit (selector: button[type=submit])
+  5. Tell the user: "I've submitted your email. A magic link should arrive shortly."
+  6. Check for the magic link email:
+       - If you have access to the user's email (e.g. Gmail skill), search for it:
+         query: "from:anthropic", look for emails in the last few minutes
+       - Get the raw email content and look for the magic link URL
+         Pattern: https://claude.ai/magic-link#TOKEN
+       - If you don't have email access, ask the user to paste the magic link URL
+  7. Once you have the magic link URL, call the `navigate_magic_link` utility
+     with the URL. This navigates the browser and extracts the session.
+  8. Verify the session with `session_check`.
+
+  ## Magic Link Extraction from Email
+
+  If you're reading the magic link from a raw email:
+  - The raw email body is often base64url-encoded RFC 2822 with quoted-printable HTML
+  - Remove QP soft line breaks: replace =\r\n and =\n with ""
+  - The link pattern: href=3D"https://claude.ai/magic-link#TOKEN"
+  - Replace =3D with = in the extracted URL
+  - The helper `extract_magic_link` in claude-login.py can do this for you
 
   ## API Architecture
 
   LOGIN ONLY → Playwright (CDP browser)
     - Magic link needs a real browser session to land
-    - sessionKey extraction via CDP Network.getAllCookies (Node.js ws module)
+    - sessionKey extraction via CDP Network.getAllCookies
 
-  ALL OTHER CALLS → claude-api.py (httpx / urllib stdlib)
+  ALL OTHER CALLS → claude-api.py (httpx)
     - No browser needed after login
     - sessionKey passed as Cookie header
-    - Required headers to bypass Cloudflare (all documented in claude-api.py HEADERS)
+    - Required headers to bypass Cloudflare (documented in claude-api.py)
 
   ## Cloudflare / API Headers
 
@@ -125,8 +129,8 @@ instructions: |
 
 testing:
   exempt:
-    operations: Requires live claude.ai session — tested manually
-    utilities: Requires Playwright browser running on CDP port 9222
+    operations: Requires live claude.ai session — tests in tests/claude.test.ts skip gracefully without one
+    utilities: Login utilities require Playwright browser on CDP port 9222
 
 transformers:
   conversation:
@@ -134,6 +138,7 @@ transformers:
     mapping:
       id: .uuid
       name: .name
+      content: .content
       updated_at: .updated_at
       created_at: .created_at
       data.org_uuid: .org_uuid
@@ -159,10 +164,10 @@ operations:
   conversation.list:
     description: >
       List claude.ai web chat conversations, most recently updated first.
-      Requires a valid session (run login utility if needed).
+      Requires a valid session (run login flow if needed).
     returns: conversation[]
     params:
-      account: { type: string, description: "Account to use: 'personal' (default) or 'third-party'" }
+      account: { type: string, description: "Org UUID to use (omit to use session default). Use list_orgs to discover available orgs." }
       limit: { type: integer, default: 50, description: "Max conversations to return (max 250)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
     command:
@@ -170,7 +175,7 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversations --account '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversations --org '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
       timeout: 30
 
   conversation.get:
@@ -180,13 +185,13 @@ operations:
     returns: conversation
     params:
       id: { type: string, required: true, description: "Conversation UUID" }
-      account: { type: string, description: "Account to use: 'personal' (default) or 'third-party'" }
+      account: { type: string, description: "Org UUID (omit to use session default)" }
     command:
       binary: bash
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversation --id '{{params.id}}' --account '{{params.account}}' 2>/dev/null"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversation --id '{{params.id}}' --org '{{params.account}}' 2>/dev/null"
       timeout: 30
 
   conversation.search:
@@ -198,14 +203,14 @@ operations:
     returns: conversation[]
     params:
       query: { type: string, required: true, description: "Text to search for in conversation titles" }
-      account: { type: string, description: "Account to use: 'personal' (default) or 'third-party'" }
+      account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 20, description: "Max results" }
     command:
       binary: bash
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op search --query '{{params.query}}' --account '{{params.account}}' --limit {{params.limit}} 2>/dev/null"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op search --query '{{params.query}}' --org '{{params.account}}' --limit {{params.limit}} 2>/dev/null"
       timeout: 30
 
   conversation.import:
@@ -217,7 +222,7 @@ operations:
       Use limit+offset to page through conversations in batches of 5-10.
     returns: message[]
     params:
-      account: { type: string, description: "Account to use: 'personal' (default) or 'third-party'" }
+      account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 5, description: "Conversations per batch (keep ≤10 to avoid DB lock)" }
       offset: { type: integer, default: 0, description: "Conversation offset for pagination" }
     command:
@@ -225,7 +230,7 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op import --account '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op import --org '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
       timeout: 60
 
 # ==============================================================================
@@ -233,59 +238,99 @@ operations:
 # ==============================================================================
 
 utilities:
-  login:
+  list_orgs:
     description: |
-      Full automated login flow for claude.ai. Orchestrates:
-        1. Playwright browser → navigate to /login, fill email, submit
-        2. Gmail skill → poll joe@contini.co (catch-all) for magic link email
-        3. Extract magic link from raw email (base64url + quoted-printable)
-        4. Playwright → navigate to magic link, wait for /new redirect
-        5. CDP Network.getAllCookies → extract sessionKey (HttpOnly cookie)
-        6. Save to ~/.config/agentos/claude-session.json
+      List all organizations the user has access to.
+      Returns org UUIDs, names, and capabilities. Use this to discover
+      which org has chat history (look for "chat" in capabilities).
+    returns:
+      uuid: string
+      name: string
+      capabilities: array
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op organizations 2>/dev/null"
+      timeout: 15
 
-      The login utility is an ORCHESTRATION — it requires the agent to:
-        a. Use the playwright skill for browser steps
-        b. Use the gmail skill for email steps
-        c. Call this utility's --magic-link mode once the link is known
+  navigate_magic_link:
+    description: |
+      Navigate the browser to a magic link URL and extract the session.
+      Use this after obtaining the magic link URL (from email or user).
+      Requires a Playwright browser running on CDP port 9222.
 
-      For fully automated login, use the step-by-step instructions in the
-      skill instructions block above ("Login Flow (one-shot, for agents)").
-      The login utility handles steps 4-6 once you have the magic link URL.
-
-      GMAIL CATCH-ALL NOTE:
-        anthropic@contini.co → arrives at joe@contini.co (catch-all for *@contini.co)
-        Always search Gmail with account="joe@contini.co", NOT "anthropic@contini.co"
-        (anthropic@contini.co is not in Mimestream and has no direct Gmail access)
-
-      MAGIC LINK EXTRACTION:
-        1. email.search: query="from:anthropic after:YYYY/MM/DD", account="joe@contini.co"
-        2. get_raw: id=MESSAGE_ID, account="joe@contini.co"
-        3. The raw.raw field is base64url-encoded RFC 2822
-        4. The body is quoted-printable HTML
-        5. Remove soft line breaks: replace =\r\n and =\n with ""
-        6. Pattern: href=3D"(https://claude\.ai/magic-link#[^"]+)"
-        7. Replace =3D with = in the extracted URL
-
+      Steps performed:
+        1. Navigate to the magic link URL
+        2. Wait for redirect to /new (confirms login)
+        3. Extract sessionKey via CDP Network.getAllCookies
+        4. Call /api/organizations to discover the default org
+        5. Save session to ~/.config/agentos/claude-session.json
     params:
-      magic_link:
+      url:
         type: string
-        description: "Magic link URL from email (skip browser steps if provided)"
-      force:
-        type: boolean
-        description: "Force re-login even if a valid session exists"
+        required: true
+        description: "The full magic link URL (https://claude.ai/magic-link#TOKEN)"
+      port:
+        type: integer
+        default: 9222
+        description: "CDP port"
     returns:
       session_key: string
       org_uuid: string
       org_name: string
-      account_email: string
       saved_at: string
     command:
       binary: bash
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --magic-link '{{params.magic_link}}' --verbose 2>&1 | tail -1"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --magic-link '{{params.url}}' --port {{params.port}} --verbose 2>&1 | tail -1"
       timeout: 60
+
+  extract_session:
+    description: |
+      Extract session cookies from a browser that is already logged into claude.ai.
+      Use this if the user logged in manually via their browser.
+      Requires a browser running on CDP port 9222 with claude.ai loaded.
+    params:
+      port:
+        type: integer
+        default: 9222
+        description: "CDP port"
+    returns:
+      session_key: string
+      org_uuid: string
+      org_name: string
+      saved_at: string
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --extract-session --port {{params.port}} --verbose 2>&1 | tail -1"
+      timeout: 30
+
+  extract_magic_link:
+    description: |
+      Extract the magic link URL from a raw base64url-encoded email body.
+      Pass the raw email content (from Gmail's get_raw utility) and this
+      will decode it and find the claude.ai magic link.
+    params:
+      raw_email:
+        type: string
+        required: true
+        description: "Base64url-encoded raw RFC 2822 email content"
+    returns:
+      magic_link: string
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --extract-link-from-raw '{{params.raw_email}}' 2>/dev/null"
+      timeout: 10
 
   session_check:
     description: |
@@ -302,12 +347,7 @@ utilities:
       args:
         - "-l"
         - "-c"
-        - |
-          if [ -f ~/.config/agentos/claude-session.json ]; then
-            cat ~/.config/agentos/claude-session.json
-          else
-            echo '{"error": "No session found. Run the login utility."}'
-          fi
+        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --check-session 2>/dev/null"
       timeout: 5
 
 ---
@@ -322,27 +362,34 @@ claude.ai web chat history lives server-side only — unlike Claude Code (CLI) w
 transcripts locally, web conversations are only accessible via the claude.ai API.
 
 This skill uses a two-phase approach:
-1. **Login** — Playwright browser automation performs the magic-link login flow and extracts
-   the `sessionKey` HttpOnly cookie via CDP (Chrome DevTools Protocol)
-2. **API calls** — All subsequent calls use `httpx`/`urllib` directly with the saved
+1. **Login** — The agent orchestrates a magic-link login flow using Playwright browser
+   automation and email access, then extracts the `sessionKey` HttpOnly cookie via CDP
+2. **API calls** — All subsequent calls use `httpx` directly with the saved
    `sessionKey` — no browser needed
-
-## Accounts
-
-| Account | Org | Capabilities |
-|---------|-----|-------------|
-| `personal` | anthropic@contini.co's Organization | Chat (web history) |
-| `third-party` | A Third Party | API only (no web chat history) |
 
 ## Login
 
-The login utility automates the full magic-link flow. You'll need:
-- Playwright running (port 9222)
-- Gmail access via `joe@contini.co` (catch-all for `*@contini.co`)
+The first time you use this skill, the agent will:
+1. Ask for your claude.ai email address
+2. Submit it on the login page (via Playwright)
+3. Help you find the magic link in your email (or ask you to paste it)
+4. Navigate to the magic link to complete login
+5. Extract and save the session cookie
 
-See the `login` utility documentation for the complete one-shot flow.
+Sessions last ~30 days. Use `session_check` to verify auth status.
 
-## Session
+## Capabilities
 
-Sessions are saved to `~/.config/agentos/claude-session.json` and last ~30 days.
-Use `session_check` to verify auth before making API calls.
+```
+OPERATION             DESCRIPTION
+────────────────────  ───────────────────────────────────────────────────
+conversation.list     Browse conversations, most recently updated first
+conversation.get      Full conversation with all messages
+conversation.search   Search conversations by title (client-side filter)
+conversation.import   Import messages into Memex for FTS content search
+list_orgs             Discover available orgs and capabilities
+navigate_magic_link   Complete login with a magic link URL
+extract_session       Extract session from already-logged-in browser
+extract_magic_link    Parse magic link URL from raw email content
+session_check         Verify current session status
+```
