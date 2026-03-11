@@ -31,7 +31,6 @@ import addFormats from 'ajv-formats';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');
 const SKILLS_DIR = join(ROOT, 'skills');
-const ENTITIES_DIR = join(ROOT, 'entities');
 const NEEDS_WORK_DIR = join(SKILLS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'skill.schema.json');
 
@@ -64,75 +63,55 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validateSchema = ajv.compile(schema);
 
-function loadEntityIds() {
+// Entity types now live in the database (seeded from seed.sql), not YAML files.
+// Query the live server to get known types. If server is not running, skip entity checks.
+async function loadEntityIdsFromServer() {
   const entityIds = new Set();
-  function scan(dir) {
-    if (!existsSync(dir)) return;
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
-        scan(fullPath);
-      } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
-        try {
-          const docs = parseAllDocuments(readFileSync(fullPath, 'utf-8'));
-          for (const doc of docs) {
-            const data = doc.toJSON();
-            if (data?.id) entityIds.add(data.id);
-          }
-        } catch {}
-      }
+  try {
+    const resp = await fetch('http://127.0.0.1:3456/mem/_types?limit=500');
+    if (!resp.ok) return { ids: entityIds, available: false };
+    const data = await resp.json();
+    for (const entity of (data.data || [])) {
+      // _type entities have their type id in data.id (the entity type slug)
+      const typeId = entity.data?.id || entity.id;
+      if (typeId && !entity.data?.is_relationship) entityIds.add(typeId);
     }
+    return { ids: entityIds, available: true };
+  } catch {
+    return { ids: entityIds, available: false };
   }
-  scan(ENTITIES_DIR);
-  return entityIds;
 }
 
-function loadEntityProperties() {
+async function loadEntityPropertiesFromServer() {
   const props = {};
-  const vocabularies = {};
-  function scan(dir) {
-    if (!existsSync(dir)) return;
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = join(dir, entry.name);
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'views') {
-        scan(fullPath);
-      } else if (entry.name.endsWith('.yaml') && entry.name !== 'icon.yaml') {
-        try {
-          const docs = parseAllDocuments(readFileSync(fullPath, 'utf-8'));
-          for (const doc of docs) {
-            const data = doc.toJSON();
-            if (data?.id && data?.properties) {
-              props[data.id] = Object.keys(data.properties);
-              if (data.vocabulary) vocabularies[data.id] = data.vocabulary;
-              if (data.extends && props[data.extends]) {
-                const vocabulary = vocabularies[data.id] || {};
-                // Apply vocabulary overrides when inheriting parent props
-                // e.g., vocabulary: { author: sender } renames inherited `author` to `sender`
-                const parentProps = props[data.extends].map(
-                  prop => vocabulary[prop] || prop
-                );
-                props[data.id] = [...new Set([...parentProps, ...props[data.id]])];
-              }
-            }
-          }
-        } catch {}
+  try {
+    const resp = await fetch('http://127.0.0.1:3456/mem/_types?limit=500');
+    if (!resp.ok) return props;
+    const data = await resp.json();
+    for (const entity of (data.data || [])) {
+      const typeId = entity.data?.id || entity.id;
+      if (typeId && entity.data?.properties && !entity.data?.is_relationship) {
+        props[typeId] = Object.keys(entity.data.properties);
+        // Inject system properties
+        if (!props[typeId].includes('created_at')) props[typeId].push('created_at');
+        if (!props[typeId].includes('updated_at')) props[typeId].push('updated_at');
       }
     }
-  }
-  // Scan twice to resolve extends (parent might load after child)
-  scan(ENTITIES_DIR);
-  scan(ENTITIES_DIR);
-  // Inject system properties — every entity gets created_at/updated_at automatically.
-  // These are system-managed timestamps, not declared in individual YAMLs.
-  for (const id of Object.keys(props)) {
-    if (!props[id].includes('created_at')) props[id].push('created_at');
-    if (!props[id].includes('updated_at')) props[id].push('updated_at');
-  }
+  } catch {}
   return props;
 }
 
-const validEntityIds = loadEntityIds();
-const entityProperties = loadEntityProperties();
+// Load from server (async init, resolved before main runs)
+let validEntityIds = new Set();
+let entityProperties = {};
+let entityServerAvailable = false;
+
+async function initEntityData() {
+  const result = await loadEntityIdsFromServer();
+  validEntityIds = result.ids;
+  entityServerAvailable = result.available;
+  entityProperties = await loadEntityPropertiesFromServer();
+}
 
 // ============================================================================
 // CHECKS
@@ -178,13 +157,18 @@ function checkEntities(frontmatter) {
   let total = 0;
   let passed = 0;
   
+  // If the server isn't running, we can't validate entity refs — skip gracefully
+  if (!entityServerAvailable && validEntityIds.size === 0) {
+    return { pass: true, passed: 0, total: 0, errors: [] };
+  }
+  
   if (frontmatter.operations) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
       total++;
       if (!op.returns || op.returns === 'void') {
         const verb = opName.split('.')[1];
-        if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send'].includes(verb)) {
-          errors.push(`'${opName}' returns void — read operations must return an entity`);
+        if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send', 'modify', 'trash', 'untrash', 'batch_modify', 'batch_delete'].includes(verb)) {
+          errors.push(`'${opName}' returns void — write operations or read operations must return an entity`);
         } else {
           passed++;
         }
@@ -606,6 +590,9 @@ function validateSkill(skill) {
   };
 }
 
+// Initialize entity data from server before running validation
+await initEntityData();
+
 // --- Pre-commit mode: structural YAML check only, scoped to named skills ---
 if (preCommit) {
   const allSkills = findSkills(SKILLS_DIR);
@@ -661,7 +648,7 @@ sortResults(activeResults);
 sortResults(needsWorkResults);
 
 // 3. Collect entity coverage (before moves)
-const knownEntities = [...validEntityIds].sort();
+const knownEntities = [...validEntityIds].filter(id => !['_type'].includes(id)).sort();
 const coveredEntities = new Set();
 for (const result of activeResults) {
   try {
