@@ -53,6 +53,19 @@ transformers:
       provider: '"anthropic"'
       model_type: '"llm"'
 
+  conversation:
+    terminology: Session
+    mapping:
+      id: .id
+      name: .name
+      client: '"claude-desktop"'
+      last_message: .last_message
+      last_message_at: .last_message_at
+      data.workspace: .workspace
+      data.user_turns: .user_turns
+      data.message_count: .message_count
+      content: .transcript
+
 operations:
   model.list:
     description: List available Claude models (via your Claude Desktop subscription)
@@ -67,6 +80,52 @@ operations:
       response:
         root: /data
 
+  conversation.list:
+    description: >
+      List Claude Code sessions from local JSONL transcripts in ~/.claude/projects/.
+      Claude Code is the CLI that runs inside Claude Desktop for agentic coding tasks.
+      Sessions are stored locally and available without credentials.
+    returns: conversation[]
+    params:
+      workspace:
+        type: string
+        description: Filter to sessions in a specific workspace path (e.g. /Users/joe/dev/myproject)
+    command:
+      binary: bash
+      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --workspace '{{params.workspace}}' 2>/dev/null"]
+      timeout: 30
+
+  conversation.search:
+    description: >
+      Search Claude Code session history by content.
+      Searches through the full text of all local session transcripts.
+    returns: conversation[]
+    params:
+      query:
+        type: string
+        required: true
+        description: Text to search for in session content
+      workspace:
+        type: string
+        description: Optionally limit search to a specific workspace path
+    command:
+      binary: bash
+      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --query '{{params.query}}' --workspace '{{params.workspace}}' 2>/dev/null"]
+      timeout: 30
+
+  conversation.get:
+    description: Get a Claude Code session by UUID with full conversation transcript
+    returns: conversation
+    params:
+      id:
+        type: string
+        required: true
+        description: Session UUID
+    command:
+      binary: bash
+      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --id '{{params.id}}' 2>/dev/null"]
+      timeout: 15
+
 instructions: |
   Claude AI via your Claude Desktop subscription. Calls are billed to your Pro/Max plan —
   not a separate API account.
@@ -74,6 +133,10 @@ instructions: |
   Use model.list to discover available models — don't hardcode model IDs.
   The token is read directly from Claude Desktop's encrypted config — no API key needed.
   If Claude Desktop is not installed or not signed in, this skill will fail.
+
+  Session history is stored locally in ~/.claude/projects/ as JSONL files — no credentials
+  needed to read it. Use conversation.list to browse, conversation.search to find by content,
+  conversation.get to retrieve a full transcript by UUID.
 
 utilities:
   chat:
@@ -134,6 +197,7 @@ utilities:
 
 testing:
   exempt:
+    operations: Local command skill — reads ~/.claude/projects/ JSONL files, tested manually
     utilities: Requires live Claude Desktop OAuth token — tested manually
 ---
 
@@ -149,6 +213,17 @@ AgentOS reads the OAuth token that Claude Desktop stores in its encrypted local 
 
 - Claude Desktop app installed and signed in
 - Claude Pro or Max plan (free tier may not support API access)
+
+## Session History
+
+Claude Code (the agentic CLI that runs inside Claude Desktop) stores conversation transcripts locally at `~/.claude/projects/{workspace}/`. The `session.list`, `session.search`, and `session.get` operations read these files directly — no credentials or network access needed.
+
+**What's stored locally:**
+- Claude Code (CLI) sessions — full transcripts in `~/.claude/projects/`
+- Session metadata in `~/Library/Application Support/Claude/claude-code-sessions/`
+
+**What's NOT stored locally:**
+- Claude.ai web chat history — that lives server-side only
 
 ## MCP Setup
 

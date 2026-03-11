@@ -746,6 +746,19 @@ utilities:
 
 Full-featured email via the [Gmail REST API](https://developers.google.com/gmail/api) — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations.
 
+## Agent Guidance
+
+**Always default to inbox.** When the user asks to check email or see unread messages, ALWAYS scope to the inbox first using `query: "in:inbox is:unread"`. Do NOT use bare `is:unread` — that searches all mail including Promotions, Updates, and Spam and will return hundreds of irrelevant messages. After showing inbox results, briefly note counts for other categories if there are any (e.g. "Also 50+ unread in Promotions — want me to show those?").
+
+**Folder query syntax** — use the `query` param, not `label_ids`:
+- Inbox: `in:inbox`
+- Spam: `in:spam`
+- Promotions: `category:promotions`
+- Updates: `category:updates`
+- Social: `category:social`
+
+Do not pass `label_ids` as an array param — it causes a 400 error from the API.
+
 ## Auth — No Setup Required (with Mimestream)
 
 If [Mimestream](https://mimestream.com/) is installed, this skill automatically borrows its Google OAuth tokens from the macOS Keychain. No OAuth app registration, no API keys to enter.

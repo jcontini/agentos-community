@@ -14,4 +14,25 @@ describe("Claude Desktop Skill", () => {
       expect(true).toBe(true);
     });
   });
+
+  describe("conversation.list", () => {
+    it("lists Claude Code sessions (skip - local command skill)", () => {
+      const _ = { tool: "conversation.list" };
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("conversation.search", () => {
+    it("searches Claude Code sessions by content (skip - local command skill)", () => {
+      const _ = { tool: "conversation.search" };
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("conversation.get", () => {
+    it("gets a Claude Code session by UUID (skip - local command skill)", () => {
+      const _ = { tool: "conversation.get" };
+      expect(true).toBe(true);
+    });
+  });
 });

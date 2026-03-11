@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="brave-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF5500"/>
+      <stop offset="100%" style="stop-color:#FB542B"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#brave-gradient)" d="M128 20L40 60v80c0 50 40 90 88 96 48-6 88-46 88-96V60L128 20zm0 30l60 28v62c0 35-28 62-60 66-32-4-60-31-60-66V78l60-28z"/>
+  <path fill="#fff" d="M128 70l40 18v52c0 22-18 40-40 44-22-4-40-22-40-44V88l40-18z"/>
+</svg>
