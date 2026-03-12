@@ -35,9 +35,8 @@ auth:
             - { action: goto, url: "{{magic_link}}" }
             - { action: wait, url_contains: "/new" }
           returns_to_agent: >
-            Login complete. Extract cookies with the Playwright cookies utility
-            (domain: .claude.ai) or use Brave Browser cookie_get, then save to
-            ~/.config/agentos/claude-session.json.
+            Login complete. The sessionKey cookie is now in the browser.
+            Cookie matchmaking will extract it automatically on next API call.
     verify:
       url: "https://claude.ai/api/organizations"
       method: GET
@@ -69,42 +68,25 @@ instructions: |
   Claude.ai web chat history. Conversations live server-side only — not in any local file.
   Access requires a valid sessionKey cookie from a logged-in claude.ai browser session.
 
-  ## Getting a Session
+  ## Authentication
 
-  Before using this skill, check for a session with `session_check`.
+  Cookie matchmaking handles session automatically:
+  - `auth.cookies` declares the skill needs `sessionKey` from `.claude.ai`
+  - agentOS discovers a cookie provider (Brave Browser reads the cookie DB)
+  - The sessionKey is injected into `params.auth.sessionKey` before each call
+  - No session file, no manual credential storage
 
-  If no session exists, there are two ways to get one:
-
-  ### Option 1: Import from Brave Browser (fast, if user is already logged in)
-  1. Call Brave Browser's `cookie_get` utility: `{ domain: "platform.claude.com", names: "sessionKey" }`
-  2. If it returns a sessionKey cookie, the user is already logged in on Brave
-  3. Present to user: "I found a claude.ai session in Brave. Import it?"
-  4. If yes, call `session_save` with the sessionKey value
-
-  ### Option 2: Playwright login flow (if no existing session)
-  The auth.cookies.login section above describes the multi-phase flow:
-  1. Ask the user for their claude.ai email address
-  2. Use Playwright to navigate to claude.ai/login, fill email, click submit
-  3. Tell user: "Magic link requested. Check your email."
-  4. Find the magic link (Gmail skill or ask user to paste it)
-  5. Use Playwright to navigate to the magic link URL
-  6. After redirect to /new, extract cookies with Playwright's `cookies` utility
-  7. Call `session_save` with the sessionKey value
+  If the user is NOT logged into claude.ai on Brave Browser, the Playwright
+  login flow is needed (auth.cookies.login phases above).
 
   ## Discovering the User's Account
 
   DO NOT assume any email address, org UUID, or account name.
 
   1. Ask the user: "What email do you use for claude.ai?"
-  2. After login, call `conversation.list` with no account param — the session's
-     default org is used automatically.
+  2. Call `conversation.list` with no account param — the org is auto-discovered via API.
   3. If you need to switch orgs, use `list_orgs` to discover available orgs and
-     their UUIDs, then pass `--org UUID` via the account param.
-
-  ## Session Storage
-
-  Session is saved to: ~/.config/agentos/claude-session.json
-  Sessions last ~30 days. If API calls return 401/403, re-run the login flow.
+     their UUIDs, then pass the UUID via the account param.
 
   ## Magic Link Extraction from Email
 
@@ -289,30 +271,6 @@ utilities:
         - ".params.auth.sessionKey"
       timeout: 15
 
-  session_save:
-    description: |
-      Save a sessionKey cookie to the Claude session file.
-      Call this after extracting the sessionKey from Brave Browser (cookie_get)
-      or from Playwright (cookies utility). This also calls /api/organizations
-      to discover the default org and saves it alongside the session key.
-    params:
-      session_key:
-        type: string
-        required: true
-        description: "The sessionKey cookie value (sk-ant-sid02-...)"
-    returns:
-      session_key: string
-      org_uuid: string
-      org_name: string
-      saved_at: string
-    command:
-      binary: python3
-      args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
-        - "--save-session"
-        - ".params.session_key"
-      timeout: 15
-
   extract_magic_link:
     description: |
       Extract the magic link URL from a raw base64url-encoded email body.
@@ -333,23 +291,6 @@ utilities:
         - ".params.raw_email"
       timeout: 10
 
-  session_check:
-    description: |
-      Check if a valid session exists and return its details.
-      Returns the saved session JSON, or an error if no session found.
-      Use this before conversation operations to confirm auth is working.
-    returns:
-      session_key: string
-      org_uuid: string
-      org_name: string
-      saved_at: string
-    command:
-      binary: python3
-      args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
-        - "--check-session"
-      timeout: 5
-
 ---
 
 # Claude.ai
@@ -362,21 +303,10 @@ claude.ai web chat history lives server-side only — unlike Claude Code (CLI) w
 transcripts locally, web conversations are only accessible via the claude.ai API.
 
 Two phases:
-1. **Get session** — either import from Brave Browser (if already logged in) or
-   orchestrate a magic-link login flow via Playwright + email
-2. **API calls** — all subsequent calls use `httpx` directly with the saved
-   `sessionKey` — no browser needed
-
-## Getting a Session
-
-**Fast path (Brave):** If the user is logged into claude.ai on Brave Browser,
-extract the sessionKey with `brave-browser/cookie_get` and save it with `session_save`.
-
-**Login flow (Playwright):** Navigate to claude.ai/login, submit email, find magic link
-in email (Gmail skill or user pastes it), navigate to magic link, extract cookies with
-Playwright's `cookies` utility, save with `session_save`.
-
-Sessions last ~30 days. Use `session_check` to verify.
+1. **Cookie matchmaking** — agentOS auto-extracts the sessionKey from Brave Browser
+   (or falls back to Playwright login if the user isn't logged in)
+2. **API calls** — all subsequent calls use `httpx` directly with the injected
+   `sessionKey` — no browser needed, no session file
 
 ## Capabilities
 
@@ -388,7 +318,5 @@ conversation.get      Full conversation with all messages
 conversation.search   Search conversations by title (client-side filter)
 conversation.import   Import messages into Memex for FTS content search
 list_orgs             Discover available orgs and capabilities
-session_save          Save a sessionKey to the session file
 extract_magic_link    Parse magic link URL from raw email content
-session_check         Verify current session status
 ```

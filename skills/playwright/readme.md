@@ -39,11 +39,11 @@ seed:
       type: company
       url: https://microsoft.com
 
-provides:
-  - service: cookies
-    description: "Extract cookies from a live browser session (including HttpOnly). Use after navigating to a logged-in site."
-    via: cookies
-    account_param: domain
+# Playwright's `cookies` utility can extract cookies from a live browser session,
+# but it's not a passive cookie provider — it requires an active CDP session.
+# Cookie reads for auth should go through passive providers like brave-browser.
+# Playwright's role in the cookie flow is the login phase (auth.cookies.login),
+# not providing cookies on demand.
 
 instructions: |
   WHEN TO USE THIS SKILL vs OTHERS:

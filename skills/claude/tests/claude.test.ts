@@ -1,11 +1,11 @@
 /**
  * Claude.ai Skill Tests
  *
- * Requires a valid claude.ai session saved at ~/.config/agentos/claude-session.json.
- * All tests skip gracefully if no session is available.
+ * Requires a valid sessionKey cookie available via cookie matchmaking
+ * (user must be logged into claude.ai on Brave Browser).
+ * All tests skip gracefully if cookie auth fails.
  *
  * Coverage:
- * - session_check (utility)
  * - list_orgs (utility)
  * - conversation.list
  * - conversation.get
@@ -15,55 +15,28 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { aos } from '@test/fixtures';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
 
 const adapter = 'claude';
 
 let skipTests = false;
-let sessionOrgUuid: string | undefined;
 
 describe('Claude.ai Skill', () => {
-  beforeAll(() => {
-    // Check if a session file exists
-    const sessionPath = join(homedir(), '.config', 'agentos', 'claude-session.json');
-    if (!existsSync(sessionPath)) {
-      console.log('  ⏭ Skipping Claude tests: no session at ~/.config/agentos/claude-session.json');
-      skipTests = true;
-      return;
-    }
+  beforeAll(async () => {
+    // Probe with list_orgs to check if cookie matchmaking can provide auth
     try {
-      const session = JSON.parse(readFileSync(sessionPath, 'utf-8'));
-      if (!session.session_key) {
-        console.log('  ⏭ Skipping Claude tests: session file missing session_key');
-        skipTests = true;
-        return;
-      }
-      sessionOrgUuid = session.org_uuid;
-    } catch {
-      console.log('  ⏭ Skipping Claude tests: invalid session file');
-      skipTests = true;
-    }
-  });
-
-  // ===========================================================================
-  // session_check (utility)
-  // ===========================================================================
-  describe('session_check', () => {
-    it('returns saved session details', async () => {
-      if (skipTests) return;
-
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'session_check',
+        tool: 'list_orgs',
         params: {},
-      }) as { session_key: string; org_uuid: string; org_name: string };
-
-      expect(result).toBeDefined();
-      expect(result.session_key).toBeDefined();
-      expect(result.org_uuid).toBeDefined();
-    });
+      }) as Array<{ uuid: string }>;
+      if (!Array.isArray(result) || result.length === 0) {
+        console.log('  ⏭ Skipping Claude tests: list_orgs returned no orgs (no valid session)');
+        skipTests = true;
+      }
+    } catch (e) {
+      console.log(`  ⏭ Skipping Claude tests: cookie auth unavailable (${e})`);
+      skipTests = true;
+    }
   });
 
   // ===========================================================================

@@ -7,8 +7,8 @@ This script provides thin CDP (Chrome DevTools Protocol) helpers for:
   2. Extracting the sessionKey HttpOnly cookie from a logged-in browser
   3. Extracting a magic link URL from raw email content
 
-The agent orchestrates the full login flow — this script handles only the
-mechanical browser parts that require CDP access.
+No session file persistence — agentOS cookie matchmaking handles caching.
+The extracted sessionKey is returned as JSON for the provider to cache in-memory.
 
 Usage:
   python3 claude-login.py --magic-link URL [--port 9222]    # Navigate + extract
@@ -192,34 +192,6 @@ def extract_magic_link_from_raw_email(raw_b64):
     return None
 
 
-# -- Session persistence -------------------------------------------------------
-
-SESSION_PATH = Path.home() / ".config" / "agentos" / "claude-session.json"
-
-
-def save_session(session_key, org_uuid, org_name):
-    """Save session to ~/.config/agentos/claude-session.json"""
-    SESSION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    data = {
-        "session_key": session_key,
-        "org_uuid": org_uuid,
-        "org_name": org_name,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
-    }
-    SESSION_PATH.write_text(json.dumps(data, indent=2))
-    return data
-
-
-def load_session():
-    """Load saved session. Returns None if not found."""
-    if not SESSION_PATH.exists():
-        return None
-    try:
-        return json.loads(SESSION_PATH.read_text())
-    except Exception:
-        return None
-
-
 # -- Browser login helpers -----------------------------------------------------
 
 def check_logged_in(ws_url):
@@ -247,71 +219,16 @@ def check_logged_in(ws_url):
 
 # -- Entry point ---------------------------------------------------------------
 
-def save_session_from_key(session_key):
-    """Save a session from a raw sessionKey value.
-
-    Calls /api/organizations to discover the default org, then saves everything.
-    This is the new entry point — the agent extracts the sessionKey from
-    Brave Browser or Playwright, then calls this to persist it.
-    """
-    headers = {
-        "Accept": "application/json",
-        "Cookie": f"sessionKey={session_key}",
-        "anthropic-client-version": "claude-ai/web@1.1.5368",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Dest": "empty",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    }
-
-    try:
-        resp = httpx.get("https://claude.ai/api/organizations", headers=headers, follow_redirects=True)
-        resp.raise_for_status()
-        orgs = resp.json()
-    except Exception as e:
-        return {"error": f"Session key invalid or expired: {e}"}
-
-    if not isinstance(orgs, list) or not orgs:
-        return {"error": "No organizations found — session key may be invalid"}
-
-    # Find the chat org
-    chat_org = next((o for o in orgs if "chat" in o.get("capabilities", [])), orgs[0])
-    org_uuid = chat_org["uuid"]
-    org_name = chat_org.get("name", "Unknown")
-
-    return save_session(session_key, org_uuid, org_name)
-
-
 def main():
     parser = argparse.ArgumentParser(description="Claude.ai browser login helpers")
     parser.add_argument("--magic-link", help="Navigate to magic link URL and extract session")
-    parser.add_argument("--save-session", metavar="SESSION_KEY",
-                        help="Save a sessionKey directly (from Brave/Playwright cookie extraction)")
     parser.add_argument("--extract-session", action="store_true",
                         help="Extract cookies from current browser (already logged in)")
-    parser.add_argument("--check-session", action="store_true",
-                        help="Check if a saved session exists and print it")
     parser.add_argument("--extract-link-from-raw", metavar="BASE64",
                         help="Extract magic link URL from base64url-encoded raw email")
     parser.add_argument("--port", type=int, default=9222, help="CDP port (default: 9222)")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
-
-    # Mode: save session from raw key (no browser needed)
-    if args.save_session:
-        result = save_session_from_key(args.save_session)
-        print(json.dumps(result))
-        return 1 if "error" in result else 0
-
-    # Mode: check saved session (no browser needed)
-    if args.check_session:
-        session = load_session()
-        if session:
-            print(json.dumps(session))
-            return 0
-        else:
-            print(json.dumps({"error": "No session found. Run the login flow to authenticate."}))
-            return 1
 
     # Mode: extract magic link from raw email (no browser needed)
     if args.extract_link_from_raw:
@@ -376,9 +293,14 @@ def main():
     if args.verbose:
         print(f"[login] Got sessionKey: {session_key[:30]}...", file=sys.stderr)
 
-    # Save and output
-    session = save_session(session_key, org_uuid, org_name)
-    print(json.dumps(session))
+    # Output extracted session info (no file persistence — cookie matchmaking handles caching)
+    result = {
+        "session_key": session_key,
+        "org_uuid": org_uuid,
+        "org_name": org_name,
+        "extracted_at": datetime.now(timezone.utc).isoformat(),
+    }
+    print(json.dumps(result))
     return 0
 
 

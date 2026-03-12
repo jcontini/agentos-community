@@ -2,7 +2,7 @@
 """
 claude-api.py — httpx-based client for the claude.ai private API
 
-Uses the sessionKey cookie saved by claude-login.py.
+Session key is injected by agentOS cookie matchmaking via --session-key.
 All API calls use httpx (NOT Playwright) — login is the only thing that
 needs a browser. Once the sessionKey is extracted, httpx handles everything.
 
@@ -14,26 +14,22 @@ Required headers (bypass Cloudflare + match expected browser client):
   Sec-Fetch-Dest: empty
 
 Usage:
-  python3 claude-api.py --op organizations
-  python3 claude-api.py --op conversations [--org ORG_UUID] [--limit 50] [--offset 0]
-  python3 claude-api.py --op conversation --id CONV_UUID [--org ORG_UUID]
-  python3 claude-api.py --op search --query TEXT [--org ORG_UUID]
-  python3 claude-api.py --op import [--org ORG_UUID] [--limit 5] [--offset 0]
+  python3 claude-api.py --session-key SK --op organizations
+  python3 claude-api.py --session-key SK --op conversations [--org ORG_UUID] [--limit 50]
+  python3 claude-api.py --session-key SK --op conversation --id CONV_UUID [--org ORG_UUID]
+  python3 claude-api.py --session-key SK --op search --query TEXT [--org ORG_UUID]
+  python3 claude-api.py --session-key SK --op import [--org ORG_UUID] [--limit 5] [--offset 0]
 
 Org discovery:
   Run --op organizations to list all orgs the user has access to.
   The org with "chat" in its capabilities is the one with web chat history.
-  If --org is omitted, uses the org_uuid from the saved session.
+  If --org is omitted, auto-discovers the chat org via API.
 """
 
 import argparse
 import json
-import os
 import sys
 import httpx
-from pathlib import Path
-
-SESSION_PATH = Path.home() / ".config" / "agentos" / "claude-session.json"
 
 BASE_URL = "https://claude.ai"
 
@@ -51,16 +47,6 @@ HEADERS = {
     "Sec-CH-UA-Platform": '"macOS"',
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Brave/1.80",
 }
-
-
-def load_session():
-    """Load session from ~/.config/agentos/claude-session.json"""
-    if not SESSION_PATH.exists():
-        raise FileNotFoundError(
-            f"No session found at {SESSION_PATH}. "
-            "Run the claude skill login flow first."
-        )
-    return json.loads(SESSION_PATH.read_text())
 
 
 def make_request(path, session_key, method="GET", body=None):
@@ -88,25 +74,13 @@ def get_organizations(session_key):
     return make_request("/api/organizations", session_key)
 
 
-def resolve_org_uuid(session_key, org_uuid=None, skip_session_file=False):
+def resolve_org_uuid(session_key, org_uuid=None):
     """Resolve the org UUID to use.
 
-    Priority: explicit --org > session default > auto-discover chat org from API.
-    When skip_session_file is True (session key passed directly), skip the
-    saved session file and go straight to API discovery.
+    Priority: explicit --org > auto-discover chat org from API.
     """
     if org_uuid:
         return org_uuid
-
-    # Try session default (only if not using a directly-provided session key)
-    if not skip_session_file:
-        try:
-            session = load_session()
-            saved_org = session.get("org_uuid")
-            if saved_org:
-                return saved_org
-        except FileNotFoundError:
-            pass
 
     # Auto-discover: find the org with "chat" capability
     orgs = get_organizations(session_key)
@@ -285,17 +259,11 @@ def main():
     parser.add_argument("--query", help="Search query (for search op)")
     parser.add_argument("--limit", type=int, default=50, help="Max results")
     parser.add_argument("--offset", type=int, default=0, help="Pagination offset")
-    parser.add_argument("--session-key", help="sessionKey cookie value (injected by agentOS auth)")
+    parser.add_argument("--session-key", required=True,
+                        help="sessionKey cookie value (injected by agentOS cookie matchmaking)")
     args = parser.parse_args()
 
-    # Priority: --session-key flag > session file
-    skip_session_file = False
-    if args.session_key:
-        session_key = args.session_key
-        skip_session_file = True
-    else:
-        session = load_session()
-        session_key = session["session_key"]
+    session_key = args.session_key
 
     if args.op == "organizations":
         orgs = get_organizations(session_key)
@@ -303,7 +271,7 @@ def main():
         return 0
 
     # Resolve org UUID for all other operations
-    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None, skip_session_file=skip_session_file)
+    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None)
 
     if args.op == "conversations":
         convs = get_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)
