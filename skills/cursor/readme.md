@@ -140,6 +140,8 @@ MCP config locations:
 - macOS/Linux: `~/.cursor/mcp.json`
 - Windows: `%APPDATA%/Cursor/mcp.json`
 
+**Use the release binary** for the agentOS MCP command (`target/release/agentos`). `restart.sh` only rebuilds release by default, so the debug binary goes stale.
+
 ## Instructions for AI
 
 You are running in Cursor.
