@@ -131,6 +131,20 @@ operations:
           s.summary_deletions as deletions,
           s.summary_files as files_changed,
           (SELECT count(*) FROM message m WHERE m.session_id = s.id) as message_count,
+          (SELECT count(*) FROM part pt WHERE pt.session_id = s.id AND json_extract(pt.data, '$.type') = 'text') as text_part_count,
+          (SELECT group_concat(
+            CASE json_extract(m2.data, '$.role')
+              WHEN 'user' THEN '## User' || char(10) || json_extract(pt2.data, '$.text')
+              WHEN 'assistant' THEN '## Assistant' || char(10) || json_extract(pt2.data, '$.text')
+              ELSE json_extract(pt2.data, '$.text')
+            END,
+            char(10) || char(10)
+          ) FROM part pt2
+           JOIN message m2 ON pt2.message_id = m2.id
+           WHERE pt2.session_id = s.id
+             AND json_extract(pt2.data, '$.type') = 'text'
+           ORDER BY pt2.time_created ASC
+          ) as transcript_text,
           datetime(s.time_created / 1000, 'unixepoch') as created_at,
           datetime(s.time_updated / 1000, 'unixepoch') as updated_at
         FROM session s
@@ -407,6 +421,26 @@ use({ skill: "opencode", tool: "ask", params: {
 ```
 
 The called agent wakes up in its workspace with full context — AGENTS.md, MCP servers, readme — answers the question, and returns. Like calling a colleague at their desk.
+
+## MCP Server Configuration
+
+OpenCode connects to MCP servers via its config file at `~/.config/opencode/opencode.json`. The `mcp` key defines each server:
+
+```json
+{
+  "mcp": {
+    "agentOS": {
+      "type": "local",
+      "command": ["/Users/joe/dev/agentos/target/release/agentos", "mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+- **Use the release binary** (`target/release/agentos`) — `restart.sh` rebuilds release by default, so the debug binary goes stale
+- After changing the config, restart OpenCode or start a new session for the MCP connection to pick up the change
+- The MCP process (`agentos mcp`) is a thin stdio pipe that forwards to the HTTP server on port 3456 — it survives server restarts
 
 ## Database Location
 
