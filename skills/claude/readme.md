@@ -173,11 +173,19 @@ operations:
       limit: { type: integer, default: 50, description: "Max conversations to return (max 250)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversations --org '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "--op"
+        - "conversations"
+        - "--session-key"
+        - ".params.auth.sessionKey"
+        - if .params.account then "--org" else "" end
+        - if .params.account then .params.account else "" end
+        - "--limit"
+        - ".params.limit"
+        - "--offset"
+        - ".params.offset"
       timeout: 30
 
   conversation.get:
@@ -189,11 +197,17 @@ operations:
       id: { type: string, required: true, description: "Conversation UUID" }
       account: { type: string, description: "Org UUID (omit to use session default)" }
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op conversation --id '{{params.id}}' --org '{{params.account}}' 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "--op"
+        - "conversation"
+        - "--session-key"
+        - ".params.auth.sessionKey"
+        - "--id"
+        - ".params.id"
+        - if .params.account then "--org" else "" end
+        - if .params.account then .params.account else "" end
       timeout: 30
 
   conversation.search:
@@ -208,11 +222,19 @@ operations:
       account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 20, description: "Max results" }
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op search --query '{{params.query}}' --org '{{params.account}}' --limit {{params.limit}} 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "--op"
+        - "search"
+        - "--session-key"
+        - ".params.auth.sessionKey"
+        - "--query"
+        - ".params.query"
+        - if .params.account then "--org" else "" end
+        - if .params.account then .params.account else "" end
+        - "--limit"
+        - ".params.limit"
       timeout: 30
 
   conversation.import:
@@ -226,13 +248,21 @@ operations:
     params:
       account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 5, description: "Conversations per batch (keep ≤10 to avoid DB lock)" }
-      offset: { type: integer, default: 0, description: "Conversation offset for pagination" }
+      offset: { type: integer, default: 0, description: "Pagination offset" }
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op import --org '{{params.account}}' --limit {{params.limit}} --offset {{params.offset}} 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "--op"
+        - "import"
+        - "--session-key"
+        - ".params.auth.sessionKey"
+        - if .params.account then "--org" else "" end
+        - if .params.account then .params.account else "" end
+        - "--limit"
+        - ".params.limit"
+        - "--offset"
+        - ".params.offset"
       timeout: 60
 
 # ==============================================================================
@@ -250,11 +280,13 @@ utilities:
       name: string
       capabilities: array
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op organizations 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "--op"
+        - "organizations"
+        - "--session-key"
+        - ".params.auth.sessionKey"
       timeout: 15
 
   session_save:
@@ -274,11 +306,11 @@ utilities:
       org_name: string
       saved_at: string
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --save-session '{{params.session_key}}' 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
+        - "--save-session"
+        - ".params.session_key"
       timeout: 15
 
   extract_magic_link:
@@ -294,11 +326,11 @@ utilities:
     returns:
       magic_link: string
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --extract-link-from-raw '{{params.raw_email}}' 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
+        - "--extract-link-from-raw"
+        - ".params.raw_email"
       timeout: 10
 
   session_check:
@@ -312,11 +344,10 @@ utilities:
       org_name: string
       saved_at: string
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --check-session 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
+        - "--check-session"
       timeout: 5
 
 ---

@@ -171,6 +171,18 @@ def main():
     parser.add_argument("--profile", default="Default", help="Brave profile (default: Default)")
     args = parser.parse_args()
 
+    # Treat empty strings as None (template engine passes '' for unset params)
+    if args.domain and not args.domain.strip():
+        args.domain = None
+    if args.names and not args.names.strip():
+        args.names = None
+    if args.host and not args.host.strip():
+        args.host = None
+    if args.name and not args.name.strip():
+        args.name = None
+    if args.profile and not args.profile.strip():
+        args.profile = "Default"
+
     # Support legacy --host/--name single-cookie mode
     domain = args.domain or args.host
     if not domain:
@@ -179,7 +191,7 @@ def main():
 
     names = None
     if args.names:
-        names = [n.strip() for n in args.names.split(",")]
+        names = [n.strip() for n in args.names.split(",") if n.strip()]
     elif args.name:
         names = [args.name]
 

@@ -88,19 +88,25 @@ def get_organizations(session_key):
     return make_request("/api/organizations", session_key)
 
 
-def resolve_org_uuid(session_key, org_uuid=None):
+def resolve_org_uuid(session_key, org_uuid=None, skip_session_file=False):
     """Resolve the org UUID to use.
 
     Priority: explicit --org > session default > auto-discover chat org from API.
+    When skip_session_file is True (session key passed directly), skip the
+    saved session file and go straight to API discovery.
     """
     if org_uuid:
         return org_uuid
 
-    # Try session default
-    session = load_session()
-    saved_org = session.get("org_uuid")
-    if saved_org:
-        return saved_org
+    # Try session default (only if not using a directly-provided session key)
+    if not skip_session_file:
+        try:
+            session = load_session()
+            saved_org = session.get("org_uuid")
+            if saved_org:
+                return saved_org
+        except FileNotFoundError:
+            pass
 
     # Auto-discover: find the org with "chat" capability
     orgs = get_organizations(session_key)
@@ -279,10 +285,17 @@ def main():
     parser.add_argument("--query", help="Search query (for search op)")
     parser.add_argument("--limit", type=int, default=50, help="Max results")
     parser.add_argument("--offset", type=int, default=0, help="Pagination offset")
+    parser.add_argument("--session-key", help="sessionKey cookie value (injected by agentOS auth)")
     args = parser.parse_args()
 
-    session = load_session()
-    session_key = session["session_key"]
+    # Priority: --session-key flag > session file
+    skip_session_file = False
+    if args.session_key:
+        session_key = args.session_key
+        skip_session_file = True
+    else:
+        session = load_session()
+        session_key = session["session_key"]
 
     if args.op == "organizations":
         orgs = get_organizations(session_key)
@@ -290,7 +303,7 @@ def main():
         return 0
 
     # Resolve org UUID for all other operations
-    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None)
+    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None, skip_session_file=skip_session_file)
 
     if args.op == "conversations":
         convs = get_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)

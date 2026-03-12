@@ -181,7 +181,7 @@ utilities:
         - id: derive_key
           crypto:
             algorithm: pbkdf2
-            password: "{{get_password.value}}"
+            password: ".get_password.value"
             salt: "saltysalt"
             iterations: 1003
             key_length: 16
@@ -254,11 +254,17 @@ utilities:
       count: integer
       source: string
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/brave-browser/get-cookie.py --domain '{{params.domain}}' {{#if params.names}}--names '{{params.names}}'{{/if}} {{#if params.host}}--host '{{params.host}}'{{/if}} {{#if params.profile}}--profile '{{params.profile}}'{{/if}} 2>/dev/null"
+        - "/Users/joe/dev/agentos-community/skills/brave-browser/get-cookie.py"
+        - "--domain"
+        - ".params.domain"
+        - if .params.names then "--names" else "" end
+        - if .params.names then .params.names else "" end
+        - if .params.host then "--host" else "" end
+        - if .params.host then .params.host else "" end
+        - if .params.profile then "--profile" else "" end
+        - if .params.profile then .params.profile else "" end
       timeout: 15
 
 ---
