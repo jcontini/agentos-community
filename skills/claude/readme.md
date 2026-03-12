@@ -10,7 +10,38 @@ website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
 
-auth: none
+auth:
+  cookies:
+    domain: ".claude.ai"
+    names: ["sessionKey"]
+    session_duration: "30d"
+    login:
+      account_prompt: "What email do you use for claude.ai?"
+      phases:
+        - name: request_login
+          description: "Submit email on the Claude login page to trigger a magic link email"
+          steps:
+            - { action: goto, url: "https://claude.ai/login" }
+            - { action: fill, selector: "input[type=email]", value: "{{account}}" }
+            - { action: click, selector: "button[type=submit]" }
+          returns_to_agent: >
+            Magic link requested. Check the user's email for a message from Anthropic
+            containing a claude.ai/magic-link URL. Use the Gmail skill to search for it,
+            or ask the user to paste it.
+        - name: complete_login
+          description: "Navigate to the magic link URL to complete authentication"
+          requires: [magic_link]
+          steps:
+            - { action: goto, url: "{{magic_link}}" }
+            - { action: wait, url_contains: "/new" }
+          returns_to_agent: >
+            Login complete. Extract cookies with the Playwright cookies utility
+            (domain: .claude.ai) or use Brave Browser cookie_get, then save to
+            ~/.config/agentos/claude-session.json.
+    verify:
+      url: "https://claude.ai/api/organizations"
+      method: GET
+      expect_status: 200
 
 connects_to: claude-ai-web
 
@@ -38,10 +69,27 @@ instructions: |
   Claude.ai web chat history. Conversations live server-side only — not in any local file.
   Access requires a valid sessionKey cookie from a logged-in claude.ai browser session.
 
-  ## First-Time Setup
+  ## Getting a Session
 
-  Before using this skill, you need a session. Check with `session_check` first.
-  If no session exists, walk the user through login (see Login Flow below).
+  Before using this skill, check for a session with `session_check`.
+
+  If no session exists, there are two ways to get one:
+
+  ### Option 1: Import from Brave Browser (fast, if user is already logged in)
+  1. Call Brave Browser's `cookie_get` utility: `{ domain: "platform.claude.com", names: "sessionKey" }`
+  2. If it returns a sessionKey cookie, the user is already logged in on Brave
+  3. Present to user: "I found a claude.ai session in Brave. Import it?"
+  4. If yes, call `session_save` with the sessionKey value
+
+  ### Option 2: Playwright login flow (if no existing session)
+  The auth.cookies.login section above describes the multi-phase flow:
+  1. Ask the user for their claude.ai email address
+  2. Use Playwright to navigate to claude.ai/login, fill email, click submit
+  3. Tell user: "Magic link requested. Check your email."
+  4. Find the magic link (Gmail skill or ask user to paste it)
+  5. Use Playwright to navigate to the magic link URL
+  6. After redirect to /new, extract cookies with Playwright's `cookies` utility
+  7. Call `session_save` with the sessionKey value
 
   ## Discovering the User's Account
 
@@ -53,35 +101,10 @@ instructions: |
   3. If you need to switch orgs, use `list_orgs` to discover available orgs and
      their UUIDs, then pass `--org UUID` via the account param.
 
-  ## Auth / Session
-
-  The sessionKey is an HttpOnly cookie — JS document.cookie cannot read it.
-  It must be extracted via CDP Network.getAllCookies from a logged-in browser.
+  ## Session Storage
 
   Session is saved to: ~/.config/agentos/claude-session.json
   Sessions last ~30 days. If API calls return 401/403, re-run the login flow.
-
-  ## Login Flow (agent-orchestrated)
-
-  The login requires a real browser and email access. You (the agent) orchestrate
-  the steps — the Python scripts handle only the mechanical browser parts.
-
-  1. Ask the user for their claude.ai email address.
-  2. Use Playwright to navigate to https://claude.ai/login
-   3. Fill the email input (selector: input[type=email]) with the user's email.
-     A plain Playwright fill() works. If React doesn't pick it up, use the
-     nativeInputValueSetter trick (set value via prototype setter, dispatch input event).
-  4. Click submit (selector: button[type=submit])
-  5. Tell the user: "I've submitted your email. A magic link should arrive shortly."
-  6. Check for the magic link email:
-       - If you have access to the user's email (e.g. Gmail skill), search for it:
-         query: "from:anthropic", look for emails in the last few minutes
-       - Get the raw email content and look for the magic link URL
-         Pattern: https://claude.ai/magic-link#TOKEN
-       - If you don't have email access, ask the user to paste the magic link URL
-  7. Once you have the magic link URL, call the `navigate_magic_link` utility
-     with the URL. This navigates the browser and extracts the session.
-  8. Verify the session with `session_check`.
 
   ## Magic Link Extraction from Email
 
@@ -90,18 +113,12 @@ instructions: |
   - Remove QP soft line breaks: replace =\r\n and =\n with ""
   - The link pattern: href=3D"https://claude.ai/magic-link#TOKEN"
   - Replace =3D with = in the extracted URL
-  - The helper `extract_magic_link` in claude-login.py can do this for you
+  - The helper `extract_magic_link` utility can do this for you
 
   ## API Architecture
 
-  LOGIN ONLY → Playwright (CDP browser)
-    - Magic link needs a real browser session to land
-    - sessionKey extraction via CDP Network.getAllCookies
-
-  ALL OTHER CALLS → claude-api.py (httpx)
-    - No browser needed after login
-    - sessionKey passed as Cookie header
-    - Required headers to bypass Cloudflare (documented in claude-api.py)
+  LOGIN ONLY → Playwright skill (browser control) + Brave Browser skill (cookie extraction)
+  ALL OTHER CALLS → claude-api.py (httpx with sessionKey as Cookie header)
 
   ## Cloudflare / API Headers
 
@@ -111,21 +128,6 @@ instructions: |
     Sec-Fetch-Mode: cors
     Sec-Fetch-Dest: empty
     Cookie: sessionKey=sk-ant-sid02-...
-
-  ## API Endpoints
-
-  GET /api/organizations
-    → list of orgs with capabilities array
-
-  GET /api/organizations/{org_uuid}/chat_conversations?limit=50&offset=0
-    → list of conversation stubs (uuid, name, updated_at)
-    → sorted by updated_at desc
-    → there is NO server-side search endpoint — fetch + filter locally
-
-  GET /api/organizations/{org_uuid}/chat_conversations/{conv_uuid}
-       ?tree=True&rendering_mode=messages&render_all_tools=true
-    → full conversation with chat_messages array
-    → each message: { uuid, sender ("human"|"assistant"), content [{type, text}], created_at }
 
 testing:
   exempt:
@@ -255,27 +257,17 @@ utilities:
         - "python3 ~/dev/agentos-community/skills/claude/claude-api.py --op organizations 2>/dev/null"
       timeout: 15
 
-  navigate_magic_link:
+  session_save:
     description: |
-      Navigate the browser to a magic link URL and extract the session.
-      Use this after obtaining the magic link URL (from email or user).
-      Requires a Playwright browser running on CDP port 9222.
-
-      Steps performed:
-        1. Navigate to the magic link URL
-        2. Wait for redirect to /new (confirms login)
-        3. Extract sessionKey via CDP Network.getAllCookies
-        4. Call /api/organizations to discover the default org
-        5. Save session to ~/.config/agentos/claude-session.json
+      Save a sessionKey cookie to the Claude session file.
+      Call this after extracting the sessionKey from Brave Browser (cookie_get)
+      or from Playwright (cookies utility). This also calls /api/organizations
+      to discover the default org and saves it alongside the session key.
     params:
-      url:
+      session_key:
         type: string
         required: true
-        description: "The full magic link URL (https://claude.ai/magic-link#TOKEN)"
-      port:
-        type: integer
-        default: 9222
-        description: "CDP port"
+        description: "The sessionKey cookie value (sk-ant-sid02-...)"
     returns:
       session_key: string
       org_uuid: string
@@ -286,31 +278,8 @@ utilities:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --magic-link '{{params.url}}' --port {{params.port}} --verbose 2>&1 | tail -1"
-      timeout: 60
-
-  extract_session:
-    description: |
-      Extract session cookies from a browser that is already logged into claude.ai.
-      Use this if the user logged in manually via their browser.
-      Requires a browser running on CDP port 9222 with claude.ai loaded.
-    params:
-      port:
-        type: integer
-        default: 9222
-        description: "CDP port"
-    returns:
-      session_key: string
-      org_uuid: string
-      org_name: string
-      saved_at: string
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --extract-session --port {{params.port}} --verbose 2>&1 | tail -1"
-      timeout: 30
+        - "python3 ~/dev/agentos-community/skills/claude/claude-login.py --save-session '{{params.session_key}}' 2>/dev/null"
+      timeout: 15
 
   extract_magic_link:
     description: |
@@ -361,22 +330,22 @@ Browse and search your claude.ai web chat conversation history.
 claude.ai web chat history lives server-side only — unlike Claude Code (CLI) which stores
 transcripts locally, web conversations are only accessible via the claude.ai API.
 
-This skill uses a two-phase approach:
-1. **Login** — The agent orchestrates a magic-link login flow using Playwright browser
-   automation and email access, then extracts the `sessionKey` HttpOnly cookie via CDP
-2. **API calls** — All subsequent calls use `httpx` directly with the saved
+Two phases:
+1. **Get session** — either import from Brave Browser (if already logged in) or
+   orchestrate a magic-link login flow via Playwright + email
+2. **API calls** — all subsequent calls use `httpx` directly with the saved
    `sessionKey` — no browser needed
 
-## Login
+## Getting a Session
 
-The first time you use this skill, the agent will:
-1. Ask for your claude.ai email address
-2. Submit it on the login page (via Playwright)
-3. Help you find the magic link in your email (or ask you to paste it)
-4. Navigate to the magic link to complete login
-5. Extract and save the session cookie
+**Fast path (Brave):** If the user is logged into claude.ai on Brave Browser,
+extract the sessionKey with `brave-browser/cookie_get` and save it with `session_save`.
 
-Sessions last ~30 days. Use `session_check` to verify auth status.
+**Login flow (Playwright):** Navigate to claude.ai/login, submit email, find magic link
+in email (Gmail skill or user pastes it), navigate to magic link, extract cookies with
+Playwright's `cookies` utility, save with `session_save`.
+
+Sessions last ~30 days. Use `session_check` to verify.
 
 ## Capabilities
 
@@ -388,8 +357,7 @@ conversation.get      Full conversation with all messages
 conversation.search   Search conversations by title (client-side filter)
 conversation.import   Import messages into Memex for FTS content search
 list_orgs             Discover available orgs and capabilities
-navigate_magic_link   Complete login with a magic link URL
-extract_session       Extract session from already-logged-in browser
+session_save          Save a sessionKey to the session file
 extract_magic_link    Parse magic link URL from raw email content
 session_check         Verify current session status
 ```

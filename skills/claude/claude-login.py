@@ -247,9 +247,46 @@ def check_logged_in(ws_url):
 
 # -- Entry point ---------------------------------------------------------------
 
+def save_session_from_key(session_key):
+    """Save a session from a raw sessionKey value.
+
+    Calls /api/organizations to discover the default org, then saves everything.
+    This is the new entry point — the agent extracts the sessionKey from
+    Brave Browser or Playwright, then calls this to persist it.
+    """
+    headers = {
+        "Accept": "application/json",
+        "Cookie": f"sessionKey={session_key}",
+        "anthropic-client-version": "claude-ai/web@1.1.5368",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    }
+
+    try:
+        resp = httpx.get("https://claude.ai/api/organizations", headers=headers, follow_redirects=True)
+        resp.raise_for_status()
+        orgs = resp.json()
+    except Exception as e:
+        return {"error": f"Session key invalid or expired: {e}"}
+
+    if not isinstance(orgs, list) or not orgs:
+        return {"error": "No organizations found — session key may be invalid"}
+
+    # Find the chat org
+    chat_org = next((o for o in orgs if "chat" in o.get("capabilities", [])), orgs[0])
+    org_uuid = chat_org["uuid"]
+    org_name = chat_org.get("name", "Unknown")
+
+    return save_session(session_key, org_uuid, org_name)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Claude.ai browser login helpers")
     parser.add_argument("--magic-link", help="Navigate to magic link URL and extract session")
+    parser.add_argument("--save-session", metavar="SESSION_KEY",
+                        help="Save a sessionKey directly (from Brave/Playwright cookie extraction)")
     parser.add_argument("--extract-session", action="store_true",
                         help="Extract cookies from current browser (already logged in)")
     parser.add_argument("--check-session", action="store_true",
@@ -259,6 +296,12 @@ def main():
     parser.add_argument("--port", type=int, default=9222, help="CDP port (default: 9222)")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
+
+    # Mode: save session from raw key (no browser needed)
+    if args.save_session:
+        result = save_session_from_key(args.save_session)
+        print(json.dumps(result))
+        return 1 if "error" in result else 0
 
     # Mode: check saved session (no browser needed)
     if args.check_session:

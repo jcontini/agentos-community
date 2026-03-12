@@ -17,10 +17,10 @@ connects_to: brave-browser-app
 # This skill exposes a credential_get utility that extracts and decrypts
 # the sessionKey cookie for claude.ai, usable by consumer skills via provides:.
 provides:
-  - service: claude-ai
-    scopes: [sessionKey]
-    via: credential_get
-    account_param: account
+  - service: cookies
+    description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
+    via: cookie_get
+    account_param: domain
     accounts_via: list_accounts
     account_field: name
 
@@ -227,40 +227,39 @@ utilities:
         domain: '"%" + .params.domain + "%"'
         limit: '.params.limit // 1000'
 
-  credential_get:
+  cookie_get:
     description: |
-      Extract and decrypt the sessionKey (or any named cookie) from Brave Browser
-      for a given host. Used by consumer skills via provides: to get claude.ai session credentials.
-
-      Copies the Cookies DB to /tmp to avoid file-lock issues when Brave is running,
-      derives the AES key from macOS Keychain, and decrypts the v10 cookie value.
-
-      Returns { session_key: "sk-ant-..." }.
+      Extract and decrypt cookies for a domain from Brave Browser's cookie database.
+      Full decryption pipeline: Keychain → PBKDF2 → AES-128-CBC.
+      Returns plaintext cookie values including HttpOnly cookies.
+      This is the provider interface for cookie matchmaking — other skills
+      that need browser cookies discover Brave through this utility.
     params:
+      domain:
+        type: string
+        required: true
+        description: "Cookie domain to match (e.g., '.claude.ai', '.chase.com')"
+      names:
+        type: string
+        description: "Comma-separated cookie names to filter (e.g., 'sessionKey,csrf_token')"
       host:
         type: string
-        description: "Host pattern to match (default: platform.claude.com)"
-      name:
+        description: "Specific host_key to match (more specific than domain, e.g., 'platform.claude.com')"
+      profile:
         type: string
-        description: "Cookie name (default: sessionKey)"
-      account:
-        type: string
-        description: "Brave profile name (optional, default profile used if omitted)"
+        description: "Brave profile directory name (default: 'Default')"
     returns:
-      session_key: string
-    steps:
-      steps:
-        - id: cookie
-          command:
-            binary: bash
-            args:
-              - "-l"
-              - "-c"
-              - "python3 ~/dev/agentos-community/skills/brave-browser/get-cookie.py --host '{{params.host | default:platform.claude.com}}' --name '{{params.name | default:sessionKey}}'"
-
-      response:
-        transform: |
-          { session_key: .cookie.value }
+      domain: string
+      cookies: array
+      count: integer
+      source: string
+    command:
+      binary: bash
+      args:
+        - "-l"
+        - "-c"
+        - "python3 ~/dev/agentos-community/skills/brave-browser/get-cookie.py --domain '{{params.domain}}' {{#if params.names}}--names '{{params.names}}'{{/if}} {{#if params.host}}--host '{{params.host}}'{{/if}} {{#if params.profile}}--profile '{{params.profile}}'{{/if}} 2>/dev/null"
+      timeout: 15
 
 ---
 
@@ -295,13 +294,16 @@ Brave encrypts cookie values on macOS using:
 
 The `get_cookie_key` utility handles steps 1–2. The `credential_get` utility does the full pipeline.
 
-## Claude.ai Session Key
+## Cookie Extraction
 
-The `sessionKey` cookie for claude.ai lives on host `.platform.claude.com`.
+Extract decrypted cookies for any domain. Used by other skills through cookie provider matchmaking.
 
 ```
-use({ skill: "brave-browser", tool: "credential_get", params: {} })
-// → { session_key: "sk-ant-..." }
+use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".claude.ai", names: "sessionKey" } })
+→ { domain: ".claude.ai", cookies: [{name: "sessionKey", value: "sk-ant-...", httpOnly: true, ...}], count: 1 }
+
+use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".chase.com" } })
+→ { domain: ".chase.com", cookies: [...], count: 5 }
 ```
 
 ## Operations
@@ -317,5 +319,5 @@ UTILITY            DESCRIPTION
 list_accounts      List Brave profiles with display names
 get_cookie_key     Derive AES-128 key from Keychain (PBKDF2)
 list_cookies       List raw (encrypted) cookies for a domain
-credential_get     Full pipeline: extract + decrypt sessionKey for claude.ai
+cookie_get         Full pipeline: extract + decrypt any cookies for a domain
 ```

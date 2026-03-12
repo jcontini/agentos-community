@@ -39,6 +39,12 @@ seed:
       type: company
       url: https://microsoft.com
 
+provides:
+  - service: cookies
+    description: "Extract cookies from a live browser session (including HttpOnly). Use after navigating to a logged-in site."
+    via: cookies
+    account_param: domain
+
 instructions: |
   WHEN TO USE THIS SKILL vs OTHERS:
   - Need to READ a web page's content? → Use Exa (search.create) or Firecrawl (webpage.read). NOT this.
@@ -364,6 +370,32 @@ utilities:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts close_tab 2>/dev/null"]
       timeout: 10
+
+  cookies:
+    description: |
+      Extract cookies for a domain from the browser's active session via CDP.
+      Returns all cookies matching the domain (including HttpOnly cookies that
+      JavaScript cannot access). Use this after a login flow to capture session
+      cookies for storage. The cookies are returned in Playwright's cookie format
+      with name, value, domain, path, expires, httpOnly, secure, sameSite.
+    params:
+      domain:
+        type: string
+        required: true
+        description: "Cookie domain to match (e.g. '.claude.ai', '.chase.com')"
+      names:
+        type: string
+        description: "Comma-separated cookie names to filter (e.g. 'sessionKey,csrf_token'). Omit for all cookies on the domain."
+    returns:
+      domain: string
+      cookies: array
+      count: integer
+      url: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts cookies"]
+      stdin: '{"domain": "{{params.domain}}", "names": "{{params.names}}"}'
+      timeout: 15
 ---
 
 # Playwright
@@ -462,6 +494,20 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 | `tabs` | List all open tabs with URLs and titles. |
 | `new_tab` | Open a new tab, optionally navigate to URL. |
 | `close_tab` | Close the current tab. |
+
+### Cookies
+
+| Utility | What it does |
+|---------|-------------|
+| `cookies` | Extract cookies for a domain from the active browser session. Returns HttpOnly cookies too (via CDP, not JS). Use after a login flow to capture session cookies. |
+
+```
+cookies { domain: ".claude.ai" }
+→ { domain: ".claude.ai", cookies: [{name: "sessionKey", value: "sk-ant-...", httpOnly: true, ...}], count: 1 }
+
+cookies { domain: ".chase.com", names: "JSESSIONID,auth_token" }
+→ { domain: ".chase.com", cookies: [...], count: 2 }
+```
 
 ## Selectors
 

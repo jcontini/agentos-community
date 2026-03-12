@@ -225,6 +225,10 @@
           "account_field": {
             "type": "string",
             "description": "Field name in the accounts_via response containing the account identifier (default: 'email')"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this provider supplies"
           }
         },
         "additionalProperties": false
@@ -536,6 +540,71 @@
               "type": "string",
               "enum": ["firefox", "chrome"],
               "description": "Preferred browser. Default: tries firefox first (plaintext), then chrome (needs decryption)."
+            },
+            "session_duration": {
+              "type": "string",
+              "description": "Estimated session lifetime (e.g., '30d', '8h'). Used for credential expiry."
+            },
+            "login": {
+              "type": "object",
+              "description": "Multi-phase login recipe executed by the agent via Playwright. Each phase is a sequence of browser actions. Control returns to the agent between phases.",
+              "properties": {
+                "account_prompt": {
+                  "type": "string",
+                  "description": "Question to ask the user to determine the account (e.g., 'What email do you use?')"
+                },
+                "phases": {
+                  "type": "array",
+                  "description": "Ordered login phases. Agent executes each phase, filling in 'requires' values between phases.",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "steps"],
+                    "properties": {
+                      "name": { "type": "string", "description": "Phase identifier" },
+                      "description": { "type": "string", "description": "What this phase does" },
+                      "requires": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Values the agent must provide before this phase (e.g., magic_link, mfa_code)"
+                      },
+                      "optional": {
+                        "type": "boolean",
+                        "description": "If true, agent can skip this phase (e.g., MFA not always required)"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "description": "Playwright actions to execute",
+                        "items": {
+                          "type": "object",
+                          "required": ["action"],
+                          "properties": {
+                            "action": { "type": "string", "description": "Playwright action: goto, fill, click, wait, evaluate, type, select" },
+                            "url": { "type": "string" },
+                            "selector": { "type": "string" },
+                            "value": { "type": "string" },
+                            "url_contains": { "type": "string", "description": "For wait action: wait until URL contains this string" },
+                            "timeout": { "type": "integer" },
+                            "script": { "type": "string" }
+                          }
+                        }
+                      },
+                      "returns_to_agent": {
+                        "type": "string",
+                        "description": "Message to the agent when this phase completes. Guides next steps."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "verify": {
+              "type": "object",
+              "description": "Endpoint to probe for session validity",
+              "properties": {
+                "url": { "type": "string", "description": "URL to check" },
+                "method": { "type": "string", "description": "HTTP method (default: GET)" },
+                "expect_status": { "type": "integer", "description": "Expected HTTP status (default: 200)" }
+              }
             }
           },
           "additionalProperties": false

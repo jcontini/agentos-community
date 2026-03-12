@@ -29,6 +29,7 @@
  *   tabs                            List open tabs
  *   new_tab [url]                   Open a new tab
  *   close_tab                       Close current tab
+ *   cookies --domain D [--names N]  Extract cookies for a domain via CDP
  */
 
 import { spawn } from "child_process";
@@ -484,6 +485,53 @@ async function cmdInspect(): Promise<void> {
   await browser.close();
 }
 
+async function cmdCookies(): Promise<void> {
+  const port = getPort();
+  const domain = (stdinParams.domain as string) || getOption("domain");
+  if (!domain) err("Usage: cookies --domain <domain>");
+
+  const namesRaw = (stdinParams.names as string) || getOption("names");
+  const names = namesRaw ? namesRaw.split(",").map((n) => n.trim()) : null;
+
+  const browser = await connectBrowser(port);
+  const context = browser.contexts()[0];
+  if (!context) err("No browser context found");
+
+  // Get all cookies from the browser context, filtered by domain
+  const allCookies = await context.cookies();
+  let filtered = allCookies.filter((c) => {
+    // Match domain: ".claude.ai" matches ".claude.ai" and "claude.ai"
+    // "claude.ai" in cookie domain matches ".claude.ai" filter
+    const cookieDomain = c.domain.startsWith(".") ? c.domain : `.${c.domain}`;
+    const filterDomain = domain.startsWith(".") ? domain : `.${domain}`;
+    return cookieDomain.endsWith(filterDomain) || filterDomain.endsWith(cookieDomain);
+  });
+
+  if (names) {
+    filtered = filtered.filter((c) => names.includes(c.name));
+  }
+
+  // Return structured cookie data — consumers store this in credentials.json
+  const cookies = filtered.map((c) => ({
+    name: c.name,
+    value: c.value,
+    domain: c.domain,
+    path: c.path,
+    expires: c.expires,
+    httpOnly: c.httpOnly,
+    secure: c.secure,
+    sameSite: c.sameSite,
+  }));
+
+  out({
+    domain,
+    cookies,
+    count: cookies.length,
+    url: (await getPage(browser)).url(),
+  });
+  await browser.close();
+}
+
 // --- Dispatch ---
 
 const commands: Record<string, () => Promise<void>> = {
@@ -505,6 +553,7 @@ const commands: Record<string, () => Promise<void>> = {
   tabs: cmdTabs,
   new_tab: cmdNewTab,
   close_tab: cmdCloseTab,
+  cookies: cmdCookies,
 };
 
 async function main() {
