@@ -113,7 +113,7 @@ operations:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts goto"]
-      stdin: '{"url": "{{params.url}}", "wait_until": "{{params.wait_until}}"}'
+      stdin: '.params | {url: .url, wait_until: (.wait_until // "networkidle")}'
       timeout: 45
 
   webpage.read:
@@ -129,7 +129,7 @@ operations:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts extract"]
-      stdin: '{"selector": "{{params.selector}}", "format": "{{params.format}}"}'
+      stdin: '.params | {selector: (.selector // "body"), format: (.format // "text")}'
       timeout: 30
 
 utilities:
@@ -149,7 +149,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts start"]
-      stdin: '{"mode": "{{params.mode}}", "port": "{{params.port}}"}'
+      stdin: '.params | {mode: (.mode // "headed"), port: (.port // 9222)}'
       timeout: 30
 
   stop:
@@ -158,7 +158,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts stop"]
-      stdin: '{"port": "{{params.port}}"}'
+      stdin: '.params | {port: (.port // 9222)}'
       timeout: 10
 
   status:
@@ -170,7 +170,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts status"]
-      stdin: '{"port": "{{params.port}}"}'
+      stdin: '.params | {port: (.port // 9222)}'
       timeout: 10
 
   screenshot:
@@ -190,7 +190,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts screenshot"]
-      stdin: '{"selector": "{{params.selector}}", "path": "{{params.path}}", "full_page": "{{params.full_page}}"}'
+      stdin: '.params | {selector: .selector, path: (.path // "/tmp/screenshot.png"), full_page: (.full_page // false)}'
       timeout: 30
 
   click:
@@ -206,7 +206,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts click"]
-      stdin: '{"selector": "{{params.selector}}"}'
+      stdin: '.params | {selector: .selector}'
       timeout: 15
 
   fill:
@@ -226,7 +226,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts fill"]
-      stdin: '{"selector": "{{params.selector}}", "value": "{{params.value}}"}'
+      stdin: '.params | {selector: .selector, value: .value}'
       timeout: 15
 
   select:
@@ -246,7 +246,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts select"]
-      stdin: '{"selector": "{{params.selector}}", "value": "{{params.value}}"}'
+      stdin: '.params | {selector: .selector, value: .value}'
       timeout: 15
 
   type:
@@ -266,7 +266,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts type"]
-      stdin: '{"selector": "{{params.selector}}", "text": "{{params.text}}"}'
+      stdin: '.params | {selector: .selector, text: .text}'
       timeout: 30
 
   evaluate:
@@ -281,7 +281,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts evaluate"]
-      stdin: '{"script": "{{params.script}}"}'
+      stdin: '.params | {script: .script}'
       timeout: 30
 
   url:
@@ -307,7 +307,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts inspect"]
-      stdin: '{"selector": "{{params.selector}}"}'
+      stdin: '.params | {selector: (.selector // "body")}'
       timeout: 15
 
   errors:
@@ -335,7 +335,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts wait"]
-      stdin: '{"selector": "{{params.selector}}", "timeout": "{{params.timeout}}"}'
+      stdin: '.params | {selector: .selector, timeout: (.timeout // 10000)}'
       timeout: 60
 
   tabs:
@@ -360,7 +360,7 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts new_tab"]
-      stdin: '{"url": "{{params.url}}"}'
+      stdin: '.params | {url: .url}'
       timeout: 30
 
   close_tab:
@@ -394,8 +394,50 @@ utilities:
     command:
       binary: bash
       args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts cookies"]
-      stdin: '{"domain": "{{params.domain}}", "names": "{{params.names}}"}'
+      stdin: '.params | {domain: .domain, names: .names}'
       timeout: 15
+
+  network.capture:
+    description: |
+      Navigate to a URL and capture all network requests/responses.
+      Optionally inject cookies before navigating (useful for authenticated pages).
+      Returns every XHR/fetch response matching the pattern, including the parsed
+      JSON body for JSON responses. Use this to discover undocumented API endpoints
+      that a page calls — e.g. to find the real backend endpoint Chase's dashboard
+      hits when it loads account data.
+
+      Pattern uses glob syntax: "**" matches everything, "**/svc/**" matches any
+      URL with /svc/ in the path. Default pattern captures all non-asset requests.
+
+      Wait time (default 5000ms) controls how long after navigation to keep
+      listening — increase for SPAs that make deferred async calls.
+    params:
+      url:
+        type: string
+        required: true
+        description: "URL to navigate to"
+      pattern:
+        type: string
+        description: "Glob URL pattern to match (default: ** = all non-asset requests)"
+      wait:
+        type: integer
+        description: "Milliseconds to wait after navigation for async requests (default: 5000)"
+      cookies:
+        type: array
+        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use brave-browser cookie_get to get these."
+      capture_body:
+        type: boolean
+        description: "Capture JSON response bodies (default: true)"
+    returns:
+      url: string
+      title: string
+      captured: array
+      count: integer
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts network_capture"]
+      stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), cookies: (.cookies // []), capture_body: (.capture_body // true)}'
+      timeout: 60
 ---
 
 # Playwright
@@ -507,6 +549,20 @@ cookies { domain: ".claude.ai" }
 
 cookies { domain: ".chase.com", names: "JSESSIONID,auth_token" }
 → { domain: ".chase.com", cookies: [...], count: 2 }
+```
+
+### Network Capture
+
+| Utility | What it does |
+|---------|-------------|
+| `network.capture` | Navigate to a URL and capture all XHR/fetch responses. Optionally inject cookies first. Returns URL, method, status, content-type, and parsed JSON body for each matching response. **Use for endpoint discovery on authenticated pages.** |
+
+```
+network.capture { url: "https://secure.chase.com/web/auth/dashboard", cookies: [...], wait: 8000 }
+→ { captured: [{url: "https://secure.chase.com/svc/rr/...", method: "POST", status: 200, body: {...}}, ...], count: 42 }
+
+network.capture { url: "https://example.com/dashboard", pattern: "**/api/**", wait: 3000 }
+→ { captured: [{url: ".../api/user", method: "GET", status: 200, body: {name: "..."}}], count: 1 }
 ```
 
 ## Selectors

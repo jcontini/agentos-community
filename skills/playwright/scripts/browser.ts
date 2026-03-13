@@ -30,6 +30,8 @@
  *   new_tab [url]                   Open a new tab
  *   close_tab                       Close current tab
  *   cookies --domain D [--names N]  Extract cookies for a domain via CDP
+ *   network_capture --url URL [--pattern P] [--wait N] [--cookies JSON]
+ *                               Navigate and capture all XHR/fetch responses
  */
 
 import { spawn } from "child_process";
@@ -485,6 +487,112 @@ async function cmdInspect(): Promise<void> {
   await browser.close();
 }
 
+async function cmdNetworkCapture(): Promise<void> {
+  const port = getPort();
+  const url = (stdinParams.url as string) || process.argv[3];
+  if (!url) err("Usage: network_capture --url <url>");
+
+  const pattern = (stdinParams.pattern as string) || getOption("pattern") || "**";
+  const waitMs = parseInt((stdinParams.wait as string) || getOption("wait") || "5000", 10);
+  const cookiesRaw = stdinParams.cookies;
+  const captureBody = getFlag("capture-body") || (stdinParams.capture_body as boolean) || true;
+
+  const browser = await connectBrowser(port);
+  const context = browser.contexts()[0];
+  if (!context) err("No browser context found");
+
+  // Inject cookies if provided
+  if (cookiesRaw && Array.isArray(cookiesRaw) && cookiesRaw.length > 0) {
+    await context.addCookies(cookiesRaw as Parameters<typeof context.addCookies>[0]);
+  }
+
+  const captured: Array<{
+    url: string;
+    method: string;
+    status: number;
+    contentType: string;
+    resourceType: string;
+    body?: unknown;
+    size?: number;
+  }> = [];
+
+  // Build a glob-style regex from the pattern
+  const patternRegex = new RegExp(
+    "^" +
+      pattern
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&") // escape regex special chars (not * ?)
+        .replace(/\*\*/g, "§DOUBLESTAR§")
+        .replace(/\*/g, "[^/]*")
+        .replace(/§DOUBLESTAR§/g, ".*")
+        .replace(/\?/g, "[^/]") +
+      "$"
+  );
+
+  const page = await getPage(browser);
+
+  // Listen for all responses
+  page.on("response", async (response) => {
+    const respUrl = response.url();
+    if (!patternRegex.test(respUrl)) return;
+
+    const status = response.status();
+    const headers = response.headers();
+    const contentType = headers["content-type"] || "";
+    const resourceType = response.request().resourceType();
+
+    // Skip non-data resource types unless pattern is specific
+    if (
+      pattern === "**" &&
+      ["image", "stylesheet", "font", "media"].includes(resourceType)
+    )
+      return;
+
+    const entry: (typeof captured)[0] = {
+      url: respUrl,
+      method: response.request().method(),
+      status,
+      contentType,
+      resourceType,
+    };
+
+    // Capture JSON response bodies
+    if (captureBody && contentType.includes("application/json") && status < 400) {
+      try {
+        const body = await response.json();
+        entry.body = body;
+      } catch {
+        try {
+          const text = await response.text();
+          entry.body = text;
+          entry.size = text.length;
+        } catch {
+          /* skip */
+        }
+      }
+    }
+
+    captured.push(entry);
+  });
+
+  // Navigate
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  } catch {
+    // Ignore navigation errors — page might still fire requests
+  }
+
+  // Wait for additional async requests to fire
+  await page.waitForTimeout(waitMs);
+
+  out({
+    url: page.url(),
+    title: await page.title(),
+    captured,
+    count: captured.length,
+  });
+  await browser.close();
+}
+
 async function cmdCookies(): Promise<void> {
   const port = getPort();
   const domain = (stdinParams.domain as string) || getOption("domain");
@@ -554,6 +662,7 @@ const commands: Record<string, () => Promise<void>> = {
   new_tab: cmdNewTab,
   close_tab: cmdCloseTab,
   cookies: cmdCookies,
+  network_capture: cmdNetworkCapture,
 };
 
 async function main() {
