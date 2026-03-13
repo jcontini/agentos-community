@@ -78,11 +78,14 @@ transformers:
       data.notes: .notes
       data.type: .type
 
-      # Transaction type as tags: recurring, internal-transfer
-      type_tags:
+      # Tags: recurring, internal-transfer, and Copilot spending category (with emoji + color)
+      # Python script emits tags as [{name, emoji?, color?}]
+      tags:
         tag[]:
-          _source: '([if (.type == "recurring" or .recurring == 1 or .recurring == true) then "recurring" else empty end] + [if .type == "internal_transfer" then "internal-transfer" else empty end])'
-          name: .
+          _source: '.tags'
+          name: .name
+          emoji: .emoji
+          color: .color
 
 # ==============================================================================
 # OPERATIONS
@@ -98,64 +101,28 @@ operations:
         - "~/dev/agentos-community/skills/copilot-money/copilot-accounts.py"
 
   transaction.list:
-    description: List recent transactions, optionally filtered by account
+    description: List recent transactions, optionally filtered by account, with category tags (emoji + color)
     returns: transaction[]
     params:
       account_id: { type: string, description: "Filter by account ID" }
       limit: { type: integer }
-    sql:
-      query: |
-        SELECT
-          t.id,
-          t.name as merchant_name,
-          t.amount,
-          date(t.date, 'localtime') as date,
-          t.account_id,
-          t.category_id,
-          t.type,
-          t.recurring,
-          t.pending,
-          t.user_note as notes
-        FROM Transactions t
-        WHERE (:account_id IS NULL OR t.account_id = :account_id)
-          AND t.user_deleted = 0
-        ORDER BY t.date DESC
-        LIMIT :limit
-      params:
-        account_id: .params.account_id
-        limit: '.params.limit // 100'
+    command:
+      binary: python3
+      args:
+        - "~/dev/agentos-community/skills/copilot-money/copilot-transactions.py"
+        - '{account_id: .params.account_id, limit: (.params.limit // 100), query: null} | tojson'
 
   transaction.search:
-    description: Search transactions by merchant name, category, or notes
+    description: Search transactions by merchant name or notes, with category tags (emoji + color)
     returns: transaction[]
     params:
       query: { type: string, required: true }
       limit: { type: integer }
-    sql:
-      query: |
-        SELECT
-          t.id,
-          t.name as merchant_name,
-          t.amount,
-          date(t.date, 'localtime') as date,
-          t.account_id,
-          t.category_id,
-          t.type,
-          t.recurring,
-          t.pending,
-          t.user_note as notes
-        FROM Transactions t
-        WHERE t.user_deleted = 0
-          AND (
-            t.name LIKE '%' || :query || '%'
-            OR t.original_name LIKE '%' || :query || '%'
-            OR t.user_note LIKE '%' || :query || '%'
-          )
-        ORDER BY t.date DESC
-        LIMIT :limit
-      params:
-        query: .params.query
-        limit: '.params.limit // 100'
+    command:
+      binary: python3
+      args:
+        - "~/dev/agentos-community/skills/copilot-money/copilot-transactions.py"
+        - '{account_id: null, limit: (.params.limit // 100), query: .params.query} | tojson'
 
 ---
 

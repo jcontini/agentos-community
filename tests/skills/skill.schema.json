@@ -356,7 +356,7 @@
                   "ref": { "type": "string", "description": "Entity type to look up (e.g., 'journey', 'outcome')" },
                   "value": { "type": "string", "description": "jaq expression for the lookup value (scalar or array)" },
                   "rel": { "type": "string", "description": "Explicit relationship type (optional — inferred from schemas if unambiguous)" },
-                  "lookup": { "type": "string", "enum": ["service_id", "name"], "description": "How to find the referenced entity: by service_id (default) or by name" }
+                  "lookup": { "type": "string", "enum": ["name"], "description": "How to find the referenced entity: by name" }
                 },
                 "additionalProperties": false
               },

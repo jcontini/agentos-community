@@ -69,7 +69,7 @@ transformers:
           id: '(.assignee // {}).id'
           name: '(.assignee // {}).name'
 
-      # Relationship ref: look up project entity by project service_id
+      # Relationship ref: look up project entity by project remote_id
       project_id:
         ref: project
         value: '(.project // {}).id'

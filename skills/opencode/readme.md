@@ -191,7 +191,7 @@ operations:
       Import OpenCode sessions with their full conversation transcripts into the Memex.
       Each session becomes a session entity, and its transcript becomes a transcript entity
       linked via a transcribe relationship. Content is FTS5-indexed for full-text search.
-      Use since to import only recent sessions. Deduplicates via service_id — safe to run repeatedly.
+      Use since to import only recent sessions. Deduplicates by remote_id — safe to run repeatedly.
     returns: session[]
     params:
       since:
@@ -366,7 +366,7 @@ use({ skill: "opencode", tool: "document.import", params: { since: 7 } })
 use({ skill: "opencode", tool: "document.import", params: { query: "Coda formula language" } })
 ```
 
-Import is safe to run repeatedly — deduplicates via service_id. Each session becomes a session entity with the full conversation transcript as its body content, directly FTS5-indexed. Research outputs become document entities.
+Import is safe to run repeatedly — deduplicates by remote_id. Each session becomes a session entity with the full conversation transcript as its body content, directly FTS5-indexed. Research outputs become document entities.
 
 ## Browsing Sessions
 

@@ -196,7 +196,7 @@ search({ query: "Langfuse pipeline", types: ["session"] })
 
 **Stats:** Run `python3 list-conversations.py --stats` to see how many sessions are available across both sources and all workspaces before importing.
 
-**Deduplication:** Sessions are deduplicated by UUID (service_id). Safe to run backfill multiple times — existing sessions won't be duplicated.
+**Deduplication:** Sessions are deduplicated by UUID (remote_id). Safe to run backfill multiple times — existing sessions won't be duplicated.
 
 ---
 

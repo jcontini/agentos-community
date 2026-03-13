@@ -70,7 +70,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 // ─── Field Classification ────────────────────────────────────────────────────────
 
 const INTERNAL_FIELDS = new Set([
-  '_entity_id', '_labels', '_project_id', 'service_id', 'remote_id',
+  '_entity_id', '_labels', '_project_id', 'remote_id',
   'fetched_at', 'id', 'data',
 ]);
 
