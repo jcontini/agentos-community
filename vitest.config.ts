@@ -28,15 +28,15 @@ export default defineConfig({
     // Timeout for slow operations
     testTimeout: 30000,
     
-    // Run tests sequentially (MCP connection is shared)
+    // Single process, shared module cache → one MCP connection for all tests
     pool: 'forks',
     poolOptions: {
       forks: {
-        singleFork: true,  // All tests in one process to share MCP connection
+        singleFork: true,
       },
     },
+    isolate: false,  // Module cache persists → globalAos singleton shared across files
     
-    // Reporter
-    reporter: ['verbose'],
+    reporters: ['verbose'],
   },
 });
