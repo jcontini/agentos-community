@@ -34,39 +34,6 @@ seed:
       ticker: AAPL
       exchange: NASDAQ
       wikidata_id: Q312
-
-testing:
-  exempt:
-    cleanup: "Tests only verify list/read behavior, do not create contacts"
-    create: "Write operation - modifies contacts database"
-    update: "Write operation - modifies contacts database"
-    delete: "Write operation - modifies contacts database"
-
-instructions: |
-  Apple Contacts connector with multi-account support (iCloud, local, work, etc.).
-  
-  **Requirements:**
-  - macOS only
-  - Grant permissions in System Settings → Privacy & Security → Contacts
-  
-  **Multi-Account Support:**
-  macOS can have multiple contact accounts (iCloud, local, Exchange, etc.).
-  
-  **Always call `accounts` first** to get available accounts and find the default.
-  Then use the account ID in list/search calls.
-  
-  Example workflow:
-  1. `apple-contacts.accounts()` → Find account with `is_default: true`
-  2. `person.list(source: "apple-contacts", account: "ABC-123-UUID", limit: 10)`
-  
-  **Performance:**
-  - The `list` response includes phones, emails, urls, has_photo, organization, job_title
-  - Only call `get` when you need addresses, notes, birthday, or full label info
-  
-  **Notes:**
-  - Contact IDs can change after iCloud sync - query by name after create
-  - Phone numbers are auto-normalized: 5125551234 → +15125551234
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -233,7 +200,7 @@ operations:
       id: { type: string, required: true, description: "Contact ID (ZUNIQUEID)" }
     applescript:
       script: |
-        set contactId to "{{params.id}}"
+        set contactId to "${PARAM_ID}"
         if contactId does not end with ":ABPerson" then
           set contactId to contactId & ":ABPerson"
         end if
@@ -478,22 +445,22 @@ utilities:
         tell application "Contacts"
           set props to {}
           
-          if "{{params.first_name}}" is not "" then set props to props & {first name:"{{params.first_name}}"}
-          if "{{params.last_name}}" is not "" then set props to props & {last name:"{{params.last_name}}"}
-          if "{{params.organization}}" is not "" then set props to props & {organization:"{{params.organization}}"}
-          if "{{params.job_title}}" is not "" then set props to props & {job title:"{{params.job_title}}"}
+          if "${PARAM_FIRST_NAME}" is not "" then set props to props & {first name:"${PARAM_FIRST_NAME}"}
+          if "${PARAM_LAST_NAME}" is not "" then set props to props & {last name:"${PARAM_LAST_NAME}"}
+          if "${PARAM_ORGANIZATION}" is not "" then set props to props & {organization:"${PARAM_ORGANIZATION}"}
+          if "${PARAM_JOB_TITLE}" is not "" then set props to props & {job title:"${PARAM_JOB_TITLE}"}
           
           set newPerson to make new person with properties props
           
           -- Add phones from array
-          {{#each params.phones}}
-          make new phone at end of phones of newPerson with properties {label:"{{this.label | default: mobile}}", value:"{{this.value}}"}
-          {{/each}}
+          ${#EACH PARAMS_PHONES}
+          make new phone at end of phones of newPerson with properties {label:"${THIS_LABEL}", value:"${THIS_VALUE}"}
+          ${/EACH}
           
           -- Add emails from array
-          {{#each params.emails}}
-          make new email at end of emails of newPerson with properties {label:"{{this.label | default: home}}", value:"{{this.value}}"}
-          {{/each}}
+          ${#EACH PARAMS_EMAILS}
+          make new email at end of emails of newPerson with properties {label:"${THIS_LABEL}", value:"${THIS_VALUE}"}
+          ${/EACH}
           
           save
           
@@ -521,7 +488,7 @@ utilities:
       job_title: { type: string, description: "Job title" }
     applescript:
       script: |
-        set contactId to "{{params.id}}"
+        set contactId to "${PARAM_ID}"
         if contactId does not end with ":ABPerson" then
           set contactId to contactId & ":ABPerson"
         end if
@@ -530,10 +497,10 @@ utilities:
           try
             set p to person id contactId
             
-            if "{{params.first_name}}" is not "" then set first name of p to "{{params.first_name}}"
-            if "{{params.last_name}}" is not "" then set last name of p to "{{params.last_name}}"
-            if "{{params.organization}}" is not "" then set organization of p to "{{params.organization}}"
-            if "{{params.job_title}}" is not "" then set job title of p to "{{params.job_title}}"
+            if "${PARAM_FIRST_NAME}" is not "" then set first name of p to "${PARAM_FIRST_NAME}"
+            if "${PARAM_LAST_NAME}" is not "" then set last name of p to "${PARAM_LAST_NAME}"
+            if "${PARAM_ORGANIZATION}" is not "" then set organization of p to "${PARAM_ORGANIZATION}"
+            if "${PARAM_JOB_TITLE}" is not "" then set job title of p to "${PARAM_JOB_TITLE}"
             
             save
             return "{\"id\":\"" & id of p & "\",\"status\":\"updated\"}"
@@ -553,7 +520,7 @@ utilities:
       id: { type: string, required: true, description: "Contact ID" }
     applescript:
       script: |
-        set contactId to "{{params.id}}"
+        set contactId to "${PARAM_ID}"
         if contactId does not end with ":ABPerson" then
           set contactId to contactId & ":ABPerson"
         end if

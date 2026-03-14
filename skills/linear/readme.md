@@ -504,39 +504,6 @@ seed:
       type: company
       url: https://linear.app
       founded: "2019"
-
-instructions: |
-  Linear adapter notes for AI:
-  
-  **SETUP (do this after credential is added):**
-  1. Call `setup` utility — returns organization, teams, and user info
-  2. Extract workspace_slug from organization.urlKey
-  3. If one team: use its id as team_id
-     If multiple teams: ask user "Which Linear team should be your default?"
-  4. Set params via PUT /api/settings/account_params:
-     ```
-     PUT /api/settings/account_params
-     {"value": {"linear:AccountName": {"workspace_slug": "urlKey", "team_id": "team-id"}}}
-     ```
-  
-  Creating issues:
-  - Requires team_id — if not set in account params, call get_teams first
-  
-  Completing/reopening issues:
-  1. Get the issue's team_id (from task.get or task.list)
-  2. Call get_workflow_states with team_id
-  3. Find state with type "completed" (for complete) or "backlog" (for reopen)
-  4. Call task.update with state_id
-  
-  Managing relationships:
-  - add_blocker/add_related return relation ID in response
-  - get_relations returns all relationships with their IDs
-  - remove_relation takes relation_id param
-  
-  Other notes:
-  - Issues have human-readable IDs like "AGE-123" (in data.remote_id)
-  - Priority: 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low
-  - Web URLs: https://linear.app/{workspace_slug}/issue/{identifier}
 ---
 
 # Linear

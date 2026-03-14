@@ -38,21 +38,6 @@ seed:
       type: company
       url: https://posthog.com
       founded: "2020"
-
-instructions: |
-  PostHog project ID is required for all API calls. It appears in the URL path.
-  Ask the user for their project ID if not known, or call the get_projects utility.
-
-  The events API is deprecated. For querying events, use the query utility which
-  sends HogQL queries to the /query endpoint. For listing recent events by name,
-  the deprecated events endpoint still works but is limited to 24h without date params.
-
-  Persons can be searched by email via the ?search= query parameter.
-
-  Session recordings list returns metadata only, not replay data.
-
-  Rate limits: 240/min and 1200/hour for analytics endpoints.
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════

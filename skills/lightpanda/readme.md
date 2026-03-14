@@ -7,8 +7,6 @@ color: "#1B3C27"
 
 website: https://lightpanda.io
 auth: none
-platforms: [macos]
-
 connects_to: lightpanda
 
 seed:
@@ -31,59 +29,6 @@ seed:
     data:
       type: company
       url: https://lightpanda.io
-
-instructions: |
-  WHEN TO USE THIS SKILL vs OTHERS:
-  - Need to READ content from a URL quickly (no interactivity)? → Use THIS skill (fetch) or Exa/Firecrawl.
-  - Need to SCRAPE many pages at scale with low memory? → Use THIS skill. NOT playwright.
-  - Need to CLICK, FILL FORMS, handle auth, or maintain a logged-in session? → Use playwright instead.
-  - Need a VISIBLE browser window? → Use playwright. Lightpanda is headless-only.
-  - Need to automate a COMPLEX SPA with full Chrome API coverage? → Use playwright for reliability.
-  - Need to extract data from many URLs fast and cheaply? → Use THIS skill.
-
-  Lightpanda is a from-scratch headless browser (written in Zig) built for high-throughput
-  AI agent workloads: scraping at scale, fast page fetches, and programmatic automation
-  where Chrome's overhead is a bottleneck. It exposes a CDP server — Playwright's TypeScript
-  client connects to it just like Chromium.
-
-  KEY DIFFERENCES FROM THE PLAYWRIGHT SKILL:
-  - Always headless (no visible window).
-  - ~10x less memory and ~11x faster than Chrome for fetch-heavy workloads.
-  - Instant startup (~100ms vs Chrome's seconds).
-  - Beta — some Web APIs and CDP commands are incomplete. If a site fails, fall back to playwright.
-  - No persistent session across stops — each `start` is a fresh browser.
-  - No cross-call page state via CDP — each operation re-navigates to the last URL saved in
-    /tmp/agentos-lightpanda-state.json. This is transparent but means every CDP call costs a
-    navigation round-trip. Use `fetch` for read-only work to avoid this overhead.
-  - `url` utility returns the last known URL from state (no live browser query).
-  - Do NOT use wait_until: networkidle — it causes "Frame detached" errors. Use domcontentloaded.
-
-  The server is PERSISTENT — `start` launches it and it stays running. All operations
-  (goto, inspect, extract, evaluate, click, fill) connect to the running server automatically.
-  Call `stop` when fully done to free the process.
-
-  Use `fetch` (the fast path) when you just need page content — it uses lightpanda's
-  native fetch command (no CDP overhead, no persistent process, fastest possible).
-  Use the CDP operations (goto, inspect, click, etc.) when you need interactivity or JS execution.
-
-requires:
-  - name: lightpanda
-    check: lightpanda version
-    install:
-      macos: |
-        curl -L -o ~/bin/lightpanda https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-aarch64-macos && chmod a+x ~/bin/lightpanda
-
-credits:
-  - skill: playwright
-    relationship: appreciates
-    reason: Complementary — Playwright handles interactive/auth sessions, Lightpanda handles headless scale
-  - skill: firecrawl
-    relationship: appreciates
-    reason: Complementary — Firecrawl reads static content, Lightpanda executes JS headlessly
-  - skill: exa
-    relationship: appreciates
-    reason: Complementary — Exa searches and fetches, Lightpanda automates and interacts
-
 transformers:
   webpage:
     terminology: Page

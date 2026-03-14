@@ -30,14 +30,6 @@ seed:
     data:
       url: https://daniel.haxx.se
       wikidata_id: Q42160379
-
-instructions: |
-  Curl is a simple fallback for fetching URLs.
-  - No API key required
-  - Works for basic HTML pages
-  - No JavaScript rendering (use Firecrawl for SPAs)
-  - Good for simple pages, APIs, RSS feeds
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -66,8 +58,9 @@ operations:
       args:
         - "-c"
         - |
+          PARAM_URL="$1"
           set -e
-          URL="{{params.url}}"
+          URL="${PARAM_URL}"
           
           # Create temp file for headers
           HEADERS_FILE=$(mktemp)
@@ -92,6 +85,8 @@ operations:
             --arg content "$CONTENT" \
             --arg content_type "$CONTENT_TYPE" \
             '{url: $url, title: $title, content: $content, content_type: $content_type}'
+        - "--"
+        - ".params.url"
       timeout: 35
 ---
 

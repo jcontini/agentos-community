@@ -36,16 +36,6 @@ seed:
       ticker: META
       exchange: NASDAQ
       wikidata_id: Q380
-
-instructions: |
-  WhatsApp stores messages in a local SQLite database.
-  - Conversation IDs are numeric (Z_PK integers like 880, 899). Always use the numeric ID from conversation.list.
-  - Date format: seconds since macOS epoch (2001-01-01). Convert with: date + 978307200 → Unix timestamp.
-  - Contact identifiers: JID format (phone@s.whatsapp.net) or LID format (opaque_id@lid). Both are used.
-  - Session types: 0 = DM, 1 = group, 3 = broadcast/status
-  - To get unread messages, use message.list with unread=true (no conversation_id needed).
-  - To get group participants, use person.list with conversation_id param.
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════

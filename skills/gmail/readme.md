@@ -32,48 +32,6 @@ seed:
     relationships:
       - role: offered_by
         to: google
-
-instructions: |
-  Gmail skill — full-featured email via the Gmail REST API. Auth is automatic when Mimestream is installed.
-
-  Available accounts are listed in the Configured Accounts section of this readme.
-  Pass the email address as the `account` param (e.g. account: "user@example.com").
-
-  CHOOSING THE RIGHT OPERATION:
-  - To browse emails: use conversation.list (returns thread snippets) then conversation.get for full content
-  - To read a specific email: use email.get with the message ID
-  - email.list and email.search return ID stubs ONLY (no subject, no sender, no body) — they are useful
-    for getting message IDs to pass to email.get, but do not contain readable content on their own.
-  - Prefer conversation.list over email.list for browsing — threads have snippets and subjects.
-
-  REPLYING TO EMAILS — email.reply requires 3 values from the original message:
-  - thread_id: the original email's conversation_id (threadId)
-  - in_reply_to: the original email's message_id header (Message-ID, not the Gmail ID)
-  - subject: must start with "Re: " followed by the original subject
-  Use conversation.get or email.get first to get these values.
-
-  MANAGING EMAILS — email.modify is a single operation for all label changes:
-  - Mark read:   email.modify with remove_labels: ["UNREAD"]
-  - Mark unread:  email.modify with add_labels: ["UNREAD"]
-  - Star:        email.modify with add_labels: ["STARRED"]
-  - Unstar:      email.modify with remove_labels: ["STARRED"]
-  - Archive:     email.modify with remove_labels: ["INBOX"]
-  - Move to spam: email.modify with add_labels: ["SPAM"] and remove_labels: ["INBOX"]
-  - Apply label:  email.modify with add_labels: ["Label_123"]
-
-  ATTACHMENTS:
-  - email.get includes attachment metadata (filename, mimeType, size, attachmentId) in data.attachments
-  - Use attachment.get with the messageId and attachmentId to download the actual file content
-  - Attachment data is returned as URL-safe base64
-
-  Key concepts:
-  - Messages have IDs (hex strings like "19cd96cdb6276b79") and thread IDs
-  - email.search uses Gmail query syntax: "from:sender@example.com", "subject:invoice", "after:2026/01/01"
-  - Labels: INBOX, SENT, DRAFT, TRASH, SPAM, STARRED, UNREAD, IMPORTANT, CATEGORY_SOCIAL, CATEGORY_PROMOTIONS, CATEGORY_UPDATES, CATEGORY_FORUMS (system labels are uppercase)
-  - conversation.get returns the full thread with all messages, headers, and body content
-  - Every email has a conversation_id (threadId) linking it to its thread
-  - Sender and recipient accounts are auto-created as entities (from/to/cc/bcc typed references)
-
 # ==============================================================================
 # TRANSFORMERS
 # ==============================================================================
@@ -184,7 +142,7 @@ operations:
       id: { type: string, required: true, description: "Message ID from email.list" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id'
       method: GET
       query:
         format: full
@@ -232,7 +190,7 @@ operations:
       id: { type: string, required: true, description: "Thread ID from conversation.list or email's conversation_id" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/threads/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/threads/" + .params.id'
       method: GET
       query:
         format: full
@@ -255,7 +213,7 @@ operations:
       method: POST
       body: |
         {
-          "raw": "{{["To: ", params.to, "\r\n", (if params.cc then ["Cc: ", params.cc, "\r\n"] | join("") else "" end), (if params.bcc then ["Bcc: ", params.bcc, "\r\n"] | join("") else "" end), "Subject: ", params.subject, "\r\nMIME-Version: 1.0\r\nContent-Type: ", (if params.html_body then "text/html" else "text/plain" end), "; charset=utf-8\r\n\r\n", (if params.html_body then params.html_body else params.body end)] | join("") | @base64}}"
+          "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}"
         }
 
   email.reply:
@@ -277,8 +235,8 @@ operations:
       method: POST
       body: |
         {
-          "raw": "{{["To: ", params.to, "\r\n", (if params.cc then ["Cc: ", params.cc, "\r\n"] | join("") else "" end), (if params.bcc then ["Bcc: ", params.bcc, "\r\n"] | join("") else "" end), "Subject: ", params.subject, "\r\nIn-Reply-To: ", params.in_reply_to, "\r\nReferences: ", (if params.references then params.references else params.in_reply_to end), "\r\nMIME-Version: 1.0\r\nContent-Type: ", (if params.html_body then "text/html" else "text/plain" end), "; charset=utf-8\r\n\r\n", (if params.html_body then params.html_body else params.body end)] | join("") | @base64}}",
-          "threadId": "{{params.thread_id}}"
+          "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}",
+          "threadId": "${PARAM_THREAD_ID}"
         }
 
   email.forward:
@@ -298,8 +256,8 @@ operations:
       method: POST
       body: |
         {
-          "raw": "{{["To: ", params.to, "\r\n", (if params.cc then ["Cc: ", params.cc, "\r\n"] | join("") else "" end), (if params.bcc then ["Bcc: ", params.bcc, "\r\n"] | join("") else "" end), "Subject: ", params.subject, "\r\nMIME-Version: 1.0\r\nContent-Type: ", (if params.html_body then "text/html" else "text/plain" end), "; charset=utf-8\r\n\r\n", (if params.html_body then params.html_body else params.body end)] | join("") | @base64}}"
-          {{- if params.thread_id then [", \"threadId\": \"", params.thread_id, "\""] | join("") else "" end}}
+          "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}"
+          ${- IF PARAMS_THREAD_ID THEN [", \"THREADID\": \"", PARAMS_THREAD_ID, "\""]}
         }
 
   # --- Modifying ---
@@ -313,12 +271,12 @@ operations:
       add_labels: { type: array, description: "Label IDs to add (e.g. ['STARRED', 'UNREAD', 'Label_123'])" }
       remove_labels: { type: array, description: "Label IDs to remove (e.g. ['INBOX', 'UNREAD'])" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}/modify"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/modify"'
       method: POST
       body: |
         {
-          "addLabelIds": {{params.add_labels // []}},
-          "removeLabelIds": {{params.remove_labels // []}}
+          "addLabelIds": ${PARAM_ADD_LABELS // []},
+          "removeLabelIds": ${PARAM_REMOVE_LABELS // []}
         }
 
   email.trash:
@@ -328,7 +286,7 @@ operations:
       id: { type: string, required: true, description: "Message ID" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}/trash"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/trash"'
       method: POST
 
   email.untrash:
@@ -338,7 +296,7 @@ operations:
       id: { type: string, required: true, description: "Message ID" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}/untrash"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/untrash"'
       method: POST
 
   email.batch_modify:
@@ -354,9 +312,9 @@ operations:
       method: POST
       body: |
         {
-          "ids": {{params.ids}},
-          "addLabelIds": {{params.add_labels // []}},
-          "removeLabelIds": {{params.remove_labels // []}}
+          "ids": ${PARAM_IDS},
+          "addLabelIds": ${PARAM_ADD_LABELS // []},
+          "removeLabelIds": ${PARAM_REMOVE_LABELS // []}
         }
 
   email.batch_delete:
@@ -370,7 +328,7 @@ operations:
       method: POST
       body: |
         {
-          "ids": {{params.ids}}
+          "ids": ${PARAM_IDS}
         }
 
   # Drafts, labels, and filters are in utilities (not entity-typed operations)
@@ -412,7 +370,7 @@ utilities:
       id: string
       message: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
       method: GET
       query:
         format: full
@@ -436,8 +394,8 @@ utilities:
       body: |
         {
           "message": {
-            "raw": "{{["To: ", params.to, "\r\n", (if params.cc then ["Cc: ", params.cc, "\r\n"] | join("") else "" end), (if params.bcc then ["Bcc: ", params.bcc, "\r\n"] | join("") else "" end), "Subject: ", params.subject, "\r\nMIME-Version: 1.0\r\nContent-Type: ", (if params.html_body then "text/html" else "text/plain" end), "; charset=utf-8\r\n\r\n", (if params.html_body then params.html_body else params.body end)] | join("") | @base64}}"
-            {{- if params.thread_id then [", \"threadId\": \"", params.thread_id, "\""] | join("") else "" end}}
+            "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}"
+            ${- IF PARAMS_THREAD_ID THEN [", \"THREADID\": \"", PARAMS_THREAD_ID, "\""]}
           }
         }
 
@@ -455,12 +413,12 @@ utilities:
     returns:
       id: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
       method: PUT
       body: |
         {
           "message": {
-            "raw": "{{["To: ", params.to, "\r\n", (if params.cc then ["Cc: ", params.cc, "\r\n"] | join("") else "" end), (if params.bcc then ["Bcc: ", params.bcc, "\r\n"] | join("") else "" end), "Subject: ", params.subject, "\r\nMIME-Version: 1.0\r\nContent-Type: ", (if params.html_body then "text/html" else "text/plain" end), "; charset=utf-8\r\n\r\n", (if params.html_body then params.html_body else params.body end)] | join("") | @base64}}"
+            "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}"
           }
         }
 
@@ -477,7 +435,7 @@ utilities:
       method: POST
       body: |
         {
-          "id": "{{params.id}}"
+          "id": "${PARAM_ID}"
         }
 
   delete_draft:
@@ -488,7 +446,7 @@ utilities:
     returns:
       status: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
       method: DELETE
 
   # --- Account ---
@@ -530,7 +488,7 @@ utilities:
       data: string
       size: integer
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.message_id}}/attachments/{{params.attachment_id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.message_id + "/attachments/" + .params.attachment_id'
       method: GET
 
   get_raw:
@@ -543,7 +501,7 @@ utilities:
       id: string
       threadId: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id'
       method: GET
       query:
         format: raw
@@ -603,14 +561,14 @@ utilities:
       method: PUT
       body: |
         {
-          "enableAutoReply": {{params.enabled}},
-          "responseSubject": "{{params.subject // ""}}",
-          "responseBodyPlainText": "{{params.body // ""}}",
-          "responseBodyHtml": "{{params.html_body // ""}}",
-          "restrictToContacts": {{params.contacts_only // false}},
-          "restrictToDomain": {{params.domain_only // false}}
-          {{- if params.start_time then [", \"startTime\": ", (params.start_time | tostring)] | join("") else "" end}}
-          {{- if params.end_time then [", \"endTime\": ", (params.end_time | tostring)] | join("") else "" end}}
+          "enableAutoReply": ${PARAM_ENABLED},
+          "responseSubject": "${PARAM_SUBJECT // ""}",
+          "responseBodyPlainText": "${PARAM_BODY // ""}",
+          "responseBodyHtml": "${PARAM_HTML_BODY // ""}",
+          "restrictToContacts": ${PARAM_CONTACTS_ONLY // FALSE},
+          "restrictToDomain": ${PARAM_DOMAIN_ONLY // FALSE}
+          ${- IF PARAMS_START_TIME THEN [", \"STARTTIME\": ", (PARAMS_START_TIME}
+          ${- IF PARAMS_END_TIME THEN [", \"ENDTIME\": ", (PARAMS_END_TIME}
         }
 
   create_label:
@@ -629,9 +587,9 @@ utilities:
       method: POST
       body: |
         {
-          "name": "{{params.name}}",
-          "labelListVisibility": "{{params.show_in_label_list // "labelShow"}}",
-          "messageListVisibility": "{{params.show_in_message_list // "show"}}"
+          "name": "${PARAM_NAME}",
+          "labelListVisibility": "${PARAM_SHOW_IN_LABEL_LIST // "LABELSHOW"}",
+          "messageListVisibility": "${PARAM_SHOW_IN_MESSAGE_LIST // "SHOW"}"
         }
 
   update_label:
@@ -646,13 +604,13 @@ utilities:
       id: string
       name: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/labels/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/labels/" + .params.id'
       method: PATCH
       body: |
         {
-          {{- if params.name then ["\"name\": \"", params.name, "\""] | join("") else "" end}}
-          {{- if params.show_in_label_list then [", \"labelListVisibility\": \"", params.show_in_label_list, "\""] | join("") else "" end}}
-          {{- if params.show_in_message_list then [", \"messageListVisibility\": \"", params.show_in_message_list, "\""] | join("") else "" end}}
+          ${- IF PARAMS_NAME THEN ["\"NAME\": \"", PARAMS_NAME, "\""]}
+          ${- IF PARAMS_SHOW_IN_LABEL_LIST THEN [", \"LABELLISTVISIBILITY\": \"", PARAMS_SHOW_IN_LABEL_LIST, "\""]}
+          ${- IF PARAMS_SHOW_IN_MESSAGE_LIST THEN [", \"MESSAGELISTVISIBILITY\": \"", PARAMS_SHOW_IN_MESSAGE_LIST, "\""]}
         }
 
   delete_label:
@@ -663,7 +621,7 @@ utilities:
     returns:
       status: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/labels/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/labels/" + .params.id'
       method: DELETE
 
   list_filters:
@@ -700,16 +658,16 @@ utilities:
       body: |
         {
           "criteria": {
-            {{- if params.from then ["\"from\": \"", params.from, "\""] | join("") else "" end}}
-            {{- if params.to then [", \"to\": \"", params.to, "\""] | join("") else "" end}}
-            {{- if params.subject then [", \"subject\": \"", params.subject, "\""] | join("") else "" end}}
-            {{- if params.query then [", \"query\": \"", params.query, "\""] | join("") else "" end}}
-            {{- if params.has_attachment then ", \"hasAttachment\": true" else "" end}}
+            ${- IF PARAMS_FROM THEN ["\"FROM\": \"", PARAMS_FROM, "\""]}
+            ${- IF PARAMS_TO THEN [", \"TO\": \"", PARAMS_TO, "\""]}
+            ${- IF PARAMS_SUBJECT THEN [", \"SUBJECT\": \"", PARAMS_SUBJECT, "\""]}
+            ${- IF PARAMS_QUERY THEN [", \"QUERY\": \"", PARAMS_QUERY, "\""]}
+            ${- IF PARAMS_HAS_ATTACHMENT THEN ", \"HASATTACHMENT\": TRUE" ELSE "" END}
           },
           "action": {
-            "addLabelIds": {{params.add_labels // []}},
-            "removeLabelIds": {{params.remove_labels // []}}
-            {{- if params.forward_to then [", \"forward\": \"", params.forward_to, "\""] | join("") else "" end}}
+            "addLabelIds": ${PARAM_ADD_LABELS // []},
+            "removeLabelIds": ${PARAM_REMOVE_LABELS // []}
+            ${- IF PARAMS_FORWARD_TO THEN [", \"FORWARD\": \"", PARAMS_FORWARD_TO, "\""]}
           }
         }
 
@@ -721,7 +679,7 @@ utilities:
     returns:
       status: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/filters/{{params.id}}"
+      url: '"https://gmail.googleapis.com/gmail/v1/users/me/settings/filters/" + .params.id'
       method: DELETE
 
   list_send_as:

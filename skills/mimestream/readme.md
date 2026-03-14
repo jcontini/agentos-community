@@ -9,7 +9,6 @@ website: https://mimestream.com
 privacy_url: https://mimestream.com/privacy
 
 auth: none
-platforms: [macos]
 connects_to: mimestream
 
 # Mimestream stores Google OAuth tokens in the macOS Keychain under
@@ -54,29 +53,6 @@ seed:
       url: https://mimestream.com
       founded: "2020"
       location: Melbourne, Australia
-
-instructions: |
-  Mimestream stores emails in a local Core Data SQLite database.
-
-  Accounts — the `account` param on operations takes the exact database display name, NOT an email address:
-  - "user@example.com" — personal Gmail
-  - "Adavia" — business Gmail (user@example.com)
-  Call list_accounts to discover accounts if unsure. The values above are the only valid account filter values.
-
-  Common workflows:
-  - "Show me my inbox" → email.list with mailbox: inbox
-  - "Find emails about X" → email.search with query: X
-  - "Show me a thread" → conversation.get with the conversation_id from an email
-  - "What attachments does this email have?" → file.list with email_id
-
-  Technical details:
-  - Date format: seconds since Apple epoch (2001-01-01). Convert with: timestamp + 978307200 -> Unix timestamp.
-  - From header format: "Display Name <email@example.com>" — parse with SQL string functions.
-  - Thread IDs map to conversation entities. A thread IS a conversation.
-  - Message content (body, to, cc, bcc, message-id, references) lives in ZMESSAGECONTENT, joined via ZCONTENT foreign key.
-  - This skill is read-only. Mimestream syncs with Gmail, so data reflects what's synced locally.
-  - Labels/folders are inferred from boolean flags (ZISININBOX, ZISSENT, ZISDRAFT, ZISTRASHED, ZISSPAM, ZISFLAGGED).
-
 database: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
 
 # ==============================================================================
@@ -456,13 +432,15 @@ utilities:
             binary: bash
             args:
               - "-c"
-              - "security find-generic-password -s 'Mimestream: {{params.account}}' -a 'OAuth' -w 2>/dev/null | tr -d '\\n'"
+              - "security find-generic-password -s 'Mimestream: ${PARAM_ACCOUNT}' -a 'OAuth' -w 2>/dev/null | tr -d '\\n'"
+              - "--"
+              - ".params.account"
 
         # Step 2: Decode the hex → binary plist → extract token fields by $objects index.
         # These indices are stable across Mimestream versions (verified on both accounts).
         - id: fields
           plist:
-            input: "{{params.raw}}"
+            input: ".raw"
             extract:
               refresh_token: 32   # Google refresh token (1//01...)
               client_id: 13       # OAuth client ID (1064022...apps.googleusercontent.com)
@@ -471,13 +449,13 @@ utilities:
         # Step 3: Exchange the refresh token for a live access token.
         - id: token_response
           rest:
-            url: "{{params.fields.token_url}}"
+            url: ".params.fields.token_url"
             method: POST
             encoding: form
             body:
               grant_type: refresh_token
-              refresh_token: "{{params.fields.refresh_token}}"
-              client_id: "{{params.fields.client_id}}"
+              refresh_token: ".params.fields.refresh_token"
+              client_id: ".params.fields.client_id"
 
       response:
         transform: |

@@ -60,19 +60,6 @@ operations:
         anthropic-version: '"2023-06-01"'
       response:
         root: /data
-
-instructions: |
-  Claude models via the Anthropic API.
-
-  Use model.list to discover available models — don't hardcode model IDs.
-  Models change frequently; the API always has the latest.
-
-  For agent jobs, pick the smallest model that works. Upgrade only when needed.
-
-  Tool use: The API supports tool_calls for function calling. Pass tool definitions
-  in the `tools` parameter. The model returns `stop_reason: "tool_use"` when it wants
-  to call a tool.
-
 utilities:
   chat:
     description: Send a chat completion request to Claude (Anthropic Messages API)

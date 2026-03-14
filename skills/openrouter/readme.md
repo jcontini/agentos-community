@@ -56,15 +56,6 @@ operations:
       url: https://openrouter.ai/api/v1/models
       response:
         root: /data
-
-instructions: |
-  OpenRouter provides one API key for many model providers.
-
-  Use model.list to discover available models — don't hardcode model IDs.
-  Model IDs are provider-qualified (e.g., anthropic/claude-3.5-haiku, openai/gpt-4o-mini).
-
-  For agent jobs, start with cheaper models and upgrade only when needed.
-
 utilities:
   chat:
     description: Send a chat completion request through OpenRouter

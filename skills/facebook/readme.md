@@ -11,14 +11,6 @@ terms_url: https://www.facebook.com/legal/terms
 
 auth: none
 connects_to: facebook
-
-requires:
-  - name: Chromium
-    install:
-      macos: brew install --cask chromium
-      linux: sudo apt install -y chromium-browser
-      windows: choco install chromium -y
-
 seed:
   - id: facebook
     types: [software]
@@ -43,15 +35,6 @@ seed:
       ticker: META
       exchange: NASDAQ
       wikidata_id: Q380
-
-instructions: |
-  Facebook-specific notes:
-  - Works for public groups only (no login required)
-  - Uses curl for metadata (fast, ~100ms)
-  - Uses Chromium headless --dump-dom for member count (slower, ~2-3s)
-  - Group must be public for this to work
-  - If Chromium not installed, member_count will be null
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -90,9 +73,10 @@ operations:
       args:
         - "-c"
         - |
+          PARAM_GROUP="$1"; PARAM_INCLUDE_MEMBERS="$2"
           set -e
-          GROUP_PARAM="{{params.group}}"
-          INCLUDE_MEMBERS="{{params.include_members}}"
+          GROUP_PARAM="${PARAM_GROUP}"
+          INCLUDE_MEMBERS="${PARAM_INCLUDE_MEMBERS}"
           
           # Extract group name/ID from parameter
           # Handle: "becomingaportuguesecitizen", "23386646249", or full URL
@@ -192,6 +176,9 @@ operations:
               member_count_numeric: $member_count_numeric,
               privacy: $privacy
             }'
+        - "--"
+        - ".params.group"
+        - ".params.include_members"
       timeout: 35
 
 ---

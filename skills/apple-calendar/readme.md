@@ -34,21 +34,6 @@ seed:
       ticker: AAPL
       exchange: NASDAQ
       wikidata_id: Q312
-
-instructions: |
-  Apple Calendar accesses local macOS Calendar via EventKit.
-  
-  **Requirements:**
-  - macOS only
-  - Grant permissions in System Settings → Privacy & Security:
-    - Calendars → Full Access for Cursor/Terminal
-  
-  **Notes:**
-  - All calendars configured in macOS Calendar.app are accessible (iCloud, Google, etc.)
-  - Subscribed calendars (ICS feeds like US Holidays) are read-only
-  - Recurring events: updates/deletes only affect the single occurrence
-  - Times use system timezone
-
 transformers:
   calendar:
     terminology: Calendar
@@ -249,12 +234,19 @@ operations:
             print("[]")
         }
       args:
-        - "{{params.days}}"
-        - "{{params.past}}"
-        - "{{params.calendar_id}}"
-        - "{{params.query}}"
-        - "{{params.limit}}"
-        - "{{params.exclude_all_day}}"
+        - ".params.days"
+        - ".params.past"
+        - ".params.calendar_id"
+        - ".params.query"
+        - ".params.limit"
+        - ".params.exclude_all_day"
+        - "--"
+        - ".params.days"
+        - ".params.past"
+        - ".params.calendar_id"
+        - ".params.query"
+        - ".params.limit"
+        - ".params.exclude_all_day"
 
   meeting.get:
     description: Get full details of a specific event
@@ -319,7 +311,9 @@ operations:
             print(jsonString)
         }
       args:
-        - "{{params.id}}"
+        - ".params.id"
+        - "--"
+        - ".params.id"
 
   meeting.create:
     description: Create a new calendar event
@@ -448,13 +442,21 @@ operations:
             exit(1)
         }
       args:
-        - "{{params.title}}"
-        - "{{params.start}}"
-        - "{{params.end}}"
-        - "{{params.calendar_id}}"
-        - "{{params.location}}"
-        - "{{params.description}}"
-        - "{{params.all_day}}"
+        - ".params.title"
+        - ".params.start"
+        - ".params.end"
+        - ".params.calendar_id"
+        - ".params.location"
+        - ".params.description"
+        - ".params.all_day"
+        - "--"
+        - ".params.title"
+        - ".params.start"
+        - ".params.end"
+        - ".params.calendar_id"
+        - ".params.location"
+        - ".params.description"
+        - ".params.all_day"
 
   meeting.update:
     description: Update an existing calendar event
@@ -556,13 +558,21 @@ operations:
             exit(1)
         }
       args:
-        - "{{params.id}}"
-        - "{{params.title}}"
-        - "{{params.start}}"
-        - "{{params.end}}"
-        - "{{params.location}}"
-        - "{{params.description}}"
-        - "{{params.calendar_id}}"
+        - ".params.id"
+        - ".params.title"
+        - ".params.start"
+        - ".params.end"
+        - ".params.location"
+        - ".params.description"
+        - ".params.calendar_id"
+        - "--"
+        - ".params.id"
+        - ".params.title"
+        - ".params.start"
+        - ".params.end"
+        - ".params.location"
+        - ".params.description"
+        - ".params.calendar_id"
 
   meeting.delete:
     description: Delete a calendar event
@@ -610,7 +620,9 @@ operations:
             exit(1)
         }
       args:
-        - "{{params.id}}"
+        - ".params.id"
+        - "--"
+        - ".params.id"
 ---
 
 # Apple

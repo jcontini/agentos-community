@@ -6,8 +6,6 @@ icon: icon.svg
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox
-platforms: [macos]
-
 auth: none
 
 connects_to: firefox
@@ -36,21 +34,6 @@ seed:
 
 database:
   macos: "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
-
-instructions: |
-  Mozilla Firefox browser — local data access via SQLite databases.
-  - History and bookmarks are in places.sqlite
-  - Cookies are in cookies.sqlite (plaintext — no decryption needed!)
-  - Firefox uses glob paths (profiles have random prefixes like "abc123.default")
-  - The SQL executor resolves globs automatically, querying all matching profiles
-  - Timestamps: Firefox uses microseconds since Unix epoch (PRTime)
-  - To convert to seconds: time / 1000000
-  - Bookmark types: 1 = bookmark, 2 = folder, 3 = separator
-
-testing:
-  exempt:
-    has_tests: "Local SQLite database — requires Firefox to be installed"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -23,12 +23,6 @@ agent:
     - webpage.search
     - webpage.read
   max_iterations: 10
-
-credits:
-  - entity: webpage
-    operations: [search, read]
-    relationship: needs
-
 ---
 
 # Research Web

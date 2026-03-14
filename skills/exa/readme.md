@@ -37,13 +37,6 @@ seed:
       type: company
       url: https://exa.ai
       founded: "2021"
-
-instructions: |
-  Exa-specific notes:
-  - Neural search finds content by meaning, not just keywords
-  - Fast: typically under 1 second per request
-  - Use for research, concepts, "how to" queries
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -64,6 +57,7 @@ transformers:
   webpage:
     terminology: Page
     mapping:
+      id: .url
       url: .url
       title: .title
       favicon: .favicon

@@ -4,21 +4,11 @@ name: OpenCode
 description: CLI coding agent for Claude — conversation history, sub-agent research, and session data
 icon: icon.svg
 color: "#F97316"
-platforms: [macos, linux]
-
 website: https://opencode.ai
 
 auth: none
 
 database: "~/.local/share/opencode/opencode.db"
-
-instructions: >
-  You are running in OpenCode. Your conversation history and sub-agent research
-  are stored locally in a SQLite database. Use this skill to search past sessions,
-  find previous research, recover sub-agent output, and call other workspace agents.
-  Use agent.ask to call another project's agent when you need domain knowledge —
-  the agent wakes up in its workspace with full context and answers your question.
-
 connects_to: opencode-app
 
 seed:
@@ -336,12 +326,12 @@ utilities:
       binary: bash
       args:
         - "-c"
-        - "bash ~/dev/agentos-community/skills/opencode/agent-ask.sh '{{params.project}}' '{{params.question}}' '{{params.model}}'"
+        - "bash ~/dev/agentos-community/skills/opencode/agent-ask.sh '${PARAM_PROJECT}' '${PARAM_QUESTION}' '${PARAM_MODEL}'"
+        - "--"
+        - ".params.project"
+        - ".params.question"
+        - ".params.model"
       timeout: 120
-
-testing:
-  exempt:
-    operations: Local database skill — requires OpenCode installation
 ---
 
 # OpenCode

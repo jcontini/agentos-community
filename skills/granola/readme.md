@@ -9,7 +9,6 @@ website: https://granola.ai
 privacy_url: https://granola.ai/privacy
 
 auth: none
-platforms: [macos]
 connects_to: granola
 
 seed:
@@ -31,21 +30,6 @@ seed:
     data:
       type: company
       url: https://granola.ai
-
-instructions: |
-  Granola meeting transcripts and AI summaries.
-
-  - Auth is automatic — reads local token from ~/Library/Application Support/Granola/supabase.json
-  - Token expires every ~6 hours; open Granola to auto-refresh if you get auth errors
-  - meeting.list returns recent meetings with attendee metadata (no transcript, fast)
-  - meeting.get returns a full meeting: transcript as a linked transcript entity, AI summary, attendees
-  - Transcripts are FTS5-indexed for full-text search — use the local search API after ingesting
-
-requires:
-  - name: Granola
-    install:
-      macos: Download from https://granola.ai
-
 transformers:
   meeting:
     terminology: Meeting
@@ -87,7 +71,10 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/granola/granola.py list {{params.limit}} {{params.page}}"
+        - "python3 ~/dev/agentos-community/skills/granola/granola.py list ${PARAM_LIMIT} ${PARAM_PAGE}"
+        - "--"
+        - ".params.limit"
+        - ".params.page"
       timeout: 30
 
   meeting.get:
@@ -100,7 +87,9 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/granola/granola.py get {{params.id}}"
+        - "python3 ~/dev/agentos-community/skills/granola/granola.py get ${PARAM_ID}"
+        - "--"
+        - ".params.id"
       timeout: 60
 
 ---

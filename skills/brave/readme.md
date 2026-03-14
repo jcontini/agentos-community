@@ -38,13 +38,6 @@ seed:
       url: https://brave.com
       founded: "2015"
       wikidata_id: Q50391972
-
-instructions: |
-  Brave Search - privacy-focused web search with its own index.
-  - Free tier: 2,000 queries/month
-  - Independent index (not Google/Bing)
-  - Supports search operators: "exact phrase", -exclude, site:domain.com
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,9 +70,9 @@ operations:
       method: GET
       url: https://api.search.brave.com/res/v1/web/search
       query:
-        q: "{{params.query}}"
-        count: "{{params.limit | default:20}}"
-        freshness: "{{params.freshness}}"
+        q: ".params.query"
+        count: ".params.limit // 20"
+        freshness: ".params.freshness"
       response:
         root: "/web/results"
 ---

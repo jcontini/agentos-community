@@ -6,8 +6,6 @@ icon: icon.svg
 color: "#4285F4"
 
 website: https://www.google.com/chrome
-platforms: [macos]
-
 auth: none
 
 connects_to: google-chrome
@@ -35,20 +33,6 @@ seed:
 
 database:
   macos: "~/Library/Application Support/Google/Chrome/Default/History"
-
-instructions: |
-  Google Chrome browser — local data access via SQLite databases.
-  - History: browsing history with visit counts and timestamps
-  - Bookmarks: uses Chrome's JSON Bookmarks file via command executor
-  - Cookie key derivation: derives the AES key from macOS Keychain for Chromium cookie decryption
-  - All data is local, read-only, no network requests
-  - Chrome timestamps are WebKit epoch (microseconds since 1601-01-01)
-  - To convert to Unix: (chrome_time / 1000000) - 11644473600
-
-testing:
-  exempt:
-    has_tests: "Local SQLite database — requires Chrome to be installed"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -136,7 +120,7 @@ utilities:
         - id: derive_key
           crypto:
             algorithm: pbkdf2
-            password: "{{get_password.value}}"
+            password: ".get_password.value"
             salt: "saltysalt"
             iterations: 1003
             key_length: 16

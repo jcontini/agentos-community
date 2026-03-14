@@ -6,8 +6,6 @@ icon: icon.svg
 color: "#F83B1D"
 
 website: https://brave.com
-platforms: [macos]
-
 auth: none
 
 connects_to: brave-browser-app
@@ -46,23 +44,6 @@ seed:
       url: https://brave.com
       founded: "2015"
       wikidata_id: Q50391972
-
-instructions: |
-  Brave Browser — local data access via SQLite databases (Chromium-based).
-  - Cookies: encrypted with AES-128-CBC, key derived via PBKDF2 from macOS Keychain
-  - History: browsing history with visit counts and WebKit timestamps
-  - Cookie key derivation: "Brave Safe Storage" service, "Brave" account in Keychain
-  - Keychain account is "Brave" (not "Chromium") — verified on macOS
-  - Chrome timestamps are WebKit epoch (microseconds since 1601-01-01)
-  - To convert to Unix: (chrome_time / 1000000) - 11644473600
-  - Brave must NOT be running when reading the Cookies DB (file lock),
-    OR use the credential_get utility which copies to /tmp first.
-  - The claude.ai sessionKey cookie lives on host .platform.claude.com
-
-testing:
-  exempt:
-    has_tests: "Local SQLite database — requires Brave Browser to be installed"
-
 # ==============================================================================
 # TRANSFORMERS
 # ==============================================================================

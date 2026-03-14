@@ -47,13 +47,6 @@ seed:
       ticker: RDDT
       exchange: NYSE
       wikidata_id: Q111759432
-
-instructions: |
-  Reddit-specific notes:
-  - Uses public JSON endpoints (no auth needed)
-  - Rate limited to ~10 requests/minute
-  - Works for any public subreddit, post, or user profile
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -200,7 +193,8 @@ operations:
       args:
         - "-c"
         - |
-          curl -s -A "AgentOS/1.0" "https://www.reddit.com/comments/{{params.id}}.json?limit={{params.comment_limit}}" | jq '
+          PARAM_ID="$1"; PARAM_COMMENT_LIMIT="$2"
+          curl -s -A "AgentOS/1.0" "https://www.reddit.com/comments/${PARAM_ID}.json?limit=${PARAM_COMMENT_LIMIT}" | jq '
             def flatten_tree:
               (. + {parent_id: (.parent_id | split("_") | .[1:] | join("_"))}),
               (if .replies == "" then empty
@@ -208,6 +202,9 @@ operations:
                end);
             .[0].data.children[0].data as $post |
             [$post] + [.[1].data.children[] | select(.kind == "t1") | .data | flatten_tree]'
+        - "--"
+        - ".params.id"
+        - ".params.comment_limit"
       timeout: 30
 
   forum.get:
@@ -222,8 +219,9 @@ operations:
       args:
         - "-c"
         - |
-          SUBREDDIT="{{params.subreddit}}"
-          LIMIT="{{params.limit}}"
+          PARAM_SUBREDDIT="$1"; PARAM_LIMIT="$2"
+          SUBREDDIT="${PARAM_SUBREDDIT}"
+          LIMIT="${PARAM_LIMIT}"
           
           # Fetch subreddit metadata and posts
           ABOUT=$(curl -s -A "AgentOS/1.0" "https://www.reddit.com/r/${SUBREDDIT}/about.json")
@@ -249,6 +247,9 @@ operations:
             posts: $posts
           }
           '
+        - "--"
+        - ".params.subreddit"
+        - ".params.limit"
       timeout: 30
 
   forum.search:

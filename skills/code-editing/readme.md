@@ -8,32 +8,6 @@ color: "#10B981"
 website: https://github.com/jcontini/agentos-community
 
 auth: none
-
-testing:
-  exempt:
-    seed: "Meta-skill — no external service, operates on local filesystem"
-
-credits:
-  - skill: cursor
-    relationship: appreciates
-    reason: Cursor's tool set (Read, Write, StrReplace, Delete, Glob, Grep) directly inspired this skill's operation design
-
-instructions: |
-  This skill provides filesystem operations for agents that need to create, read,
-  modify, or delete files — without requiring terminal access.
-
-  Operations follow the same patterns as Cursor's built-in tools:
-  - file.read     → Read a file's contents (like Cursor's Read tool)
-  - file.write    → Create or overwrite a file (like Cursor's Write tool)
-  - file.edit     → Surgical string replacement (like Cursor's StrReplace tool)
-  - file.delete   → Delete a file (like Cursor's Delete tool)
-  - file.list     → List directory contents (like Cursor's Glob tool)
-  - file.search   → Search file contents by pattern (like Cursor's Grep tool)
-  - file.find     → Find files by glob pattern (like Cursor's Glob tool)
-
-  Always read before editing. Use file.edit for surgical changes; file.write for
-  creating new files or full rewrites.
-
 ---
 
 # Code Editing
@@ -118,10 +92,6 @@ Skills that build or modify files need `file.write` and `file.edit` capabilities
 
 ```yaml
 # In a skill's readme.md credits section:
-credits:
-  - entity: file
-    operations: [read, write, edit]
-    relationship: needs
 ```
 
 The install engine resolves this at install time: "this skill needs file editing

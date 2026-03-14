@@ -7,8 +7,6 @@ color: "#2EAD33"
 
 website: https://playwright.dev
 auth: none
-platforms: [macos]
-
 connects_to: playwright
 
 seed:
@@ -44,52 +42,6 @@ seed:
 # Cookie reads for auth should go through passive providers like brave-browser.
 # Playwright's role in the cookie flow is the login phase (auth.cookies.login),
 # not providing cookies on demand.
-
-instructions: |
-  WHEN TO USE THIS SKILL vs OTHERS:
-  - Need to READ a web page's content? → Use Exa (search.create) or Firecrawl (webpage.read). NOT this.
-  - Need to SEARCH the web? → Use Exa or Brave. NOT this.
-  - Need to check browsing HISTORY? → Use Chrome or Firefox skill. NOT this.
-  - Need to CONTROL a browser — click, fill, navigate, screenshot, automate? → Use THIS skill.
-  - Need to TEST or INSPECT a web app (console errors, visual state)? → Use THIS skill.
-  - Need to do something that requires a LOGGED-IN SESSION (cookies, auth)? → Use THIS skill.
-
-  Playwright provides browser automation — controlling a real Chromium browser via CDP.
-  This is for interactive browser control: navigating sites, clicking buttons,
-  filling forms, taking screenshots, running JavaScript, and inspecting pages.
-  This is NOT for reading web content (Exa/Firecrawl are faster and better for that).
-
-  The browser is PERSISTENT — start it once, and it stays running between calls.
-  Cookies, login sessions, and tabs survive across operations. The agent can respond
-  to the user between calls — every operation is non-blocking (connect, act, return).
-
-  You do NOT need to call `start` first — any operation auto-launches the browser
-  if it's not running. But `start` is useful to pre-launch (e.g., with --headless)
-  or to confirm the browser is ready before a sequence of operations.
-
-  To understand the page, use `inspect` first — it returns a fast structured DOM
-  snapshot (tag names, attributes, text) that you can reason about immediately.
-  Do NOT use `screenshot` unless you're stuck, the user asks for one, or you need
-  visual verification. Screenshots are slow and produce images, not actionable data.
-  Use `evaluate` as an escape hatch for anything the predefined operations don't cover.
-
-requires:
-  - name: playwright
-    check: npx playwright --version
-    install:
-      macos: npm install -g playwright && npx playwright install chromium
-
-credits:
-  - entity: webpage
-    operations: [read]
-    relationship: needs
-  - skill: chrome
-    relationship: appreciates
-    reason: Shared browser domain — Chrome provides history, Playwright provides control
-  - skill: firecrawl
-    relationship: appreciates
-    reason: Complementary — Firecrawl reads content, Playwright controls interaction
-
 transformers:
   webpage:
     terminology: Page

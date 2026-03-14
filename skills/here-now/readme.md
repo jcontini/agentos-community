@@ -37,26 +37,6 @@ seed:
     data:
       type: company
       url: https://here.now
-
-instructions: |
-  here.now publishes static files (HTML, images, PDFs) to the Cloudflare edge
-  at a unique URL like https://bright-canvas-a7k2.here.now/.
-
-  Two auth modes:
-  - Anonymous (no API key): site lives for 24 hours. The response includes a
-    claim_token and claim_url stored in entity.data — ALWAYS surface these to
-    the user so they can claim the site permanently.
-  - Authenticated (API key set): site is permanent.
-
-  The claim_token and claim_url are returned ONCE and never again.
-  If the user wants to keep an anonymous site, they must visit the claim_url
-  and sign in before the 24-hour window closes.
-
-  Workflow for publishing a single HTML page:
-  1. Call website.create with the HTML content and a title
-  2. The site is live immediately after the call returns
-  3. If anonymous, show the user the url AND the claim_url
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -125,15 +105,22 @@ operations:
         - "-l"
         - "-c"
         - |
-          TITLE="{{params.title}}"
-          DESC="{{params.description}}"
+          PARAM_TITLE="$1"; PARAM_DESCRIPTION="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
+          TITLE="${PARAM_TITLE}"
+          DESC="${PARAM_DESCRIPTION}"
           python3 ~/dev/agentos-community/skills/here-now/publish.py \
-            --filename '{{params.filename}}' \
-            --content-type '{{params.content_type}}' \
+            --filename '${PARAM_FILENAME}' \
+            --content-type '${PARAM_CONTENT_TYPE}' \
             ${TITLE:+--title "$TITLE"} \
             ${DESC:+--description "$DESC"} \
-            --token '{{params.auth_key}}'
-      stdin: "{{params.content}}"
+            --token '${PARAM_AUTH_KEY}'
+        - "--"
+        - ".params.title"
+        - ".params.description"
+        - ".params.filename"
+        - ".params.content_type"
+        - ".params.auth_key"
+      stdin: ".params.content"
       timeout: 60
 
   website.update:
@@ -162,14 +149,21 @@ operations:
         - "-l"
         - "-c"
         - |
-          TITLE="{{params.title}}"
+          PARAM_TITLE="$1"; PARAM_SLUG="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
+          TITLE="${PARAM_TITLE}"
           python3 ~/dev/agentos-community/skills/here-now/publish.py \
-            --slug '{{params.slug}}' \
-            --filename '{{params.filename}}' \
-            --content-type '{{params.content_type}}' \
+            --slug '${PARAM_SLUG}' \
+            --filename '${PARAM_FILENAME}' \
+            --content-type '${PARAM_CONTENT_TYPE}' \
             ${TITLE:+--title "$TITLE"} \
-            --token '{{params.auth_key}}'
-      stdin: "{{params.content}}"
+            --token '${PARAM_AUTH_KEY}'
+        - "--"
+        - ".params.title"
+        - ".params.slug"
+        - ".params.filename"
+        - ".params.content_type"
+        - ".params.auth_key"
+      stdin: ".params.content"
       timeout: 60
 
   website.delete:

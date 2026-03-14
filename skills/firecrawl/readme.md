@@ -37,15 +37,6 @@ seed:
       type: company
       url: https://firecrawl.dev
       founded: "2022"
-
-instructions: |
-  Firecrawl-specific notes:
-  - Renders JavaScript - use for React, Vue, Angular, SPAs
-  - Good for Notion pages, dynamic content
-  - Slower than Exa but handles modern web apps
-  - Cost: ~$0.009/page
-  - For search, use Exa instead (Firecrawl search requires semantic queries)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -87,6 +78,7 @@ operations:
       response:
         root: "/data"
         mapping:
+          id: .metadata.sourceURL
           url: .metadata.sourceURL
           title: .metadata.title
           content_type: '"text/markdown"'

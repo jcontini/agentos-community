@@ -4,8 +4,6 @@ name: Ollama
 description: Local AI models running on your machine via Ollama
 icon: icon.svg
 color: "#0F172A"
-platforms: [macos, linux, windows]
-
 website: https://ollama.com
 privacy_url: https://ollama.com/privacy
 terms_url: https://ollama.com/terms
@@ -32,16 +30,6 @@ seed:
     relationships:
       - role: offered_by
         to: ollama-inc
-
-instructions: |
-  Ollama runs models locally with no API key.
-
-  Requirements:
-  - Ollama installed and running locally
-  - At least one model pulled, e.g. `ollama pull llama3.2`
-
-  For private or offline jobs, prefer Ollama.
-
 utilities:
   chat:
     description: Send a chat request to the local Ollama API

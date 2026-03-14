@@ -10,12 +10,6 @@ website: https://git-scm.com
 auth: none
 
 connects_to: git-scm
-
-credits:
-  - entity: repository
-    operations: [get]
-    relationship: needs
-
 seed:
   - id: git-scm
     types: [software]
@@ -36,19 +30,6 @@ seed:
     name: Linus Torvalds
     data:
       wikidata_id: Q34253
-
-instructions: |
-  Git skill wraps the local git CLI. All operations require a `path` parameter —
-  the absolute path to the repository. In a coding session, this is typically
-  the workspace directory.
-
-  Commits are messages sent into a repository. The commit message subject
-  becomes the entity name; the full message becomes searchable content.
-  Authors are linked as email accounts via the person/claims/account graph.
-
-  Use git_commit.list to see recent activity. Use branch.list to see what's
-  being worked on. Use the status and diff utilities for live working tree state.
-
 transformers:
   git_commit:
     terminology: Commit
@@ -123,10 +104,11 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          BRANCH="{{params.branch}}"
-          AUTHOR="{{params.author}}"
-          git log ${BRANCH:+"$BRANCH"} ${AUTHOR:+--author="$AUTHOR"} -{{params.limit}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          PARAM_PATH="$1"; PARAM_BRANCH="$2"; PARAM_AUTHOR="$3"; PARAM_LIMIT="$4"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          BRANCH="${PARAM_BRANCH}"
+          AUTHOR="${PARAM_AUTHOR}"
+          git log ${BRANCH:+"$BRANCH"} ${AUTHOR:+--author="$AUTHOR"} -${PARAM_LIMIT} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -140,6 +122,11 @@ operations:
           }
           END { if (json) print json }
           ' | jq -s '.'
+        - "--"
+        - ".params.path"
+        - ".params.branch"
+        - ".params.author"
+        - ".params.limit"
       timeout: 30
 
   git_commit.get:
@@ -159,8 +146,9 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          git show "{{params.id}}" --pretty=format:'{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          PARAM_PATH="$1"; PARAM_ID="$2"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          git show "${PARAM_ID}" --pretty=format:'{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
             files=0; ins=0; del=0
@@ -173,6 +161,9 @@ operations:
           }
           END { if (json) print json }
           '
+        - "--"
+        - ".params.path"
+        - ".params.id"
       timeout: 30
 
   git_commit.search:
@@ -196,8 +187,9 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          git log --grep="{{params.query}}" -i -{{params.limit}} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
+          PARAM_PATH="$1"; PARAM_QUERY="$2"; PARAM_LIMIT="$3"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          git log --grep="${PARAM_QUERY}" -i -${PARAM_LIMIT} --pretty=format:'COMMIT_START%n{"hash":"%H","short_hash":"%h","author_name":"%an","author_email":"%ae","committer_name":"%cn","committer_email":"%ce","timestamp":"%aI","message":"%s"}' --shortstat 2>/dev/null | awk '
           /^COMMIT_START/ { if (json) print json; json=""; next }
           /^\{/ { json=$0; next }
           /^ [0-9]/ {
@@ -211,6 +203,10 @@ operations:
           }
           END { if (json) print json }
           ' | jq -s '.'
+        - "--"
+        - ".params.path"
+        - ".params.query"
+        - ".params.limit"
       timeout: 30
 
   branch.list:
@@ -226,7 +222,8 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
+          PARAM_PATH="$1"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
           git branch -a --format='%(refname:short)|%(upstream:short)|%(HEAD)' 2>/dev/null | while IFS='|' read name upstream head; do
             is_remote=false
             [[ "$name" == origin/* ]] && is_remote=true
@@ -234,6 +231,8 @@ operations:
             [[ "$head" == "*" ]] && is_current=true
             printf '{"name":"%s","upstream":"%s","is_remote":%s,"is_current":%s}\n' "$name" "$upstream" "$is_remote" "$is_current"
           done | jq -s '.'
+        - "--"
+        - ".params.path"
       timeout: 15
 
   branch.get:
@@ -253,8 +252,9 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          git branch -a --format='%(refname:short)|%(upstream:short)|%(HEAD)' 2>/dev/null | grep "^{{params.name}}|" | head -1 | {
+          PARAM_PATH="$1"; PARAM_NAME="$2"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          git branch -a --format='%(refname:short)|%(upstream:short)|%(HEAD)' 2>/dev/null | grep "^${PARAM_NAME}|" | head -1 | {
             IFS='|' read name upstream head
             is_remote=false
             [[ "$name" == origin/* ]] && is_remote=true
@@ -262,6 +262,9 @@ operations:
             [[ "$head" == "*" ]] && is_current=true
             printf '{"name":"%s","upstream":"%s","is_remote":%s,"is_current":%s}\n' "$name" "$upstream" "$is_remote" "$is_current"
           }
+        - "--"
+        - ".params.path"
+        - ".params.name"
       timeout: 15
 
   repository.get:
@@ -277,7 +280,8 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
+          PARAM_PATH="$1"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
           git_remote=$(git remote get-url origin 2>/dev/null || echo "")
           git_branch=$(git branch --show-current 2>/dev/null || echo "")
           repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
@@ -289,6 +293,8 @@ operations:
           [[ "$git_remote" == *codeberg.org* ]] && platform="codeberg"
           printf '{"name":"%s","full_name":"%s","url":"%s","platform":"%s","default_branch":"%s"}\n' \
             "$repo_name" "$full_name" "$git_remote" "$platform" "$git_branch"
+        - "--"
+        - ".params.path"
       timeout: 15
 
   tag.list:
@@ -304,13 +310,16 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
+          PARAM_PATH="$1"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
           git tag -l --format='%(refname:short)|%(objectname:short)|%(creatordate:iso-strict)|%(subject)|%(objecttype)' 2>/dev/null | while IFS='|' read name hash date message objtype; do
             annotated=false
             [[ "$objtype" == "tag" ]] && annotated=true
             printf '{"name":"%s","hash":"%s","date":"%s","message":"%s","annotated":%s}\n' \
               "$name" "$hash" "$date" "$message" "$annotated"
           done | jq -s '.'
+        - "--"
+        - ".params.path"
       timeout: 15
 
   tag.get:
@@ -330,14 +339,18 @@ operations:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          git tag -l "{{params.name}}" --format='%(refname:short)|%(objectname:short)|%(creatordate:iso-strict)|%(subject)|%(objecttype)' 2>/dev/null | head -1 | {
+          PARAM_PATH="$1"; PARAM_NAME="$2"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          git tag -l "${PARAM_NAME}" --format='%(refname:short)|%(objectname:short)|%(creatordate:iso-strict)|%(subject)|%(objecttype)' 2>/dev/null | head -1 | {
             IFS='|' read name hash date message objtype
             annotated=false
             [[ "$objtype" == "tag" ]] && annotated=true
             printf '{"name":"%s","hash":"%s","date":"%s","message":"%s","annotated":%s}\n' \
               "$name" "$hash" "$date" "$message" "$annotated"
           }
+        - "--"
+        - ".params.path"
+        - ".params.name"
       timeout: 15
 
 utilities:
@@ -354,7 +367,8 @@ utilities:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
+          PARAM_PATH="$1"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
           branch=$(git branch --show-current 2>/dev/null)
           tracking=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "")
           ahead=0; behind=0
@@ -367,6 +381,8 @@ utilities:
           untracked=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
           printf '{"branch":"%s","tracking":"%s","ahead":%d,"behind":%d,"staged":%d,"modified":%d,"untracked":%d}\n' \
             "$branch" "$tracking" "$ahead" "$behind" "$staged" "$modified" "$untracked"
+        - "--"
+        - ".params.path"
       timeout: 15
 
   diff:
@@ -391,10 +407,11 @@ utilities:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          REF1="{{params.ref1}}"
-          REF2="{{params.ref2}}"
-          STAGED="{{params.staged}}"
+          PARAM_PATH="$1"; PARAM_REF1="$2"; PARAM_REF2="$3"; PARAM_STAGED="$4"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          REF1="${PARAM_REF1}"
+          REF2="${PARAM_REF2}"
+          STAGED="${PARAM_STAGED}"
           if [ -n "$REF1" ]; then
             git diff "$REF1" ${REF2:+"$REF2"} 2>/dev/null
           elif [ "$STAGED" = "true" ]; then
@@ -402,6 +419,11 @@ utilities:
           else
             git diff 2>/dev/null
           fi
+        - "--"
+        - ".params.path"
+        - ".params.ref1"
+        - ".params.ref2"
+        - ".params.staged"
       timeout: 30
 
   log:
@@ -427,16 +449,17 @@ utilities:
       args:
         - "-c"
         - |
-          cd "{{params.path}}" 2>/dev/null || exit 1
-          BRANCH="{{params.branch}}"
-          FORMAT="{{params.format}}"
-          git log ${BRANCH:+"$BRANCH"} -{{params.limit}} --format="${FORMAT:-oneline}" 2>/dev/null
+          PARAM_PATH="$1"; PARAM_BRANCH="$2"; PARAM_FORMAT="$3"; PARAM_LIMIT="$4"
+          cd "${PARAM_PATH}" 2>/dev/null || exit 1
+          BRANCH="${PARAM_BRANCH}"
+          FORMAT="${PARAM_FORMAT}"
+          git log ${BRANCH:+"$BRANCH"} -${PARAM_LIMIT} --format="${FORMAT:-oneline}" 2>/dev/null
+        - "--"
+        - ".params.path"
+        - ".params.branch"
+        - ".params.format"
+        - ".params.limit"
       timeout: 30
-
-testing:
-  exempt:
-    reason: Requires a local git repository to be present
-
 ---
 
 # Git

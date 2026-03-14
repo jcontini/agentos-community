@@ -4,17 +4,9 @@ name: Cursor
 description: AI-first code editor with built-in MCP support
 icon: icon.png
 color: "#3B82F6"
-platforms: [macos, windows, linux]
-
 website: https://cursor.com
 
 auth: none
-
-instructions: >
-  You are running in Cursor. MCP config: ~/.cursor/mcp.json.
-  To reload without restart: rename mcp.json → mcp.json.bak → back to mcp.json, then sleep 1s.
-  Research archive: run extract-research.py in this skill's directory to save sub-agent research to .research/.
-
 connects_to: cursor-app
 
 seed:
@@ -101,8 +93,11 @@ operations:
         - "-l"
         - "-c"
         - |
-          WS="{{params.workspace}}"
+          PARAM_WORKSPACE="$1"
+          WS="${PARAM_WORKSPACE}"
           python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json --backfill ${WS:+--workspace "$WS"} 2>/dev/null
+        - "--"
+        - ".params.workspace"
       timeout: 300
 
   session.get:
@@ -118,12 +113,10 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --id {{params.id}} --json 2>/dev/null"
+        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --id ${PARAM_ID} --json 2>/dev/null"
+        - "--"
+        - ".params.id"
       timeout: 30
-
-testing:
-  exempt:
-    operations: Local command skill — requires local Cursor database
 ---
 
 # Cursor

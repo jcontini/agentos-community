@@ -4,8 +4,6 @@ name: Claude.ai
 description: Claude.ai web chat history — browse and search conversations from your personal claude.ai account
 icon: icon.png
 color: "#D97757"
-platforms: [macos]
-
 website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
@@ -22,7 +20,7 @@ auth:
           description: "Submit email on the Claude login page to trigger a magic link email"
           steps:
             - { action: goto, url: "https://claude.ai/login" }
-            - { action: fill, selector: "input[type=email]", value: "{{account}}" }
+            - { action: fill, selector: "input[type=email]", value: "${ACCOUNT}" }
             - { action: click, selector: "button[type=submit]" }
           returns_to_agent: >
             Magic link requested. Check the user's email for a message from Anthropic
@@ -32,7 +30,7 @@ auth:
           description: "Navigate to the magic link URL to complete authentication"
           requires: [magic_link]
           steps:
-            - { action: goto, url: "{{magic_link}}" }
+            - { action: goto, url: "${MAGIC_LINK}" }
             - { action: wait, url_contains: "/new" }
           returns_to_agent: >
             Login complete. The sessionKey cookie is now in the browser.
@@ -63,59 +61,6 @@ seed:
       type: company
       url: https://www.anthropic.com
       founded: "2021"
-
-instructions: |
-  Claude.ai web chat history. Conversations live server-side only — not in any local file.
-  Access requires a valid sessionKey cookie from a logged-in claude.ai browser session.
-
-  ## Authentication
-
-  Cookie matchmaking handles session automatically:
-  - `auth.cookies` declares the skill needs `sessionKey` from `.claude.ai`
-  - agentOS discovers a cookie provider (Brave Browser reads the cookie DB)
-  - The sessionKey is injected into `params.auth.sessionKey` before each call
-  - No session file, no manual credential storage
-
-  If the user is NOT logged into claude.ai on Brave Browser, the Playwright
-  login flow is needed (auth.cookies.login phases above).
-
-  ## Discovering the User's Account
-
-  DO NOT assume any email address, org UUID, or account name.
-
-  1. Ask the user: "What email do you use for claude.ai?"
-  2. Call `conversation.list` with no account param — the org is auto-discovered via API.
-  3. If you need to switch orgs, use `list_orgs` to discover available orgs and
-     their UUIDs, then pass the UUID via the account param.
-
-  ## Magic Link Extraction from Email
-
-  If you're reading the magic link from a raw email:
-  - The raw email body is often base64url-encoded RFC 2822 with quoted-printable HTML
-  - Remove QP soft line breaks: replace =\r\n and =\n with ""
-  - The link pattern: href=3D"https://claude.ai/magic-link#TOKEN"
-  - Replace =3D with = in the extracted URL
-  - The helper `extract_magic_link` utility can do this for you
-
-  ## API Architecture
-
-  LOGIN ONLY → Playwright skill (browser control) + Brave Browser skill (cookie extraction)
-  ALL OTHER CALLS → claude-api.py (httpx with sessionKey as Cookie header)
-
-  ## Cloudflare / API Headers
-
-  Must include these headers on every request or get 403:
-    anthropic-client-version: claude-ai/web@1.1.5368
-    Sec-Fetch-Site: same-origin
-    Sec-Fetch-Mode: cors
-    Sec-Fetch-Dest: empty
-    Cookie: sessionKey=sk-ant-sid02-...
-
-testing:
-  exempt:
-    operations: Requires live claude.ai session — tests in tests/claude.test.ts skip gracefully without one
-    utilities: Login utilities require Playwright browser on CDP port 9222
-
 transformers:
   conversation:
     terminology: Conversation

@@ -6,8 +6,6 @@ icon: icon.svg
 color: "#FF9900"
 
 website: https://www.amazon.com
-platforms: [macos]
-
 auth:
   cookies:
     domain: ".amazon.com"
@@ -25,27 +23,6 @@ seed:
       url: https://amazon.com
       founded: "1994"
       wikidata_id: Q3884
-
-instructions: |
-  Amazon consumer account access via browser session cookies.
-  
-  Authentication is fully automatic:
-  - Cookies are extracted from Firefox (or Chrome) browser databases
-  - The user must be logged into Amazon in their browser
-  - Session cookies (x-main, session-id, session-token) persist for weeks/months
-  - No API key, no OAuth, no password storage
-  
-  If requests fail with redirects to the login page, the session has expired.
-  Tell the user: "Your Amazon session has expired. Please log into Amazon in Firefox."
-  
-  Amazon does not provide a consumer JSON API. Responses are HTML pages.
-  The check_session utility verifies auth is working by checking for the
-  presence of the user's name in the account page response.
-
-testing:
-  exempt:
-    has_tests: "Requires active Amazon browser session — cannot test without credentials"
-
 # ==============================================================================
 # UTILITIES
 # ==============================================================================

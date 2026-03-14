@@ -4,8 +4,6 @@ name: Chase Bank
 description: Chase Bank accounts, balances, and transactions — checking, savings, and credit cards
 icon: icon.png
 color: "#117ACA"
-platforms: [macos]
-
 website: https://www.chase.com
 
 auth:
@@ -28,37 +26,6 @@ auth:
             - { action: wait, url_contains: "/dashboard" }
           returns_to_agent: |
             Login confirmed. Extract cookies via playwright cookies utility for domain .chase.com.
-
-instructions: |
-  Chase Bank — personal checking, savings, and credit card accounts.
-
-  ## Auth
-  Requires a full cookie jar from an active Chase browser session.
-  The key session cookies are AMSESSION + sessioncacheid + auth-guid.
-  Sessions expire in ~10 minutes so cookies are short-lived.
-
-  ## Recommended login flow (fully automatable)
-    1. Playwright navigates to Chase login, fills username + password (from agentOS secrets)
-    2. Chase sends OTP via SMS
-    3. Read the OTP from iMessage skill (same pattern as Claude skill reading email invite links)
-    4. Playwright submits OTP, lands on dashboard
-    5. Extract full cookie jar via playwright cookies utility
-    6. Use cookies for fast direct API calls
-    7. On 401 → repeat from step 1 automatically
-
-  This makes Chase fully hands-free. The iMessage skill already handles step 3.
-  TODO: build the Playwright login utility for this skill (see chaseinvest-api session.py for reference).
-
-  ## Endpoints (confirmed 2026-03-12)
-  - Accounts+balances: POST /svc/rl/accounts/l4/v1/app/data/list (empty body)
-  - Transactions: GET /svc/rr/accounts/secure/gateway/deposit-account/transactions/
-      inquiry-maintenance/etu-dda-transactions/v3/transactions?digital-account-identifier=<id>&...
-  - Extra header needed for transactions: network-channel-group-code: DIGITAL
-
-  ## Account types
-  - DDA = checking or savings (accountTileDetailType: CHK or SAV)
-  - CARD = credit card (cardType: FREEDOM_UNLIMITED, CHASE_SAPPHIRE_PREFERRED, etc.)
-
 transformers:
   account:
     terminology: Account

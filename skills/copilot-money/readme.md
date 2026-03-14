@@ -8,7 +8,6 @@ website: https://copilot.money
 privacy_url: https://copilot.money/privacy
 
 auth: none
-platforms: [macos]
 connects_to: copilot-money
 
 seed:
@@ -21,21 +20,6 @@ seed:
       platforms: [macos, ios]
       pricing: paid
       notes: Personal finance app. Syncs via Plaid. Stores accounts and transactions locally in SQLite and widget JSON files.
-
-instructions: |
-  Copilot Money stores financial data locally in two places:
-  - Accounts: widget JSON files per account (name, balance, mask, institution)
-  - Transactions: CopilotDB.sqlite (Transactions table, ~5k rows)
-  - Balance history: CopilotDB.sqlite (accountDailyBalance table)
-
-  Institution IDs map to: ins_56=Chase, ins_10=AmericanExpress, ins_11=Schwab, ins_116794=Mercury, coinbase=Coinbase
-
-  Common workflows:
-  - "Show me my accounts" → account.list
-  - "What's my net worth?" → account.list, sum all balances
-  - "Show me recent transactions" → transaction.list
-  - "Find transactions at a merchant" → transaction.search with query
-
 database: "~/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
 
 # ==============================================================================

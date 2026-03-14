@@ -8,17 +8,6 @@ color: "#6366F1"
 website: https://github.com/jcontini/agentos-community
 
 auth: none
-
-testing:
-  exempt:
-    seed: "Meta-skill — no external service, documents local macOS investigation techniques"
-
-instructions: |
-  Guide for reverse engineering how desktop apps store credentials on macOS.
-  Use this to figure out if and how AgentOS can authenticate with a given app
-  without requiring the user to generate separate API keys.
-
-  The goal: can we read the app's auth token and call its API ourselves?
 ---
 
 # Reverse Engineer

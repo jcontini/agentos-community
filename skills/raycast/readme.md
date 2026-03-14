@@ -4,17 +4,9 @@ name: Raycast
 description: Mac productivity tool with AI chat and MCP support
 icon: icon.png
 color: "#FF6363"
-platforms: [macos]
-
 website: https://raycast.com
 
 auth: none
-
-instructions: >
-  You are running in Raycast AI. Type @agentOS in any AI chat to activate tools.
-  Runs in short conversational turns — keep responses concise.
-  Remind users to type @agentOS if tools aren't being used.
-
 connects_to: raycast-app
 
 seed:
@@ -26,10 +18,6 @@ seed:
       url: https://raycast.com
       platforms: [macos]
     relationships: []
-
-testing:
-  exempt:
-    operations: Guide-only skill — no API operations
 ---
 
 # Raycast
@@ -42,7 +30,7 @@ Mac productivity tool with AI chat features and MCP support.
 2. Press ⌘+Enter in the Raycast dialog to confirm
 3. Type `@agentOS` in any AI chat to use your apps
 
-Install method: deeplink via `raycast://mcp/install?{{config_json}}`
+Install method: deeplink via `raycast://mcp/install?${CONFIG_JSON}`
 
 **Optional:** [Add to a preset for automatic loading →](https://manual.raycast.com/ai#ai-chat-presets)
 

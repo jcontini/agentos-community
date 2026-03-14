@@ -47,27 +47,6 @@ seed:
       type: company
       url: https://logo.dev
       founded: "2024"
-
-instructions: |
-  Logo.dev returns company logos as images via CDN URLs.
-  
-  URL format: https://img.logo.dev/{identifier}?token=KEY&params
-  
-  Parameters:
-  - size: 16-800 (default 128)
-  - format: jpg, png, webp (svg enterprise only)
-  - theme: auto, light, dark
-  - greyscale: true/false
-  - retina: true/false (doubles resolution)
-  - fallback: monogram (default) or 404
-  
-  Lookup modes:
-  - Domain: shopify.com
-  - Ticker: ticker:AAPL
-  - Crypto: crypto:BTC
-  - Name: name:Shopify
-  - ISIN: isin:US0378331005
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # UTILITIES - URL generators (Logo.dev is a CDN, not a JSON API)
 # ═══════════════════════════════════════════════════════════════════════════════

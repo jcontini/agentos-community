@@ -4,8 +4,6 @@ name: Claude Desktop
 description: Claude AI via your Claude Desktop subscription — calls billed to your Pro/Max plan
 icon: icon.png
 color: "#D97757"
-platforms: [macos]
-
 website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
@@ -92,7 +90,7 @@ operations:
         description: Filter to sessions in a specific workspace path (e.g. /Users/joe/dev/myproject)
     command:
       binary: bash
-      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --workspace '{{params.workspace}}' 2>/dev/null"]
+      args: ["-l", "-c", 'PARAM_WORKSPACE="$1"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.workspace"]
       timeout: 30
 
   conversation.search:
@@ -110,7 +108,7 @@ operations:
         description: Optionally limit search to a specific workspace path
     command:
       binary: bash
-      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --query '{{params.query}}' --workspace '{{params.workspace}}' 2>/dev/null"]
+      args: ["-l", "-c", 'PARAM_QUERY="$1"; PARAM_WORKSPACE="$2"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --query "${PARAM_QUERY}" --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.query", ".params.workspace"]
       timeout: 30
 
   conversation.get:
@@ -123,21 +121,8 @@ operations:
         description: Session UUID
     command:
       binary: bash
-      args: ["-l", "-c", "python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --id '{{params.id}}' 2>/dev/null"]
+      args: ["-l", "-c", 'PARAM_ID="$1"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --id "${PARAM_ID}" 2>/dev/null', "--", ".params.id"]
       timeout: 15
-
-instructions: |
-  Claude AI via your Claude Desktop subscription. Calls are billed to your Pro/Max plan —
-  not a separate API account.
-
-  Use model.list to discover available models — don't hardcode model IDs.
-  The token is read directly from Claude Desktop's encrypted config — no API key needed.
-  If Claude Desktop is not installed or not signed in, this skill will fail.
-
-  Session history is stored locally in ~/.claude/projects/ as JSONL files — no credentials
-  needed to read it. Use conversation.list to browse, conversation.search to find by content,
-  conversation.get to retrieve a full transcript by UUID.
-
 utilities:
   chat:
     description: Send a message to Claude (billed to your Claude Desktop Pro/Max subscription)
@@ -194,11 +179,6 @@ utilities:
           tool_calls: .tool_calls
           stop_reason: .stop_reason
           usage: .usage
-
-testing:
-  exempt:
-    operations: Local command skill — reads ~/.claude/projects/ JSONL files, tested manually
-    utilities: Requires live Claude Desktop OAuth token — tested manually
 ---
 
 # Claude Desktop

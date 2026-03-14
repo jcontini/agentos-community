@@ -37,52 +37,6 @@ seed:
     data:
       type: company
       url: https://serpapi.com
-
-instructions: |
-  SerpAPI scrapes Google search results and returns structured JSON. Currently
-  supports Google Flights for flight search. More engines (hotels, web, maps)
-  can be added later — they all use the same API key and base URL.
-
-  ## Important: Offers, Not Flights
-
-  SerpAPI returns **offers** — priced itineraries, not raw flight schedules.
-  Each result is an offer containing one or more flight segments bundled with
-  a price, cabin class, and booking conditions. The same physical flights
-  appear in many offers at different prices.
-
-  The offer entity has price, currency, and flight details in its data bag.
-  Individual flight segments within data.flights contain departure/arrival
-  airports, times, airline, aircraft, and duration.
-
-  ## Google Flights
-
-  Search using IATA airport codes (3-letter, e.g. "AUS", "JFK", "LHR").
-
-  **Flight types:**
-  - Round trip (default): requires outbound_date + return_date
-  - One way: requires outbound_date only
-  - Multi-city: use multi_city_json parameter
-
-  **Travel classes:** 1=Economy (default), 2=Premium economy, 3=Business, 4=First
-
-  **Stops:** 0=Any (default), 1=Nonstop only, 2=1 stop or fewer, 3=2 stops or fewer
-
-  **Sorting:** 1=Top flights (default), 2=Price, 3=Departure, 4=Arrival, 5=Duration, 6=Emissions
-
-  **Round trip flow:** First search returns outbound offers with departure_tokens.
-  To get return flights, call offer.get with the departure_token from your chosen
-  outbound offer.
-
-  **Booking flow:** Once you have both outbound and return selected, call
-  get_booking_options with the booking_token to see booking links and prices.
-
-  **Tips:**
-  - Dates must be YYYY-MM-DD format and in the future
-  - Airport codes are case-insensitive but conventionally uppercase
-  - Multiple departure/arrival airports can be comma-separated: "CDG,ORY"
-  - deep_search=true gives browser-identical results but slower response
-  - Free tier: 100 searches/month
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════

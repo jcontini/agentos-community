@@ -35,14 +35,6 @@ seed:
       url: https://www.ycombinator.com
       founded: "2005"
       wikidata_id: Q2616400
-
-instructions: |
-  Hacker News notes:
-  - Uses Algolia HN Search API (faster than official Firebase API)
-  - No authentication required
-  - Generous rate limits
-  - Returns nested comments in single request
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -97,7 +89,7 @@ operations:
       url: '"https://hn.algolia.com/api/v1/" + (if .params.feed == "new" then "search_by_date" else "search" end)'
       query:
         tags: '.params.feed | if . == "new" then "story" elif . == "ask" then "ask_hn" elif . == "show" then "show_hn" else "front_page" end'
-        hitsPerPage: .params.limit | tostring
+        hitsPerPage: .params.limit
       response:
         root: "/hits"
 
@@ -119,7 +111,7 @@ operations:
       query:
         query: .params.query
         tags: '"story"'
-        hitsPerPage: .params.limit | tostring
+        hitsPerPage: .params.limit
       response:
         root: "/hits"
 
@@ -182,13 +174,16 @@ operations:
       args:
         - "-c"
         - |
-          curl -s "https://hn.algolia.com/api/v1/items/{{params.id}}" | jq '
+          PARAM_ID="$1"
+          curl -s "https://hn.algolia.com/api/v1/items/${PARAM_ID}" | jq '
             def flatten_tree($parent_id):
               {objectID: (.id | tostring), text: .text, author: .author, created_at: .created_at, parent_id: $parent_id},
               (.children[]? | flatten_tree((.id | tostring)));
             (.id | tostring) as $story_id |
             [{objectID: $story_id, title: .title, text: .text, url: .url, author: .author, points: .points, num_comments: (.children | length), created_at: .created_at}]
             + [.children[]? | flatten_tree($story_id)]'
+        - "--"
+        - ".params.id"
       timeout: 30
 ---
 

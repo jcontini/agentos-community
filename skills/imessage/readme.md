@@ -8,7 +8,6 @@ color: "#34C759"
 website: https://support.apple.com/messages
 
 auth: none
-platforms: [macos]
 connects_to: imessage
 
 seed:
@@ -99,31 +98,7 @@ seed:
     relationships:
       - role: created_by
         to: steipete
-
-credits:
-  - skill: imsg
-    relationship: appreciates
-    reason: Native Swift CLI by Peter Steinberger (@steipete) that powers message.send. https://github.com/steipete/imsg
-
 database: "~/Library/Messages/chat.db"
-
-requires:
-  - name: imsg
-    install:
-      macos: brew tap steipete/tap && brew install imsg
-    url: https://github.com/steipete/imsg
-    description: Swift CLI for sending iMessages (used for message.send)
-
-instructions: |
-  iMessage stores messages in a local SQLite database.
-  - Date format: nanoseconds since macOS epoch (2001-01-01)
-  - Convert with: date / 1000000000 + 978307200 → Unix timestamp
-  - Phone numbers in E.164 format: +1XXXXXXXXXX
-  - Handles can be phone or email
-  - Sending uses the imsg CLI (brew tap steipete/tap && brew install imsg)
-  - Recipients can be phone numbers (+14155551234) or email addresses
-  - Service options: imessage, sms, or auto (tries iMessage first, falls back to SMS)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -345,12 +320,16 @@ operations:
       args:
         - "send"
         - "--to"
-        - "{{params.to}}"
+        - ".params.to"
         - "--text"
-        - "{{params.text}}"
+        - ".params.text"
         - "--service"
-        - "{{params.service}}"
+        - ".params.service"
         - "--json"
+        - "--"
+        - ".params.to"
+        - ".params.text"
+        - ".params.service"
       timeout: 15
 ---
 

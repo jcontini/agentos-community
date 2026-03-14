@@ -43,14 +43,6 @@ seed:
       url: https://doist.com
       founded: "2007"
       wikidata_id: Q16249122
-
-instructions: |
-  Todoist task management via the Unified API v1.
-  - Priority is inverted: Todoist 4=urgent → AgentOS 1=highest
-  - Labels map to tags, sections map to milestones
-  - Due dates can be natural language when creating ("tomorrow", "every monday")
-  - Comments support markdown and file attachments
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -141,12 +133,12 @@ operations:
     returns: task[]
     web_url: https://app.todoist.com/app/today
     params:
-      query: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
+      filter: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
     rest:
       method: GET
       url: https://api.todoist.com/api/v1/tasks/filter
       query:
-        query: .params.query
+        query: .params.filter
       response:
         root: /results
 
