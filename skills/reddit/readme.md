@@ -116,7 +116,7 @@ operations:
         Accept: application/json
       query:
         q: .params.query
-        limit: .params.limit | tostring
+        limit: .params.limit
         sort: .params.sort
       response:
         transform: '[.data.children[] | .data]'
@@ -136,7 +136,7 @@ operations:
         User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
         Accept: application/json
       query:
-        limit: .params.limit | tostring
+        limit: .params.limit
       response:
         transform: '[.data.children[] | .data]'
 
@@ -154,7 +154,7 @@ operations:
         User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
         Accept: application/json
       query:
-        limit: .params.comment_limit | tostring
+        limit: .params.comment_limit
       response:
         transform: |
           def map_comment:
@@ -267,7 +267,7 @@ operations:
         Accept: application/json
       query:
         q: .params.query
-        limit: .params.limit | tostring
+        limit: .params.limit
       response:
         root: "/data/children"
 ---
