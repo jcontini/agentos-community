@@ -432,7 +432,7 @@ utilities:
             binary: bash
             args:
               - "-c"
-              - "security find-generic-password -s 'Mimestream: ${PARAM_ACCOUNT}' -a 'OAuth' -w 2>/dev/null | tr -d '\\n'"
+              - 'security find-generic-password -s "Mimestream: $1" -a "OAuth" -w 2>/dev/null | tr -d "\n"'
               - "--"
               - ".params.account"
 
@@ -449,13 +449,13 @@ utilities:
         # Step 3: Exchange the refresh token for a live access token.
         - id: token_response
           rest:
-            url: ".params.fields.token_url"
+            url: ".fields.token_url"
             method: POST
             encoding: form
             body:
               grant_type: refresh_token
-              refresh_token: ".params.fields.refresh_token"
-              client_id: ".params.fields.client_id"
+              refresh_token: ".fields.refresh_token"
+              client_id: ".fields.client_id"
 
       response:
         transform: |
