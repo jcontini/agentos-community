@@ -8,144 +8,49 @@ color: "#34C759"
 website: https://support.apple.com/messages
 
 auth: none
-connects_to: imessage
-
-seed:
-  # Apple / iMessage
-  - id: imessage
-    types: [software]
-    name: iMessage
-    data:
-      software_type: service
-      url: https://support.apple.com/explore/messages
-      launched: "2011"
-      platforms: [ios, ipados, macos, watchos, visionos]
-      wikidata_id: Q290267
-    relationships:
-      - role: offered_by
-        to: apple
-
-  - id: apple
-    types: [organization]
-    name: Apple Inc.
-    data:
-      type: company
-      url: https://apple.com
-      founded: "1976"
-      ticker: AAPL
-      exchange: NASDAQ
-      wikidata_id: Q312
-
-  # Peter Steinberger (@steipete) — creator of imsg, OpenClaw, gogcli, PSPDFKit
-  - id: steipete
-    types: [person]
-    name: Peter Steinberger
-    data:
-      nickname: steipete
-      location: Vienna, Austria
-      url: https://steipete.me
-      notes: Prolific open source developer. Creator of PSPDFKit, OpenClaw, imsg, gogcli, and dozens of CLI tools. Built the imsg tool that powers AgentOS iMessage sending.
-    relationships:
-      - role: claims
-        to: steipete-github
-
-  - id: steipete-github
-    types: [account]
-    name: steipete
-    data:
-      platform: github
-      handle: steipete
-      url: https://github.com/steipete
-      follower_count: 4500
-
-  - id: imsg-software
-    types: [software]
-    name: imsg
-    data:
-      software_type: cli
-      url: https://github.com/steipete/imsg
-      platforms: [macos]
-      pricing: open_source
-      launched: "2025"
-      notes: Native Swift CLI for sending and reading iMessages. Uses public macOS APIs and AppleScript — no private APIs. Powers AgentOS iMessage send capability.
-    relationships:
-      - role: created_by
-        to: steipete
-
-  - id: openclaw
-    types: [software]
-    name: OpenClaw
-    data:
-      software_type: platform
-      url: https://openclaw.ai
-      platforms: [macos, linux, web]
-      pricing: open_source
-      notes: Personal AI assistant platform. Runs on your own devices, integrates with WhatsApp, Telegram, Slack, Discord, Teams, Signal, iMessage. 200K+ GitHub stars.
-    relationships:
-      - role: created_by
-        to: steipete
-
-  - id: gogcli
-    types: [software]
-    name: gogcli
-    data:
-      software_type: cli
-      url: https://github.com/steipete/gogcli
-      platforms: [macos, linux, windows]
-      pricing: open_source
-      launched: "2025"
-      notes: Google Workspace CLI — Gmail, Calendar, Drive, Contacts, Tasks, Sheets, Docs from the terminal. JSON-first output. Potential future AgentOS Gmail/Google adapter.
-    relationships:
-      - role: created_by
-        to: steipete
 database: "~/Library/Messages/chat.db"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   conversation:
-    terminology: Chat
-    mapping:
-      id: .id
-      name: .name
-      is_group: '.type == "group"'
-      updated_at: .updated_at
-      _participant_handles: .participant_handles
-      
-      # Typed reference: extract person from first participant (DMs)
-      # Handles are already E.164 format (+12025551234) or email
-      participant:
-        person:
-          phone: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (startswith("+")) then . elif test("^[0-9]+$") then "+" + . else null end) else null end'
-          email: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (contains("@") and (startswith("+") | not)) then . else null end) else null end'
-          name: .name
+    id: .id
+    name: .name
+    datePublished: .updated_at
+    is_group: '.type == "group"'
+    updated_at: .updated_at
+    _participant_handles: .participant_handles
+    participant:
+      person:
+        phone: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (startswith("+")) then . elif test("^[0-9]+$") then "+" + . else null end) else null end'
+        email: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (contains("@") and (startswith("+") | not)) then . else null end) else null end'
+        name: .name
 
   message:
-    terminology: Message
-    mapping:
-      id: .id
-      conversation_id: .conversation_id
-      content: .content
-      sender: .sender_handle
-      is_outgoing: .is_outgoing
-      timestamp: .timestamp
-      _sender_handle: .sender_handle
-      
-      # Typed reference: extract sender as person (incoming messages only)
-      # Handles are already E.164 format (+12025551234) or email
-      from:
-        person:
-          phone: 'if (.is_outgoing != true and ._sender_handle != null) then (if (._sender_handle | startswith("+")) then ._sender_handle elif (._sender_handle | test("^[0-9]+$")) then "+" + ._sender_handle else null end) else null end'
-          email: 'if (.is_outgoing != true and ._sender_handle != null and (._sender_handle | contains("@")) and (._sender_handle | startswith("+") | not)) then ._sender_handle else null end'
-          name: .sender
+    id: .id
+    name: .conversation_name
+    text: .content
+    author: .sender_handle
+    datePublished: .timestamp
+    conversation_id: .conversation_id
+    content: .content
+    sender: .sender_handle
+    is_outgoing: .is_outgoing
+    timestamp: .timestamp
+    _sender_handle: .sender_handle
+    from:
+      person:
+        phone: 'if (.is_outgoing != true and ._sender_handle != null) then (if (._sender_handle | startswith("+")) then ._sender_handle elif (._sender_handle | test("^[0-9]+$")) then "+" + ._sender_handle else null end) else null end'
+        email: 'if (.is_outgoing != true and ._sender_handle != null and (._sender_handle | contains("@")) and (._sender_handle | startswith("+") | not)) then ._sender_handle else null end'
+        name: .sender
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  conversation.list:
+  list_conversations:
     description: List all iMessage/SMS conversations
     returns: conversation[]
     params:
@@ -184,7 +89,7 @@ operations:
       response:
         root: "/"
 
-  conversation.get:
+  get_conversation:
     description: Get a specific conversation with metadata
     returns: conversation
     params:
@@ -217,7 +122,7 @@ operations:
       response:
         root: "/0"
 
-  message.list:
+  list_messages:
     description: List messages in a conversation
     returns: message[]
     params:
@@ -248,7 +153,7 @@ operations:
       response:
         root: "/"
 
-  message.get:
+  get_message:
     description: Get a specific message by ID
     returns: message
     params:
@@ -275,7 +180,7 @@ operations:
       response:
         root: "/0"
 
-  message.search:
+  search_messages:
     description: Search messages by text content
     returns: message[]
     params:
@@ -307,7 +212,7 @@ operations:
       response:
         root: "/"
 
-  message.send:
+  send_message:
     description: Send an iMessage or SMS to a phone number or email
     returns: void
     params:

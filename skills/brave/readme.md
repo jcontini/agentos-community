@@ -14,51 +14,25 @@ auth:
   label: API Key
   help_url: https://api-dashboard.search.brave.com/app/keys
 
-connects_to: brave-search
-
-seed:
-  - id: brave-search
-    types: [software]
-    name: Brave Search
-    data:
-      software_type: service
-      url: https://search.brave.com
-      launched: "2021"
-      platforms: [web]
-      wikidata_id: Q107355971
-    relationships:
-      - role: offered_by
-        to: brave-software
-
-  - id: brave-software
-    types: [organization]
-    name: Brave Software, Inc.
-    data:
-      type: company
-      url: https://brave.com
-      founded: "2015"
-      wikidata_id: Q50391972
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   result:
-    terminology: Result
-    mapping:
-      id: .url
-      url: .url
-      title: .title
-      snippet: .description
-      favicon: .meta_url.favicon
-      indexed_at: .page_age
+    id: .url
+    url: .url
+    title: .title
+    snippet: .description
+    favicon: .meta_url.favicon
+    indexed_at: .page_age
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  search.create:
+  search:
     description: Search the web using Brave's independent index
     returns: result[]
     wraps_as: search
@@ -96,12 +70,12 @@ Privacy-focused web search powered by Brave's independent index.
 
 ## Operations
 
-### search.create
+### search
 
 Create a web search. Returns search results (index records).
 
 ```
-use({ skill: "brave", tool: "search.create", params: { query: "rust programming" } })
+use({ skill: "brave", tool: "search", params: { query: "rust programming" } })
 ```
 
 ### Search Operators

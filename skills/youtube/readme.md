@@ -7,46 +7,6 @@ color: "#FF0808"
 website: https://youtube.com
 
 auth: none
-connects_to: youtube
-
-# Seed entities: the product and organizations this adapter connects to
-seed:
-  - id: youtube
-    types: [software]
-    name: YouTube
-    data:
-      software_type: platform
-      url: https://youtube.com
-      launched: "2005"
-      platforms: [web, ios, android, macos, windows]
-      pricing: free
-      wikidata_id: Q866
-    relationships:
-      - role: offered_by
-        to: google
-
-  - id: google
-    types: [organization]
-    name: Google LLC
-    data:
-      type: company
-      url: https://google.com
-      founded: "1998"
-      wikidata_id: Q95
-
-  - id: alphabet
-    types: [organization]
-    name: Alphabet Inc.
-    data:
-      type: company
-      url: https://abc.xyz
-      founded: "2015"
-      ticker: GOOGL
-      exchange: NASDAQ
-      wikidata_id: Q21077852
-    relationships:
-      - role: parent_of
-        to: google
 # External sources this adapter needs (for CSP)
 # Note: Specifying "ytimg.com" allows all subdomains (i.ytimg.com, i9.ytimg.com, etc.)
 sources:
@@ -58,104 +18,98 @@ sources:
     - https://www.youtube.com          # Embedded video player
     - https://www.youtube-nocookie.com  # Privacy-enhanced embed (better webview compat)
 
-transformers:
+adapters:
   video:
-    terminology: Video
-    mapping:
-      id: .id
-      remote_id: .id
-      url: .webpage_url
-      title: .title
-      description: .description
-      duration_ms: (.duration // null) | if . != null then . * 1000 else null end
-      thumbnail: .thumbnail
-      published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
-      resolution: .resolution
-      view_count: .view_count
-      like_count: .like_count
-      comment_count: .comment_count
-      
-      posted_by:
-        account:
-          id: .channel_id
-          platform: '"youtube"'
-          handle: .channel
-          display_name: .channel
-          platform_id: .channel_id
-          url: .channel_url
+    id: .id
+    remote_id: .id
+    url: .webpage_url
+    title: .title
+    description: .description
+    duration_ms: (.duration // null) | if . != null then . * 1000 else null end
+    thumbnail: .thumbnail
+    published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
+    resolution: .resolution
+    view_count: .view_count
+    like_count: .like_count
+    comment_count: .comment_count
 
-      upload:
-        channel:
-          id: .channel_id
-          name: .channel
-          url: .channel_url
-          subscriber_count: .channel_follower_count
-          platform: '"youtube"'
+    posted_by:
+      account:
+        id: .channel_id
+        platform: '"youtube"'
+        handle: .channel
+        display_name: .channel
+        platform_id: .channel_id
+        url: .channel_url
 
-      embed:
-        post:
-          id: '(.id) + "_post"'
-          title: .title
-          content: .description
-          url: .webpage_url
-          published_at: .upload_date
+    upload:
+      channel:
+        id: .channel_id
+        name: .channel
+        url: .channel_url
+        subscriber_count: .channel_follower_count
+        platform: '"youtube"'
 
-      transcribe:
-        transcript:
-          id: '(.id) + "_transcript"'
-          title: '"Transcript: " + .title'
-          content: .transcript
-          content_role: '"transcript"'
-          url: .webpage_url
-          language: .language
-          source_type: .source_type
-          duration_ms: (.duration // null) | if . != null then . * 1000 else null end
-          segments: .transcript_segments
-          segment_count: (.transcript_segments // []) | length
+    embed:
+      post:
+        id: '(.id) + "_post"'
+        title: .title
+        content: .description
+        url: .webpage_url
+        published_at: .upload_date
 
-      add_to:
-        playlist:
-          id: .playlist_id
-          name: .playlist
-          url: .playlist_url
-          platform: '"youtube"'
+    transcribe:
+      transcript:
+        id: '(.id) + "_transcript"'
+        title: '"Transcript: " + .title'
+        content: .transcript
+        content_role: '"transcript"'
+        url: .webpage_url
+        language: .language
+        source_type: .source_type
+        duration_ms: (.duration // null) | if . != null then . * 1000 else null end
+        segments: .transcript_segments
+        segment_count: (.transcript_segments // []) | length
+
+    add_to:
+      playlist:
+        id: .playlist_id
+        name: .playlist
+        url: .playlist_url
+        platform: '"youtube"'
 
   channel:
-    terminology: Channel
-    mapping:
-      id: .id
-      name: .name
-      url: .url
-      description: .description
-      subscriber_count: .subscriber_count
-      icon: .avatar
-      platform: .platform
+    id: .id
+    name: .name
+    url: .url
+    description: .description
+    subscriber_count: .subscriber_count
+    icon: .avatar
+    platform: .platform
 
   post:
-    terminology: Comment
-    mapping:
-      id: .id
-      content: .text
-      url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
-      published_at: .timestamp | todate
-      engagement.likes: .like_count
+    id: .id
+    content: .text
+    url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
+    published_at: .timestamp | todate
+    engagement.likes: .like_count
 
-      posted_by:
-        account:
-          id: .author_id
-          platform: '"youtube"'
-          handle: .author
-          display_name: .author
-          platform_id: .author_id
-          url: .author_url
-          avatar: .author_thumbnail
+    posted_by:
+      account:
+        id: .author_id
+        platform: '"youtube"'
+        handle: .author
+        display_name: .author
+        platform_id: .author_id
+        url: .author_url
+        avatar: .author_thumbnail
 
-      replies_to:
-        post:
-          id: 'if .parent == "root" then .video_id + "_post" else .parent end'
+    replies_to:
+      post:
+        id: 'if .parent == "root" then .video_id + "_post" else .parent end'
 
 operations:
-  video.search:
+  search_videos:
     description: Search YouTube videos by query (returns 10 results sorted by relevance)
     returns: video[]
     web_url: "https://www.youtube.com/results?search_query=${PARAM_QUERY}"
@@ -191,7 +145,7 @@ operations:
         - ".params.query"
       timeout: 60
 
-  video.search_recent:
+  search_recent_video:
     description: Search YouTube videos by query sorted by upload date (newest first)
     returns: video[]
     web_url: "https://www.youtube.com/results?search_query=${PARAM_QUERY}&sp=CAI"
@@ -227,7 +181,7 @@ operations:
         - ".params.query"
       timeout: 60
 
-  video.list:
+  list_videos:
     description: List videos from a YouTube channel or playlist
     returns: video[]
     web_url: .params.url
@@ -271,7 +225,7 @@ operations:
         - ".params.url"
       timeout: 60
 
-  video.get:
+  get_video:
     description: Get video metadata (title, creator, thumbnail, duration)
     returns: video
     web_url: .params.url
@@ -293,7 +247,7 @@ operations:
         - ".params.url"
       timeout: 30
 
-  video.transcript:
+  transcript_video:
     description: |
       Get video transcript with optional timestamps.
       
@@ -439,7 +393,7 @@ operations:
         - ".params.url"
       timeout: 90
 
-  channel.get:
+  get_channel:
     description: Get YouTube channel metadata (avatar, description, subscriber count)
     returns: channel
     handles_urls:
@@ -471,7 +425,7 @@ operations:
         - ".params.url"
       timeout: 30
 
-  channel.get_avatar:
+  get_avatar_channel:
     description: Quick fetch of just the channel avatar URL (scrapes og:image from channel page, ~1s)
     returns: channel
     params:
@@ -495,7 +449,7 @@ operations:
         - ".params.url"
       timeout: 10
 
-  post.list:
+  list_posts:
     description: |
       List comments on a YouTube video.
       Returns comments as post entities with account attribution and threading.
@@ -546,12 +500,12 @@ choco install yt-dlp   # Windows
 
 | Operation | Description |
 |-----------|-------------|
-| `video.search` | Search YouTube videos (sorted by relevance) |
-| `video.search_recent` | Search YouTube videos (sorted by upload date, newest first) |
-| `video.list` | List videos from a channel or playlist |
-| `video.get` | Get full metadata for a single video |
-| `video.transcript` | Get video transcript — plain text (default) or timestamped segments |
-| `channel.get` | Get channel metadata (avatar, description, subscriber count) |
+| `search_videos` | Search YouTube videos (sorted by relevance) |
+| `search_recent_video` | Search YouTube videos (sorted by upload date, newest first) |
+| `list_videos` | List videos from a channel or playlist |
+| `get_video` | Get full metadata for a single video |
+| `transcript_video` | Get video transcript — plain text (default) or timestamped segments |
+| `get_channel` | Get channel metadata (avatar, description, subscriber count) |
 
 ## video.search
 
@@ -711,6 +665,6 @@ All operations return videos with these fields:
 }
 ```
 
-**Linked entities:** Each operation creates account (channel identity) and channel entities in the Memex, linked via `posts` and `posted_in` relationships. `video.get` and `video.transcript` additionally create a post entity (social wrapper) and document entity (transcript).
+**Linked entities:** Each operation creates account (channel identity) and channel entities in the Memex, linked via `posts` and `posted_in` relationships. `get_video` and `transcript_video` additionally create a post entity (social wrapper) and document entity (transcript).
 
-**Note:** `view_count`, `published_at`, and `posted_in.member_count` may be null for search/list results (flat-playlist mode). Use `video.get` on individual videos for complete metadata.
+**Note:** `view_count`, `published_at`, and `posted_in.member_count` may be null for search/list results (flat-playlist mode). Use `get_video` on individual videos for complete metadata.

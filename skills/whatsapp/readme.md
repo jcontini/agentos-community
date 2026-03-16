@@ -8,113 +8,80 @@ color: "#2CD46B"
 website: https://www.whatsapp.com/
 
 auth: none
-connects_to: whatsapp
 
 database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
-
-seed:
-  - id: whatsapp
-    types: [software]
-    name: WhatsApp
-    data:
-      software_type: app
-      url: https://www.whatsapp.com
-      launched: "2009"
-      platforms: [ios, android, macos, windows, web]
-      wikidata_id: Q1049511
-    relationships:
-      - role: offered_by
-        to: meta
-
-  - id: meta
-    types: [organization]
-    name: Meta Platforms, Inc.
-    data:
-      type: company
-      url: https://about.meta.com
-      founded: "2004"
-      ticker: META
-      exchange: NASDAQ
-      wikidata_id: Q380
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   person:
-    terminology: Contact
-    mapping:
-      id: .jid
-      name: '.real_name // .contact_name // .display_name // .phone // .jid'
-      phone: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end) else null end)'
-      nickname: .username
-      notes: .about
-      
-      # Typed reference: creates image entity for avatar
-      avatar:
-        image:
-          path: .profile_photo
-
-      # Typed reference: person claims a WhatsApp account
-      claim:
-        account:
-          id: .jid
-          platform: '"whatsapp"'
-          handle: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | "+" + .) else .jid end)'
-          display_name: '.real_name // .contact_name // .display_name'
-          platform_id: .jid
-          bio: .about
+    id: .jid
+    name: '.real_name // .contact_name // .display_name // .phone // .jid'
+    text: .about
+    phone: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end) else null end)'
+    nickname: .username
+    notes: .about
+    avatar:
+      image:
+        path: .profile_photo
+    claim:
+      account:
+        id: .jid
+        platform: '"whatsapp"'
+        handle: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | "+" + .) else .jid end)'
+        display_name: '.real_name // .contact_name // .display_name'
+        platform_id: .jid
+        bio: .about
 
   conversation:
-    terminology: Chat
-    mapping:
-      id: .id
-      name: .name
-      is_group: '.type == "group"'
-      unread_count: .unread_count
-      participant_count: .participant_count
-      last_message_at: .updated_at
-      updated_at: .updated_at
-      data.message_count: .message_count
-      _contact_jid: .contact_jid
-      _contact_name: .name
-      
-      # Typed reference: conversation partner's WhatsApp account (DMs only)
-      participant:
-        account:
-          id: ._contact_jid
-          platform: '"whatsapp"'
-          handle: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else ._contact_jid end'
-          display_name: ._contact_name
+    id: .id
+    name: .name
+    datePublished: .updated_at
+    is_group: '.type == "group"'
+    is_archived: '.is_archived == 1 or .is_archived == true'
+    unread_count: .unread_count
+    participant_count: .participant_count
+    last_message_at: .updated_at
+    updated_at: .updated_at
+    data.message_count: .message_count
+    _contact_jid: .contact_jid
+    _contact_name: .name
+    participant:
+      account:
+        id: ._contact_jid
+        platform: '"whatsapp"'
+        handle: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else ._contact_jid end'
+        display_name: ._contact_name
 
   message:
-    terminology: Message
-    mapping:
-      id: .id
-      conversation_id: .conversation_id
-      content: .content
-      is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
-      timestamp: .timestamp
-      data.is_starred: .is_starred
-      data.conversation_name: .conversation_name
-      _reply_to_id: .reply_to_id
-      _sender_jid: .sender_jid
-      _sender_name: .sender_name
-      
-      # Typed reference: sender's WhatsApp account (incoming messages only)
-      from:
-        account:
-          id: ._sender_jid
-          platform: '"whatsapp"'
-          handle: 'if (._sender_jid | type == "string" and endswith("@s.whatsapp.net")) then (._sender_jid | split("@") | .[0] | "+" + .) else ._sender_jid end'
-          display_name: ._sender_name
+    id: .id
+    name: .conversation_name
+    text: .content
+    author: 'if .is_outgoing == 1 or .is_outgoing == true then "Me" else .sender_name end'
+    datePublished: .timestamp
+    conversation_id: .conversation_id
+    content: .content
+    is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
+    timestamp: .timestamp
+    data.is_starred: .is_starred
+    data.conversation_name: .conversation_name
+    _reply_to_id: .reply_to_id
+    _sender_jid: .sender_jid
+    _sender_name: .sender_name
+    from:
+      account:
+        id: ._sender_jid
+        platform: '"whatsapp"'
+        handle: 'if (._sender_jid | type == "string" and endswith("@s.whatsapp.net")) then (._sender_jid | split("@") | .[0] | "+" + .) else ._sender_jid end'
+        display_name: ._sender_name
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  person.list:
+  list_persons:
     description: Get WhatsApp contacts, or group participants when conversation_id is provided
     returns: person[]
     params:
@@ -172,10 +139,11 @@ operations:
       response:
         root: "/"
 
-  conversation.list:
-    description: List all WhatsApp conversations
+  list_conversations:
+    description: List WhatsApp conversations. Defaults to active (non-archived) chats only. Use archived=true to list archived conversations instead.
     returns: conversation[]
     params:
+      archived: { type: boolean, description: "When true, returns archived conversations. Defaults to false (active chats only)." }
       limit: { type: integer }
     sql:
       query: |
@@ -187,19 +155,22 @@ operations:
             ELSE 'direct' 
           END as type,
           cs.ZUNREADCOUNT as unread_count,
+          cs.ZARCHIVED as is_archived,
           datetime(cs.ZLASTMESSAGEDATE + 978307200, 'unixepoch') as updated_at,
           cs.ZCONTACTJID as contact_jid
         FROM ZWACHATSESSION cs
         WHERE cs.ZREMOVED = 0
           AND cs.ZSESSIONTYPE IN (0, 1)
+          AND cs.ZARCHIVED = :archived
         ORDER BY cs.ZLASTMESSAGEDATE DESC
         LIMIT :limit
       params:
+        archived: 'if .params.archived == true then 1 else 0 end'
         limit: '.params.limit // 1000'
       response:
         root: "/"
 
-  conversation.get:
+  get_conversation:
     description: Get a specific conversation with metadata
     returns: conversation
     params:
@@ -226,7 +197,7 @@ operations:
       response:
         root: "/0"
 
-  message.list:
+  list_messages:
     description: List messages in a conversation. Use unread=true without conversation_id to get all unread messages across conversations.
     returns: message[]
     params:
@@ -275,7 +246,7 @@ operations:
       response:
         root: "/"
 
-  message.get:
+  get_message:
     description: Get a specific message by ID
     returns: message
     params:
@@ -308,7 +279,7 @@ operations:
       response:
         root: "/0"
 
-  message.search:
+  search_messages:
     description: Search messages by text content
     returns: message[]
     params:
@@ -356,13 +327,15 @@ Read WhatsApp messages from the local macOS database. Read-only access to messag
 
 ## Conversation IDs
 
-Conversations use numeric IDs (SQLite primary keys like `880`, `899`). Always use the `id` returned by `conversation.list` — these are **not** JIDs.
+Conversations use numeric IDs (SQLite primary keys like `880`, `899`). Always use the `id` returned by `list_conversations` — these are **not** JIDs.
 
 ## Common Tasks
 
-- **Get unread messages:** `message.list` with `unread: true` (no conversation_id needed)
-- **Get group participants:** `person.list` with `conversation_id` param
-- **Search messages:** `message.search` with `query` param
+- **Get active chats:** `list_conversations` (default — non-archived only)
+- **Get archived chats:** `list_conversations` with `archived: true`
+- **Get unread messages:** `list_messages` with `unread: true` (no conversation_id needed)
+- **Get group participants:** `list_persons` with `conversation_id` param
+- **Search messages:** `search_messages` with `query` param
 
 ## Contact Identifiers
 
@@ -370,7 +343,7 @@ WhatsApp uses two identifier formats:
 - **JID:** `12125551234@s.whatsapp.net` (phone-based, used for DMs)
 - **LID:** `opaque_id@lid` (server-assigned, newer format)
 
-The `person.list` operation resolves both formats to phone numbers when available via the contacts database.
+The `list_persons` operation resolves both formats to phone numbers when available via the contacts database.
 
 ## Entity Model
 

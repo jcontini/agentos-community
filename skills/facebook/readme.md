@@ -10,53 +10,27 @@ privacy_url: https://www.facebook.com/privacy/policy
 terms_url: https://www.facebook.com/legal/terms
 
 auth: none
-connects_to: facebook
-seed:
-  - id: facebook
-    types: [software]
-    name: Facebook
-    data:
-      software_type: platform
-      url: https://www.facebook.com
-      launched: "2004"
-      platforms: [web, ios, android]
-      wikidata_id: Q355
-    relationships:
-      - role: offered_by
-        to: meta
-
-  - id: meta
-    types: [organization]
-    name: Meta Platforms, Inc.
-    data:
-      type: company
-      url: https://about.meta.com
-      founded: "2004"
-      ticker: META
-      exchange: NASDAQ
-      wikidata_id: Q380
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   forum:
-    terminology: Group
-    mapping:
-      id: .id
-      name: .name
-      description: .description
-      url: .url
-      icon: .icon
-      member_count: .member_count_numeric
-      privacy: .privacy
+    id: .id
+    name: .name
+    description: .description
+    url: .url
+    image: .icon
+    icon: .icon
+    member_count: .member_count_numeric
+    privacy: .privacy
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  forum.get:
+  get_forum:
     description: Get metadata for a public Facebook group
     returns: forum
     params:
@@ -180,7 +154,6 @@ operations:
         - ".params.group"
         - ".params.include_members"
       timeout: 35
-
 ---
 
 # Facebook

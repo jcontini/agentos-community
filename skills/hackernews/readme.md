@@ -11,68 +11,40 @@ terms_url: https://www.ycombinator.com/legal
 
 auth: none
 
-connects_to: hackernews
-
-seed:
-  - id: hackernews
-    types: [software]
-    name: Hacker News
-    data:
-      software_type: platform
-      url: https://news.ycombinator.com
-      launched: "2007"
-      platforms: [web]
-      wikidata_id: Q686797
-    relationships:
-      - role: offered_by
-        to: ycombinator
-
-  - id: ycombinator
-    types: [organization]
-    name: Y Combinator
-    data:
-      type: company
-      url: https://www.ycombinator.com
-      founded: "2005"
-      wikidata_id: Q2616400
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   post:
-    terminology: Story
-    mapping:
-      id: .objectID
-      title: .title
-      url: '"https://news.ycombinator.com/item?id=" + .objectID'
-      content: .text
-      external_url: .url
-      replies: .replies
-      
-      engagement.score: .points
-      engagement.comment_count: .num_comments
-      published_at: .created_at
-      
-      posted_by:
-        account:
-          id: .author
-          platform: '"hackernews"'
-          handle: .author
-          display_name: .author
-          url: '"https://news.ycombinator.com/user?id=" + .author'
-
-      parent_id:
-        ref: post
-        value: .parent_id
-        rel: replies_to
+    id: .objectID
+    name: .title
+    text: .text
+    url: '"https://news.ycombinator.com/item?id=" + .objectID'
+    author: .author
+    datePublished: .created_at
+    external_url: .url
+    replies: .replies
+    engagement.score: .points
+    engagement.comment_count: .num_comments
+    posted_by:
+      account:
+        id: .author
+        platform: '"hackernews"'
+        handle: .author
+        display_name: .author
+        url: '"https://news.ycombinator.com/user?id=" + .author'
+    parent_id:
+      ref: post
+      value: .parent_id
+      rel: replies_to
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  post.list:
+  list_posts:
     description: List Hacker News stories by feed type
     returns: post[]
     web_url: '"https://news.ycombinator.com/" + (if .params.feed == "front" then "" else .params.feed end)'
@@ -93,7 +65,7 @@ operations:
       response:
         root: "/hits"
 
-  post.search:
+  search_posts:
     description: Search Hacker News stories
     returns: post[]
     web_url: '"https://hn.algolia.com/?query=" + (.params.query | @uri)'
@@ -115,7 +87,7 @@ operations:
       response:
         root: "/hits"
 
-  post.get:
+  get_post:
     description: Get a Hacker News story with comments
     returns: post
     web_url: '"https://news.ycombinator.com/item?id=" + .params.id'
@@ -157,7 +129,7 @@ operations:
             replies: [.children[]? | map_comment]
           }
 
-  post.comments:
+  comments_post:
     description: |
       Get comments on a Hacker News story as graph-native entities.
       Returns a flat list: the parent story first, then all comments in parent-first order.
@@ -203,13 +175,13 @@ The official HN Firebase API requires multiple requests to fetch a story with co
 
 | Operation | Description |
 |-----------|-------------|
-| `post.list` | List stories by feed type (front, new, ask, show) |
-| `post.search` | Search stories by keyword |
-| `post.get` | Get a single story with all comments |
+| `list_posts` | List stories by feed type (front, new, ask, show) |
+| `search_posts` | Search stories by keyword |
+| `get_post` | Get a single story with all comments |
 
 ## Feeds
 
-The `post.list` operation supports different feeds via the `feed` param:
+The `list_posts` operation supports different feeds via the `feed` param:
 
 | Feed | Description | HN URL |
 |------|-------------|--------|

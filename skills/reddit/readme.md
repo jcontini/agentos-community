@@ -10,8 +10,6 @@ privacy_url: https://www.reddit.com/policies/privacy-policy
 terms_url: https://www.redditinc.com/policies/user-agreement
 
 auth: none
-connects_to: reddit
-
 sources:
   images:
     - styles.redditmedia.com
@@ -23,84 +21,61 @@ sources:
   image_headers:
     Referer: "https://www.reddit.com/"
 
-seed:
-  - id: reddit
-    types: [software]
-    name: Reddit
-    data:
-      software_type: platform
-      url: https://reddit.com
-      launched: "2005"
-      platforms: [web, ios, android]
-      wikidata_id: Q1136
-    relationships:
-      - role: offered_by
-        to: reddit-inc
-
-  - id: reddit-inc
-    types: [organization]
-    name: Reddit, Inc.
-    data:
-      type: company
-      url: https://redditinc.com
-      founded: "2005"
-      ticker: RDDT
-      exchange: NYSE
-      wikidata_id: Q111759432
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   post:
-    terminology: Post
-    mapping:
-      id: .id
-      title: .title
-      url: '"https://reddit.com" + .permalink'
-      content: .selftext // .body
-      engagement.score: .score
-      engagement.comment_count: .num_comments
-      published_at: .created_utc | todate
-      replies: .replies
-      
-      publish:
-        forum:
-          id: .subreddit
-          name: .subreddit
-          url: '"https://reddit.com/r/" + .subreddit'
-          platform: '"reddit"'
+    id: .id
+    name: .title
+    title: .title
+    text: .selftext // .body
+    url: '"https://reddit.com" + .permalink'
+    content: .selftext // .body
+    author: .author
+    datePublished: .created_utc | todate
+    engagement.score: .score
+    engagement.comment_count: .num_comments
+    published_at: .created_utc | todate
+    replies: .replies
 
-      posted_by:
-        account:
-          id: .author
-          platform: '"reddit"'
-          handle: .author
-          display_name: .author
-          url: '"https://reddit.com/u/" + .author'
+    publish:
+      forum:
+        id: .subreddit
+        name: .subreddit
+        url: '"https://reddit.com/r/" + .subreddit'
+        platform: '"reddit"'
 
-      parent_id:
-        ref: post
-        value: .parent_id
-        rel: replies_to
-  
+    posted_by:
+      account:
+        id: .author
+        platform: '"reddit"'
+        handle: .author
+        display_name: .author
+        url: '"https://reddit.com/u/" + .author'
+
+    parent_id:
+      ref: post
+      value: .parent_id
+      rel: replies_to
+
   forum:
-    terminology: Subreddit
-    mapping:
-      id: .name
-      name: .display_name
-      description: .public_description
-      url: '"https://reddit.com/r/" + .display_name'
-      icon: .community_icon
-      member_count: .subscribers
-      privacy: '"OPEN"'
+    id: .name
+    name: .display_name
+    description: .public_description
+    url: '"https://reddit.com/r/" + .display_name'
+    image: .community_icon
+    icon: .community_icon
+    member_count: .subscribers
+    privacy: '"OPEN"'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  post.search:
+  search_posts:
     description: Search posts across Reddit
     returns: post[]
     web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
@@ -121,7 +96,7 @@ operations:
       response:
         transform: '[.data.children[] | .data]'
 
-  post.list:
+  list_posts:
     description: List posts from a subreddit
     returns: post[]
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
@@ -140,7 +115,7 @@ operations:
       response:
         transform: '[.data.children[] | .data]'
 
-  post.get:
+  get_post:
     description: Get a Reddit post with comments
     returns: post
     web_url: '"https://www.reddit.com/comments/" + .params.id'
@@ -178,7 +153,7 @@ operations:
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
 
-  post.comments:
+  comments_post:
     description: |
       Get comments on a Reddit post as graph-native entities.
       Returns a flat list: the parent post first, then all comments in parent-first order.
@@ -207,7 +182,7 @@ operations:
         - ".params.comment_limit"
       timeout: 30
 
-  forum.get:
+  get_forum:
     description: Get a subreddit with its top posts
     returns: forum
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
@@ -252,7 +227,7 @@ operations:
         - ".params.limit"
       timeout: 30
 
-  forum.search:
+  search_forums:
     description: Search for subreddits
     returns: forum[]
     web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
@@ -301,11 +276,11 @@ No authentication required, just a custom User-Agent header to avoid rate limiti
 
 | Operation | Description |
 |-----------|-------------|
-| `post.search` | Search posts across all of Reddit |
-| `post.list` | List posts from a specific subreddit |
-| `post.get` | Get a single post with comments |
-| `forum.search` | Search for subreddits |
-| `forum.get` | Get metadata for a specific subreddit |
+| `search_posts` | Search posts across all of Reddit |
+| `list_posts` | List posts from a specific subreddit |
+| `get_post` | Get a single post with comments |
+| `search_forums` | Search for subreddits |
+| `get_forum` | Get metadata for a specific subreddit |
 
 ## Examples
 
