@@ -337,6 +337,14 @@ function checkResult(result, returns) {
   return { ok: true };
 }
 
+function isSkippableAuthError(message) {
+  return message.includes('Credential not found')
+    || message.includes('no credentials')
+    || message.includes('Multiple cookie providers found')
+    || message.includes('Multiple auth providers found')
+    || message.includes('Ask the user which one to use');
+}
+
 function pluralize(noun) {
   if (noun.endsWith('s')) return noun;
   if (noun.endsWith('y') && !/[aeiou]y$/.test(noun)) return noun.slice(0, -1) + 'ies';
@@ -555,8 +563,11 @@ async function main() {
         }
       } catch (e) {
         const message = e.message || String(e);
-        if (message.includes('Credential not found') || message.includes('no credentials')) {
-          results.push({ op: opName, status: 'skip', reason: 'no credentials' });
+        if (isSkippableAuthError(message)) {
+          const reason = message.includes('Multiple')
+            ? 'auth choice required'
+            : 'no credentials';
+          results.push({ op: opName, status: 'skip', reason });
           totalSkip++;
         } else {
           results.push({ op: opName, status: 'fail', reason: message.slice(0, 100) });
