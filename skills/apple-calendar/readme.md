@@ -8,56 +8,30 @@ color: "#000000"
 website: https://www.apple.com/macos/
 
 auth: none
-connects_to: apple-calendar
 
-seed:
-  - id: apple-calendar
-    types: [software]
-    name: Apple Calendar
-    data:
-      software_type: app
-      url: https://support.apple.com/guide/calendar/welcome/mac
-      launched: "2002"
-      platforms: [macos, ios, ipados, watchos, visionos]
-      wikidata_id: Q306184
-    relationships:
-      - role: offered_by
-        to: apple
-
-  - id: apple
-    types: [organization]
-    name: Apple Inc.
-    data:
-      type: company
-      url: https://apple.com
-      founded: "1976"
-      ticker: AAPL
-      exchange: NASDAQ
-      wikidata_id: Q312
-transformers:
+adapters:
   calendar:
-    terminology: Calendar
-    mapping:
-      id: .id
-      name: .name
-      color: .color
-      is_subscribed: .is_readonly
+    id: .id
+    name: .name
+    color: .color
+    is_subscribed: .is_readonly
 
   meeting:
-    terminology: Event
-    mapping:
-      id: .id
-      title: .title
-      description: .description
-      content: .description
-      start: .start
-      end: .end
-      all_day: .all_day
-      location: .location
-      recurrence: .recurrence
+    id: .id
+    name: .title
+    description: .description
+    text: .description
+    datePublished: .start
+    title: .title
+    content: .description
+    start: .start
+    end: .end
+    all_day: .all_day
+    location: .location
+    recurrence: .recurrence
 
 operations:
-  calendar.list:
+  list_calendars:
     description: List all available calendars
     returns: calendar[]
     swift:
@@ -112,7 +86,7 @@ operations:
             print("[]")
         }
 
-  meeting.list:
+  list_meetings:
     description: List calendar events within a date range
     returns: meeting[]
     params:
@@ -248,7 +222,7 @@ operations:
         - ".params.limit"
         - ".params.exclude_all_day"
 
-  meeting.get:
+  get_meeting:
     description: Get full details of a specific event
     returns: meeting
     params:
@@ -315,7 +289,7 @@ operations:
         - "--"
         - ".params.id"
 
-  meeting.create:
+  create_meeting:
     description: Create a new calendar event
     returns: meeting
     params:
@@ -458,7 +432,7 @@ operations:
         - ".params.description"
         - ".params.all_day"
 
-  meeting.update:
+  update_meeting:
     description: Update an existing calendar event
     returns: meeting
     params:
@@ -574,7 +548,7 @@ operations:
         - ".params.description"
         - ".params.calendar_id"
 
-  meeting.delete:
+  delete_meeting:
     description: Delete a calendar event
     returns: void
     params:
