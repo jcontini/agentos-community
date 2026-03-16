@@ -11,6 +11,11 @@ const SKILLS_DIR = join(ROOT, 'skills');
 
 const INLINE_PRIMITIVE_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null', 'void']);
 const REQUEST_TEMPLATE_ROOTS = new Set(['params', 'auth', 'item']);
+const LEGACY_AUTH_PATTERNS = [
+  /(^|[^A-Za-z0-9_])\.params\.auth(?:[.\[]|$)/,
+  /(^|[^A-Za-z0-9_])\.params\.auth_key(?:[^A-Za-z0-9_]|$)/,
+  /(^|[^A-Za-z0-9_])\.auth_key(?:[^A-Za-z0-9_]|$)/,
+];
 
 function parseArgs(argv) {
   const flags = new Map();
@@ -217,7 +222,7 @@ function lintSkill(frontmatter) {
       issues.push(issue('error', path, 'legacy {token}-style placeholder found; use .auth.* expressions'));
     }
 
-    if (value.includes('.params.auth') || value.includes('.auth_key')) {
+    if (LEGACY_AUTH_PATTERNS.some(pattern => pattern.test(value))) {
       issues.push(issue('error', path, 'legacy auth variable root found; use .auth.*'));
     }
   });

@@ -63,14 +63,6 @@ adapters:
            "Carbon: " + ((.carbon_emissions.this_flight / 1000 | floor | tostring)) + " kg CO₂"
          else "" end))
 
-  airport:
-    id: .airport.id
-    name: .airport.name
-    iata_code: .airport.id
-    city: .city
-    country: .country
-    country_code: .country_code
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════

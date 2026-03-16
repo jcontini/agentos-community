@@ -39,6 +39,18 @@ adapters:
     data.available: .available
     data.card_type: .cardType
 
+  transaction:
+    id: '(.accountId + ":" + (.postingDate // .date) + ":" + (.description // .details.description // "transaction") + ":" + (.amount | tostring))'
+    name: .description
+    description: .description
+    account: .accountId
+    data.posting_date: '.postingDate // .date'
+    data.amount: .amount
+    data.balance: .balance
+    data.category: '.category // .categoryDescription'
+    data.pending: '.pending // false'
+    data.details: .details
+
 # ==============================================================================
 # OPERATIONS
 # ==============================================================================
