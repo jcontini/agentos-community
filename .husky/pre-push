@@ -25,5 +25,9 @@ echo "📋 Validating skills: $SKILLS"
 node scripts/skills/validate.mjs $SKILLS || exit 1
 
 echo ""
+echo "🧠 Semantic lint..."
+node scripts/skills/lint-semantic.mjs --strict $SKILLS || exit 1
+
+echo ""
 echo "🔌 MCP smoke test..."
 MCP_TEST_LENIENT=1 npm run mcp:test -- $SKILLS || exit 1

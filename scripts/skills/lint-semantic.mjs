@@ -20,6 +20,7 @@ const LEGACY_AUTH_PATTERNS = [
 function parseArgs(argv) {
   const flags = new Map();
   const positionals = [];
+  const flagsWithValues = new Set(['--filter']);
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -29,7 +30,7 @@ function parseArgs(argv) {
     }
 
     const next = argv[i + 1];
-    if (next && !next.startsWith('--')) {
+    if (flagsWithValues.has(arg) && next && !next.startsWith('--')) {
       flags.set(arg, next);
       i++;
     } else {

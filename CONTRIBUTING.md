@@ -60,6 +60,7 @@ What each step means:
 - `validate` checks structure, entity refs, mapping sanity, and icons
 - `lint:semantic` is an advisory semantic pass for legacy placeholder/auth patterns, dead `api.base_url`, suspicious request roots, and returns/adapters drift
 - Pass `--strict` to `lint:semantic` if you want it to fail on semantic errors
+- The pre-push hook runs `lint:semantic --strict` on changed top-level skills, so the main skill set is expected to stay semantically clean
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
 - `mcp:test` is a broader smoke path, not a substitute for targeted inspection
