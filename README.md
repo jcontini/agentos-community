@@ -141,3 +141,11 @@ npm install    # Sets up pre-commit hooks
 ```
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for skill development, testing, and contribution guidelines.
+
+Useful local commands:
+
+```bash
+npm run validate -- exa
+npm run lint:semantic -- exa
+npm run mcp:call -- --skill exa --tool search --params '{"query":"rust","limit":1}'
+```

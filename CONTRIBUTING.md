@@ -36,10 +36,13 @@ npm run validate --pre-commit -- my-skill
 # 3. Full structural + mapping check
 npm run validate -- my-skill
 
-# 4. Filter large runs while cleaning up families of skills
+# 4. Semantic lint for legacy patterns and request-template drift
+npm run lint:semantic -- my-skill
+
+# 5. Filter large runs while cleaning up families of skills
 npm run validate -- --filter browser
 
-# 5. Ground-truth live MCP call through run({ skill, tool, params, account? })
+# 6. Ground-truth live MCP call through run({ skill, tool, params, account? })
 npm run mcp:call -- \
   --skill exa \
   --tool search \
@@ -47,7 +50,7 @@ npm run mcp:call -- \
   --format json \
   --detail full
 
-# 6. Broader YAML-driven smoke test for a skill
+# 7. Broader YAML-driven smoke test for a skill
 npm run mcp:test -- exa --verbose
 ```
 
@@ -55,6 +58,8 @@ What each step means:
 
 - `validate --pre-commit` checks fast structural validity only
 - `validate` checks structure, entity refs, mapping sanity, and icons
+- `lint:semantic` is an advisory semantic pass for legacy placeholder/auth patterns, dead `api.base_url`, suspicious request roots, and returns/adapters drift
+- Pass `--strict` to `lint:semantic` if you want it to fail on semantic errors
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
 - `mcp:test` is a broader smoke path, not a substitute for targeted inspection
