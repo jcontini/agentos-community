@@ -1,12 +1,11 @@
 /**
  * Firecrawl Adapter Tests
- * 
- * Tests for web scraping with browser rendering.
+ *
+ * Tests for browser-rendered webpage extraction.
  * Requires: FIRECRAWL_API_KEY or configured credential in AgentOS.
- * 
+ *
  * Coverage:
- * - webpage.search (web search)
- * - webpage.read (scrape with JS rendering)
+ * - read_webpage
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -19,12 +18,12 @@ let skipTests = false;
 
 describe('Firecrawl Adapter', () => {
   beforeAll(async () => {
-    // Check if Firecrawl is configured by trying a simple search
+    // Check if Firecrawl is configured by trying a simple read
     try {
       await aos().call('UseAdapter', {
         adapter,
-        tool: 'webpage.search',
-        params: { query: 'test', limit: 1 },
+        tool: 'read_webpage',
+        params: { url: 'https://example.com' },
       });
     } catch (e: unknown) {
       const error = e as Error;
@@ -38,119 +37,55 @@ describe('Firecrawl Adapter', () => {
   });
 
   // ===========================================================================
-  // webpage.search
+  // read_webpage
   // ===========================================================================
-  describe('webpage.search', () => {
-    it('returns an array of search results', async () => {
-      if (skipTests) return;
-      
-      const results = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'webpage.search',
-        params: { query: 'what is react framework', limit: 3 },
-      });
-
-      expect(Array.isArray(results)).toBe(true);
-      expect((results as unknown[]).length).toBeLessThanOrEqual(3);
-    });
-
-    it('results have all mapped fields', async () => {
-      if (skipTests) return;
-      
-      const results = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'webpage.search',
-        params: { query: 'typescript programming', limit: 2 },
-      }) as Array<{ url: string; title: string; snippet: string; adapter: string }>;
-
-      expect(results.length).toBeGreaterThan(0);
-      
-      for (const result of results) {
-        // Required fields from inline mapping
-        expect(result.url).toBeDefined();
-        expect(typeof result.url).toBe('string');
-        expect(result.url).toMatch(/^https?:\/\//);
-        
-        expect(result.title).toBeDefined();
-        expect(typeof result.title).toBe('string');
-        
-        // Snippet is from .description in response mapping
-        expect(result.snippet).toBeDefined();
-        
-        // Adapter field added by AgentOS
-        expect(result.adapter).toBe(adapter);
-      }
-    });
-
-    it('respects limit parameter', async () => {
-      if (skipTests) return;
-      
-      const results1 = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'webpage.search',
-        params: { query: 'web development', limit: 2 },
-      }) as unknown[];
-
-      const results5 = await aos().call('UseAdapter', {
-        adapter,
-        tool: 'webpage.search',
-        params: { query: 'web development', limit: 5 },
-      }) as unknown[];
-
-      expect(results1.length).toBeLessThanOrEqual(2);
-      expect(results5.length).toBeLessThanOrEqual(5);
-    });
-  });
-
-  // ===========================================================================
-  // webpage.read
-  // ===========================================================================
-  describe('webpage.read', () => {
+  describe('read_webpage', () => {
     it('scrapes content from a URL', async () => {
       if (skipTests) return;
-      
+
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'webpage.read',
+        tool: 'read_webpage',
         params: { url: 'https://www.rust-lang.org/' },
-      }) as { url: string; title: string; content: string; adapter: string };
+      }) as { url: string; name: string; text: string; adapter: string };
 
       expect(result).toBeDefined();
       expect(result.url).toBeDefined();
-      expect(result.title).toBeDefined();
+      expect(result.name).toBeDefined();
+      expect(result.text).toBeDefined();
       expect(result.adapter).toBe(adapter);
     });
 
     it('returns markdown content from JS-rendered page', async () => {
       if (skipTests) return;
-      
+
       // React.dev is a good test - it's a React SPA
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'webpage.read',
-        params: { url: 'https://react.dev/' },
-      }) as { content: string; title: string };
+        tool: 'read_webpage',
+        params: { url: 'https://react.dev/', wait_for_js: 1000 },
+      }) as { text: string; name: string };
 
-      expect(result.content).toBeDefined();
-      expect(typeof result.content).toBe('string');
-      expect(result.content.length).toBeGreaterThan(100);
-      
+      expect(result.text).toBeDefined();
+      expect(typeof result.text).toBe('string');
+      expect(result.text.length).toBeGreaterThan(100);
+
       // Should contain React-related content
-      expect(result.title.toLowerCase()).toContain('react');
+      expect(result.name.toLowerCase()).toContain('react');
     });
 
     it('handles Notion-like dynamic pages', async () => {
       if (skipTests) return;
-      
+
       // Firecrawl is known for handling Notion pages
       const result = await aos().call('UseAdapter', {
         adapter,
-        tool: 'webpage.read',
+        tool: 'read_webpage',
         params: { url: 'https://www.notion.so/about' },
-      }) as { content: string };
+      }) as { text: string };
 
-      expect(result.content).toBeDefined();
-      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.text).toBeDefined();
+      expect(result.text.length).toBeGreaterThan(0);
     });
   });
 });

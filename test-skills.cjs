@@ -1,16 +1,31 @@
 #!/usr/bin/env node
 /**
- * test-skills.cjs — YAML-driven skill test runner
+ * test-skills.cjs — direct MCP skill runner + YAML-driven audit runner
  *
- * One MCP process. Reads each skill's YAML. Builds calls from the schema.
+ * One MCP process. Can either:
+ * - run coverage-style smoke tests across skill YAML definitions, or
+ * - make a single direct `run` call with arbitrary params/view/execute flags.
+ *
  * No vitest, no TypeScript compilation, no worker pools.
  *
  * Usage:
- *   node test-skills.cjs                    # test all skills
- *   node test-skills.cjs hackernews reddit  # test specific skills
- *   node test-skills.cjs --changed          # only skills changed since last commit
- *   node test-skills.cjs --verbose          # show params and responses
- *   node test-skills.cjs --read-only        # skip write ops (default)
+ *   node test-skills.cjs                              # test all skills
+ *   node test-skills.cjs exa reddit                  # test specific skills
+ *   node test-skills.cjs --changed                   # only changed skills
+ *   node test-skills.cjs --verbose                   # show params and responses
+ *
+ *   node test-skills.cjs --call \
+ *     --skill exa \
+ *     --tool search \
+ *     --params '{"query":"rust ownership","limit":1}' \
+ *     --format json \
+ *     --detail preview
+ *
+ *   node test-skills.cjs --call \
+ *     --skill exa \
+ *     --tool search \
+ *     --params '{"query":"rust ownership","limit":1}' \
+ *     --raw
  */
 
 const { spawn } = require('child_process');
@@ -22,8 +37,23 @@ const yaml = require('js-yaml');
 // ── Config ───────────────────────────────────────────────────────────────────
 
 const SKILLS_DIR = path.join(__dirname, 'skills');
-const BINARY = path.join(process.env.HOME, 'dev/agentos/target/debug/agentos');
+const AGENTOS_ROOT = path.join(process.env.HOME, 'dev/agentos');
 const TIMEOUT = 60_000;
+
+function resolveBinary() {
+  if (process.env.AGENTOS_BINARY) return process.env.AGENTOS_BINARY;
+
+  const debug = path.join(AGENTOS_ROOT, 'target/debug/agentos');
+  const release = path.join(AGENTOS_ROOT, 'target/release/agentos');
+  const candidates = [debug, release].filter(p => fs.existsSync(p));
+
+  if (candidates.length === 0) return debug;
+  if (candidates.length === 1) return candidates[0];
+
+  return candidates.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+}
+
+const BINARY = resolveBinary();
 
 // Default param values keyed by param name
 const FIXTURES = {
@@ -57,11 +87,57 @@ const KEYCHAIN_OPS = new Set([
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
-const args = process.argv.slice(2);
-const verbose = args.includes('--verbose');
-const changedOnly = args.includes('--changed');
-const includeWrite = args.includes('--write');
-const skillFilter = args.filter(a => !a.startsWith('--'));
+function parseArgs(argv) {
+  const flags = {};
+  const positionals = [];
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+
+    if (!arg.startsWith('--')) {
+      positionals.push(arg);
+      continue;
+    }
+
+    const eq = arg.indexOf('=');
+    if (eq !== -1) {
+      const key = arg.slice(2, eq);
+      const value = arg.slice(eq + 1);
+      flags[key] = value;
+      continue;
+    }
+
+    const key = arg.slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags[key] = next;
+      i++;
+    } else {
+      flags[key] = true;
+    }
+  }
+
+  return { flags, positionals };
+}
+
+function parseJsonFlag(raw, fallback, label) {
+  if (raw === undefined) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error(`Invalid JSON for --${label}: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+const parsed = parseArgs(process.argv.slice(2));
+const flags = parsed.flags;
+const verbose = !!flags.verbose;
+const changedOnly = !!flags.changed;
+const includeWrite = !!flags.write;
+const callMode = !!flags.call;
+const rawOutput = !!flags.raw;
+const skillFilter = parsed.positionals;
 
 // ── YAML parsing ─────────────────────────────────────────────────────────────
 
@@ -115,7 +191,7 @@ class MCP {
   async connect() {
     return new Promise((resolve, reject) => {
       this.proc = spawn(BINARY, ['mcp'], {
-        cwd: path.join(process.env.HOME, 'dev/agentos'),
+        cwd: AGENTOS_ROOT,
         env: { ...process.env, RUST_BACKTRACE: '1' },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -173,22 +249,29 @@ class MCP {
     this.proc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n');
   }
 
-  async call(skill, tool, params = {}) {
+  async callTool(name, args = {}, options = {}) {
     const result = await this._send('tools/call', {
-      name: 'run',
-      arguments: { skill, tool, params },
+      name,
+      arguments: args,
     });
-    // Unwrap MCP content
+
     if (result?.content && Array.isArray(result.content)) {
       const text = result.content.find(c => c.type === 'text')?.text;
       if (text) {
+        if (options.rawText) return text;
+
         // Strip markdown fences
         const m = text.match(/^```(?:json)?\n([\s\S]*?)\n```$/);
         const raw = m ? m[1] : text;
+        if (options.parse === false) return raw;
         try { return JSON.parse(raw); } catch { return raw; }
       }
     }
     return result;
+  }
+
+  async call(skill, tool, params = {}, extra = {}) {
+    return this.callTool('run', { skill, tool, params, ...extra });
   }
 
   async disconnect() {
@@ -253,9 +336,81 @@ function checkResult(result, returns) {
   return { ok: true };
 }
 
+function pluralize(noun) {
+  if (noun.endsWith('s')) return noun;
+  if (noun.endsWith('y') && !/[aeiou]y$/.test(noun)) return noun.slice(0, -1) + 'ies';
+  return noun + 's';
+}
+
+function guessListOperation(opName, ops) {
+  const candidates = [];
+
+  if (opName.endsWith('.get')) {
+    candidates.push(opName.replace(/\.get$/, '.list'));
+  }
+
+  if (opName.startsWith('get_')) {
+    const noun = opName.slice(4);
+    candidates.push(`list_${pluralize(noun)}`, `list_${noun}`, `search_${noun}`, 'list', 'search');
+  }
+
+  return candidates.find(candidate => ops[candidate]);
+}
+
+function prettyPrint(value) {
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value, null, 2);
+}
+
+function buildDirectRunArgs() {
+  const params = parseJsonFlag(flags.params, {}, 'params');
+  const view = parseJsonFlag(flags.view, {}, 'view');
+
+  if (flags.format) view.format = flags.format;
+  if (flags.detail) view.detail = flags.detail;
+
+  const skill = flags.skill || parsed.positionals[0];
+  const tool = flags.tool || parsed.positionals[1];
+
+  if (!skill || !tool) {
+    console.error('Direct call mode requires --skill and --tool (or positional skill/tool).');
+    process.exit(1);
+  }
+
+  const runArgs = { skill, tool, params };
+  if (Object.keys(view).length > 0) runArgs.view = view;
+  if (flags.execute) runArgs.execute = true;
+  return runArgs;
+}
+
+async function runDirectCall() {
+  console.log('\nConnecting to MCP...');
+  const mcp = new MCP();
+  await mcp.connect();
+  console.log('MCP ready.\n');
+
+  const runArgs = buildDirectRunArgs();
+  if (verbose) {
+    console.log(`run(${JSON.stringify(runArgs, null, 2)})\n`);
+  }
+
+  try {
+    const result = await mcp.callTool('run', runArgs, rawOutput ? { rawText: true } : {});
+    process.stdout.write(prettyPrint(result));
+    process.stdout.write('\n');
+  } finally {
+    await mcp.disconnect();
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (callMode) {
+    await runDirectCall();
+    return;
+  }
+
   const targets = getTargetSkills();
   if (targets.length === 0) {
     console.log('No skills to test.');
@@ -304,10 +459,10 @@ async function main() {
         continue;
       }
 
-      // For .get ops, try to get an id from the corresponding .list first
-      if (opName.endsWith('.get') && opDef?.params?.id && !params.id) {
-        const listOp = opName.replace(/\.get$/, '.list');
-        if (ops[listOp]) {
+      // For get-like ops, try to get an id from a list op first
+      if ((opName.endsWith('.get') || opName.startsWith('get_')) && opDef?.params?.id && !params.id) {
+        const listOp = guessListOperation(opName, ops);
+        if (listOp) {
           try {
             const listParams = buildParams(ops[listOp], skillId, listOp) || {};
             const listResult = await mcp.call(skillId, listOp, listParams);

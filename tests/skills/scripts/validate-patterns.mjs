@@ -159,7 +159,14 @@ function validateAdapter(adapterPath, entityType, adapter) {
   const warnings = [];
   const info = [];
   
-  const mapping = adapter.mapping || {};
+  if (adapter && typeof adapter === 'object' && 'mapping' in adapter) {
+    errors.push(
+      `Legacy adapter wrapper in '${adapterPath}' — move fields from 'mapping:' directly into the adapter body`
+    );
+    return { errors, warnings, info };
+  }
+
+  const mapping = adapter && typeof adapter === 'object' ? adapter : {};
   const mappingKeys = Object.keys(mapping);
   
   // Find existing typed references

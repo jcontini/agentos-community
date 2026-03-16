@@ -7,8 +7,7 @@
  *   2. Entity  — All operations return valid entity types
  *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
  *   4. Icon    — icon.svg or icon.png exists
- *   5. Seed    — connects_to + seed data (product/org entities)
- *   6. Tests   — Every operation has a test file
+ *   5. Tests   — Every operation has a test file
  * 
  * Skills in .needs-work/ are shown separately but never auto-moved.
  * Fix errors, then manually move to skills/ when ready.
@@ -142,7 +141,6 @@ function checkSchema(frontmatter) {
     { name: 'color', pass: !!frontmatter.color },
     { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined },
     { name: 'operations or utilities', pass: isAgentSkill || isGuideOnly || !!(frontmatter.operations || frontmatter.utilities) },
-    { name: 'instructions', pass: isAgentSkill || isGuideOnly || !!frontmatter.instructions },
   ];
   
   const passed = checks.filter(c => c.pass).length;
@@ -166,7 +164,7 @@ function checkEntities(frontmatter) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
       total++;
       if (!op.returns || op.returns === 'void') {
-        const verb = opName.split('.')[1];
+        const verb = opName.includes('.') ? opName.split('.')[1] : opName;
         if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send', 'modify', 'trash', 'untrash', 'batch_modify', 'batch_delete'].includes(verb)) {
           errors.push(`'${opName}' returns void — write operations or read operations must return an entity`);
         } else {
@@ -194,30 +192,49 @@ function checkEntities(frontmatter) {
   return { pass: errors.length === 0, passed, total, errors };
 }
 
+function getAdapters(frontmatter) {
+  return frontmatter.adapters || null;
+}
+
+function getAdapterMapping(adapter) {
+  if (!adapter || typeof adapter !== 'object') return null;
+  // Flat structure: adapter body is the mapping
+  return adapter;
+}
+
 function checkMappings(frontmatter) {
   const errors = [];
   let total = 0;
   let passed = 0;
+  const adapters = getAdapters(frontmatter);
   
-  if (!frontmatter.transformers) {
+  if (!adapters) {
     if (frontmatter.operations && Object.keys(frontmatter.operations).length > 0) {
-      errors.push('Has operations but no transformers section — data won\'t flow through entities');
+      errors.push('Has operations but no adapters section — data won\'t flow through entities');
       total = 1;
     }
     return { pass: errors.length === 0, passed, total, errors };
   }
   
-  for (const [entityName, transformer] of Object.entries(frontmatter.transformers)) {
-    if (!transformer.mapping) {
+  for (const [entityName, adapter] of Object.entries(adapters)) {
+    const mapping = getAdapterMapping(adapter);
+    if (adapter && typeof adapter === 'object' && 'mapping' in adapter) {
       total++;
-      errors.push(`'${entityName}' transformer has no mapping`);
+      errors.push(
+        `'${entityName}' uses legacy adapter 'mapping:' wrapper — move fields directly under adapters.${entityName}`
+      );
+      continue;
+    }
+    if (!mapping || Object.keys(mapping).length === 0) {
+      total++;
+      errors.push(`'${entityName}' adapter has no mapping fields`);
       continue;
     }
     
     // Reject _rel in typed references — relationship type comes from
     // the field name, not a metadata block. Rename the field to match
     // the relationship type (e.g., posted_in → upload).
-    for (const [fieldName, fieldValue] of Object.entries(transformer.mapping)) {
+    for (const [fieldName, fieldValue] of Object.entries(mapping)) {
       if (typeof fieldValue === 'object' && fieldValue !== null && '_rel' in fieldValue) {
         total++;
         errors.push(
@@ -231,10 +248,10 @@ function checkMappings(frontmatter) {
     const validProps = entityProperties[entityName];
     if (!validProps) continue;
     
-    const RESERVED_TRANSFORMER_KEYS = new Set(['content', 'content_role']);
-    for (const [propName, propValue] of Object.entries(transformer.mapping)) {
+    const RESERVED_ADAPTER_KEYS = new Set(['content', 'content_role']);
+    for (const [propName, propValue] of Object.entries(mapping)) {
       if (propName.startsWith('_')) continue;
-      if (RESERVED_TRANSFORMER_KEYS.has(propName)) continue;
+      if (RESERVED_ADAPTER_KEYS.has(propName)) continue;
       if (typeof propValue === 'object' && propValue !== null) continue;
       
       total++;
@@ -248,10 +265,11 @@ function checkMappings(frontmatter) {
   }
   
   // Check jaq expressions
-  if (frontmatter.transformers) {
-    for (const [entityName, transformer] of Object.entries(frontmatter.transformers)) {
-      if (!transformer.mapping) continue;
-      for (const { path, expr } of collectJaqExpressions(transformer.mapping, entityName)) {
+  if (adapters) {
+    for (const [entityName, adapter] of Object.entries(adapters)) {
+      const mapping = getAdapterMapping(adapter);
+      if (!mapping) continue;
+      for (const { path, expr } of collectJaqExpressions(mapping, entityName)) {
         total++;
         let exprOk = true;
         const singleQuoteMatches = expr.match(/== *'[^']*'|'[^']*' *==|'[^']*' *\?|: *'[^']*'/g);
@@ -301,53 +319,6 @@ function checkIcon(adapterDir) {
   const hasPng = existsSync(join(adapterDir, 'icon.png'));
   const format = hasSvg ? 'svg' : hasPng ? 'png' : null;
   return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
-}
-
-function checkSeed(frontmatter) {
-  const errors = [];
-  let total = 0;
-  let passed = 0;
-
-  // Guide-only and agent skills don't connect to a single external service
-  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
-  const isAgentSkill = !!frontmatter.agent;
-  if (isGuideOnly || isAgentSkill) {
-    return { pass: true, passed: 0, total: 0, errors: [] };
-  }
-  
-  // Check connects_to exists
-  total++;
-  const connectsTo = frontmatter.connects_to;
-  if (connectsTo) {
-    passed++;
-  } else {
-    errors.push('Missing connects_to — skill must declare which product it connects to');
-  }
-  
-  // Check seed data exists
-  total++;
-  const seed = frontmatter.seed;
-  if (seed && seed.length > 0) {
-    passed++;
-  } else {
-    errors.push('Missing seed data — skill must seed product and organization entities');
-  }
-  
-  // Check connects_to references exist in seed data
-  if (connectsTo && seed && seed.length > 0) {
-    const seedIds = new Set(seed.map(s => s.id));
-    const targets = Array.isArray(connectsTo) ? connectsTo : [connectsTo];
-    for (const target of targets) {
-      total++;
-      if (seedIds.has(target)) {
-        passed++;
-      } else {
-        errors.push(`connects_to '${target}' not found in seed data`);
-      }
-    }
-  }
-  
-  return { pass: errors.length === 0, passed, total, errors };
 }
 
 function checkTests(adapterDir, frontmatter) {
@@ -437,13 +408,13 @@ function renderTable(sections) {
   }
   
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Seed', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
   
-  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
-  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
   
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 5 + testColW + 6;
+    const inner = nameWidth + 1 + colW * 4 + testColW + 5;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
@@ -493,7 +464,7 @@ function renderTable(sections) {
     console.log(sectionDivider(section.label));
     
     for (const r of section.results) {
-      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass;
+      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass;
       const critical = !r.schema.structureValid || !r.entity.pass;
       const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
       
@@ -502,7 +473,6 @@ function renderTable(sections) {
         `${checkCell(r.entity, colW)}${SEP}` +
         `${checkCell(r.mapping, colW)}${SEP}` +
         `${iconCell(r.icon, colW)}${SEP}` +
-        `${checkCell(r.seed, colW)}${SEP}` +
         `${testCell(r, testColW)}${SEP}`;
       console.log(line);
     }
@@ -513,7 +483,7 @@ function renderTable(sections) {
   for (const section of sections) {
     if (section.results.length === 0) continue;
     const total = section.results.length;
-    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
+    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
     const passColor = passing === total ? GREEN : passing > 0 ? YELLOW : RED;
     console.log(`  ${section.icon} ${passColor}${passing}/${total}${RESET} ${section.label}`);
   }
@@ -521,7 +491,7 @@ function renderTable(sections) {
 }
 
 function renderErrors(results) {
-  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.seed.pass || !r.tests.pass);
+  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass);
   if (failing.length === 0) return;
   
   for (const r of failing) {
@@ -530,7 +500,6 @@ function renderErrors(results) {
     if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
     if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
     if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
-    if (!r.seed.pass)    allErrors.push(...r.seed.errors.map(e => `seed: ${e}`));
     if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
     
     if (allErrors.length > 0) {
@@ -566,7 +535,6 @@ function validateSkill(skill) {
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       icon: checkIcon(skill.dir),
-      seed: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },
     };
   }
@@ -576,7 +544,6 @@ function validateSkill(skill) {
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const iconResult = checkIcon(skill.dir);
-  const seedResult = canCheck ? checkSeed(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const testsResult = canCheck ? checkTests(skill.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
   
   return {
@@ -585,7 +552,6 @@ function validateSkill(skill) {
     entity: entityResult,
     mapping: mappingResult,
     icon: iconResult,
-    seed: seedResult,
     tests: testsResult,
   };
 }
@@ -639,8 +605,8 @@ const needsWorkResults = needsWorkSkills.map(a => ({ ...validateSkill(a), _skill
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
-  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.seed.pass && a.tests.pass;
-  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.seed.pass && b.tests.pass;
+  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
+  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
   if (aPass !== bPass) return bPass - aPass;
   return a.name.localeCompare(b.name);
 });
@@ -679,7 +645,7 @@ if (verbose) renderErrors(needsWorkResults);
 
 // 6. Check for promotable .needs-work adapters
 const promotable = needsWorkResults.filter(r =>
-  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass
+  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass
 );
 if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
@@ -695,13 +661,13 @@ if (verbose) {
 }
 console.log();
 
-const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass);
+const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
 if (allPassing) {
   console.log('✅ All skills fully valid');
 } else if (activeResults.length === 0) {
   console.log('📭 No skills in skills/');
 } else {
-  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.seed.pass && r.tests.pass).length;
+  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
   console.log(`⚠️  ${passing}/${activeResults.length} skills fully valid — fix errors and run again`);
 }
 

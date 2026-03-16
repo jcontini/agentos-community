@@ -16,7 +16,7 @@ Your tasks are in Todoist. Your calendar is in Google. Your messages are split a
 
 **You should own your digital life.** Not rent it. Not have it held hostage. Own it.
 
-AgentOS creates a universal entity model—tasks, events, contacts, messages, files—that works across all services. A Todoist skill maps Todoist's API to the universal `task` entity. A Linear skill does the same. From your AI's perspective, they're identical: `task.list()`, `task.create()`, `task.complete()`.
+AgentOS creates a universal entity model—tasks, events, contacts, messages, files—that works across all services. A Todoist skill maps Todoist's API to the universal `task` entity. A Linear skill does the same. From your AI's perspective, they're identical: `list_tasks()`, `create_task()`, `complete_task()`.
 
 This means:
 - **Migration is trivial** — Switch from Todoist to Linear? Same entity, different backend
@@ -36,7 +36,7 @@ This means:
 ┌──────────────────────────────────────────────────────────────┐
 │                           SKILLS                             │
 │  YAML configs: API endpoints, auth, field mappings (jaq)     │
-│  One line routes content to body table: _body: .content      │
+│  One line routes content to body table: content: .content    │
 └──────────────────────────────┬───────────────────────────────┘
                                │ extract
                                ▼
@@ -86,7 +86,7 @@ skills/            Skills — service connections + agent context
   reddit/          Maps Reddit JSON → post, forum entities
   youtube/         Maps yt-dlp → video, channel, post entities
   curl/            Fetches URLs → webpage entities
-  CONTRIBUTING.md  Skill-building guide (auth, transformers, operations, testing)
+  CONTRIBUTING.md  Skill-building guide (auth, adapters, operations, testing)
   ...
 
 apps/              Visual apps (UI experiences)
@@ -131,13 +131,12 @@ Skills connect to services — Todoist, Linear, YouTube, Reddit, iMessage. They'
 Skills that produce rich content — transcripts, articles, self-posts, task descriptions — route it to a dedicated body table with one YAML line:
 
 ```yaml
-transformers:
+adapters:
   video:
-    mapping:
-      title: .title
-      description: .description
-      _body: .transcript           # → stored in entity_bodies
-      _body_role: '"transcript"'   # → keyed by role (default: "body")
+    name: .title
+    text: .description
+    content: .transcript           # → stored in entity_bodies
+    content_role: '"transcript"'   # → keyed by role (default: "body")
 ```
 
 FTS5 indexes bodies alongside entity names and data. Search returns BM25-ranked results with highlighted excerpts showing exactly where terms matched. Any skill that produces content becomes searchable automatically.

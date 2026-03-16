@@ -5,15 +5,16 @@
  * Connects to the agentos binary via stdio MCP.
  *
  * Skill tests call:
- *   aos().call('UseAdapter', { adapter: 'todoist', tool: 'task.list', params: {} })
+ *   aos().run('exa', 'search', { params: { query: 'rust' } })
  *
  * This translates to:
- *   mcp.call('run', { skill: 'todoist', tool: 'task.list', params: {} })
+ *   mcp.call('run', { skill: 'exa', tool: 'search', params: { query: 'rust' } })
  *
  * Results are unwrapped: operations return plain arrays/objects, utilities
  * return their JSON payload (markdown code fences stripped if present).
  */
 
+import { existsSync, statSync } from 'fs';
 import { MCPTestClient } from '../../../agentos/tests/utils/mcp-client';
 
 // ── Result unwrapping ────────────────────────────────────────────────────────
@@ -37,6 +38,12 @@ export interface AgentOSOptions {
   timeout?: number;
 }
 
+export interface AgentOSRunOptions {
+  params?: Record<string, unknown>;
+  view?: Record<string, unknown>;
+  execute?: boolean;
+}
+
 export class AgentOS {
   private mcp: MCPTestClient;
 
@@ -45,8 +52,10 @@ export class AgentOS {
   }
 
   static async connect(options: AgentOSOptions = {}): Promise<AgentOS> {
+    const agentosRoot = `${process.env.HOME}/dev/agentos`;
+    const binary = resolveBinary(agentosRoot);
     const mcp = new MCPTestClient({
-      command: `${process.env.HOME}/dev/agentos/target/debug/agentos`,
+      command: binary,
       debug: options.debug ?? !!process.env.DEBUG_MCP,
       timeout: options.timeout ?? 30_000,
     });
@@ -58,14 +67,19 @@ export class AgentOS {
     await this.mcp.disconnect();
   }
 
+  async run(skill: string, tool: string, options: AgentOSRunOptions = {}): Promise<unknown> {
+    const { params = {}, ...rest } = options;
+    return this.call('run', { skill, tool, params, ...rest });
+  }
+
   /**
    * Call a skill tool.
    *
-   * Supports the legacy UseAdapter call shape:
-   *   call('UseAdapter', { adapter: 'todoist', tool: 'task.list', params: {}, execute: true })
+   * Preferred:
+   *   call('run', { skill: 'exa', tool: 'search', params: { query: 'rust' } })
    *
-   * Also supports direct run shape:
-   *   call('run', { skill: 'todoist', tool: 'task.list', params: {} })
+   * Legacy compatibility:
+   *   call('UseAdapter', { adapter: 'todoist', tool: 'list_tasks', params: {}, execute: true })
    */
   async call(tool: string, args: Record<string, unknown> = {}): Promise<unknown> {
     let runArgs: Record<string, unknown>;
@@ -87,6 +101,19 @@ export class AgentOS {
     const result = await this.mcp.call('run', runArgs);
     return unwrap(result);
   }
+}
+
+function resolveBinary(agentosRoot: string): string {
+  if (process.env.AGENTOS_BINARY) return process.env.AGENTOS_BINARY;
+
+  const debug = `${agentosRoot}/target/debug/agentos`;
+  const release = `${agentosRoot}/target/release/agentos`;
+  const candidates = [debug, release].filter(path => existsSync(path));
+
+  if (candidates.length === 0) return debug;
+  if (candidates.length === 1) return candidates[0];
+
+  return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 }
 
 // ── Global singleton (set by setup.ts) ──────────────────────────────────────

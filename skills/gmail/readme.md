@@ -6,7 +6,6 @@ color: "#EA4335"
 
 website: https://mail.google.com
 privacy_url: https://policies.google.com/privacy
-connects_to: gmail
 
 # No client_id or client_secret needed — auth is sourced from Mimestream's keychain.
 # The system finds Mimestream's `provides: [{ service: google }]` declaration and
@@ -19,93 +18,80 @@ auth:
 
 api:
   base_url: https://gmail.googleapis.com/gmail/v1/users/me
-
-seed:
-  - id: gmail
-    types: [software]
-    name: Gmail
-    data:
-      software_type: web_app
-      url: https://mail.google.com
-      launched: "2004"
-      pricing: free
-    relationships:
-      - role: offered_by
-        to: google
 # ==============================================================================
-# TRANSFORMERS
+# ADAPTERS
 # ==============================================================================
 
-transformers:
+adapters:
   email:
-    terminology: Email
-    mapping:
-      # Helper pattern for headers: map+select can return [], so check length before .[0].value
-      id: .id
-      subject: 'if .payload then (.payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else "(no subject)" end'
-      snippet: '.snippet // ""'
-      timestamp: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
-      is_starred: 'if .labelIds then .labelIds | contains(["STARRED"]) else false end'
-      is_unread: 'if .labelIds then .labelIds | contains(["UNREAD"]) else false end'
-      is_draft: 'if .labelIds then .labelIds | contains(["DRAFT"]) else false end'
-      message_id: 'if .payload then (.payload.headers | map(select(.name == "Message-ID")) | if length > 0 then .[0].value else "" end) else "" end'
-      in_reply_to: 'if .payload then (.payload.headers | map(select(.name == "In-Reply-To")) | if length > 0 then .[0].value else null end) else null end'
-      conversation_id: '.threadId // ""'
-      # Gmail uses URL-safe base64 (- instead of +, _ instead of /). Convert before decoding.
-      content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | gsub("-"; "+") | gsub("_"; "/") | @base64d else "" end) else "" end'
-      data.label_ids: '.labelIds // []'
-      data.size_estimate: .sizeEstimate
-      data.history_id: .historyId
-      data.references: 'if .payload then (.payload.headers | map(select(.name == "References")) | if length > 0 then .[0].value else null end) else null end'
-      data.reply_to: 'if .payload then (.payload.headers | map(select(.name == "Reply-To")) | if length > 0 then .[0].value else null end) else null end'
-      data.delivered_to: 'if .payload then (.payload.headers | map(select(.name == "Delivered-To")) | if length > 0 then .[0].value else null end) else null end'
-      # Attachment metadata: extract filename, mimeType, size, attachmentId from all parts
-      data.attachments: 'if .payload then (def collect_parts: if .parts then .parts[] | collect_parts else . end; [collect_parts | select(.filename != null and .filename != "" and .body.attachmentId != null) | {filename: .filename, mime_type: .mimeType, size: .body.size, attachment_id: .body.attachmentId}]) else [] end'
+    id: .id
+    name: 'if .payload then (.payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else "(no subject)" end'
+    text: '.snippet // ""'
+    author: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
+    datePublished: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
+    # Helper pattern for headers: map+select can return [], so check length before .[0].value
+    subject: 'if .payload then (.payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else "(no subject)" end'
+    snippet: '.snippet // ""'
+    timestamp: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
+    is_starred: 'if .labelIds then .labelIds | contains(["STARRED"]) else false end'
+    is_unread: 'if .labelIds then .labelIds | contains(["UNREAD"]) else false end'
+    is_draft: 'if .labelIds then .labelIds | contains(["DRAFT"]) else false end'
+    message_id: 'if .payload then (.payload.headers | map(select(.name == "Message-ID")) | if length > 0 then .[0].value else "" end) else "" end'
+    in_reply_to: 'if .payload then (.payload.headers | map(select(.name == "In-Reply-To")) | if length > 0 then .[0].value else null end) else null end'
+    conversation_id: '.threadId // ""'
+    # Gmail uses URL-safe base64 (- instead of +, _ instead of /). Convert before decoding.
+    content: 'if .payload then (.payload.parts // [.payload] | map(select(.mimeType == "text/plain")) | if length > 0 then .[0].body.data // "" | gsub("-"; "+") | gsub("_"; "/") | @base64d else "" end) else "" end'
+    data.label_ids: '.labelIds // []'
+    data.size_estimate: .sizeEstimate
+    data.history_id: .historyId
+    data.references: 'if .payload then (.payload.headers | map(select(.name == "References")) | if length > 0 then .[0].value else null end) else null end'
+    data.reply_to: 'if .payload then (.payload.headers | map(select(.name == "Reply-To")) | if length > 0 then .[0].value else null end) else null end'
+    data.delivered_to: 'if .payload then (.payload.headers | map(select(.name == "Delivered-To")) | if length > 0 then .[0].value else null end) else null end'
+    # Attachment metadata: extract filename, mimeType, size, attachmentId from all parts
+    data.attachments: 'if .payload then (def collect_parts: if .parts then .parts[] | collect_parts else . end; [collect_parts | select(.filename != null and .filename != "" and .body.attachmentId != null) | {filename: .filename, mime_type: .mimeType, size: .body.size, attachment_id: .body.attachmentId}]) else [] end'
 
-      # Typed reference: resolve sender as an account entity.
-      # Gmail returns From as "Display Name <email@example.com>" or just "email@example.com".
-      # Parses name/email with jaq, auto-creates/deduplicates account entity, links via send relationship.
-      from:
-        account:
-          handle: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end) else null end'
-          platform: '"email"'
-          display_name: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
+    # Typed reference: resolve sender as an account entity.
+    # Gmail returns From as "Display Name <email@example.com>" or just "email@example.com".
+    # Parses name/email with jaq, auto-creates/deduplicates account entity, links via send relationship.
+    from:
+      account:
+        handle: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end) else null end'
+        platform: '"email"'
+        display_name: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
 
-      # Multi-value typed references: To, Cc, Bcc recipients.
-      # _source splits the header into {email, name} objects per address.
-      # Split on ">, " to avoid breaking names with commas (e.g. "Bernstein, David H.").
-      # Each address becomes an account entity linked to this email.
-      # account[] signals the engine to create one entity per array element.
-      to:
-        account[]:
-          _source: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
-          handle: .email
-          platform: '"email"'
-          display_name: .name
-      cc:
-        account[]:
-          _source: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
-          handle: .email
-          platform: '"email"'
-          display_name: .name
-      bcc:
-        account[]:
-          _source: 'if .payload then (.payload.headers | map(select(.name == "Bcc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
-          handle: .email
-          platform: '"email"'
-          display_name: .name
+    # Multi-value typed references: To, Cc, Bcc recipients.
+    # _source splits the header into {email, name} objects per address.
+    # Split on ">, " to avoid breaking names with commas (e.g. "Bernstein, David H.").
+    # Each address becomes an account entity linked to this email.
+    # account[] signals the engine to create one entity per array element.
+    to:
+      account[]:
+        _source: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+        handle: .email
+        platform: '"email"'
+        display_name: .name
+    cc:
+      account[]:
+        _source: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+        handle: .email
+        platform: '"email"'
+        display_name: .name
+    bcc:
+      account[]:
+        _source: 'if .payload then (.payload.headers | map(select(.name == "Bcc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then {email: (split("<") | .[1] | rtrimstr(">")), name: (split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\""))} elif test("@") then {email: (rtrimstr(">")), name: null} else null end) | map(select(. != null)) else [] end) else [] end'
+        handle: .email
+        platform: '"email"'
+        display_name: .name
 
   conversation:
-    terminology: Thread
-    mapping:
-      id: .id
-      # For full thread (conversation.get): use subject from first message.
-      # For list stubs (conversation.list): snippet only, truncated to 120 chars.
-      name: 'if .messages then (.messages | .[0].payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else (.snippet // "" | if length > 120 then .[:120] + "…" else . end) end'
-      last_message: '.snippet // ""'
-      last_message_at: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
-      data.message_count: 'if .messages then (.messages | length) else null end'
-      data.history_id: .historyId
+    id: .id
+    name: 'if .messages then (.messages | .[0].payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else (.snippet // "" | if length > 120 then .[:120] + "…" else . end) end'
+    text: '.snippet // ""'
+    datePublished: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
+    last_message: '.snippet // ""'
+    last_message_at: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
+    data.message_count: 'if .messages then (.messages | length) else null end'
+    data.history_id: .historyId
 
 # ==============================================================================
 # OPERATIONS
@@ -115,7 +101,7 @@ operations:
 
   # --- Reading ---
 
-  email.list:
+  list_emails:
     description: "List email IDs (stubs only — no subject/body). Use conversation.list to browse with snippets, or email.get for full content."
     returns: email[]
     params:
@@ -135,7 +121,7 @@ operations:
       response:
         transform: ".messages // []"
 
-  email.get:
+  get_email:
     description: Get a specific email with full body content, headers, and attachment metadata
     returns: email
     params:
@@ -147,7 +133,7 @@ operations:
       query:
         format: full
 
-  email.search:
+  search_emails:
     description: "Search for email IDs using Gmail query syntax (stubs only — use email.get for full content)"
     returns: email[]
     params:
@@ -163,7 +149,7 @@ operations:
       response:
         transform: ".messages // []"
 
-  conversation.list:
+  list_conversations:
     description: List email threads with snippets, optionally filtered by label or search query (best for browsing)
     returns: conversation[]
     params:
@@ -183,7 +169,7 @@ operations:
       response:
         transform: ".threads // []"
 
-  conversation.get:
+  get_conversation:
     description: Get a full email thread with all messages, headers, body content, and attachment metadata
     returns: conversation
     params:
@@ -197,7 +183,7 @@ operations:
 
   # --- Sending ---
 
-  email.send:
+  send_email:
     description: Send a new email (plain text or HTML)
     returns: email
     params:
@@ -216,7 +202,7 @@ operations:
           "raw": "${["TO: ", PARAMS_TO, "\R\N", (IF PARAMS_CC THEN ["CC: ", PARAMS_CC, "\R\N"]}"
         }
 
-  email.reply:
+  reply_email:
     description: "Reply to an email (stays in the same thread). Get the original email first with email.get to obtain thread_id, in_reply_to, and subject."
     returns: email
     params:
@@ -239,7 +225,7 @@ operations:
           "threadId": "${PARAM_THREAD_ID}"
         }
 
-  email.forward:
+  forward_email:
     description: "Forward an email. Get the original email first with email.get to obtain the body content, then compose a new message with the forwarded content."
     returns: email
     params:
@@ -262,7 +248,7 @@ operations:
 
   # --- Modifying ---
 
-  email.modify:
+  modify_email:
     description: "Modify email labels — mark read/unread, star/unstar, archive, move to spam, apply/remove labels"
     returns: email
     params:
@@ -279,7 +265,7 @@ operations:
           "removeLabelIds": ${PARAM_REMOVE_LABELS // []}
         }
 
-  email.trash:
+  trash_email:
     description: Move an email to trash
     returns: email
     params:
@@ -289,7 +275,7 @@ operations:
       url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/trash"'
       method: POST
 
-  email.untrash:
+  untrash_email:
     description: Remove an email from trash
     returns: email
     params:
@@ -299,7 +285,7 @@ operations:
       url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/untrash"'
       method: POST
 
-  email.batch_modify:
+  batch_modify_email:
     description: "Modify labels on multiple emails at once (max 1000 IDs)"
     returns: void
     params:
@@ -317,7 +303,7 @@ operations:
           "removeLabelIds": ${PARAM_REMOVE_LABELS // []}
         }
 
-  email.batch_delete:
+  batch_delete_email:
     description: "Permanently delete multiple emails (CANNOT BE UNDONE — max 1000 IDs)"
     returns: void
     params:

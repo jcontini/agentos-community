@@ -13,63 +13,39 @@ auth:
   header: { x-api-key: "{token}" }
   label: API Key
   help_url: https://dashboard.exa.ai/api-keys
-
-connects_to: exa
-
-seed:
-  - id: exa
-    types: [software]
-    name: Exa
-    data:
-      software_type: api
-      url: https://exa.ai
-      launched: "2022"
-      platforms: [api]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: exa-ai
-
-  - id: exa-ai
-    types: [organization]
-    name: Exa AI Inc.
-    data:
-      type: company
-      url: https://exa.ai
-      founded: "2021"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   # Search results — index records, not full webpages
   result:
-    terminology: Result
-    mapping:
-      id: .url
-      url: .url
-      title: .title
-      snippet: .text
-      favicon: .favicon
-      indexed_at: .publishedDate
+    # --- Standard Display Fields ---
+    id: .url
+    name: .title
+    text: '.text // .summary // (if .highlights then .highlights[0] else null end)'
+    url: .url
+    image: '.image // .favicon'
+    author: .author
+    datePublished: .publishedDate
 
   # Full webpage content (for read operations)
   webpage:
-    terminology: Page
-    mapping:
-      id: .url
-      url: .url
-      title: .title
-      favicon: .favicon
-      published_at: .publishedDate
-      content: .text
+    # --- Standard Display Fields ---
+    id: .url
+    name: .title
+    text: .text
+    url: .url
+    image: '.image // .favicon'
+    author: .author
+    datePublished: .publishedDate
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  search.create:
+  search:
     description: Search the web using neural/semantic search
     returns: result[]
     wraps_as: search
@@ -77,6 +53,8 @@ operations:
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, description: "Number of results" }
+      category: { type: string, description: "Category of search (e.g. company, research paper, news, tweet, github)" }
+      include_text: { type: boolean, description: "Include full text of the results (default: true)" }
     rest:
       method: POST
       url: https://api.exa.ai/search
@@ -84,15 +62,14 @@ operations:
         query: .params.query
         numResults: .params.limit
         type: '"auto"'
+        category: .params.category
+        contents:
+          text: 'if .params.include_text != null then .params.include_text else true end'
+          summary: true
       response:
         root: "/results"
-        mapping:
-          id: .url
-          url: .url
-          title: .title
-          indexed_at: .publishedDate
 
-  webpage.read:
+  read_webpage:
     description: Extract full content from a URL
     returns: webpage
     web_url: .params.url
@@ -107,7 +84,7 @@ operations:
         text: true
       response:
         root: "/results/0"
-        # Uses transformer.webpage.mapping (default) — has .text for content
+        # Uses adapters.webpage (default) — has .text for content
 ---
 
 # Exa
@@ -128,25 +105,25 @@ Semantic web search and content extraction. Neural search finds content by meani
 
 ## Operations
 
-### search.create
+### search
 
 Create a web search. Returns search results (index records, not full page content).
 
 ```
-use({ skill: "exa", tool: "search.create", params: { query: "rust programming" } })
+use({ skill: "exa", tool: "search", params: { query: "rust programming" } })
 ```
 
 Results are `result` entities — snapshots of what the search engine knew about each URL.
-To get full page content, follow up with `webpage.read` on a result's URL.
+To get full page content, follow up with `read_webpage` on a result's URL.
 
-### webpage.read
+### read_webpage
 
 Extract full content from a URL.
 
 ```
-use({ skill: "exa", tool: "webpage.read", params: { url: "https://example.com" } })
+use({ skill: "exa", tool: "read_webpage", params: { url: "https://example.com" } })
 ```
 
 ## Known Limitations
 
-**`webpage.read`**: May fail for URLs that Exa can't crawl (e.g., pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`. Use `firecrawl` as fallback for problematic URLs.
+**`read_webpage`**: May fail for URLs that Exa can't crawl (e.g., pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`. Use `firecrawl` as fallback for problematic URLs.

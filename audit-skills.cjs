@@ -8,13 +8,15 @@
  *
  *   id, name, description, icon, color, website, privacy_url, terms_url
  *   auth, api, database, sources
- *   transformers  (alias: adapters — both accepted)
+ *   adapters
  *   operations, utilities, handles
- *   connects_to, seed, provides, agent
+ *   provides, agent
  *
  * ── Dead / forbidden keys (auto-removed) ────────────────────────────────────
  *
- *   instructions  — deserialized but never shown to LLM. Use markdown section.
+ *   instructions  — put skill instructions in the markdown body after front matter
+ *   connects_to   — removed from the runtime contract
+ *   seed          — removed from the runtime contract
  *   testing       — replaced by tests/mcp/skills.test.ts
  *   platforms     — not in Skill struct, silently ignored by serde
  *   credits       — not in Skill struct, silently ignored by serde
@@ -61,15 +63,17 @@ const ALLOWED_KEYS = new Set([
   'id', 'name', 'description', 'icon', 'color',
   'website', 'privacy_url', 'terms_url',
   'auth', 'api', 'database', 'sources',
-  'transformers', 'adapters',   // adapters is the serde alias for transformers
+  'adapters',
   'operations', 'utilities', 'handles',
-  'connects_to', 'seed', 'provides', 'agent',
+  'provides', 'agent',
 ]);
 
 // ── Keys that exist in YAMLs but are dead — auto-remove ──────────────────────
 
 const DEAD_KEYS = [
-  'instructions',  // deserialized but never surfaced to LLM
+  'instructions',  // use the markdown body after front matter instead
+  'connects_to',   // removed from the runtime contract
+  'seed',          // removed from the runtime contract
   'testing',       // replaced by skills.test.ts
   'platforms',     // not in Skill struct
   'credits',       // not in Skill struct

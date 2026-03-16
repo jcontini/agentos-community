@@ -67,18 +67,18 @@
         }
       ]
     },
-    "transformers": {
+    "adapters": {
       "type": "object",
-      "description": "Entity transformers that transform API data into universal entity format. Each key is an entity type.",
+      "description": "Entity adapters that transform API data into universal entity format. Each key is an entity type.",
       "additionalProperties": {
         "$ref": "#/definitions/transformer"
       }
     },
     "operations": {
       "type": "object",
-      "description": "Entity operations (e.g., task.list, message.send). Naming: {entity}.{operation}",
+      "description": "Entity-returning operations (e.g., search, read_webpage, list_tasks)",
       "propertyNames": {
-        "pattern": "^[a-z_]+\\.[a-z_]+$"
+        "pattern": "^[a-z][a-z0-9_]*$"
       },
       "additionalProperties": {
         "$ref": "#/definitions/operation"
@@ -93,10 +93,6 @@
       "additionalProperties": {
         "$ref": "#/definitions/utility"
       }
-    },
-    "instructions": {
-      "type": "string",
-      "description": "Free-form instructions for AI about how to use this skill"
     },
     "requires": {
       "type": "array",
@@ -120,27 +116,6 @@
     },
     "sources": {
       "$ref": "#/definitions/skillSources"
-    },
-    "connects_to": {
-      "oneOf": [
-        {
-          "type": "string",
-          "description": "Single product seed entity ID this adapter connects to"
-        },
-        {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Product seed entity IDs this adapter connects to"
-        }
-      ],
-      "description": "Product(s) this skill connects to — references seed entity IDs (e.g., 'youtube', 'whatsapp')"
-    },
-    "seed": {
-      "type": "array",
-      "description": "Seed entities to create on startup (products, organizations this skill connects to)",
-      "items": {
-        "$ref": "#/definitions/seedEntity"
-      }
     },
     "platforms": {
       "type": "array",
@@ -333,53 +308,41 @@
     },
     "transformer": {
       "type": "object",
-      "description": "Entity transformer that transforms API data into universal entity format",
-      "required": ["mapping"],
-      "additionalProperties": false,
-      "properties": {
-        "terminology": {
-          "type": "string",
-          "description": "What this service calls this entity (e.g., 'Issue' for Linear's tasks)"
-        },
-        "mapping": {
-          "type": "object",
-          "description": "API response → entity property mappings. Defined once, applied to all operations returning this entity.",
-          "additionalProperties": {
-            "oneOf": [
-              { "type": "string", "description": "jaq expression (e.g., '.id', '.content', '5 - .priority')" },
-              { "type": "null", "description": "Not provided by this API" },
-              {
-                "type": "object",
-                "description": "Relationship ref: looks up existing entity and creates a typed relationship. Value can evaluate to scalar or array (creates one relationship per element). Direction inferred from relationship schemas.",
-                "required": ["ref", "value"],
-                "properties": {
-                  "ref": { "type": "string", "description": "Entity type to look up (e.g., 'journey', 'outcome')" },
-                  "value": { "type": "string", "description": "jaq expression for the lookup value (scalar or array)" },
-                  "rel": { "type": "string", "description": "Explicit relationship type (optional — inferred from schemas if unambiguous)" },
-                  "lookup": { "type": "string", "enum": ["name"], "description": "How to find the referenced entity: by name" }
-                },
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "description": "Typed reference: creates linked entity + relationship. The field name in the parent mapping IS the relationship type. Must have exactly one key (entity type) mapping to field definitions.",
-                "minProperties": 1,
-                "maxProperties": 1,
-                "not": {
-                  "required": ["_rel"]
-                },
-                "additionalProperties": {
-                  "type": "object",
-                  "description": "Entity field mappings — jaq expressions for entity properties (e.g., { id: '.channel_id', name: '.channel' })",
-                  "additionalProperties": {
-                    "type": "string",
-                    "description": "jaq expression for entity field"
-                  }
-                }
+      "description": "Flat adapter body. The adapter object itself is the mapping.",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string", "description": "jaq expression (e.g., '.id', '.content', '5 - .priority')" },
+          { "type": "null", "description": "Not provided by this API" },
+          {
+            "type": "object",
+            "description": "Relationship ref: looks up existing entity and creates a typed relationship. Value can evaluate to scalar or array (creates one relationship per element). Direction inferred from relationship schemas.",
+            "required": ["ref", "value"],
+            "properties": {
+              "ref": { "type": "string", "description": "Entity type to look up (e.g., 'journey', 'outcome')" },
+              "value": { "type": "string", "description": "jaq expression for the lookup value (scalar or array)" },
+              "rel": { "type": "string", "description": "Explicit relationship type (optional — inferred from schemas if unambiguous)" },
+              "lookup": { "type": "string", "enum": ["name"], "description": "How to find the referenced entity: by name" }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Typed reference: creates linked entity + relationship. The field name in the parent mapping IS the relationship type. Must have exactly one key (entity type) mapping to field definitions.",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "not": {
+              "required": ["_rel"]
+            },
+            "additionalProperties": {
+              "type": "object",
+              "description": "Entity field mappings — jaq expressions for entity properties (e.g., { id: '.channel_id', name: '.channel' })",
+              "additionalProperties": {
+                "type": "string",
+                "description": "jaq expression for entity field"
               }
-            ]
+            }
           }
-        }
+        ]
       }
     },
     "operation": {
@@ -1000,54 +963,6 @@
         }
       }
     },
-    "seedEntity": {
-      "type": "object",
-      "description": "A seed entity declared by a skill for auto-creation",
-      "required": ["id", "types", "name"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Well-known slug for cross-adapter dedup (e.g., 'youtube', 'google', 'meta')"
-        },
-        "types": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Entity types (e.g., ['product'], ['organization'])"
-        },
-        "name": {
-          "type": "string",
-          "description": "Display name"
-        },
-        "data": {
-          "type": "object",
-          "description": "Entity properties matching the entity schema"
-        },
-        "relationships": {
-          "type": "array",
-          "description": "Relationships from this entity to other seed entities",
-          "items": {
-            "type": "object",
-            "required": ["role", "to"],
-            "properties": {
-              "role": {
-                "type": "string",
-                "description": "Reference role (e.g., 'offered_by', 'parent_of')"
-              },
-              "to": {
-                "type": "string",
-                "description": "Target seed entity ID"
-              },
-              "data": {
-                "type": "object",
-                "description": "Optional relationship data"
-              }
-            },
-            "additionalProperties": false
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "responseMapping": {
       "type": "object",
       "description": "Response transformation",
@@ -1066,7 +981,7 @@
         },
         "mapping": {
           "type": "object",
-          "description": "Field mappings for utilities (operations use transformers.{entity}.mapping instead)",
+          "description": "Field mappings for utilities (entity operations use the adapter mapping instead)",
           "additionalProperties": true
         },
         "static": {

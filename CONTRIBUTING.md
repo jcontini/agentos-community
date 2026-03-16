@@ -1,1087 +1,388 @@
 # Contributing to AgentOS Community
 
-Everything lives here — entities, skills, apps, and themes. Core (`agentos`) is a generic Rust engine; this repo is the ecosystem.
+This file is for **skill authoring**. It is intentionally narrow.
 
-In development, the server points directly at this repo (`~/dev/agentos-community`). **Skill edits are live immediately** — the server watches `skills/*/readme.md` and hot-reloads on save, no restart needed. If a skill fails to load (YAML error), the error is written to the skill's graph entity (`status: error`, `data.error`) and logged. Core embeds a snapshot at build time; the community version overrides it.
+If you're editing `skills/*/readme.md`, start here. If you're working on apps, CSS, UI components, or unrelated repo infrastructure, this is the wrong doc.
 
-| Concern | Directory | What it is |
-|---------|-----------|-----------|
-| **Entities** | `entities/` | The Memex model — what things ARE |
-| **Skills** | `skills/` | Service connections + agent instructions |
-| **Apps** | `apps/` | UI experiences (Videos, Memex, Settings, etc.) |
-| **Themes** | `themes/` | Visual styling (CSS) |
+In development, AgentOS reads skills directly from this repo. Skill YAML changes are picked up on the next skill call. If you changed Rust core in `~/dev/agentos`, run `./restart.sh` there.
 
----
+## Read This First
 
-## Guides
+Current source of truth:
 
-Read the relevant guide before starting work:
+- `CONTRIBUTING.md` — the skill contract
+- `skills/exa/readme.md` — best current example
+- `~/dev/agentos/bin/audit-skills.py` — migration guardrail for stale patterns
+- `test-skills.cjs` — direct MCP smoke testing
 
-| Guide | When to Use |
-|-------|-------------|
-| This file (`CONTRIBUTING.md`) | **Default.** Writing, updating, or fixing skills |
-| `skills/write-app.md` | Writing apps or entity components |
-| `skills/shell-history.md` | Querying shell history |
-| `skills/apple-biome.md` | Screen time, app usage, media playback, location |
+Useful example skills:
 
----
+- `skills/exa/readme.md` — REST + canonical mapping + good preview/full output
+- `skills/todoist/readme.md` — CRUD-ish operations and task-style entities
+- `skills/linear/readme.md` — GraphQL
+- `skills/youtube/readme.md` — command executor
+- `skills/gmail/readme.md` — OAuth example
+- `skills/reddit/readme.md` — cookie auth example
+- `skills/chrome/readme.md` and `skills/brave-browser/readme.md` — advanced keychain/crypto/steps patterns only if you truly need them
 
-## Quick Start
+## Workflow
 
 ```bash
-# 1. Edit directly in this repo (it's the live source)
-vim skills/my-skill/readme.md
-# Server hot-reloads instantly — no restart needed.
-# YAML errors appear in server logs and in the skill's graph entity.
+# 1. Edit the live skill definition
+$EDITOR skills/my-skill/readme.md
 
-# 2. Test
-curl http://localhost:3456/mem/tasks?skill=my-skill
-
-# 3. Validate and commit
+# 2. Validate schema + coverage
 npm run validate
-git add -A && git commit -m "Add my-skill"
-# Pre-commit hook validates YAML structure of changed skills automatically.
+
+# 3. Directly inspect real MCP output
+npm run mcp:call -- \
+  --skill exa \
+  --tool search \
+  --params '{"query":"rust ownership","limit":1}' \
+  --format json \
+  --detail preview
+
+# 4. Smoke-test the whole skill from its YAML
+npm run mcp:test -- exa --verbose
+
+# 5. If you changed Rust core in ~/dev/agentos
+(cd ~/dev/agentos && ./restart.sh)
 ```
 
----
+`./restart.sh` also nudges Cursor's MCP config. If Cursor still looks stale, manually toggle the `agentOS` MCP connection once.
+If the editor MCP path is broken or lagging behind your changes, use `npm run mcp:call` and `npm run mcp:test` as the ground-truth validation path while you restart the engine or reconnect the editor.
 
-## Commands
+## The Short Version
 
-```bash
-npm run validate             # Schema validation + test coverage (run first!)
-npm test                     # Functional tests (excludes .needs-work)
-npm run test:needs-work      # Test skills in .needs-work
-npm test skills/exa/tests    # Test specific skill
-npm run new-skill <name>     # Create skill scaffold
-```
+The current skill style is:
 
-| Command | What it checks |
-|---------|----------------|
-| `npm run validate` | Full validation: schema, entity refs, mappings, test coverage, icons |
-| `npm run validate whatsapp linear` | Validate specific skills only |
-| `npm test` | Functional tests — actually calls APIs, verifies behavior |
+- Use `adapters:`, not `transformers:`
+- Do not use `terminology:`
+- Do not use adapter-level `display:` blocks
+- Put canonical display fields directly in the adapter body
+- Use simple `snake_case` tool names like `search` or `read_webpage`
+- Do not use dotted names like `task.list` or `webpage.read`
+- The adapter body is the mapping
+- Do not add operation-level `response.mapping` unless the operation truly returns a different shape
+- Use `utilities:` for custom actions or non-entity return shapes
+- Validate output through the direct MCP path, not just by reading YAML
 
-**Pre-commit hook** runs automatically on `git commit` and validates YAML structure of any changed skills. `npm run validate` is the full audit — run it before opening a PR.
+## Minimal Skill Shape
 
----
+Every skill is a folder like:
 
-## Folder Structure
-
-Every skill is a folder inside `skills/`:
-
-```
+```text
 skills/
-  my-service/
-    readme.md     <- Skill definition (YAML front matter + markdown docs)
-    icon.svg      <- Required. Vector icon, or icon.png if no SVG available.
+  my-skill/
+    readme.md
+    icon.svg
     tests/
-      my-service.test.ts
 ```
 
----
-
-## YAML Front Matter
-
-The `readme.md` must start with a YAML front matter block between `---` delimiters.
-
-### Required fields
+The `readme.md` starts with YAML front matter:
 
 ```yaml
-id: my-service              # lowercase, hyphenated, unique in the repo
-name: My Service            # Display name
-description: One-line description of what this skill connects to
+id: my-skill
+name: My Skill
+description: One-line description
 icon: icon.svg
-```
-
-### Common optional fields
-
-```yaml
-color: "#FF4500"            # Brand hex color
-website: https://myservice.com
-privacy_url: https://myservice.com/privacy
-auth: none                  # or an auth config block (see Auth section)
-platforms: [macos]          # Limit to specific platforms if needed
-connects_to: my-service     # Seed entity ID this skill connects to
-instructions: |             # AI guidance for using this skill
-  Notes for the agent about how to use this skill well.
-```
-
----
-
-## Auth
-
-The auth block is a template. It declares where credential fields go in HTTP requests
-using `{placeholder}` syntax. Three injection points: `header`, `query`, `body` — each
-is a map of name → value with placeholders.
-
-Placeholders are extracted to drive the UI form (one password input per unique placeholder).
-Credentials are stored as `{ fields: { "placeholder": "value" } }`.
-
-### No auth
-```yaml
-auth: none
-```
-
-### Header auth (most common — Bearer token, API key header)
-```yaml
+website: https://example.com
 auth:
   header:
     Authorization: "Bearer {token}"
   label: API Key
-  help_url: https://myservice.com/api-keys
-```
+  help_url: https://example.com/api-keys
 
-Custom header names work too:
-```yaml
-auth:
-  header:
-    X-API-Key: "{token}"
-```
+adapters:
+  result:
+    id: .url
+    name: .title
+    text: .summary
+    url: .url
+    image: .image
+    author: .author
+    datePublished: .published_at
+    data.score: .score
 
-### Query param auth
-```yaml
-auth:
-  query:
-    api_key: "{token}"
-  label: API Key
-  help_url: https://myservice.com/api-keys
-```
-
-### Body auth (multi-field)
-
-For APIs that require credentials in the request body. Each placeholder becomes
-a separate input field in the UI:
-
-```yaml
-auth:
-  body:
-    apikey: "{apikey}"
-    secretapikey: "{secretapikey}"
-  label: API Keys
-  help_url: https://myservice.com/api-keys
-```
-
-### Combined injection
-
-Header + query + body can be combined if needed:
-```yaml
-auth:
-  header:
-    Authorization: "Bearer {token}"
-  query:
-    org_id: "{org_id}"
-```
-
-### Optional auth (skill works anonymously, better with credentials)
-```yaml
-auth:
-  header:
-    Authorization: "Bearer {token}"
-  optional: true    # Don't block operations if no credentials — anonymous mode
-  label: API Key
-  help_url: https://myservice.com/api-keys
-```
-
-Use `optional: true` when a service has anonymous access but authenticated users get
-higher rate limits, persistence, or additional features. Operations still run without
-credentials — the auth header is simply omitted.
-
-### Per-operation `auth: none` override
-
-For public endpoints inside an otherwise-authenticated skill — e.g. a signup utility
-that sends a magic link before the user has credentials:
-
-```yaml
-utilities:
-  signup:
-    auth: none    # Skip credential check for this operation only
+operations:
+  search:
+    description: Search the service
+    returns: result[]
     params:
-      email: { type: string, required: true }
-    returns:
-      sent: boolean
+      query: { type: string, required: true }
+      limit: { type: integer }
     rest:
       method: POST
-      url: '"https://api.myservice.com/auth/magic-link"'
+      url: https://api.example.com/search
       body:
-        email: .params.email
+        query: .params.query
+        limit: '.params.limit // 10'
+      response:
+        root: /results
 ```
 
-`auth: none` works on both `operations:` and `utilities:` entries, for any executor
-(rest, graphql, command, etc.). It completely skips credential resolution and header
-injection for that one operation. Without it, any skill with `auth:` configured will
-block all calls — including signup — until credentials exist.
+After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
 
-### Auth in command/jq templates
+## Adapters
 
-For command and jq executors, credential fields are also available as template variables:
-- `{{auth.key}}` — the primary token (for single-field credentials)
-- `{{auth.fieldname}}` — a specific credential field by name
-- `.auth.key` / `.auth.fieldname` — same, in jq syntax
+Adapters map raw API responses into AgentOS entities. Define the shape once in `adapters:` and let operations reference it via `returns:`.
 
-### Cookie-based auth (browser session extraction)
+The adapter body itself is the mapping object.
 
-For services that use cookie-based sessions (Amazon, Reddit, etc.), the skill
-can extract cookies directly from the user's browser. No API key entry needed — the
-browser IS the credential store.
+Canonical fields for rendering:
+
+- `name`
+- `text`
+- `url`
+- `image`
+- `author`
+- `datePublished`
+
+Rules:
+
+- Put canonical fields directly in the adapter body
+- Keep all default mapping in `adapters.<entity>`
+- Use `data.*` for adapter-specific extra fields
+- Use `content` only for long body text that should be stored separately
+- Map to an existing entity type whenever possible
+
+Good:
 
 ```yaml
-auth:
-  cookies:
-    domain: ".amazon.com"
-    names: ["x-main", "session-id", "session-token", "ubid-main"]
-    browser: firefox     # optional: "firefox" (default) or "chrome"
+adapters:
+  result:
+    id: .url
+    name: .title
+    text: '.text // .summary'
+    url: .url
+    image: .image
+    author: .author
+    datePublished: .publishedDate
+    data.score: .score
 ```
 
-**How it works:**
-1. System reads cookies from Firefox (plaintext) or Chrome (encrypted, auto-decrypted)
-2. Filters to the specified domain and cookie names
-3. Injects them as a `Cookie` header on every HTTP request
-4. No refresh needed — session cookies persist for weeks/months
-
-**Fields:**
-- `domain` (required) — cookie domain to match (e.g., `.amazon.com`)
-- `names` (optional) — specific cookie names to extract. If omitted, all cookies for the domain are used.
-- `browser` (optional) — preferred browser. Default: tries Firefox first (plaintext = simpler), then Chrome (needs keychain + AES decryption).
-
-**When cookies expire:** the skill will get redirect responses (302 to login page).
-Tell the user: "Your session has expired. Please log into [service] in Firefox."
-
-Cookie auth and template auth (`header`/`query`/`body`) are mutually exclusive.
-Cookie auth takes precedence if both are defined.
-
-### OAuth 2.0 Auth
-
-For services that use OAuth (Google Workspace, GitHub, Spotify, etc.), declare an
-`oauth` block. The server handles the entire Authorization Code Grant flow:
-
-```yaml
-auth:
-  oauth:
-    client_id: "xxx.apps.googleusercontent.com"
-    client_secret: "GOCSPX-xxx"
-    auth_url: "https://accounts.google.com/o/oauth2/v2/auth"
-    token_url: "https://oauth2.googleapis.com/token"
-    scopes:
-      - "https://www.googleapis.com/auth/gmail.modify"
-      - "https://www.googleapis.com/auth/calendar"
-    auth_params:
-      access_type: "offline"   # Gets a refresh token
-      prompt: "consent"        # Always show consent screen
-  label: Google Workspace
-  help_url: https://console.cloud.google.com/apis/credentials
-```
-
-**How it works:**
-1. User opens `GET /sys/oauth/authorize/{skill_id}` in browser
-2. Browser redirects to the provider's consent screen
-3. User grants access → provider redirects to `GET /sys/oauth/callback`
-4. Server exchanges the authorization code for tokens (access + refresh)
-5. Tokens stored as a credential (`access_token`, `refresh_token`, `expires_at`)
-6. On every API call: loads tokens, refreshes if expired, injects `Authorization: Bearer {token}`
-
-**Fields:**
-- `client_id` (required) — OAuth client ID
-- `client_secret` (required) — OAuth client secret (for Desktop/installed apps, not truly secret)
-- `auth_url` (required) — Authorization endpoint URL
-- `token_url` (required) — Token exchange endpoint URL
-- `scopes` (optional) — OAuth scopes to request
-- `auth_params` (optional) — Extra parameters for the authorization URL
-
-**Token refresh:** Access tokens expire (typically 1 hour). The system automatically
-uses the refresh token to get a new access token before each API call. If the refresh
-token is revoked, the user must re-authorize via the browser.
-
-OAuth auth, cookie auth, and template auth are mutually exclusive. OAuth takes
-precedence if multiple are defined.
-
----
-
-## Transformers
-
-Transformers map API response fields to entity schema properties. Define once, applied
-to all operations that return that entity type.
+Bad:
 
 ```yaml
 transformers:
-  task:
-    terminology: Task         # What this service calls it (for UI labels)
-    mapping:
-      id: .id
-      title: .content
-      completed: .checked
-      priority: 5 - .priority # Invert: service 4=urgent -> AgentOS 1=highest
-      due_date: .due.date?    # Optional field
-      url: '"https://myservice.com/task/" + .id'
-```
-
-### Mapping adapter-specific fields with `data.*`
-
-Entity schemas have a `data` bag for adapter-specific fields that don't belong in the
-shared schema. Map into it directly using dotted keys:
-
-```yaml
-transformers:
-  task:
-    mapping:
-      id: .id
+  result:
+    terminology: Search Result
+    display:
       title: .title
-      data.remote_id: .identifier      # Service's own human-readable ID (e.g., "AGE-123")
-      data.status: .state.name         # Service-specific status label
-      data.url: .url                   # Deep link back into the service
-      data.assignee.id: '(.assignee // {}).id'    # Nested object in data bag
-      data.assignee.name: '(.assignee // {}).name'
 ```
-
-The `data.*` pattern stores the value at `entity.data.remote_id`, `entity.data.assignee`, etc.
-Use this for anything that's useful for agents but not part of the cross-service entity schema.
-
-### Rich Content (entity bodies)
-
-Use `content` to store long-form text (descriptions, transcripts, markdown) separately
-from structured fields. It's indexed in full-text search.
-
-```yaml
-transformers:
-  post:
-    mapping:
-      id: .id
-      title: .title
-      content: .body_html        # stored in entity_bodies, FTS-indexed
-```
-
-If an entity can have multiple bodies (e.g. a video with description AND transcript):
-
-```yaml
-transformers:
-  video:
-    mapping:
-      id: .id
-      title: .title
-      content: .transcript_text
-      content_role: '"transcript"'   # role key in entity_bodies (default: "body")
-```
-
-**Rules:**
-- `content` is reserved — not stored in entity data, routed to `entity_bodies`
-- `content_role` sets the role (default `"body"`). Use when an entity has more than one body
-- Both are stripped from entity data before storage — don't also map them to a schema property
-
-### Supporting Models
-
-For data shapes returned by a skill that aren't standalone entities (like DNS records),
-define a transformer without the entity needing its own operations:
-
-```yaml
-transformers:
-  domain:
-    terminology: Domain
-    mapping:
-      fqdn: .domain
-      status: .status
-      registrar: '"porkbun"'
-      expires_at: .expireDate
-
-  dns_record:               # Not a standalone entity — just a data shape
-    terminology: DNS Record
-    mapping:
-      id: .id
-      name: .name
-      type: .type
-      values: '[.content]'
-      ttl: '.ttl | tonumber'
-```
-
-Operations can then declare `returns: dns_record[]` and the transformer is applied.
-
-### Choosing the right entity type
-
-Always map to an existing entity before creating a new one. Entity types live on the
-graph — browse them with `list({ type: "_types" })` for an overview, or
-`get({ id: "type_id" })` for a specific type's full schema and properties.
-
-Common types:
-`task`, `person`, `message`, `email`, `conversation`, `post`, `video`, `channel`,
-`document`, `meeting`, `forum`, `webpage`, `website`, `repository`, `domain`, `tag`
-
-Only create a new entity type if no existing type fits. Good reasons:
-- Fundamentally different properties (e.g., `pull_request` has `head`, `base`, `mergeable`)
-- Needs different UI rendering
-- Has unique operations that don't fit existing patterns
-
-New types can be created directly on the graph via `create({ type: "_type", ... })`.
-No YAML files or server restarts required.
-
----
 
 ## Operations
 
-Entity CRUD. Naming: `entity.operation` — `task.list`, `message.send`, `video.search`
+Operations are the entity-returning skill tools.
+
+Naming rules:
+
+- Use `snake_case`
+- Prefer short, obvious names
+- Good: `search`, `read_webpage`, `list_tasks`, `get_task`, `create_task`
+- Bad: `task.list`, `webpage.read`
+
+Return rules:
+
+- `returns: entity[]` for list/search results
+- `returns: entity` for single entities
+- If the result is not an entity shape, use `utilities:`
+
+Limit rules:
+
+- Do not hardcode hidden limits
+- If a skill accepts `limit`, do not give it a misleading low default
+- Pass caller-provided limits through to the API
+
+## Utilities
+
+Use `utilities:` when one of these is true:
+
+- The return value is not an entity
+- The tool is an action, not a normal entity read/write
+- The tool returns a custom inline schema
+
+Examples:
+
+- `setup`
+- `whoami`
+- `signup`
+- `add_blocker`
+
+Utility names should also be `snake_case`.
+
+## Auth
+
+Most skills only need one of these:
+
+- `auth: none`
+- header auth
+- query auth
+- body auth
+
+Most common pattern:
 
 ```yaml
-operations:
-  task.list:
-    description: List tasks
-    returns: task[]
-    rest:
-      method: GET
-      url: https://api.myservice.com/tasks
-      response:
-        root: /results        # JSON pointer to array in response
-
-  task.get:
-    description: Get a specific task by ID
-    returns: task
-    params:
-      id: { type: string, required: true }
-    rest:
-      method: GET
-      url: '"https://api.myservice.com/tasks/" + .params.id'
-
-  task.create:
-    description: Create a new task
-    returns: task
-    params:
-      title: { type: string, required: true }
-      due_date: { type: string }
-    rest:
-      method: POST
-      url: https://api.myservice.com/tasks
-      body:
-        content: .params.title
-        due: { date: .params.due_date }
+auth:
+  header:
+    x-api-key: "{token}"
+  label: API Key
+  help_url: https://example.com/api-keys
 ```
 
-### Return types
+Useful rules:
 
-| Return | When |
-|--------|------|
-| `entity[]` | List / search operations |
-| `entity` | Get / create / update operations |
-| `void` | Delete or mutation with no useful return value |
+- Use `optional: true` if the skill works anonymously but improves with credentials
+- Use per-operation `auth: none` for public signup/setup utilities inside an otherwise-authenticated skill
+- For cookie auth, OAuth, command auth templating, or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
 
-Use `void` for any operation that doesn't return an entity. For richer return shapes
-(success flags, IDs, custom data), use `utilities:` instead — see the Utilities section.
+Example references:
 
-### Valid operation suffixes
+- Cookie auth: `skills/reddit/readme.md`
+- OAuth: `skills/gmail/readme.md`
+- Advanced keychain/crypto/steps: `skills/chrome/readme.md`, `skills/brave-browser/readme.md`
 
-The validator knows these suffixes and enforces their return types:
-`list`, `get`, `create`, `update`, `delete`, `search`, `pull`, `archive`
+## Expressions
 
-**Any other suffix in `operations:` will be treated as a read and must return an entity.**
-If you need an action like `claim`, `assign`, `transfer`, or `check` — put it in
-`utilities:` (see below), not in `operations:`.
+You only need two expression styles:
 
-### Limits and pagination
+- `rest:` and `graphql:` use jq/jaq-style expressions
+- `command:` uses Handlebars-style templates
 
-**Skills should NOT hardcode result limits.** The engine has its own pagination:
-
-- **Import path** (skill → engine → SQLite): unbounded, extracts everything
-- **Query path** (SQLite → view → MCP response): capped at 50 by ViewConfig, includes `total` count
-
-If your skill accepts a `limit` parameter, do NOT set a `default:` value on it.
-The engine will pass through whatever the caller specifies. In SQL templates,
-use a high fallback (1000) as a safety net:
+Common jq/jaq patterns:
 
 ```yaml
-params:
-  limit: { type: integer }    # No default — engine controls this
-sql:
-  query: |
-    SELECT * FROM items
-    ORDER BY updated_at DESC
-    LIMIT :limit
-  params:
-    limit: '.params.limit // 1000'    # Safety net, not a real default
-```
-
-For REST APIs that require a limit parameter, pass through the caller's value
-with a reasonable fallback matching the API's max page size.
-
-For command executors, same principle — use a high default in the template:
-```yaml
-command: my-tool --limit {{params.limit | default:1000}}
-```
-
-**Never** hardcode limits like `LIMIT 50` or `ytsearch10:` without a corresponding
-overridable parameter. If the caller can't control it, it's a hidden cap.
-
-### Executors
-
-| Executor | Use case | Example skill |
-|----------|----------|---------------|
-| `rest` | HTTP REST APIs | `todoist`, `exa` |
-| `graphql` | GraphQL APIs | `linear` |
-| `sql` | SQLite/Postgres queries | `imessage`, `postgres` |
-| `command` | CLI tools, local scripts | `youtube`, `granola` |
-| `swift` | macOS native frameworks | `apple-calendar` |
-| `applescript` | macOS automation | |
-| `csv` | Parse CSV files/data | |
-| `keychain` | macOS Keychain access | |
-| `crypto` | PBKDF2 key derivation, AES-128-CBC decryption | |
-| `steps` | Multi-step pipelines — chain executors | |
-
-**Planned executors (not yet implemented):**
-
-| Executor | Use case |
-|----------|----------|
-| `oauth` | OAuth2 authorization code flow, token refresh |
-
-### Command Executor
-
-Runs a local binary with arguments. Output is parsed as JSON (falls back to string).
-
-```yaml
-operations:
-  video.search:
-    description: Search YouTube videos
-    returns: video[]
-    params:
-      query: { type: string, required: true }
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "yt-dlp --flat-playlist --dump-json 'ytsearch10:{{params.query}}' 2>/dev/null | jq -s '.'"
-      timeout: 60
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `binary` | string | Binary name (resolved via PATH + common dirs) |
-| `args` | string[] | Arguments array — each element interpolated with `{{params.x}}` |
-| `args_string` | string | Alternative: single string split on whitespace |
-| `stdin` | string | Content piped to stdin — use for large inputs instead of args |
-| `timeout` | integer | Timeout in seconds (default: 60) |
-| `working_dir` | string | Working directory (interpolated, supports `~/`) |
-| `response` | object | Response mapping (same as REST — root, mapping) |
-
-**Credentials in command args:** Use `{{auth.key}}` to inject the resolved credential
-into args or stdin. The engine resolves it from the AgentOS credential store before
-template rendering — it's available the same way as `{{params.x}}`:
-
-```yaml
-operations:
-  website.create:
-    returns: website
-    params:
-      content: { type: string, required: true }
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "python3 ~/dev/skills/publish.py --token '{{auth.key}}'"
-      stdin: "{{params.content}}"
-```
-
-If credentials aren't configured and the skill has `optional: true` auth, `{{auth.key}}`
-renders as an empty string — scripts should handle that gracefully.
-
-**Tips:**
-- Use `bash -l -c "..."` to get a login shell (loads PATH, homebrew, pyenv, etc.)
-- Python scripts should `print(json.dumps(result))` — executor parses stdout as JSON
-- Pass large content (HTML, file data) via `stdin:` rather than args to avoid shell quoting
-- Use `2>/dev/null` to suppress stderr noise from CLI tools
-- Use `{{#if params.x}} --flag '{{params.x}}'{{/if}}` for optional string args
-- Avoid `{{#if}}` for integer/boolean params — falsy values (`0`, `false`) may not skip
-
-### Keychain Executor
-
-Reads entries from the macOS Keychain (or platform-native secure storage) via the `keyring` crate.
-Returns `{"value": "..."}`.
-
-```yaml
-operations:
-  key.get:
-    description: Get Chrome Safe Storage key
-    returns: credential
-    keychain:
-      service: "Chrome Safe Storage"
-      account: "Chrome"   # optional, defaults to $USER
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `service` | string | Keychain service name (e.g., "Chrome Safe Storage") |
-| `account` | string | Account name (optional, defaults to current user, supports `$USER`) |
-| `response` | object | Response mapping |
-
-### Crypto Executor
-
-Generic cryptographic primitives. Two algorithms:
-
-**PBKDF2-HMAC-SHA1** — key derivation:
-```yaml
-crypto:
-  algorithm: pbkdf2
-  password: "{{get_key.value}}"
-  salt: "saltysalt"
-  iterations: 1003
-  key_length: 16
-```
-
-**AES-128-CBC** — decryption with PKCS7 padding:
-```yaml
-crypto:
-  algorithm: aes-128-cbc
-  key: "{{derive.value}}"
-  iv: "20202020202020202020202020202020"
-  data: "{{raw_cookies.encrypted_value}}"
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `algorithm` | string | `"pbkdf2"` or `"aes-128-cbc"` |
-| `password` | string | PBKDF2: password input (template-interpolated) |
-| `salt` | string | PBKDF2: salt string |
-| `iterations` | integer | PBKDF2: iteration count |
-| `key_length` | integer | PBKDF2: output key length in bytes |
-| `key` | string | AES: hex-encoded 16-byte key (template-interpolated) |
-| `iv` | string | AES: hex-encoded 16-byte IV (template-interpolated) |
-| `data` | string | AES: hex-encoded ciphertext (template-interpolated) |
-| `response` | object | Response mapping |
-
-Both algorithms return `{"value": "hex_string"}`.
-
-### Steps Executor
-
-Multi-step pipelines that chain executors sequentially. Each step has an `id`, uses any
-executor, and can reference previous step outputs via `{{step_id.field}}`.
-
-```yaml
-operations:
-  credential.get:
-    description: Extract encrypted cookies from Chrome
-    params:
-      domain: { type: string, required: true }
-    returns: credential
-    steps:
-      - id: get_key
-        keychain:
-          service: "Chrome Safe Storage"
-
-      - id: derive
-        crypto:
-          algorithm: pbkdf2
-          password: "{{get_key.value}}"
-          salt: "saltysalt"
-          iterations: 1003
-          key_length: 16
-
-      - id: raw_cookies
-        sql:
-          database: "~/Library/Application Support/Google/Chrome/Default/Cookies"
-          query: "SELECT name, encrypted_value FROM cookies WHERE host_key LIKE :domain"
-          params:
-            domain: ".{{params.domain}}"
-
-      - id: decrypt
-        crypto:
-          algorithm: aes-128-cbc
-          key: "{{derive.key}}"
-          iv: "20202020202020202020202020202020"
-          data: "{{raw_cookies.rows}}"
-```
-
-**Step fields:**
-- `id` — required, used to reference this step's output in later steps
-- Any executor key (`rest`, `sql`, `command`, `keychain`, `crypto`, etc.)
-- `skip_if` — conditional skip (Handlebars expression)
-
-Each step's output is stored in a context map. Later steps access it via `{{step_id.field}}`.
-The final step's output becomes the operation's return value.
-
----
-
-## How Data Flows: Graph-First
-
-AgentOS is **graph-first**. Skills sync data INTO the Memex; queries read FROM it.
-
-```
-Skill (API/command) -> extract + transform -> Memex (SQLite) -> REST/MCP response
-```
-
-**Default list requests read from cache — they do NOT call skills.**
-
-| Request | What happens |
-|---------|-------------|
-| `GET /mem/tasks` | Reads cached graph. Fast (0ms). No skill execution. |
-| `GET /mem/tasks?refresh=true` | Syncs ALL task skills first, then reads graph. |
-| `GET /mem/tasks?refresh=true&skill=todoist` | Syncs only Todoist, then reads graph. |
-
-**`?refresh=true` is how you trigger a live pull.** Without it, you only see what was previously synced.
-
-```bash
-# First sync: pulls data from your skill into the graph
-curl -H "X-Agent: test" "http://localhost:3456/mem/tasks?refresh=true&skill=my-service"
-
-# Subsequent reads: fast, from cache
-curl -H "X-Agent: test" "http://localhost:3456/mem/tasks"
-
-# Direct skill call (bypasses graph, returns live data)
-curl -X POST "http://localhost:3456/use/my-service/task.list" \
-  -H "Content-Type: application/json" \
-  -d '{"limit": 10}'
-```
-
----
-
-## Expression Syntax
-
-Skills use **two syntaxes** depending on the executor:
-
-### REST / GraphQL operations — jaq expressions (jq syntax)
-
-```yaml
-# jaq expressions — used in rest: and graphql: blocks
-url: '"https://api.example.com/tasks/" + .params.id'
+url: '"https://api.example.com/items/" + .params.id'
 query:
-  limit: .params.limit | tostring
-  priority: 5 - .params.priority
+  q: .params.query
+  limit: '.params.limit | tostring'
 body:
-  content: .params.title
-  due: { date: .params.due_date }
+  title: .params.title
 ```
 
-**Common jaq patterns:**
-- String concat: `'"https://example.com/" + .params.id'`
-- To string: `.params.limit | tostring`
-- URL encode: `.params.query | @uri`
-- Unix -> ISO: `.created_utc | todate`
-- Optional: `.due.date?`
-- Conditional: `'if .params.x == "y" then "a" else "b" end'`
-- Math: `5 - .params.priority`
-
-### Command executor — Handlebars templates
+Common command patterns:
 
 ```yaml
-# Template syntax — used in command: args, stdin, and working_dir
 command:
   binary: bash
   args:
     - "-l"
     - "-c"
-    - "yt-dlp --dump-json '{{params.url}}' 2>/dev/null"
-  stdin: "{{params.content}}"
+    - "my-script --query '{{params.query}}'"
 ```
 
-**Template patterns:**
-- Simple value: `{{params.query}}`
-- Auth credential: `{{auth.key}}`
-- Default value: `{{params.limit | default:10}}`
-- Conditional flag: `{{#if params.title}} --title '{{params.title}}'{{/if}}`
+If you need advanced command, steps, or crypto behavior, copy from an existing skill.
 
----
+## View Contract
 
-## Credits
-
-The `credits` field is the unified place for attribution and dependency declaration.
-If your skill needs or is inspired by something, it goes here. There's no separate
-`needs` or `desires` section — crediting forces attribution.
+The `run` tool accepts:
 
 ```yaml
-credits:
-  - entity: repository          # An entity capability this skill needs
-    operations: [write]
-    relationship: needs         # Required to function
-  - entity: webpage
-    operations: [read]
-    relationship: desires       # Optional but better with it
-  - skill: git
-    relationship: appreciates   # Attribution / inspiration
-    reason: Shared patterns for working with git repositories
+view:
+  detail: preview | full
+  format: markdown | json
 ```
 
-### Relationship types
+Rules:
 
-| Relationship | Meaning |
-|-------------|---------|
-| `needs` | Required — skill won't work without this entity capability |
-| `desires` | Optional — better experience if installed |
-| `appreciates` | Attribution — this influenced or inspired the skill |
+- `detail` changes data volume
+- `format` changes representation
+- Default is markdown preview
+- Preview keeps canonical fields and truncates long `text`
+- Full returns all mapped fields
+- JSON returns a `{ data, meta }` envelope
 
-**Entity vs skill credits:**
-- Use `entity` + `operations` when you need a *capability* (runtime resolves what provides it)
-- Use `skill` when you're attributing or relating to a *specific skill*
+This is why canonical mapping fields matter.
 
----
+## Direct MCP Testing
 
-## Seed Entities
+Use direct MCP testing whenever you change a skill. This is the fastest way to verify the real output contract.
 
-Seed entities are graph nodes created on skill load. Use them to credit upstream projects,
-declare what service the skill connects to, and model the maintainers behind it.
+`mcp:call` and `mcp:test` automatically use the newest built `agentos` binary. Set `AGENTOS_BINARY=/path/to/agentos` if you need to force a specific one.
 
-```yaml
-seed:
-  - id: my-service
-    types: [software]
-    name: My Service
-    data:
-      software_type: api        # api | cli | app | service | library
-      url: https://myservice.com
-      launched: "2020"
-      platforms: [web]
-      pricing: freemium         # free | freemium | paid | open_source
-    relationships:
-      - role: offered_by
-        to: my-service-org
-
-  - id: my-service-org
-    types: [organization]
-    name: My Service Inc.
-    data:
-      type: company
-      url: https://myservice.com
-```
-
-Always create a seed entity for:
-- The service this skill connects to
-- Any CLI tool, library, or upstream dependency the skill wraps
-- The author/organization behind critical dependencies
-
----
-
-## Utilities
-
-For operations that don't fit standard entity CRUD — introspection, actions, setup flows,
-custom return shapes. Use utilities when:
-- The return isn't an entity (workflow states, org info, success flags)
-- The action verb isn't in the standard operation set (`claim`, `assign`, `transfer`, `setup`)
-- You need a mutation that returns a custom shape
-
-```yaml
-utilities:
-  get_workflow_states:
-    description: List available workflow states for a team
-    params:
-      team_id: { type: string, required: true }
-    returns:
-      id: string
-      name: string
-      type: string
-    rest:
-      method: GET
-      url: '"https://api.myservice.com/teams/" + .params.team_id + "/states"'
-      response:
-        root: /states
-
-  add_blocker:
-    description: Add a blocking relationship between two issues
-    params:
-      id: { type: string, required: true }
-      blocker_id: { type: string, required: true }
-    returns: void
-    rest:
-      method: POST
-      url: https://api.myservice.com/relations
-      body:
-        issueId: .params.blocker_id
-        relatedIssueId: .params.id
-        type: '"blocks"'
-
-  setup:
-    description: Auto-configure account params after credential is added
-    returns:
-      org_name: string
-      teams: array
-    graphql:
-      query: "{ organization { name } teams { nodes { id name } } }"
-      response:
-        root: /data
-```
-
-**Naming rules (enforced by validator):** utility names must be `snake_case` — no dots,
-no spaces. Pattern: `verb_noun` (`get_teams`, `add_blocker`, `claim_site`) or just a
-noun (`setup`, `whoami`, `signup`). For credential acquisition flows, `signup` is the
-conventional name — pair it with `auth: none` so it works before credentials exist.
-
-**`returns` in utilities** can be:
-- `void` — mutation with no useful output
-- An inline object schema — `{ id: string, name: string }` for custom shapes
-- An array — `returns: array` for list-style utilities
-
----
-
-## Testing
-
-Every operation needs at least one test. Tests use the `aos()` helper:
-
-```typescript
-import { describe, it, expect, beforeAll } from "vitest";
-import { aos } from "../../../tests/utils/fixtures";
-
-const skill = "my-service";
-let skipTests = false;
-
-describe("My Service Skill", () => {
-  beforeAll(async () => {
-    try {
-      await aos().call("UseAdapter", { skill, tool: "task.list", params: {} });
-    } catch (e: any) {
-      if (e.message?.includes("Credential not found")) {
-        console.log("  > Skipping: no credentials");
-        skipTests = true;
-      } else throw e;
-    }
-  });
-
-  describe("task.list", () => {
-    it("returns array of tasks", async () => {
-      if (skipTests) return;
-      const result = await aos().call("UseAdapter", {
-        skill,
-        tool: "task.list",
-        params: {},
-      });
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
-
-  // Include destructive operations in tests even if skipped — validator checks coverage
-  describe("task.create", () => {
-    it("creates a task (skipped — would modify data)", async () => {
-      const _ = { tool: "task.create" };
-      expect(true).toBe(true);
-    });
-  });
-});
-```
-
-**Important:** The test helper calls `UseAdapter`, not `UseSkill`. The validator looks
-for `tool: "operation.name"` in test files. Include every operation, even destructive
-ones that are skipped.
-
----
-
-## Validation & Publishing
+JSON preview:
 
 ```bash
-# From the community repo root:
-npm run validate              # Schema check + test coverage audit
-npm test skills/my-service/tests   # Run your skill's tests
-
-# If validate passes:
-git add skills/my-service/
-git commit -m "Add My Service skill"
-gh pr create --title "Add My Service skill" --body "Connects AgentOS to [service]."
+npm run mcp:call -- \
+  --skill exa \
+  --tool search \
+  --params '{"query":"rust ownership","limit":1}' \
+  --format json \
+  --detail preview
 ```
 
-### Validation checks
+JSON full:
 
-- `icon.svg` or `icon.png` exists
-- All required front matter fields present (`id`, `name`, `description`)
-- Every operation has a test referencing `tool: "operation.name"`
-- No orphaned transformers (must be referenced by at least one operation)
-
-### PR conventions
-
-- Title: `Add [Service] skill` or `Update [Service] skill: [what changed]`
-- Include a brief description of what the service is and what operations you mapped
-- Link to the service's API docs
-
----
-
-## Entities
-
-Entity types live on the graph as `_type` entities — not as YAML files on disk. The
-`entities/` directory in this repo is legacy reference documentation; it is NOT read at
-runtime. The engine bootstraps core types from `seed.sql` and new types are created
-directly on the graph.
-
-To browse types: `list({ type: "_types" })` for an overview, or `get({ id: "type_id" })`
-for a specific type's full schema. To create a new type:
-`create({ type: "_type", name: "My Type", ... })`.
-
-**Always map to an existing entity type before creating a new one.** Only create a new
-type if the domain has genuinely different properties or needs different UI rendering.
-
-When building skills, use `data.*` mapping for adapter-specific fields that don't belong
-in the shared schema. See the Transformers section above for details.
-
----
-
-## Entity Components
-
-**Components must only compose primitives — never custom CSS.**
-
-```tsx
-// Good: uses data-* attributes for styling
-<div data-component="stack" data-direction="horizontal" data-gap="md">
-  <span data-component="text" data-variant="title">{title}</span>
-</div>
-
-// Bad: custom CSS that breaks themes
-<div style={{ display: 'flex', gap: '16px' }}>
-  <span className="my-title">{title}</span>
-</div>
+```bash
+npm run mcp:call -- \
+  --skill exa \
+  --tool search \
+  --params '{"query":"rust ownership","limit":1}' \
+  --format json \
+  --detail full
 ```
 
-**Why:** Themes style primitives via `[data-component="text"]` selectors. Custom CSS breaks theming.
+Markdown full:
 
-**Image proxy:** External images need proxying to bypass hotlink protection. Import the shared helper:
-
-```tsx
-import { getProxiedSrc } from '/ui/lib/utils.js';
-
-// getProxiedSrc handles data:, blob:, protocol-relative, and external URLs
-// External URLs are rewritten to /ui/proxy/image?url=...
-<img src={getProxiedSrc(item.thumbnail)} />
+```bash
+npm run mcp:call -- \
+  --skill exa \
+  --tool search \
+  --params '{"query":"rust ownership","limit":1}' \
+  --detail full \
+  --raw
 ```
 
----
+YAML-driven smoke test:
 
-## Skill Checklist
+```bash
+npm run mcp:test -- exa --verbose
+```
 
-Before committing a skill:
+Use `tests/utils/mcp-client.ts` only when you want reusable Vitest coverage. For quick validation, use `mcp:call` first.
 
-- [ ] `skills/my-service/` folder exists with `readme.md` + `icon.svg`/`icon.png`
-- [ ] All required front matter: `id`, `name`, `description`, `icon`, `website`
-- [ ] Auth configured correctly for the service (`optional: true` if service has anonymous access)
-- [ ] Public endpoints (signup, etc.) use `auth: none` at the operation level
-- [ ] `transformers` map to existing entity types (check with `list({ type: "_types" })`)
-- [ ] Adapter-specific fields use `data.*` mapping (not polluting the entity schema)
-- [ ] Operations use correct `entity.operation` naming with known suffixes only
-- [ ] Actions that don't fit standard CRUD are in `utilities:` with snake_case names
-- [ ] `returns: void` used for mutations/deletes; inline schema for custom shapes
-- [ ] Seed entities credit the upstream service + any CLI/library dependencies
-- [ ] Tests cover all operations AND utilities (even skipped destructive ones)
+## Validation
+
+Before committing:
+
+- Run `npm run validate`
+- Run direct MCP checks for the changed skill
+- Run `npm run mcp:test -- <skill> --verbose`
+- Run targeted tests if the skill already has them
+
+What `validate` should catch:
+
+- Required front matter
+- Schema shape
+- Icon presence
+- Test coverage references
+- Basic structural problems
+
+## Checklist
+
+Before you commit a skill:
+
+- [ ] Uses `adapters:`, not `transformers:`
+- [ ] No `terminology:`
+- [ ] No adapter `display:` blocks
+- [ ] Uses canonical mapping fields where available
+- [ ] Uses simple `snake_case` operation names
+- [ ] No unnecessary `response.mapping` overrides
+- [ ] Uses `utilities:` for non-entity or action-style tools
+- [ ] Direct MCP preview/full output looks correct
 - [ ] `npm run validate` passes
-- [ ] `npm test` passes (or gracefully skips if no credentials)
+- [ ] `npm run mcp:test -- <skill> --verbose` passes
 
----
+## Advanced Stuff
 
-## The `.needs-work` Folder
+This guide does not try to document every executor or every edge case.
 
-Skills that fail validation live in `skills/.needs-work/`. To fix one:
+If you need something advanced, copy an existing skill:
 
-1. Fix the issues
-2. Run `npm run validate`
-3. Move to working folder: `mv skills/.needs-work/my-skill skills/my-skill`
+- `linear` for GraphQL
+- `youtube` for command execution
+- `gmail` for OAuth
+- `reddit` for cookie auth
+- `chrome` / `brave-browser` for keychain, crypto, and multi-step extraction
 
----
-
-## Manifest
-
-**Never edit `manifest.json` manually!** GitHub Actions auto-generate it on push to `main`.
-
-```bash
-node scripts/generate-manifest.js        # Regenerate
-node scripts/generate-manifest.js --check # Validate only
-```
-
----
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `tests/skills/skill.schema.json` | Schema source of truth for skill YAML |
-| `tests/utils/fixtures.ts` | Test utilities (`aos()` helper) |
-| `entities/` (legacy) | Reference docs only — types live on the graph as `_type` entities |
-
----
-
-## License
-
-MIT licensed. Contributions are MIT licensed and may be used in official releases including commercial offerings.
+If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.

@@ -13,54 +13,30 @@ auth:
   header: { Authorization: "Bearer {token}" }
   label: API Key
   help_url: https://www.firecrawl.dev/app/api-keys
-
-connects_to: firecrawl
-
-seed:
-  - id: firecrawl
-    types: [software]
-    name: Firecrawl
-    data:
-      software_type: api
-      url: https://firecrawl.dev
-      launched: "2024"
-      platforms: [api]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: mendable
-
-  - id: mendable
-    types: [organization]
-    name: Mendable Inc.
-    data:
-      type: company
-      url: https://firecrawl.dev
-      founded: "2022"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    # Note: Firecrawl uses different field names for search vs read
-    # Search: .url, .title, .description
-    # Read: .metadata.sourceURL, .metadata.title, .markdown
-    # So we use inline mappings in operations and leave adapter mapping empty
-    mapping: {}
+    id: '.metadata.sourceURL // .metadata.url // .url'
+    name: '.metadata.title // .metadata.ogTitle // .title'
+    text: '.markdown // .metadata.description'
+    url: '.metadata.sourceURL // .metadata.url // .url'
+    image: '.metadata.ogImage // .metadata.image // .metadata["og:image"]'
+    author: '.metadata.author // .metadata["article:author"]'
+    datePublished: '.metadata.publishedTime // .metadata.publishedDate // .metadata["article:published_time"]'
+    data.content_type: '"text/markdown"'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  # Note: Search removed - Firecrawl's semantic search requires full-sentence queries
-  # which is confusing. Use Exa for search, Firecrawl for JS-heavy pages.
-
-  webpage.read:
+  read_webpage:
     description: Read a URL with browser rendering (handles JS-heavy sites)
     returns: webpage
+    web_url: .params.url
     params:
       url: { type: string, required: true, description: "URL to read" }
       wait_for_js: { type: integer, default: 0, description: "Milliseconds to wait for JS (0=fast, 1000+=for SPAs)" }
@@ -77,17 +53,13 @@ operations:
         timeout: .params.timeout
       response:
         root: "/data"
-        mapping:
-          id: .metadata.sourceURL
-          url: .metadata.sourceURL
-          title: .metadata.title
-          content_type: '"text/markdown"'
-          content: .markdown
 ---
 
 # Firecrawl
 
 Read webpages with full browser rendering. Handles JS-heavy sites that other tools struggle with.
+
+Use Exa for discovery/search, then use Firecrawl to fetch URLs that need a real browser render.
 
 ## Setup
 
@@ -107,3 +79,19 @@ Read webpages with full browser rendering. Handles JS-heavy sites that other too
 - Notion pages
 - Sites that fail with Exa
 - When you need fresh/live content
+
+## Operation
+
+### read_webpage
+
+Read a URL with browser rendering and return a `webpage` entity.
+
+```js
+use({
+  skill: "firecrawl",
+  tool: "read_webpage",
+  params: { url: "https://react.dev/", wait_for_js: 1000 }
+})
+```
+
+Use `wait_for_js` for pages that need time to hydrate. Leave it at `0` for fast/static pages.
