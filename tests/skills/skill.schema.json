@@ -84,13 +84,6 @@
         "$ref": "#/definitions/operation"
       }
     },
-    "requires": {
-      "type": "array",
-      "description": "System dependencies that must be installed",
-      "items": {
-        "$ref": "#/definitions/dependency"
-      }
-    },
     "handles": {
       "type": "object",
       "description": "URL patterns this adapter handles for routing",
@@ -106,29 +99,6 @@
     },
     "sources": {
       "$ref": "#/definitions/skillSources"
-    },
-    "platforms": {
-      "type": "array",
-      "description": "Platforms this skill has been tested on",
-      "items": {
-        "type": "string",
-        "enum": ["macos", "windows", "linux"]
-      }
-    },
-    "testing": {
-      "type": "object",
-      "description": "Test configuration — exemptions for test linting requirements",
-      "properties": {
-        "exempt": {
-          "type": "object",
-          "description": "Test exemptions — keys are check names, values are reasons",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Reason for exemption"
-          }
-        }
-      },
-      "additionalProperties": false
     },
     "agent": {
       "type": "object",
@@ -194,39 +164,6 @@
           "description": {
             "type": "string",
             "description": "Human-readable description of what this provider supplies"
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "credits": {
-      "type": "array",
-      "description": "Relationships to other skills or entity capabilities. Unifies attribution and dependency declaration — if you need it, you credit it.",
-      "items": {
-        "type": "object",
-        "required": ["relationship"],
-        "properties": {
-          "skill": {
-            "type": "string",
-            "description": "Skill ID in the community repo (e.g., 'git', 'write-app')"
-          },
-          "entity": {
-            "type": "string",
-            "description": "Entity type for capability-based references (e.g., 'repository', 'webpage')"
-          },
-          "operations": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Operations on the entity this skill uses (e.g., ['write', 'read'])"
-          },
-          "relationship": {
-            "type": "string",
-            "enum": ["needs", "desires", "appreciates"],
-            "description": "'needs' = required to function, 'desires' = optional but better, 'appreciates' = attribution / inspiration"
-          },
-          "reason": {
-            "type": "string",
-            "description": "Optional note explaining why (shown in credits UI)"
           }
         },
         "additionalProperties": false

@@ -13,7 +13,7 @@ terms_url: https://www.anthropic.com/terms-of-service
 # For now, auth is disabled until the steps/keychain/crypto executors exist.
 auth:
   header:
-    Authorization: "Bearer {token}"
+    Authorization: '"Bearer " + .auth.key'
     anthropic-version: "2023-06-01"
     anthropic-beta: "oauth-2025-04-20"
   label: Claude Desktop subscription

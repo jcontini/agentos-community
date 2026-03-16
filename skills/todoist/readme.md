@@ -14,7 +14,7 @@ terms_url: https://doist.com/terms-of-service
 
 auth:
   header:
-    Authorization: "Bearer {token}"
+    Authorization: '"Bearer " + .auth.key'
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 # ═══════════════════════════════════════════════════════════════════════════════

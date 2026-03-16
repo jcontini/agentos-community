@@ -10,7 +10,7 @@ privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
 
 auth:
-  header: { x-api-key: "{token}" }
+  header: { x-api-key: .auth.key }
   label: API Key
   help_url: https://console.anthropic.com/settings/keys
 

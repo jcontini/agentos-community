@@ -10,7 +10,7 @@ privacy_url: https://here.now/privacy
 terms_url: https://here.now/terms
 
 auth:
-  header: { Authorization: "Bearer {token}" }
+  header: { Authorization: '"Bearer " + .auth.key' }
   label: API Key
   optional: true
   help_url: https://here.now
@@ -94,7 +94,7 @@ operations:
         - ".params.description"
         - ".params.filename"
         - ".params.content_type"
-        - ".params.auth_key"
+        - ".auth.key"
       working_dir: .
       stdin: ".params.content"
       timeout: 60
@@ -138,7 +138,7 @@ operations:
         - ".params.slug"
         - ".params.filename"
         - ".params.content_type"
-        - ".params.auth_key"
+        - ".auth.key"
       working_dir: .
       stdin: ".params.content"
       timeout: 60

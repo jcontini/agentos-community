@@ -85,7 +85,7 @@ operations:
         - "--op"
         - "conversations"
         - "--session-key"
-        - ".params.auth.sessionKey"
+        - ".auth.sessionKey"
         - if .params.account then "--org" else "" end
         - if .params.account then .params.account else "" end
         - "--limit"
@@ -109,7 +109,7 @@ operations:
         - "--op"
         - "conversation"
         - "--session-key"
-        - ".params.auth.sessionKey"
+        - ".auth.sessionKey"
         - "--id"
         - ".params.id"
         - if .params.account then "--org" else "" end
@@ -134,7 +134,7 @@ operations:
         - "--op"
         - "search"
         - "--session-key"
-        - ".params.auth.sessionKey"
+        - ".auth.sessionKey"
         - "--query"
         - ".params.query"
         - if .params.account then "--org" else "" end
@@ -162,7 +162,7 @@ operations:
         - "--op"
         - "import"
         - "--session-key"
-        - ".params.auth.sessionKey"
+        - ".auth.sessionKey"
         - if .params.account then "--org" else "" end
         - if .params.account then .params.account else "" end
         - "--limit"
@@ -187,7 +187,7 @@ operations:
         - "--op"
         - "organizations"
         - "--session-key"
-        - ".params.auth.sessionKey"
+        - ".auth.sessionKey"
       timeout: 15
 
   extract_magic_link:

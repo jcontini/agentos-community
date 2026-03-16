@@ -1,5 +1,0 @@
-{
-  "yaml.schemas": {
-    "./tests/adapters/adapter.schema.json": "adapters/**/readme.md"
-  }
-}

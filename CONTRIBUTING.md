@@ -104,7 +104,7 @@ icon: icon.svg
 website: https://example.com
 auth:
   header:
-    Authorization: "Bearer {token}"
+    Authorization: '"Bearer " + .auth.key'
   label: API Key
   help_url: https://example.com/api-keys
 
@@ -256,7 +256,7 @@ Most common pattern:
 ```yaml
 auth:
   header:
-    x-api-key: "{token}"
+    x-api-key: .auth.key
   label: API Key
   help_url: https://example.com/api-keys
 ```
@@ -323,10 +323,10 @@ Example references:
 
 ## Expressions
 
-You only need one dynamic expression style plus one auth placeholder style:
+Use one expression style everywhere:
 
-- `rest:`, `graphql:`, and `command:` use jq/jaq-style expressions for dynamic values
-- `auth:` still uses `{token}`-style credential placeholders today
+- `rest:`, `graphql:`, `command:`, and `auth:` all use jq/jaq-style expressions
+- Resolved credentials are available under `.auth.*` such as `.auth.key` or `.auth.access_token`
 
 Common jq/jaq patterns:
 
@@ -334,9 +334,12 @@ Common jq/jaq patterns:
 url: '"https://api.example.com/items/" + .params.id'
 query:
   q: .params.query
-  limit: '.params.limit | tostring'
+  limit: .params.limit // 10
 body:
   title: .params.title
+auth:
+  header:
+    Authorization: '"Bearer " + .auth.key'
 ```
 
 Common command patterns:

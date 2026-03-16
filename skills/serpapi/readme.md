@@ -11,7 +11,7 @@ terms_url: https://serpapi.com/terms-and-conditions
 
 auth:
   query:
-    api_key: "{token}"
+    api_key: .auth.key
   label: API Key
   help_url: https://serpapi.com/manage-api-key
 

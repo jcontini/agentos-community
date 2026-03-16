@@ -705,7 +705,7 @@ How it works:
 1. Mimestream stores Google OAuth tokens in the Keychain under `"Mimestream: {email}"` / `"OAuth"`
 2. The `mimestream` skill reads those tokens via its `credential_get` operation
 3. This skill declares `auth: { oauth: { service: google } }`
-4. The resolver matches the provider → calls `credential_get` → injects `Authorization: Bearer {token}`
+4. The resolver matches the provider → calls `credential_get` → injects the configured auth headers using `.auth.*` fields
 5. If multiple installed skills provide Google auth, the agent should ask the user which provider to use
 
 **Without a provider skill:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.

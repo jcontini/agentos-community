@@ -66,7 +66,7 @@ const displayName = skillName
 function entityReadme(): string {
   const authBlock = isLocal ? 'auth: none' : `auth:
   header:
-    Authorization: "Bearer {token}"
+    Authorization: '"Bearer " + .auth.key'
   label: API Key
   help_url: https://example.com/api-keys`;
 
@@ -156,7 +156,7 @@ operations:
       url: https://api.example.com/search
       query:
         q: .params.query
-        limit: '(.params.limit // 10) | tostring'
+        limit: .params.limit // 10
       response:
         root: /results
 
@@ -181,8 +181,8 @@ real service contract.
 ## Workflow
 
 1. Update the YAML frontmatter until \`npm run validate -- ${skillName}\` is clean.
-2. Replace the placeholder tests with real \`run({ skill, tool, params })\` coverage.
-3. Use \`npm run mcp:call -- --skill ${skillName} --tool search --params '{"query":"test"}' --format json --detail full\` for live runtime proof.
+2. Use \`npm run mcp:call -- --skill ${skillName} --tool search --params '{"query":"test"}' --format json --detail full\` for live runtime proof.
+3. Run \`npm run mcp:test -- ${skillName} --verbose\` once the real contract is wired up.
 `;
 }
 
@@ -195,8 +195,6 @@ icon: icon.svg
 color: "#805AD5"
 website: https://example.com
 auth: none
-platforms:
-  - macos
 
 operations:
   list_status:
@@ -252,7 +250,7 @@ window, browser, or OS automation.
 
 - Rename the placeholder tools to real local-control operations
 - Replace the sample Python snippets with your real command executors
-- Add any required binaries to \`requires:\`
+- Add setup notes in the markdown body if the skill depends on local binaries
 
 ## Runtime Proof
 

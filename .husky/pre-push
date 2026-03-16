@@ -1,6 +1,3 @@
-# Run full integration tests before pushing
-# This catches issues that schema validation alone can't
-
 echo "🚀 Running pre-push checks..."
 
 # Get commits that will be pushed (not yet on remote)
@@ -15,5 +12,17 @@ echo "📦 Commits being pushed:"
 echo "$COMMITS" | head -5
 echo ""
 
-# Run full tests for changed apps
-./tests/test-changed.sh --committed
+# Collect changed skills from commits that are about to be pushed
+SKILLS=$(git diff @{u}..HEAD --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^skills/[^/]+/' | cut -d/ -f2 | sort -u | tr '\n' ' ')
+
+if [ -z "$SKILLS" ]; then
+  echo "✅ No skill changes to validate"
+  exit 0
+fi
+
+echo "📋 Validating skills: $SKILLS"
+node tests/skills/scripts/validate.mjs $SKILLS || exit 1
+
+echo ""
+echo "🔌 MCP smoke test..."
+npm run mcp:test -- $SKILLS || exit 1

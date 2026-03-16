@@ -1,2 +1,0 @@
-# Auto-resolve manifest.json conflicts by regenerating
-manifest.json merge=regenerate-manifest

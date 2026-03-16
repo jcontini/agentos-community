@@ -1,6 +1,6 @@
 # AgentOS Community
 
-Skills, entities, apps, and themes for [AgentOS](https://github.com/jcontini/agentos).
+Community skills and skill docs for [AgentOS](https://github.com/jcontini/agentos).
 
 ---
 
@@ -48,10 +48,10 @@ This means:
                                │
               ┌────────────────┼────────────────┐
               ▼                ▼                ▼
-         ┌─────────┐   ┌───────────┐   ┌─────────────┐
-         │ Desktop  │   │  HTTP API │   │  MCP (AI)   │
-         │  (apps)  │   │  (REST)   │   │  (agents)   │
-         └─────────┘   └───────────┘   └─────────────┘
+         ┌───────────┐   ┌─────────────┐
+         │  HTTP API │   │  MCP (AI)   │
+         │  (REST)   │   │  (agents)   │
+         └───────────┘   └─────────────┘
 ```
 
 ### What You Can Do
@@ -73,14 +73,6 @@ This means:
 ## What's Here
 
 ```
-entities/          Entity type definitions (the Memex model)
-  _primitives/     Abstract base types (document, media, collection)
-  _relationships/  Relationship types (contains, references, posts)
-  task.yaml        Concrete entity types
-  person.yaml
-  video.yaml
-  ...
-
 skills/            Skills — service connections + agent context
   todoist/         Maps Todoist API → task, project, tag entities
   reddit/          Maps Reddit JSON → post, forum entities
@@ -88,22 +80,7 @@ skills/            Skills — service connections + agent context
   curl/            Fetches URLs → webpage entities
   CONTRIBUTING.md  Skill-building guide (auth, adapters, operations, testing)
   ...
-
-apps/              Visual apps (UI experiences)
-  videos/          Video player with channel info and embed
-  memex/           Universal entity viewer and editor
-  settings/        System preferences
-  ...
-
-themes/            Visual styling (CSS)
-  os/
-    macos9/        Mac OS 9 theme
-    win98/         Windows 98 theme
 ```
-
-### Entity Schemas
-
-Entity types are defined in YAML. They declare properties, validation rules, operations, and display hints. The Rust engine reads these schemas — no hardcoded types.
 
 ### Skills
 
@@ -141,17 +118,11 @@ adapters:
 
 FTS5 indexes bodies alongside entity names and data. Search returns BM25-ranked results with highlighted excerpts showing exactly where terms matched. Any skill that produces content becomes searchable automatically.
 
-### Themes
-
-Visual styling for the AgentOS desktop. Mac OS 9, Windows 98, and more.
-
----
-
 ## Contributing
 
 **Anyone can contribute.** Found a bug? Want a new skill? Have an idea? [Open an issue](https://github.com/jcontini/agentos-community/issues) or see [CONTRIBUTING.md](CONTRIBUTING.md) for how to build skills.
 
-**The community builds everything.** Skills, entities, apps, themes—all open source, all MIT licensed, all yours forever.
+**The community builds the skill layer.** Skills and documentation are open source, MIT licensed, and designed to stay simple enough for both humans and small models to follow.
 
 ---
 
@@ -160,22 +131,6 @@ Visual styling for the AgentOS desktop. Mac OS 9, Windows 98, and more.
 **MIT** — see [LICENSE](LICENSE)
 
 By contributing, you grant AgentOS the right to use your contributions in official releases, including commercial offerings. Your code stays open forever. See [CONTRIBUTING.md](CONTRIBUTING.md) for full terms.
-
----
-
-## App Store
-
-**The AgentOS App Store fetches items directly from this repository.** No backend servers, no infrastructure costs—GitHub IS the backend.
-
-When you add or modify skills/entities/apps/themes, a GitHub Action automatically:
-1. Scans the repository structure
-2. Reads metadata from YAML front matter
-3. Generates an updated `manifest.json`
-4. Commits it back to the repo
-
-**You never touch `manifest.json` manually!** Just add your files and the manifest updates automatically.
-
----
 
 ## For Developers
 

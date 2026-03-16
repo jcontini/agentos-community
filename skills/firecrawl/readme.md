@@ -10,7 +10,7 @@ privacy_url: https://www.firecrawl.dev/privacy
 terms_url: https://www.firecrawl.dev/terms-and-conditions
 
 auth:
-  header: { Authorization: "Bearer {token}" }
+  header: { Authorization: '"Bearer " + .auth.key' }
   label: API Key
   help_url: https://www.firecrawl.dev/app/api-keys
 # ═══════════════════════════════════════════════════════════════════════════════

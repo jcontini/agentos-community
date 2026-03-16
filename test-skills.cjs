@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * test-skills.cjs — direct MCP skill runner + YAML-driven audit runner
+ * test-skills.cjs — direct MCP skill runner and smoke harness
  *
  * One MCP process. Can either:
  * - run coverage-style smoke tests across skill YAML definitions, or

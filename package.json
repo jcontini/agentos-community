@@ -1,7 +1,7 @@
 {
   "name": "agentos-integrations",
   "version": "0.1.0",
-  "description": "Apps and connectors for AgentOS",
+  "description": "Community skills for AgentOS",
   "type": "module",
   "scripts": {
     "test": "node tests/skills/scripts/validate.mjs",
@@ -10,7 +10,6 @@
     "validate": "node tests/skills/scripts/validate.mjs",
     "validate:patterns": "node tests/skills/scripts/validate-patterns.mjs",
     "new-skill": "npx tsx tests/skills/scripts/new-skill.ts",
-    "test:changed": "./tests/test-changed.sh --staged",
     "prepare": "husky"
   },
   "devDependencies": {

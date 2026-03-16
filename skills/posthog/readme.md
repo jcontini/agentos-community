@@ -11,7 +11,7 @@ terms_url: https://posthog.com/terms
 
 auth:
   header:
-    Authorization: "Bearer {token}"
+    Authorization: '"Bearer " + .auth.key'
   label: Personal API Key
   help_url: https://us.posthog.com/settings/user-api-keys
 

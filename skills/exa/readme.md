@@ -10,7 +10,7 @@ privacy_url: https://exa.ai/privacy
 terms_url: https://exa.ai/terms
 
 auth:
-  header: { x-api-key: "{token}" }
+  header: { x-api-key: .auth.key }
   label: API Key
   help_url: https://dashboard.exa.ai/api-keys
 # ═══════════════════════════════════════════════════════════════════════════════
