@@ -269,6 +269,7 @@ Useful rules:
 - If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
 - For cookie auth, retry with `params.cookie_provider` set to the chosen provider id, or persist that choice in account params for repeat use
 - `browser:` under `auth.cookies` is legacy compatibility only. Do not rely on it in new skills; prefer cookie provider skills instead
+- Prefer `brave-browser` or `firefox` as the concrete cookie-provider examples. Treat `chrome` as a lower-level Chromium keychain/decryption helper unless the runtime and docs explicitly promote it to a provider.
 - Today `provides:` is primarily an auth contract. Do not invent broader generic provider/consumer patterns in skill YAML unless the runtime and docs explicitly support them
 - For command auth templating or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
 

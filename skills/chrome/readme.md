@@ -8,50 +8,31 @@ color: "#4285F4"
 website: https://www.google.com/chrome
 auth: none
 
-connects_to: google-chrome
-
-seed:
-  - id: google-chrome
-    types: [software]
-    name: Google Chrome
-    data:
-      software_type: browser
-      url: https://www.google.com/chrome
-      platforms: [macos, windows, linux]
-      wikidata_id: Q777
-    relationships:
-      - role: offered_by
-        to: google
-
-  - id: google
-    types: [organization]
-    name: Google
-    data:
-      type: company
-      url: https://google.com
-      wikidata_id: Q95
+# Chrome remains useful for Chromium keychain/decryption flows, but AgentOS
+# currently treats Brave Browser and Firefox as the primary cookie-provider
+# examples. Do not assume Chrome participates in provider matchmaking unless
+# the skill explicitly declares `provides:`.
 
 database:
   macos: "~/Library/Application Support/Google/Chrome/Default/History"
 # ═══════════════════════════════════════════════════════════════════════════════
-# TRANSFORMERS
+# ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      id: .url
-      url: .url
-      title: .title
-      data: '{ visit_count: .visit_count }'
+    id: .url
+    name: '.title // .url'
+    url: .url
+    data.visit_count: .visit_count
+    data.last_visit_unix: .last_visit_unix
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.list:
+  list_webpages:
     description: List recently visited pages from Chrome browsing history
     returns: webpage[]
     params:
@@ -71,7 +52,7 @@ operations:
       response:
         root: "/"
 
-  webpage.search:
+  search_webpages:
     description: Search Chrome browsing history by URL or title
     returns: webpage[]
     params:
@@ -98,10 +79,9 @@ operations:
         root: "/"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-utilities:
   get_cookie_key:
     description: >
       Derive the AES-128 decryption key for Chrome cookies on macOS.
@@ -199,6 +179,10 @@ utilities:
 
 Access browsing history, bookmarks, cookies, and saved logins from Google Chrome's local databases.
 
+This skill is primarily a lower-level Chromium data/decryption helper. For the
+current provider-auth flow, prefer `brave-browser` or `firefox` when a consumer
+skill needs browser cookies via `provides:`.
+
 ## Data Sources
 
 All data is read directly from Chrome's SQLite databases on disk. No network access, no Chrome extension needed.
@@ -209,7 +193,7 @@ All data is read directly from Chrome's SQLite databases on disk. No network acc
 
 ## Operations
 
-### webpage.list / webpage.search
+### list_webpages / search_webpages
 
 Browse and search Chrome history. Returns web pages with visit counts.
 
@@ -228,4 +212,4 @@ Chrome encrypts cookie values on macOS using:
 2. PBKDF2-HMAC-SHA1 (salt: "saltysalt", 1003 iterations, 16-byte key)
 3. AES-128-CBC (IV: all spaces = `20` repeated 16 times)
 
-The `get_cookie_key` utility handles steps 1-2 automatically.
+The `get_cookie_key` operation handles steps 1-2 automatically.
