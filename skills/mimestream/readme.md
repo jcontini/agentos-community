@@ -9,12 +9,11 @@ website: https://mimestream.com
 privacy_url: https://mimestream.com/privacy
 
 auth: none
-connects_to: mimestream
 
 # Mimestream stores Google OAuth tokens in the macOS Keychain under
 # "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.
 # These tokens have full Google scopes (Gmail, Contacts, Calendar).
-# Any skill that needs Google OAuth can use Mimestream as an auth source.
+# Mimestream can act as a Google auth provider skill for other consumers.
 provides:
   - service: google
     scopes:
@@ -29,84 +28,57 @@ provides:
     account_param: account
     accounts_via: list_accounts
     account_field: email
-
-seed:
-  - id: mimestream
-    types: [software]
-    name: Mimestream
-    data:
-      software_type: app
-      url: https://mimestream.com
-      launched: "2021"
-      platforms: [macos]
-      pricing: paid
-      notes: Native macOS email client built on Apple frameworks. Uses Gmail API for sync. Stores local cache in Core Data SQLite database.
-    relationships:
-      - role: offered_by
-        to: mimestream-pty
-
-  - id: mimestream-pty
-    types: [organization]
-    name: Mimestream Pty Ltd
-    data:
-      type: company
-      url: https://mimestream.com
-      founded: "2020"
-      location: Melbourne, Australia
 database: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
 
 # ==============================================================================
 # TRANSFORMERS
 # ==============================================================================
 
-transformers:
+adapters:
   email:
-    terminology: Email
-    mapping:
-      id: .id
-      subject: .subject
-      snippet: .snippet
-      from_address: .from_email
-      timestamp: .date_received
-      is_starred: '.is_flagged == 1'
-      is_draft: '.is_draft == 1'
-      message_id: .message_id
-      in_reply_to: .in_reply_to
-      conversation_id: '.thread_id | tostring'
-      content: .body_text
-      data.account_email: .account_email
-      data.is_unread: '.is_unread == 1'
-      data.has_attachments: '.has_attachments == 1'
-      data.is_sent: '.is_sent == 1'
-      data.is_trash: '.is_trash == 1'
-      data.is_spam: '.is_spam == 1'
-      data.to_raw: .to_raw
-      data.cc_raw: .cc_raw
-      data.bcc_raw: .bcc_raw
-      data.body_html: .body_html
-      data.size_estimate: .size_estimate
-
-      # Typed reference: resolve sender as an account entity
-      # Creates/deduplicates account by email handle, links via send relationship
-      # account --send--> email (engine infers direction from ontology)
-      # Expressions reference source fields directly (no two-pass evaluation)
-      from:
-        account:
-          handle: .from_email
-          platform: '"email"'
-          display_name: .from_name
+    id: .id
+    name: .subject
+    text: .snippet
+    author: .from_email
+    datePublished: .date_received
+    subject: .subject
+    snippet: .snippet
+    from_address: .from_email
+    timestamp: .date_received
+    is_starred: '.is_flagged == 1'
+    is_draft: '.is_draft == 1'
+    message_id: .message_id
+    in_reply_to: .in_reply_to
+    conversation_id: '.thread_id | tostring'
+    content: .body_text
+    data.account_email: .account_email
+    data.is_unread: '.is_unread == 1'
+    data.has_attachments: '.has_attachments == 1'
+    data.is_sent: '.is_sent == 1'
+    data.is_trash: '.is_trash == 1'
+    data.is_spam: '.is_spam == 1'
+    data.to_raw: .to_raw
+    data.cc_raw: .cc_raw
+    data.bcc_raw: .bcc_raw
+    data.body_html: .body_html
+    data.size_estimate: .size_estimate
+    from:
+      account:
+        handle: .from_email
+        platform: '"email"'
+        display_name: .from_name
 
   conversation:
-    terminology: Thread
-    mapping:
-      id: '.id | tostring'
-      name: .subject
-      last_message: .snippet
-      last_message_at: .date_updated
-      data.account_email: .account_email
-      data.message_count: .message_count
-      data.has_unread: '.has_unread == 1'
-      data.has_attachments: '.has_attachments == 1'
+    id: '.id | tostring'
+    name: .subject
+    text: .snippet
+    datePublished: .date_updated
+    last_message: .snippet
+    last_message_at: .date_updated
+    data.account_email: .account_email
+    data.message_count: .message_count
+    data.has_unread: '.has_unread == 1'
+    data.has_attachments: '.has_attachments == 1'
 
   # BLOCKED: file entity type not yet registered in engine type system (task eb14f8fa)
   # Uncomment when _type creation via MCP lands data in the right column
@@ -130,7 +102,7 @@ transformers:
 # ==============================================================================
 
 operations:
-  email.list:
+  list_emails:
     description: List emails, optionally filtered by mailbox, account, or flags
     returns: email[]
     params:
@@ -188,7 +160,7 @@ operations:
         mailbox: .params.mailbox
         limit: '.params.limit // 1000'
 
-  email.get:
+  get_email:
     description: Get a specific email with full body content and headers
     returns: email
     params:
@@ -238,7 +210,7 @@ operations:
       response:
         root: "/0"
 
-  email.search:
+  search_emails:
     description: Search emails by subject, snippet, body text, or sender
     returns: email[]
     params:
@@ -288,7 +260,7 @@ operations:
         account: .params.account
         limit: '.params.limit // 1000'
 
-  conversation.list:
+  list_conversations:
     description: List email threads with latest message info
     returns: conversation[]
     params:
@@ -314,7 +286,7 @@ operations:
         account: .params.account
         limit: '.params.limit // 1000'
 
-  conversation.get:
+  get_conversation:
     description: Get all messages in an email thread
     returns: conversation
     params:
@@ -386,11 +358,6 @@ operations:
   #     response:
   #       root: "/0"
 
-# ==============================================================================
-# UTILITIES
-# ==============================================================================
-
-utilities:
   list_accounts:
     description: List configured email accounts with their primary email address
     returns:
@@ -413,7 +380,7 @@ utilities:
     description: |
       Get a live Google OAuth access token sourced from Mimestream's keychain.
       Returns access_token, refresh_token, client_id, and token_url.
-      Used by consumer skills (gmail, google-calendar, etc.) as an auth source.
+      Used by consumer skills (gmail, google-calendar, etc.) as a Google provider operation.
     params:
       account: { type: string, required: true, description: "Email address (e.g. 'user@example.com' or 'user@example.com')" }
     returns:
@@ -514,6 +481,8 @@ utilities:
 # Mimestream
 
 Read and search email from [Mimestream](https://mimestream.com/), a native macOS email client for Gmail.
+
+This skill also acts as a Google auth provider for consumer skills that declare `auth: { oauth: { service: google } }`.
 
 ## Requirements
 
