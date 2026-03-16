@@ -58,7 +58,7 @@ What each step means:
 
 - `validate --pre-commit` checks fast structural validity only
 - `validate` checks structure, entity refs, mapping sanity, and icons
-- `lint:semantic` is an advisory semantic pass for legacy placeholder/auth patterns, dead `api.base_url`, suspicious request roots, and returns/adapters drift
+- `lint:semantic` is an advisory semantic pass for legacy placeholder/auth patterns, dead `api.base_url`, suspicious request roots, returns/adapters drift, mixed executor types, and GraphQL endpoint drift
 - Pass `--strict` to `lint:semantic` if you want it to fail on semantic errors
 - The pre-push hook runs `lint:semantic --strict` on changed top-level skills, so the main skill set is expected to stay semantically clean
 - `mcp:call` proves the live runtime can load the skill and execute one real tool

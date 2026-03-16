@@ -11,6 +11,7 @@ const SKILLS_DIR = join(ROOT, 'skills');
 
 const INLINE_PRIMITIVE_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null', 'void']);
 const REQUEST_TEMPLATE_ROOTS = new Set(['params', 'auth', 'item']);
+const EXECUTOR_KEYS = ['rest', 'graphql', 'command'];
 const LEGACY_AUTH_PATTERNS = [
   /(^|[^A-Za-z0-9_])\.params\.auth(?:[.\[]|$)/,
   /(^|[^A-Za-z0-9_])\.params\.auth_key(?:[^A-Za-z0-9_]|$)/,
@@ -153,6 +154,10 @@ function issue(level, path, message) {
   return { level, path, message };
 }
 
+function isAbsoluteUrlOrExpression(value) {
+  return typeof value === 'string' && (/^https?:\/\//.test(value) || looksLikeExpression(value));
+}
+
 function walkStrings(value, path, visit) {
   if (typeof value === 'string') {
     visit(value, path);
@@ -214,6 +219,10 @@ function lintSkill(frontmatter) {
     issues.push(issue('error', 'api.graphql', 'rename to api.graphql_endpoint'));
   }
 
+  if (frontmatter.auth?.cookies && Object.prototype.hasOwnProperty.call(frontmatter.auth.cookies, 'browser')) {
+    issues.push(issue('warn', 'auth.cookies.browser', 'legacy cookie-browser shortcut found; prefer cookie provider skills'));
+  }
+
   walkStrings(frontmatter, '', (value, path) => {
     if (value.includes('{{')) {
       issues.push(issue('error', path, 'legacy mustache template found; use jaq expressions'));
@@ -232,6 +241,17 @@ function lintSkill(frontmatter) {
   for (const [opName, op] of Object.entries(ops)) {
     if (!/^[a-z0-9_]+$/.test(opName)) {
       issues.push(issue('warn', `operations.${opName}`, 'tool name is not simple snake_case'));
+    }
+
+    const executors = EXECUTOR_KEYS.filter(key => op && Object.prototype.hasOwnProperty.call(op, key));
+    if (executors.length > 1) {
+      issues.push(
+        issue(
+          'error',
+          `operations.${opName}`,
+          `operation mixes multiple executor types (${executors.join(', ')}); keep exactly one`
+        )
+      );
     }
 
     const entityName = returnsEntityName(op);
@@ -257,6 +277,12 @@ function lintSkill(frontmatter) {
     }
 
     if (op.graphql) {
+      const endpoint = op.graphql.endpoint ?? frontmatter.api?.graphql_endpoint;
+      if (!endpoint) {
+        issues.push(issue('error', `operations.${opName}.graphql`, 'GraphQL operation needs endpoint or api.graphql_endpoint'));
+      } else if (!isAbsoluteUrlOrExpression(endpoint)) {
+        issues.push(issue('error', `operations.${opName}.graphql.endpoint`, 'GraphQL endpoint must be absolute or a jaq expression that resolves to one'));
+      }
       issues.push(...requestRootWarnings(op.graphql.endpoint, `operations.${opName}.graphql.endpoint`));
     }
 
