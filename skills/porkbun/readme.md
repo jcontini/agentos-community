@@ -1,0 +1,223 @@
+---
+id: porkbun
+name: Porkbun
+description: Domain and DNS management via the Porkbun API
+icon: icon.svg
+color: "#D62F53"
+
+website: https://porkbun.com
+privacy_url: https://porkbun.com/products/privacy
+
+auth:
+  body:
+    apikey: '.auth.key | split(":") | .[0]'
+    secretapikey: '.auth.key | split(":") | .[1]'
+  label: API key and secret
+  help_url: https://porkbun.com/account/api
+
+adapters:
+  domain:
+    id: .domain
+    name: .domain
+    url: '"https://" + .domain'
+    data.status: .status
+    data.registrar: '"porkbun"'
+    data.expires_at: .expireDate
+    data.auto_renew: '.autoRenew == "yes"'
+    data.created_at: .createDate
+
+  dns_record:
+    id: '.domain + ":" + (.id | tostring)'
+    name: 'if (.name // "") == "" then .domain else .name + "." + .domain end'
+    text: '.type + " " + .content'
+    data.record_id: '.id | tostring'
+    data.domain: .domain
+    data.type: .type
+    data.content: .content
+    data.ttl: '.ttl | tonumber'
+    data.priority: '.prio // null'
+
+operations:
+  list_domains:
+    description: List all domains in your Porkbun account
+    returns: domain[]
+    rest:
+      method: POST
+      url: https://api.porkbun.com/api/json/v3/domain/listAll
+      body:
+        apikey: '.auth.key | split(":") | .[0]'
+        secretapikey: '.auth.key | split(":") | .[1]'
+      response:
+        root: /domains
+
+  list_dns_records:
+    description: List all DNS records for a domain
+    returns: dns_record[]
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name, for example example.com
+    rest:
+      method: POST
+      url: '"https://api.porkbun.com/api/json/v3/dns/retrieve/" + .params.domain'
+      body:
+        apikey: '.auth.key | split(":") | .[0]'
+        secretapikey: '.auth.key | split(":") | .[1]'
+      response:
+        root: /records
+        inject:
+          domain: .params.domain
+
+  create_dns_record:
+    description: Create a new DNS record for a domain
+    returns: void
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name
+      name:
+        type: string
+        description: Subdomain, omit or empty string for the apex
+      type:
+        type: string
+        required: true
+        description: A, AAAA, CNAME, MX, TXT, NS, or SRV
+      content:
+        type: string
+        required: true
+        description: Record value
+      ttl:
+        type: integer
+        default: 600
+        description: TTL in seconds
+      prio:
+        type: integer
+        description: Priority, used for MX records
+    rest:
+      method: POST
+      url: '"https://api.porkbun.com/api/json/v3/dns/create/" + .params.domain'
+      body:
+        apikey: '.auth.key | split(":") | .[0]'
+        secretapikey: '.auth.key | split(":") | .[1]'
+        name: '.params.name // ""'
+        type: .params.type
+        content: .params.content
+        ttl: '(.params.ttl // 600) | tostring'
+        prio: .params.prio
+      response:
+        raw: true
+
+  update_dns_record:
+    description: Update an existing DNS record
+    returns: void
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name
+      id:
+        type: string
+        required: true
+        description: Porkbun DNS record ID
+      name:
+        type: string
+        description: Subdomain, omit or empty string for the apex
+      type:
+        type: string
+        required: true
+        description: Record type
+      content:
+        type: string
+        required: true
+        description: Record value
+      ttl:
+        type: integer
+        default: 600
+        description: TTL in seconds
+      prio:
+        type: integer
+        description: Priority, used for MX records
+    rest:
+      method: POST
+      url: '"https://api.porkbun.com/api/json/v3/dns/edit/" + .params.domain + "/" + .params.id'
+      body:
+        apikey: '.auth.key | split(":") | .[0]'
+        secretapikey: '.auth.key | split(":") | .[1]'
+        name: '.params.name // ""'
+        type: .params.type
+        content: .params.content
+        ttl: '(.params.ttl // 600) | tostring'
+        prio: .params.prio
+      response:
+        raw: true
+
+  delete_dns_record:
+    description: Delete a DNS record from a domain
+    returns: void
+    params:
+      domain:
+        type: string
+        required: true
+        description: Domain name
+      id:
+        type: string
+        required: true
+        description: Porkbun DNS record ID
+    rest:
+      method: POST
+      url: '"https://api.porkbun.com/api/json/v3/dns/delete/" + .params.domain + "/" + .params.id'
+      body:
+        apikey: '.auth.key | split(":") | .[0]'
+        secretapikey: '.auth.key | split(":") | .[1]'
+      response:
+        raw: true
+---
+
+# Porkbun
+
+Manage domains and DNS records in a Porkbun account.
+
+## Setup
+
+1. Open [Porkbun API Access](https://porkbun.com/account/api)
+2. Enable API access for your account
+3. Copy both the API key and secret API key
+4. Store them in AgentOS as a single credential in the format `apikey:secretapikey`
+
+## What It Covers
+
+- List domains in your Porkbun account
+- List DNS records for a domain
+- Create, update, and delete DNS records
+
+## Limitations
+
+- Porkbun does not support domain registration through this API
+- This skill is for managing existing domains and DNS only
+
+## Example Calls
+
+```js
+run({ skill: "porkbun", tool: "list_domains" })
+
+run({
+  skill: "porkbun",
+  tool: "list_dns_records",
+  params: { domain: "example.com" }
+})
+
+run({
+  skill: "porkbun",
+  tool: "create_dns_record",
+  params: {
+    domain: "example.com",
+    name: "",
+    type: "A",
+    content: "185.199.108.153",
+    ttl: 600
+  },
+  execute: true
+})
+```
