@@ -9,58 +9,40 @@ website: https://granola.ai
 privacy_url: https://granola.ai/privacy
 
 auth: none
-connects_to: granola
 
-seed:
-  - id: granola
-    types: [software]
-    name: Granola
-    data:
-      software_type: app
-      url: https://granola.ai
-      platforms: [macos, windows]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: granola-inc
-
-  - id: granola-inc
-    types: [organization]
-    name: Granola, Inc.
-    data:
-      type: company
-      url: https://granola.ai
-transformers:
+adapters:
   meeting:
-    terminology: Meeting
-    mapping:
-      id: .id
-      title: .title
-      start: .start
-      end: .end
-      description: .summary_text
-      location: .location
-      data.calendar_link: .calendar_link
-      data.granola_url: .granola_url
-      data.creation_source: .creation_source
-      data.valid_meeting: .valid_meeting
-      data.organizer_email: .organizer_email
-      data.organizer_name: .organizer_name
-      data.attendees: .attendees
+    id: .id
+    name: .title
+    description: .summary_text
+    text: .summary_text
+    url: .granola_url
+    datePublished: .start
+    title: .title
+    start: .start
+    end: .end
+    location: .location
+    data.calendar_link: .calendar_link
+    data.granola_url: .granola_url
+    data.creation_source: .creation_source
+    data.valid_meeting: .valid_meeting
+    data.organizer_email: .organizer_email
+    data.organizer_name: .organizer_name
+    data.attendees: .attendees
 
-      transcribe:
-        transcript:
-          id: '(.id) + "_transcript"'
-          title: '"Transcript: " + .title'
-          content: .transcript_text
-          content_role: '"transcript"'
-          language: '"en"'
-          source_type: '"realtime_asr"'
-          segment_count: .segment_count
-          duration_ms: .duration_ms
+    transcribe:
+      transcript:
+        id: '(.id) + "_transcript"'
+        title: '"Transcript: " + .title'
+        content: .transcript_text
+        content_role: '"transcript"'
+        language: '"en"'
+        source_type: '"realtime_asr"'
+        segment_count: .segment_count
+        duration_ms: .duration_ms
 
 operations:
-  meeting.list:
+  list_meetings:
     description: List recent meetings with metadata and attendees
     returns: meeting[]
     params:
@@ -71,13 +53,14 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/granola/granola.py list ${PARAM_LIMIT} ${PARAM_PAGE}"
+        - "python3 ./granola.py list ${PARAM_LIMIT} ${PARAM_PAGE}"
         - "--"
         - ".params.limit"
         - ".params.page"
+      working_dir: .
       timeout: 30
 
-  meeting.get:
+  get_meeting:
     description: Get a meeting with full transcript, attendees, and AI summary
     returns: meeting
     params:
@@ -87,9 +70,10 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/granola/granola.py get ${PARAM_ID}"
+        - "python3 ./granola.py get ${PARAM_ID}"
         - "--"
         - ".params.id"
+      working_dir: .
       timeout: 60
 
 ---
@@ -106,7 +90,7 @@ If you see auth errors, open the Granola app to refresh the token.
 
 ## What gets created in the graph
 
-For each `meeting.get` call:
+For each `get_meeting` call:
 
 | Entity | Type | Details |
 |--------|------|---------|
@@ -120,7 +104,7 @@ Attendees are stored in `data.attendees` on the meeting entity. Full person enti
 
 ## Operations
 
-### `meeting.list` — Browse recent meetings
+### `list_meetings` — Browse recent meetings
 
 ```bash
 curl -X POST http://localhost:3456/api/skills/granola/meeting.list \
@@ -129,9 +113,9 @@ curl -X POST http://localhost:3456/api/skills/granola/meeting.list \
   -d '{"limit": 10}'
 ```
 
-Returns meetings with title, times, location, attendees. No transcript data — use `meeting.get` for that.
+Returns meetings with title, times, location, attendees. No transcript data — use `get_meeting` for that.
 
-### `meeting.get` — Full meeting with transcript
+### `get_meeting` — Full meeting with transcript
 
 ```bash
 curl -X POST http://localhost:3456/api/skills/granola/meeting.get \
