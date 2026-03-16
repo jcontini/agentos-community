@@ -14,41 +14,16 @@ auth:
   label: API Key
   help_url: https://console.anthropic.com/settings/keys
 
-connects_to: anthropic-api
-
-seed:
-  - id: anthropic-inc
-    types: [organization]
-    name: Anthropic
-    data:
-      type: company
-      url: https://www.anthropic.com
-      founded: "2021"
-
-  - id: anthropic-api
-    types: [software]
-    name: Anthropic Messages API
-    data:
-      software_type: api
-      url: https://console.anthropic.com
-      launched: "2023"
-      platforms: [api]
-    relationships:
-      - role: offered_by
-        to: anthropic-inc
-
-transformers:
+adapters:
   model:
-    terminology: Model
-    mapping:
-      api_id: .id
-      title: .display_name
-      released: .created_at
-      provider: '"anthropic"'
-      model_type: '"llm"'
+    api_id: .id
+    title: .display_name
+    released: .created_at
+    provider: '"anthropic"'
+    model_type: '"llm"'
 
 operations:
-  model.list:
+  list_models:
     description: List available Claude models from Anthropic
     returns: model[]
     rest:
@@ -60,7 +35,7 @@ operations:
         anthropic-version: '"2023-06-01"'
       response:
         root: /data
-utilities:
+
   chat:
     description: Send a chat completion request to Claude (Anthropic Messages API)
     returns:
@@ -132,7 +107,7 @@ Claude AI models via the [Anthropic Messages API](https://docs.anthropic.com/mes
 
 ## Models
 
-Use `model.list` to discover available models:
+Use `list_models` to discover available models:
 
 ```bash
 curl http://localhost:3456/mem/models?skill=anthropic-api -H "X-Agent: cursor"
