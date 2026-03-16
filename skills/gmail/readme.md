@@ -1,15 +1,15 @@
 ---
 id: gmail
 name: Gmail
-description: Full-featured Gmail skill — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations. Auth sourced from Mimestream (no OAuth setup needed).
+description: Full-featured Gmail skill — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations. Auth can be sourced from an installed Google provider skill.
 color: "#EA4335"
 
 website: https://mail.google.com
 privacy_url: https://policies.google.com/privacy
 
-# No client_id or client_secret needed — auth is sourced from Mimestream's keychain.
-# The system finds Mimestream's `provides: [{ service: google }]` declaration and
-# calls its `credential.get` utility to get a live access token automatically.
+# No client_id or client_secret needed when a Google provider skill is installed.
+# For example, the system can find Mimestream's `provides: [{ service: google }]`
+# declaration and call its `credential_get` operation to get a live access token.
 auth:
   oauth:
     service: google
@@ -317,13 +317,7 @@ operations:
           "ids": ${PARAM_IDS}
         }
 
-  # Drafts, labels, and filters are in utilities (not entity-typed operations)
-
-# ==============================================================================
-# UTILITIES
-# ==============================================================================
-
-utilities:
+  # Drafts, labels, and filters are additional operations with custom returns
 
   # --- Drafts ---
 
@@ -703,17 +697,18 @@ Full-featured email via the [Gmail REST API](https://developers.google.com/gmail
 
 Do not pass `label_ids` as an array param — it causes a 400 error from the API.
 
-## Auth — No Setup Required (with Mimestream)
+## Auth — Provider-Sourced Google OAuth
 
-If [Mimestream](https://mimestream.com/) is installed, this skill automatically borrows its Google OAuth tokens from the macOS Keychain. No OAuth app registration, no API keys to enter.
+If a Google provider skill is installed, this skill can borrow Google OAuth tokens without separate app registration or API-key setup. [Mimestream](https://mimestream.com/) is the current canonical example.
 
 How it works:
 1. Mimestream stores Google OAuth tokens in the Keychain under `"Mimestream: {email}"` / `"OAuth"`
-2. The `mimestream` skill reads those tokens via its `credential.get` utility
+2. The `mimestream` skill reads those tokens via its `credential_get` operation
 3. This skill declares `auth: { oauth: { service: google } }`
-4. The resolver matches the provider → calls `credential.get` → injects `Authorization: Bearer {token}`
+4. The resolver matches the provider → calls `credential_get` → injects `Authorization: Bearer {token}`
+5. If multiple installed skills provide Google auth, the agent should ask the user which provider to use
 
-**Without Mimestream:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
+**Without a provider skill:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
 
 ## Capabilities
 

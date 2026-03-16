@@ -18,6 +18,7 @@
  *     --skill exa \
  *     --tool search \
  *     --params '{"query":"rust ownership","limit":1}' \
+ *     --account work \
  *     --format json \
  *     --detail preview
  *
@@ -419,6 +420,7 @@ function buildDirectRunArgs() {
   }
 
   const runArgs = { skill, tool, params };
+  if (flags.account) runArgs.account = flags.account;
   if (Object.keys(view).length > 0) runArgs.view = view;
   if (flags.execute) runArgs.execute = true;
   return runArgs;
@@ -427,7 +429,7 @@ function buildDirectRunArgs() {
 async function runDirectCall() {
   console.log('\nConnecting to MCP...');
   console.log(`Binary: ${BINARY}`);
-  console.log('Call path: run({ skill, tool, params }) via MCP proxy -> engine socket.');
+  console.log('Call path: run({ skill, tool, params, account? }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
   await mcp.connect();
   console.log('MCP ready.\n');
@@ -464,7 +466,7 @@ async function main() {
 
   console.log(`\nConnecting to MCP...`);
   console.log(`Binary: ${BINARY}`);
-  console.log('Call path: run({ skill, tool, params }) via MCP proxy -> engine socket.');
+  console.log('Call path: run({ skill, tool, params, account? }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
   await mcp.connect();
   console.log(`MCP ready. Testing ${targets.length} skills.\n`);

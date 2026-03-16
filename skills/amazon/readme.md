@@ -10,24 +10,12 @@ auth:
   cookies:
     domain: ".amazon.com"
     names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
-    browser: firefox
 
-connects_to: amazon
-
-seed:
-  - id: amazon
-    types: [organization]
-    name: Amazon
-    data:
-      type: company
-      url: https://amazon.com
-      founded: "1994"
-      wikidata_id: Q3884
 # ==============================================================================
-# UTILITIES
+# OPERATIONS
 # ==============================================================================
 
-utilities:
+operations:
   check_session:
     description: >
       Verify that Amazon browser cookies are valid by fetching the account page.
@@ -50,18 +38,19 @@ utilities:
 
 # Amazon
 
-Access your Amazon account using browser session cookies. No API keys, no OAuth — just log into Amazon in Firefox and this skill handles the rest.
+Access your Amazon account using browser session cookies. No API keys, no OAuth — just log into Amazon in a browser backed by an installed cookie provider skill and this skill handles the rest.
 
 ## How It Works
 
-Amazon uses **pure cookie-based session auth**. When you log into Amazon in your browser, it stores session cookies that persist for weeks or months. This skill extracts those cookies and uses them to make authenticated requests on your behalf.
+Amazon uses **pure cookie-based session auth**. When you log into Amazon in your browser, it stores session cookies that persist for weeks or months. This skill asks an installed cookie provider skill for those cookies and uses them to make authenticated requests on your behalf.
 
 ### Authentication Flow
 
-1. You log into Amazon in Firefox (you probably already are)
-2. AgentOS reads cookies from Firefox's local database (plaintext, no decryption needed)
+1. You log into Amazon in a browser with an installed cookie provider skill
+2. AgentOS asks that provider skill for `.amazon.com` cookies
 3. Cookies are injected as a `Cookie` header on every request
 4. Sessions last weeks/months — no refresh needed
+5. If multiple cookie providers are installed, the agent should ask the user which browser/provider to use
 
 ### Key Cookies
 
@@ -83,4 +72,4 @@ Verifies that your Amazon session is active by fetching your account page. If au
 
 - Amazon does not provide a consumer JSON API — all responses are HTML
 - Sessions eventually expire (rare, usually weeks/months)
-- When expired, log into Amazon in Firefox again
+- When expired, log into Amazon again in the browser/provider you want to use

@@ -34,63 +34,42 @@ auth:
             - { action: wait, url_contains: "/new" }
           returns_to_agent: >
             Login complete. The sessionKey cookie is now in the browser.
-            Cookie matchmaking will extract it automatically on next API call.
+            Cookie provider matchmaking will extract it automatically on the next API call.
     verify:
       url: "https://claude.ai/api/organizations"
       method: GET
       expect_status: 200
-
-connects_to: claude-ai-web
-
-seed:
-  - id: claude-ai-web
-    types: [software]
-    name: Claude.ai
-    data:
-      software_type: web_app
-      url: https://claude.ai
-      platforms: [web, macos, ios, android]
-    relationships:
-      - role: offered_by
-        to: anthropic-inc
-
-  - id: anthropic-inc
-    types: [organization]
-    name: Anthropic
-    data:
-      type: company
-      url: https://www.anthropic.com
-      founded: "2021"
-transformers:
+adapters:
   conversation:
-    terminology: Conversation
-    mapping:
-      id: .uuid
-      name: .name
-      content: .content
-      updated_at: .updated_at
-      created_at: .created_at
-      data.org_uuid: .org_uuid
-      data.message_count: .message_count
+    id: .uuid
+    name: .name
+    text: .content
+    content: .content
+    datePublished: .updated_at
+    data.created_at: .created_at
+    data.org_uuid: .org_uuid
+    data.message_count: .message_count
 
   message:
-    terminology: Message
-    mapping:
-      id: .id
-      conversation_id: .conversation_id
-      content: .text
-      is_outgoing: '.role == "human"'
-      timestamp: .created_at
-      url: '"https://claude.ai/chat/" + .conversation_id'
-      data.role: .role
-      data.conversation_name: .conversation_name
+    id: .id
+    name: .conversation_name
+    text: .text
+    content: .text
+    url: '"https://claude.ai/chat/" + .conversation_id'
+    author: .role
+    datePublished: .created_at
+    is_outgoing: '.role == "human"'
+    timestamp: .created_at
+    data.conversation_id: .conversation_id
+    data.role: .role
+    data.conversation_name: .conversation_name
 
 # ==============================================================================
 # OPERATIONS
 # ==============================================================================
 
 operations:
-  conversation.list:
+  list_conversations:
     description: >
       List claude.ai web chat conversations, most recently updated first.
       Requires a valid session (run login flow if needed).
@@ -102,7 +81,7 @@ operations:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "./claude-api.py"
         - "--op"
         - "conversations"
         - "--session-key"
@@ -115,7 +94,7 @@ operations:
         - ".params.offset"
       timeout: 30
 
-  conversation.get:
+  get_conversation:
     description: >
       Get a full claude.ai web conversation with all messages.
       Returns the complete message history including both human and assistant turns.
@@ -126,7 +105,7 @@ operations:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "./claude-api.py"
         - "--op"
         - "conversation"
         - "--session-key"
@@ -137,11 +116,11 @@ operations:
         - if .params.account then .params.account else "" end
       timeout: 30
 
-  conversation.search:
+  search_conversations:
     description: >
       Search claude.ai web conversations by title/name.
       Fetches up to 250 conversations and filters locally (no server-side search).
-      For full content search across message text, use conversation.import first,
+      For full content search across message text, use import_conversation first,
       then search({ query: "...", types: ["message"] }) against the Memex FTS index.
     returns: conversation[]
     params:
@@ -151,7 +130,7 @@ operations:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "./claude-api.py"
         - "--op"
         - "search"
         - "--session-key"
@@ -164,7 +143,7 @@ operations:
         - ".params.limit"
       timeout: 30
 
-  conversation.import:
+  import_conversation:
     description: >
       Import claude.ai conversations and all their messages into the Memex.
       Each message becomes a message entity with full content FTS-indexed.
@@ -179,7 +158,7 @@ operations:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "./claude-api.py"
         - "--op"
         - "import"
         - "--session-key"
@@ -192,11 +171,6 @@ operations:
         - ".params.offset"
       timeout: 60
 
-# ==============================================================================
-# UTILITIES
-# ==============================================================================
-
-utilities:
   list_orgs:
     description: |
       List all organizations the user has access to.
@@ -209,7 +183,7 @@ utilities:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-api.py"
+        - "./claude-api.py"
         - "--op"
         - "organizations"
         - "--session-key"
@@ -219,7 +193,7 @@ utilities:
   extract_magic_link:
     description: |
       Extract the magic link URL from a raw base64url-encoded email body.
-      Pass the raw email content (from Gmail's get_raw utility) and this
+      Pass the raw email content (from Gmail's `get_raw` operation) and this
       will decode it and find the claude.ai magic link.
     params:
       raw_email:
@@ -231,7 +205,7 @@ utilities:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/claude/claude-login.py"
+        - "./claude-login.py"
         - "--extract-link-from-raw"
         - ".params.raw_email"
       timeout: 10
@@ -248,20 +222,23 @@ claude.ai web chat history lives server-side only — unlike Claude Code (CLI) w
 transcripts locally, web conversations are only accessible via the claude.ai API.
 
 Two phases:
-1. **Cookie matchmaking** — agentOS auto-extracts the sessionKey from Brave Browser
-   (or falls back to Playwright login if the user isn't logged in)
+1. **Cookie provider matchmaking** — agentOS asks an installed cookie provider
+   skill for the `sessionKey` cookie (for example `brave-browser`)
 2. **API calls** — all subsequent calls use `httpx` directly with the injected
    `sessionKey` — no browser needed, no session file
+
+If multiple installed skills provide cookies, the agent should ask the user
+which browser/provider to use instead of guessing.
 
 ## Capabilities
 
 ```
-OPERATION             DESCRIPTION
-────────────────────  ───────────────────────────────────────────────────
-conversation.list     Browse conversations, most recently updated first
-conversation.get      Full conversation with all messages
-conversation.search   Search conversations by title (client-side filter)
-conversation.import   Import messages into Memex for FTS content search
-list_orgs             Discover available orgs and capabilities
-extract_magic_link    Parse magic link URL from raw email content
+OPERATION              DESCRIPTION
+─────────────────────  ───────────────────────────────────────────────────
+list_conversations     Browse conversations, most recently updated first
+get_conversation       Full conversation with all messages
+search_conversations   Search conversations by title (client-side filter)
+import_conversation    Import messages into Memex for FTS content search
+list_orgs              Discover available orgs and capabilities
+extract_magic_link     Parse magic link URL from raw email content
 ```

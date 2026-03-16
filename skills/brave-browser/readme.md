@@ -8,12 +8,12 @@ color: "#F83B1D"
 website: https://brave.com
 auth: none
 
-connects_to: brave-browser-app
-
 # Brave (Chromium-based) stores cookies encrypted in SQLite.
 # The encryption key lives in macOS Keychain under "Brave Safe Storage" / "Brave".
-# This skill exposes a credential_get utility that extracts and decrypts
-# the sessionKey cookie for claude.ai, usable by consumer skills via provides:.
+# This skill exposes a cookie_get operation that extracts and decrypts
+# browser cookies for consumer skills via provides:.
+# If multiple installed skills provide cookies, the agent should ask the user
+# which provider/browser to use instead of guessing.
 provides:
   - service: cookies
     description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
@@ -22,47 +22,24 @@ provides:
     accounts_via: list_accounts
     account_field: name
 
-seed:
-  - id: brave-browser-app
-    types: [software]
-    name: Brave Browser
-    data:
-      software_type: browser
-      url: https://brave.com
-      launched: "2016"
-      platforms: [macos, windows, linux]
-      pricing: free
-    relationships:
-      - role: offered_by
-        to: brave-software
-
-  - id: brave-software
-    types: [organization]
-    name: Brave Software, Inc.
-    data:
-      type: company
-      url: https://brave.com
-      founded: "2015"
-      wikidata_id: Q50391972
 # ==============================================================================
-# TRANSFORMERS
+# ADAPTERS
 # ==============================================================================
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      id: .url
-      url: .url
-      title: .title
-      data: '{ visit_count: .visit_count }'
+    id: .url
+    name: '.title // .url'
+    url: .url
+    data.visit_count: .visit_count
+    data.last_visit_unix: .last_visit_unix
 
 # ==============================================================================
 # OPERATIONS
 # ==============================================================================
 
 operations:
-  webpage.list:
+  list_webpages:
     description: List recently visited pages from Brave browsing history
     returns: webpage[]
     params:
@@ -83,7 +60,7 @@ operations:
       response:
         root: "/"
 
-  webpage.search:
+  search_webpages:
     description: Search Brave browsing history by URL or title
     returns: webpage[]
     params:
@@ -111,10 +88,9 @@ operations:
         root: "/"
 
 # ==============================================================================
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ==============================================================================
 
-utilities:
   list_accounts:
     description: List Brave browser profiles with their display name
     returns:
@@ -214,7 +190,7 @@ utilities:
       Full decryption pipeline: Keychain → PBKDF2 → AES-128-CBC.
       Returns plaintext cookie values including HttpOnly cookies.
       This is the provider interface for cookie matchmaking — other skills
-      that need browser cookies discover Brave through this utility.
+      that need browser cookies discover Brave through this operation.
     params:
       domain:
         type: string
@@ -237,7 +213,7 @@ utilities:
     command:
       binary: python3
       args:
-        - "/Users/joe/dev/agentos-community/skills/brave-browser/get-cookie.py"
+        - "./get-cookie.py"
         - "--domain"
         - ".params.domain"
         - if .params.names then "--names" else "" end
@@ -247,7 +223,6 @@ utilities:
         - if .params.profile then "--profile" else "" end
         - if .params.profile then .params.profile else "" end
       timeout: 15
-
 ---
 
 # Brave Browser
@@ -262,7 +237,7 @@ AES-128-CBC with a key derived via PBKDF2 from a master password stored in macOS
 - **macOS only** — reads local SQLite databases
 - **Brave Browser installed** — databases must exist at the standard paths
 - **Full Disk Access** — System Settings > Privacy & Security > Full Disk Access (for the process reading the databases)
-- **Brave closed (for cookies)** — SQLite WAL lock; or use `credential_get` which copies to `/tmp`
+- **Brave closed (for cookies)** — SQLite WAL lock; or use `cookie_get` which copies to `/tmp`
 
 ## Data Sources
 
@@ -279,7 +254,7 @@ Brave encrypts cookie values on macOS using:
 3. AES-128-CBC (IV: 16 space bytes = `20` repeated 16 times in hex)
 4. The encrypted value has a 3-byte `v10` prefix that must be stripped before decryption
 
-The `get_cookie_key` utility handles steps 1–2. The `credential_get` utility does the full pipeline.
+The `get_cookie_key` operation handles steps 1-2. The `cookie_get` operation does the full pipeline.
 
 ## Cookie Extraction
 
@@ -298,10 +273,10 @@ use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".chase.com"
 ```
 OPERATION          DESCRIPTION
 --------------     -------------------------------------------------------
-webpage.list       Recently visited pages from Brave history
-webpage.search     Search browsing history by URL or title
+list_webpages      Recently visited pages from Brave history
+search_webpages    Search browsing history by URL or title
 
-UTILITY            DESCRIPTION
+OPERATION          DESCRIPTION
 --------------     -------------------------------------------------------
 list_accounts      List Brave profiles with display names
 get_cookie_key     Derive AES-128 key from Keychain (PBKDF2)

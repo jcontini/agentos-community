@@ -161,7 +161,7 @@
     },
     "provides": {
       "type": "array",
-      "description": "Credential provisions — declares that this skill can supply OAuth tokens sourced from local apps (keychain, SQLite, etc.). Consumer skills declare auth.oauth.service and the resolver matchmakes.",
+      "description": "Provider declarations for auth capabilities sourced from local apps, keychains, or browser profiles. Today this is primarily OAuth and cookie auth matchmaking.",
       "items": {
         "type": "object",
         "required": ["service"],
@@ -185,7 +185,7 @@
           },
           "accounts_via": {
             "type": "string",
-            "description": "Utility to call to discover available accounts (e.g., 'list_accounts')"
+            "description": "Operation to call to discover available accounts (e.g., 'list_accounts')"
           },
           "account_field": {
             "type": "string",
@@ -408,7 +408,7 @@
     },
     "auth": {
       "type": "object",
-      "description": "Auth injection. Template-based ({placeholder} syntax) for API keys, cookie-based for browser session auth, or OAuth 2.0 for third-party authorization.",
+      "description": "Auth injection. Template-based ({placeholder} syntax) for API keys, cookie-based auth via provider skills, or OAuth 2.0 via standalone config or provider matchmaking.",
       "properties": {
         "header": {
           "type": "object",
@@ -427,7 +427,7 @@
         },
         "cookies": {
           "type": "object",
-          "description": "Cookie-based auth: extract cookies from browser databases for a domain. No user credential entry needed.",
+          "description": "Cookie-based auth for a domain. Prefer installed cookie provider skills that declare provides: [{ service: \"cookies\" }]. No user credential entry needed.",
           "required": ["domain"],
           "properties": {
             "domain": {
@@ -442,7 +442,7 @@
             "browser": {
               "type": "string",
               "enum": ["firefox", "chrome"],
-              "description": "Preferred browser. Default: tries firefox first (plaintext), then chrome (needs decryption)."
+              "description": "Legacy browser hint kept for compatibility with older skills. Prefer cookie provider discovery instead of relying on this field in new skills."
             },
             "session_duration": {
               "type": "string",
@@ -514,11 +514,11 @@
         },
         "oauth": {
           "type": "object",
-          "description": "OAuth 2.0 Authorization Code flow. When 'service' is set, auth is sourced from an installed provider skill (e.g., Mimestream for Google) — no client_id or secrets needed. For standalone OAuth, provide client_id, client_secret, auth_url, token_url.",
+          "description": "OAuth 2.0 Authorization Code flow. When 'service' is set, auth is sourced from an installed provider skill (for example Mimestream for Google) — no client_id or secrets needed. For standalone OAuth, provide client_id, client_secret, auth_url, token_url.",
           "properties": {
             "service": {
               "type": "string",
-              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds an installed skill with a matching provides: entry and calls its credential_get operation. client_id, client_secret, auth_url, token_url are not needed."
+              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds installed skills with matching provides: entries and calls their credential_get operation. If several providers match, the agent should ask the user which provider to use."
             },
             "client_id": {
               "type": "string",

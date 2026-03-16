@@ -39,7 +39,7 @@ npm run validate -- my-skill
 # 4. Filter large runs while cleaning up families of skills
 npm run validate -- --filter browser
 
-# 5. Ground-truth live MCP call through run({ skill, tool, params })
+# 5. Ground-truth live MCP call through run({ skill, tool, params, account? })
 npm run mcp:call -- \
   --skill exa \
   --tool search \
@@ -56,6 +56,7 @@ What each step means:
 - `validate --pre-commit` checks fast structural validity only
 - `validate` checks structure, entity refs, mapping sanity, and icons
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
+- Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
 - `mcp:test` is a broader smoke path, not a substitute for targeted inspection
 
 Important runtime note:
