@@ -18,7 +18,7 @@ fi
 ERRORS=0
 
 # === Structural Validation ===
-node tests/skills/scripts/validate.mjs --pre-commit $SKILLS || ERRORS=$((ERRORS + 1))
+node scripts/skills/validate.mjs --pre-commit $SKILLS || ERRORS=$((ERRORS + 1))
 
 # === Security Checks ===
 STAGED_READMES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^skills/[^/]+/readme\.md$' || true)

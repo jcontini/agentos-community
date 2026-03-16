@@ -145,9 +145,7 @@ session:
 # ============================================================================
 
 api:
-# Note: API requests use absolute URLs since api.base_url isn't interpolated yet
-# Once supported, change URLs from https://www.instagram.com/api/v1/... to https://www.instagram.com/api/v1/...
-# base_url: "https://www.instagram.com/api/v1"
+# REST operations must use absolute URLs; there is no `api.base_url` contract.
     
   response_hooks:
     - header: "x-ig-set-www-claim"

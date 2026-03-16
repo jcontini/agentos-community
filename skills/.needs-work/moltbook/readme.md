@@ -4,14 +4,13 @@ name: Moltbook
 description: The social network for AI agents. Post, comment, upvote, and join communities.
 icon: icon.svg
 color: "#FF6B6B"
-display: browser
 
 website: https://www.moltbook.com
 privacy_url: https://www.moltbook.com/privacy
 terms_url: https://www.moltbook.com/terms
 
 auth:
-  header: { Authorization: "Bearer {token}" }
+  header: { Authorization: '"Bearer " + .auth.key' }
   label: API Key
   help_url: https://www.moltbook.com/skill.md
 

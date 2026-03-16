@@ -3,14 +3,13 @@ id: posthog
 name: PostHog
 description: Access PostHog analytics, user data, and session recordings
 icon: icon.svg
-display: browser
 
 website: https://posthog.com
 privacy_url: https://posthog.com/privacy
 terms_url: https://posthog.com/terms
 
 auth:
-  header: { Authorization: "{token}" }
+  header: { Authorization: .auth.key }
   label: Personal API Key
   help_url: https://posthog.com/docs/api/personal-api-keys
 

@@ -521,12 +521,7 @@
       "type": "object",
       "description": "API configuration",
       "properties": {
-        "base_url": {
-          "type": "string",
-          "format": "uri",
-          "description": "Base URL for REST endpoints"
-        },
-        "graphql": {
+        "graphql_endpoint": {
           "type": "string",
           "format": "uri",
           "description": "GraphQL endpoint URL"
@@ -605,7 +600,7 @@
         "endpoint": {
           "type": "string",
           "format": "uri",
-          "description": "GraphQL endpoint (overrides api.graphql)"
+          "description": "GraphQL endpoint (overrides api.graphql_endpoint)"
         },
         "query": {
           "type": "string",

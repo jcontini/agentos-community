@@ -4,12 +4,11 @@
   "description": "Community skills for AgentOS",
   "type": "module",
   "scripts": {
-    "test": "node tests/skills/scripts/validate.mjs",
+    "test": "node scripts/skills/validate.mjs",
     "mcp:call": "node test-skills.cjs --call",
     "mcp:test": "node test-skills.cjs",
-    "validate": "node tests/skills/scripts/validate.mjs",
-    "validate:patterns": "node tests/skills/scripts/validate-patterns.mjs",
-    "new-skill": "npx tsx tests/skills/scripts/new-skill.ts",
+    "validate": "node scripts/skills/validate.mjs",
+    "new-skill": "npx tsx scripts/skills/new-skill.ts",
     "prepare": "husky"
   },
   "devDependencies": {

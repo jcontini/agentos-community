@@ -21,7 +21,7 @@ if [ -z "$SKILLS" ]; then
 fi
 
 echo "📋 Validating skills: $SKILLS"
-node tests/skills/scripts/validate.mjs $SKILLS || exit 1
+node scripts/skills/validate.mjs $SKILLS || exit 1
 
 echo ""
 echo "🔌 MCP smoke test..."

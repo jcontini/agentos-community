@@ -226,6 +226,8 @@ Rules:
 - Use `returns: entity` for single entities
 - Do not hardcode misleading low limits
 - Pass caller-provided limits through to the API when the backend supports them
+- REST operations must use full absolute `rest.url` values; there is no `api.base_url` shortcut
+- Only GraphQL supports a shared API default, via `api.graphql_endpoint`
 
 ## Action Operations
 
