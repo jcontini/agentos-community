@@ -17,52 +17,6 @@ auth:
       secret: true
       description: Apple ID password (or app-specific password if 2FA enabled)
 
-connects_to: icloud
-
-seed:
-  - id: icloud
-    types: [product]
-    name: iCloud
-    data:
-      product_type: platform
-      url: https://www.icloud.com
-      launched: "2011"
-      platforms: [web, ios, macos, windows]
-      pricing: freemium
-      wikidata_id: Q867084
-    relationships:
-      - role: offered_by
-        to: apple
-
-  - id: apple
-    types: [organization]
-    name: Apple Inc.
-    data:
-      type: company
-      url: https://apple.com
-      founded: "1976"
-      ticker: AAPL
-      exchange: NASDAQ
-      wikidata_id: Q312
-
-instructions: |
-  iCloud adapter powered by pyicloud (Python). Requires Apple ID credentials.
-  
-  **Focus: iCloud Drive as an entity source.** Files are imported as work entities
-  (document, image, video, audio — typed by extension). Folders are place entities.
-  The entity graph captures the full folder hierarchy via file_in relationships.
-  
-  **Authentication:** If 2FA is enabled (most accounts), you'll need to verify on
-  first connection. The session caches for ~2 months, then requires re-verification.
-  
-  **Services covered:**
-  - iCloud Drive — files and folders (primary focus)
-  - iCloud Photos — albums and photos (phase 2)
-  
-  **Not covered** (already have native adapters):
-  - Calendar → apple-calendar adapter
-  - Contacts → apple-contacts adapter
-
 requires:
   - name: pyicloud
     install:
@@ -84,9 +38,8 @@ requires:
 # yet supported by the engine. Interim: map everything as document with
 # data.file_type for the actual type. Migrate when engine supports it.
 
-transformers:
+adapters:
   document:
-    terminology: File
     mapping:
       id: .docwsid
       title: .name
@@ -108,7 +61,7 @@ transformers:
 
 operations:
   # --- Drive browsing ---
-  document.list:
+  list_documents:
     description: List contents of an iCloud Drive folder (files and subfolders)
     returns: document[]
     params:
@@ -125,7 +78,7 @@ operations:
           print('[]')
       timeout: 30
 
-  document.get:
+  get_document:
     description: Get metadata for a specific file in iCloud Drive
     returns: document
     params:
@@ -141,7 +94,7 @@ operations:
           print('{}')
       timeout: 30
 
-  document.read:
+  read_document:
     description: Download and read text content from an iCloud Drive file
     returns: document
     params:
@@ -157,7 +110,7 @@ operations:
       timeout: 60
 
   # --- Drive mutations ---
-  document.create:
+  create_document:
     description: Upload a file to iCloud Drive
     returns: document
     params:
@@ -180,7 +133,7 @@ operations:
           print('{}')
       timeout: 60
 
-  document.mkdir:
+  mkdir_document:
     description: Create a new folder in iCloud Drive
     returns: void
     params:
@@ -199,7 +152,7 @@ operations:
           print('{}')
       timeout: 30
 
-  document.rename:
+  rename_document:
     description: Rename a file or folder
     returns: void
     params:
@@ -218,7 +171,7 @@ operations:
           print('{}')
       timeout: 30
 
-  document.delete:
+  delete_document:
     description: Move a file or folder to iCloud Drive trash
     returns: void
     params:
@@ -271,18 +224,18 @@ Documents/                    →       folder (place) "Documents"
 
 | Operation | Returns | Description |
 |-----------|---------|-------------|
-| `document.list` | `document[]` | List folder contents (files + subfolders) |
-| `document.get` | `document` | Get file metadata |
-| `document.read` | `document` | Download and read text content |
+| `list_documents` | `document[]` | List folder contents (files + subfolders) |
+| `get_document` | `document` | Get file metadata |
+| `read_document` | `document` | Download and read text content |
 
 ### Mutations
 
 | Operation | Returns | Description |
 |-----------|---------|-------------|
-| `document.create` | `document` | Upload a file |
-| `document.mkdir` | `void` | Create a new folder |
-| `document.rename` | `void` | Rename a file or folder |
-| `document.delete` | `void` | Move to trash |
+| `create_document` | `document` | Upload a file |
+| `mkdir_document` | `void` | Create a new folder |
+| `rename_document` | `void` | Rename a file or folder |
+| `delete_document` | `void` | Move to trash |
 
 ## Entity Mapping
 

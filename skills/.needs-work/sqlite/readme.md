@@ -17,13 +17,6 @@ auth:
     - "/Users/joe/data/app.sqlite"
     - "./local.db"
 
-instructions: |
-  SQLite-specific notes:
-  - File must exist and be readable
-  - No network connection needed
-  - Uses sqlite_master for metadata queries
-  - Supports both .sqlite and .db extensions
-
 # Action implementations (merged from mapping.yaml)
 actions:
   query:

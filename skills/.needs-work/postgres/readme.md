@@ -16,20 +16,12 @@ auth:
     - "postgresql://joe:secret@localhost:5432/myapp"
     - "postgres://user:pass@db.example.com:5432/prod?sslmode=require"
 
-instructions: |
-  PostgreSQL database access for AI agents.
-  - Use table.list to discover available tables
-  - Use table.get to understand table structure before querying
-  - Use the query utility for custom SQL queries
-  - For databases behind firewalls, set up an SSH tunnel in AgentOS Terminal
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   table:
-    terminology: Table
     mapping:
       id: .name
       name: .name
@@ -39,7 +31,6 @@ transformers:
       description: .description
 
   column:
-    terminology: Column
     mapping:
       id: .name
       name: .name
@@ -53,7 +44,7 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  table.list:
+  list_tables:
     description: List all tables in the database
     returns: table[]
     params:
@@ -75,7 +66,7 @@ operations:
       response:
         root: "/"
 
-  table.get:
+  get_table:
     description: Get table schema with columns and constraints
     returns: table
     params:
@@ -114,7 +105,7 @@ operations:
             "columns": .
           }
 
-  table.search:
+  search_tables:
     description: Search for tables by name pattern
     returns: table[]
     params:
@@ -138,10 +129,8 @@ operations:
         root: "/"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
   query:
     description: Execute a custom SQL query (read-only)
     params:
@@ -266,13 +255,13 @@ For databases behind a firewall:
 
 ## Operations
 
-### table.list
+### list_tables
 List all tables with row counts and sizes.
 
-### table.get
+### get_table
 Get full schema for a table including columns, types, and constraints.
 
-### table.search
+### search_tables
 Find tables by name pattern.
 
 ## Utilities

@@ -12,13 +12,6 @@ database:
   windows: "%APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb"
   linux: "~/.config/Cursor/User/globalStorage/state.vscdb"
 
-instructions: |
-  Cursor stores AI chat history in a local SQLite database.
-  - Conversations are stored as JSON in a key-value table
-  - Message type: 1 = user, 2 = assistant
-  - Timestamps are Unix milliseconds
-  - Code blocks are embedded in markdown content, not separate
-
 # Action implementations (merged from mapping.yaml)
 actions:
   list_conversations:

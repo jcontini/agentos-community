@@ -7,17 +7,6 @@ color: "#FF6363"
 website: https://raycast.com
 
 auth: none
-connects_to: raycast-app
-
-seed:
-  - id: raycast-app
-    types: [software]
-    name: Raycast
-    data:
-      software_type: ai_client
-      url: https://raycast.com
-      platforms: [macos]
-    relationships: []
 ---
 
 # Raycast

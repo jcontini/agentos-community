@@ -9,19 +9,6 @@ platform: macos
 
 # No auth block = no credentials needed (local system access)
 
-instructions: |
-  macOS connector for local file operations using standard CLI tools.
-  
-  **Tools used:** ls, cat, cp, mv, rm, mkdir, tee, file, open, tree, pdftotext, textutil
-  
-  **Optional dependencies:**
-  - `tree` for tree view: `brew install tree`
-  - `pdftotext` for PDFs: `brew install poppler`
-  
-  **Security:**
-  - All CLI tools prompt for approval on first use via firewall
-  - No shell - all commands executed safely via std::process::Command
-
 # Action implementations (merged from mapping.yaml)
 actions:
   open:

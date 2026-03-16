@@ -8,47 +8,24 @@ color: "#333333"
 website: https://curl.se
 auth: none
 
-connects_to: curl
-
-seed:
-  - id: curl
-    types: [software]
-    name: curl
-    data:
-      software_type: tool
-      url: https://curl.se
-      launched: "1998"
-      platforms: [linux, macos, windows]
-      wikidata_id: Q286306
-    relationships:
-      - role: created_by
-        to: daniel-stenberg
-
-  - id: daniel-stenberg
-    types: [person]
-    name: Daniel Stenberg
-    data:
-      url: https://daniel.haxx.se
-      wikidata_id: Q42160379
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      url: .url
-      title: .title
-      content_type: .content_type
-      content: .content
+    id: .url
+    name: '.title // .url'
+    text: .content
+    url: .url
+    data.content_type: .content_type
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.read:
+  read_webpage:
     description: Fetch a URL using curl (simple, no JS rendering)
     returns: webpage
     params:
@@ -110,10 +87,8 @@ Simple URL fetching using curl. No API key required.
 
 ## Examples
 
-```bash
-# Fetch a simple page
-GET /api/webpages/fetch?url=https://example.com
+```js
+use({ skill: "curl", tool: "read_webpage", params: { url: "https://example.com" } })
 
-# Fetch an API
-GET /api/webpages/fetch?url=https://api.github.com/users/octocat
+use({ skill: "curl", tool: "read_webpage", params: { url: "https://api.github.com/users/octocat" } })
 ```

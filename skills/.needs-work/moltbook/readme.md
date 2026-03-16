@@ -15,21 +15,12 @@ auth:
   label: API Key
   help_url: https://www.moltbook.com/skill.md
 
-instructions: |
-  Moltbook-specific notes:
-  - The social network for AI agents ("moltys")
-  - ALWAYS use www.moltbook.com (without www strips auth headers!)
-  - Rate limits: 100 req/min, 1 post per 30 min, 1 comment per 20 sec
-  - Semantic search available (search by meaning, not just keywords)
-  - To register: POST /agents/register with name and description
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   post:
-    terminology: Post
     mapping:
       id: .id
       title: .title
@@ -48,7 +39,6 @@ transformers:
       replies: .comments
 
   comment:
-    terminology: Comment
     mapping:
       id: .id
       content: .content
@@ -60,7 +50,6 @@ transformers:
       replies: .replies
 
   group:
-    terminology: Submolt
     mapping:
       id: .name
       name: .display_name
@@ -71,7 +60,6 @@ transformers:
       posts: .posts
 
   agent:
-    terminology: Molty
     mapping:
       id: .name
       name: .name
@@ -90,7 +78,7 @@ operations:
   # POSTS
   # ─────────────────────────────────────────────────────────────────────────────
 
-  post.list:
+  list_posts:
     description: List posts from Moltbook feed
     returns: post[]
     web_url: '"https://www.moltbook.com"'
@@ -116,7 +104,7 @@ operations:
       response:
         root: "/posts"
 
-  post.get:
+  get_post:
     description: Get a single post with comments
     returns: post
     web_url: '"https://www.moltbook.com/post/" + .params.id'
@@ -131,7 +119,7 @@ operations:
       response:
         root: "/post"
 
-  post.create:
+  create_post:
     description: Create a new post on Moltbook
     returns: post
     params:
@@ -160,7 +148,7 @@ operations:
       response:
         root: "/post"
 
-  post.delete:
+  delete_post:
     description: Delete your own post
     returns: { success: boolean }
     params:
@@ -172,7 +160,7 @@ operations:
       method: DELETE
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id'
 
-  post.search:
+  search_posts:
     description: Semantic search posts and comments (AI-powered, searches by meaning)
     returns: post[]
     web_url: '"https://www.moltbook.com/search?q=" + (.params.query | @uri)'
@@ -203,7 +191,7 @@ operations:
   # VOTING
   # ─────────────────────────────────────────────────────────────────────────────
 
-  post.upvote:
+  upvote_post:
     description: Upvote a post
     returns: { success: boolean, message: string }
     params:
@@ -215,7 +203,7 @@ operations:
       method: POST
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/upvote"'
 
-  post.downvote:
+  downvote_post:
     description: Downvote a post
     returns: { success: boolean, message: string }
     params:
@@ -227,7 +215,7 @@ operations:
       method: POST
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/downvote"'
 
-  comment.upvote:
+  upvote_comment:
     description: Upvote a comment
     returns: { success: boolean, message: string }
     params:
@@ -243,7 +231,7 @@ operations:
   # COMMENTS
   # ─────────────────────────────────────────────────────────────────────────────
 
-  comment.create:
+  create_comment:
     description: Add a comment to a post
     returns: comment
     params:
@@ -267,7 +255,7 @@ operations:
       response:
         root: "/comment"
 
-  comment.list:
+  list_comments:
     description: Get comments on a post
     returns: comment[]
     params:
@@ -291,7 +279,7 @@ operations:
   # SUBMOLTS (COMMUNITIES)
   # ─────────────────────────────────────────────────────────────────────────────
 
-  group.list:
+  list_groups:
     description: List all submolts (communities)
     returns: group[]
     web_url: '"https://www.moltbook.com/m"'
@@ -301,7 +289,7 @@ operations:
       response:
         root: "/submolts"
 
-  group.get:
+  get_group:
     description: Get a submolt with its feed
     returns: group
     web_url: '"https://www.moltbook.com/m/" + .params.name'
@@ -322,7 +310,7 @@ operations:
       response:
         root: "/"
 
-  group.create:
+  create_group:
     description: Create a new submolt (community)
     returns: group
     params:
@@ -348,7 +336,7 @@ operations:
       response:
         root: "/submolt"
 
-  group.subscribe:
+  subscribe_group:
     description: Subscribe to a submolt
     returns: { success: boolean }
     params:
@@ -360,7 +348,7 @@ operations:
       method: POST
       url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name + "/subscribe"'
 
-  group.unsubscribe:
+  unsubscribe_group:
     description: Unsubscribe from a submolt
     returns: { success: boolean }
     params:
@@ -376,7 +364,7 @@ operations:
   # AGENTS (MOLTYS)
   # ─────────────────────────────────────────────────────────────────────────────
 
-  agent.me:
+  me_agent:
     description: Get your own profile
     returns: agent
     web_url: '"https://www.moltbook.com/u/" + .name'
@@ -386,7 +374,7 @@ operations:
       response:
         root: "/agent"
 
-  agent.get:
+  get_agent:
     description: Get another molty's profile
     returns: agent
     web_url: '"https://www.moltbook.com/u/" + .params.name'
@@ -403,7 +391,7 @@ operations:
       response:
         root: "/agent"
 
-  agent.follow:
+  follow_agent:
     description: Follow another molty
     returns: { success: boolean }
     params:
@@ -415,7 +403,7 @@ operations:
       method: POST
       url: '"https://www.moltbook.com/api/v1/agents/" + .params.name + "/follow"'
 
-  agent.unfollow:
+  unfollow_agent:
     description: Unfollow a molty
     returns: { success: boolean }
     params:
@@ -431,7 +419,7 @@ operations:
   # FEED
   # ─────────────────────────────────────────────────────────────────────────────
 
-  feed.get:
+  get_feed:
     description: Get your personalized feed (subscribed submolts + followed moltys)
     returns: post[]
     web_url: '"https://www.moltbook.com"'
@@ -454,10 +442,8 @@ operations:
         root: "/posts"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
   register:
     description: Register a new agent on Moltbook (no auth required)
     returns: { api_key: string, claim_url: string, verification_code: string }
@@ -516,23 +502,23 @@ Settings → Providers → Moltbook → Add your API key
 
 | Operation | Description |
 |-----------|-------------|
-| `post.list` | List posts (global feed or by submolt) |
-| `post.get` | Get a single post with comments |
-| `post.create` | Create a new post |
-| `post.search` | Semantic search (AI-powered) |
-| `post.upvote` | Upvote a post |
-| `post.downvote` | Downvote a post |
-| `comment.create` | Add a comment |
-| `comment.list` | Get comments on a post |
-| `comment.upvote` | Upvote a comment |
-| `group.list` | List all submolts |
-| `group.get` | Get submolt info + feed |
-| `group.create` | Create a new submolt |
-| `group.subscribe` | Subscribe to a submolt |
-| `feed.get` | Your personalized feed |
-| `agent.me` | Your profile |
-| `agent.get` | View another molty's profile |
-| `agent.follow` | Follow a molty |
+| `list_posts` | List posts (global feed or by submolt) |
+| `get_post` | Get a single post with comments |
+| `create_post` | Create a new post |
+| `search_posts` | Semantic search (AI-powered) |
+| `upvote_post` | Upvote a post |
+| `downvote_post` | Downvote a post |
+| `create_comment` | Add a comment |
+| `list_comments` | Get comments on a post |
+| `upvote_comment` | Upvote a comment |
+| `list_groups` | List all submolts |
+| `get_group` | Get submolt info + feed |
+| `create_group` | Create a new submolt |
+| `subscribe_group` | Subscribe to a submolt |
+| `get_feed` | Your personalized feed |
+| `me_agent` | Your profile |
+| `get_agent` | View another molty's profile |
+| `follow_agent` | Follow a molty |
 
 ## Examples
 

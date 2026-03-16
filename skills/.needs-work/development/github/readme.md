@@ -11,25 +11,11 @@ auth:
   type: none
   # gh handles its own auth via `gh auth login`
 
-instructions: |
-  GitHub integration via the `gh` CLI. Maps to existing entities:
-  
-  - **Issues → Tasks** - Show up in Tasks app alongside Todoist, Linear
-  - **Gists → Posts** - Show up in Posts app alongside Reddit, HN  
-  - **Repo contents → Files** - Browse repos in Files app
-  
-  **Setup:** Run `gh auth login` in terminal once.
-  
-  **Examples:**
-  - List issues as tasks: `task.list (adapter: github, repo: "owner/repo")`
-  - List gists as posts: `post.list (adapter: github)`
-  - Browse repo files: `file.list (adapter: github, path: "owner/repo")`
-
 # =============================================================================
 # Entity Adapters - Map GitHub to existing entities
 # =============================================================================
 
-transformers:
+adapters:
   task:
     list: issue.list
     get: issue.get
@@ -49,7 +35,7 @@ actions:
   # -------------------------------------------------------------------------
   # Issues → task entity
   # -------------------------------------------------------------------------
-  issue.list:
+  list_issues:
     operation: read
     label: "List issues"
     description: List issues for a repository (maps to task entity)
@@ -93,7 +79,7 @@ actions:
           updated_at: .updatedAt
           completed_at: .closedAt
 
-  issue.get:
+  get_issue:
     operation: read
     label: "Get issue"
     description: Get a specific issue (maps to task entity)
@@ -129,7 +115,7 @@ actions:
           updated_at: .updatedAt
           completed_at: .closedAt
 
-  issue.create:
+  create_issue:
     operation: create
     label: "Create issue"
     description: Create a new issue (maps to task.create)
@@ -158,7 +144,7 @@ actions:
     response:
       raw: true
 
-  issue.close:
+  close_issue:
     operation: update
     label: "Close issue"
     description: Close an issue (maps to task.complete)
@@ -181,7 +167,7 @@ actions:
     response:
       raw: true
 
-  issue.reopen:
+  reopen_issue:
     operation: update
     label: "Reopen issue"
     description: Reopen a closed issue (maps to task.reopen)
@@ -207,7 +193,7 @@ actions:
   # -------------------------------------------------------------------------
   # Gists → post entity
   # -------------------------------------------------------------------------
-  gist.list:
+  list_gists:
     operation: read
     label: "List gists"
     description: List your gists (maps to post entity)
@@ -228,7 +214,7 @@ actions:
       # Note: gh gist list doesn't support --json, need to parse text output
       # or use API directly. For now, raw output.
 
-  gist.get:
+  get_gist:
     operation: read
     label: "Get gist"
     description: Get a specific gist (maps to post entity)
@@ -247,7 +233,7 @@ actions:
     response:
       raw: true
 
-  gist.create:
+  create_gist:
     operation: create
     label: "Create gist"
     description: Create a new gist (maps to post.create)
@@ -284,7 +270,7 @@ actions:
   # -------------------------------------------------------------------------
   # Repo contents → file entity
   # -------------------------------------------------------------------------
-  contents.list:
+  list_contents:
     operation: read
     label: "List repo contents"
     description: List files in a repository (maps to file entity)
@@ -312,7 +298,7 @@ actions:
           type: 'if .type == "dir" then "directory" else "file" end'
           size: .size
 
-  contents.read:
+  read_contents:
     operation: read
     label: "Read file"
     description: Read a file from a repository (maps to file entity)
@@ -340,7 +326,7 @@ actions:
           name: '"{{params.path | split:''/'' | .[-1]}}"'
           content: .
 
-  contents.write:
+  write_contents:
     operation: create
     label: "Write file"
     description: Create or update a file in a repository
@@ -383,7 +369,7 @@ actions:
   # -------------------------------------------------------------------------
   # Utilities (no entity mapping)
   # -------------------------------------------------------------------------
-  pr.list:
+  list_prs:
     operation: read
     label: "List PRs"
     description: List pull requests (utility - no entity mapping)
@@ -412,7 +398,7 @@ actions:
     response:
       raw: true
 
-  pr.create:
+  create_pr:
     operation: create
     label: "Create PR"
     description: Create a pull request
@@ -565,7 +551,7 @@ source branch/path, and the public URL. Operations to add:
 
 Mapping:
 ```yaml
-transformers:
+adapters:
   website:
     mapping:
       id: .url

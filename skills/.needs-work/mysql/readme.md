@@ -16,13 +16,6 @@ auth:
     - "mysql://joe:secret@localhost:3306/myapp"
     - "mysql://user:pass@db.example.com:3306/prod"
 
-instructions: |
-  MySQL-specific notes:
-  - Works with both MySQL and MariaDB
-  - Default port is 3306
-  - Use information_schema for metadata queries
-  - For PlanetScale, use their provided connection string
-
 # Action implementations (merged from mapping.yaml)
 actions:
   query:

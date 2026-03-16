@@ -14,21 +14,13 @@ auth:
   label: Personal API Key
   help_url: https://posthog.com/docs/api/personal-api-keys
 
-instructions: |
-  PostHog-specific notes:
-  - Requires Personal API Key (not project API key)
-  - Project ID required for all API calls
-  - Supports US Cloud, EU Cloud, and self-hosted instances
-  - Focus areas: user identification, session recordings, person management
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   # Person adapter - maps PostHog person data
   person:
-    terminology: Person
     mapping:
       id: .id
       uuid: .uuid
@@ -40,7 +32,6 @@ transformers:
 
   # Session recording adapter
   recording:
-    terminology: Recording
     mapping:
       id: .id
       distinct_id: .distinct_id
@@ -56,7 +47,7 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  person.list:
+  list_persons:
     description: List persons (users) from PostHog
     returns: person[]
     params:
@@ -67,7 +58,7 @@ operations:
     # GET /api/projects/{project_id}/persons/
     # Based on skills/posthog/posthog.sh
 
-  person.get:
+  get_person:
     description: Get a specific person by ID or UUID
     returns: person
     params:
@@ -75,7 +66,7 @@ operations:
     # TODO: Implement using REST executor
     # GET /api/projects/{project_id}/persons/{id}/
 
-  person.search:
+  search_persons:
     description: Search for persons by email address
     returns: person[]
     params:
@@ -83,7 +74,7 @@ operations:
     # TODO: Implement using REST executor
     # GET /api/projects/{project_id}/persons/?search={email}
 
-  recording.list:
+  list_recordings:
     description: List session recordings
     returns: recording[]
     params:
@@ -93,7 +84,7 @@ operations:
     # TODO: Implement using REST executor
     # GET /api/projects/{project_id}/session_recordings/
 
-  recording.get:
+  get_recording:
     description: Get a specific session recording
     returns: recording
     params:

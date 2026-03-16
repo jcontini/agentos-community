@@ -7,21 +7,12 @@ icon: icon.svg
 auth:
   type: none
 
-instructions: |
-  Uses the system `whois` command for domain lookups. No API key required.
-  
-  **Capabilities:**
-  - Look up domain registration info
-  - Check if a domain is available
-  
-  **Note:** Output is raw WHOIS text. AI interprets the data.
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  domain.get:
+  get_domain:
     description: WHOIS lookup for a domain
     returns: void
     params:
@@ -32,7 +23,7 @@ operations:
         - .params.domain
       timeout: 30
 
-  domain.check:
+  check_domain:
     description: Check if a domain is available (via WHOIS)
     returns: void
     params:

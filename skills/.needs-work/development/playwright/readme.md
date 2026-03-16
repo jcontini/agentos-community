@@ -37,7 +37,7 @@ requires:
     install:
       all: npx playwright install chromium
 
-transformers:
+adapters:
   webpage:
     mapping:
       url: .url
@@ -46,14 +46,14 @@ transformers:
 
 operations:
   # Session Management
-  webpage.start_session:
+  start_session_webpage:
     description: Start a persistent browser session for multi-step workflows
     returns: void
     node:
       script: scripts/playwright.mjs
       args: ["start_session", "{{params | json}}"]
 
-  webpage.end_session:
+  end_session_webpage:
     description: Close a persistent browser session
     params:
       session_id: { type: string, required: true }
@@ -63,7 +63,7 @@ operations:
       args: ["end_session", "{{params | json}}"]
 
   # Page Inspection
-  webpage.inspect:
+  inspect_webpage:
     description: Get page structure, console logs, network activity
     readonly: true
     params:
@@ -77,7 +77,7 @@ operations:
       args: ["inspect", "{{params | json}}"]
 
   # Interaction
-  webpage.click:
+  click_webpage:
     description: Click an element on a page
     params:
       session_id: { type: string }
@@ -89,7 +89,7 @@ operations:
       script: scripts/playwright.mjs
       args: ["click", "{{params | json}}"]
 
-  webpage.type:
+  type_webpage:
     description: Type text into an input field
     params:
       session_id: { type: string }
@@ -102,7 +102,7 @@ operations:
       script: scripts/playwright.mjs
       args: ["type", "{{params | json}}"]
 
-  webpage.screenshot:
+  screenshot_webpage:
     description: Take a screenshot (expensive, use sparingly)
     readonly: true
     params:
@@ -115,7 +115,7 @@ operations:
       script: scripts/playwright.mjs
       args: ["screenshot", "{{params | json}}"]
 
-  webpage.evaluate:
+  evaluate_webpage:
     description: Run JavaScript in the page context
     params:
       session_id: { type: string }
@@ -127,7 +127,6 @@ operations:
       script: scripts/playwright.mjs
       args: ["evaluate", "{{params | json}}"]
 
-utilities:
   record_flow:
     description: Start recording user interactions on a browser session
     params:

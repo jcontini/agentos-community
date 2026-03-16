@@ -19,53 +19,27 @@ auth:
   label: Claude Desktop subscription
   help_url: https://claude.ai
 
-connects_to: claude-desktop-app
-
-seed:
-  - id: claude-desktop-app
-    types: [software]
-    name: Claude Desktop
-    data:
-      software_type: ai_client
-      url: https://claude.ai
-      platforms: [macos, windows]
-    relationships:
-      - role: offered_by
-        to: anthropic-inc
-
-  - id: anthropic-inc
-    types: [organization]
-    name: Anthropic
-    data:
-      type: company
-      url: https://www.anthropic.com
-      founded: "2021"
-
-transformers:
+adapters:
   model:
-    terminology: Model
-    mapping:
-      api_id: .id
-      title: .display_name
-      released: .created_at
-      provider: '"anthropic"'
-      model_type: '"llm"'
+    id: .id
+    name: .display_name
+    datePublished: .created_at
+    data.provider: '"anthropic"'
+    data.model_type: '"llm"'
 
   conversation:
-    terminology: Session
-    mapping:
-      id: .id
-      name: .name
-      client: '"claude-desktop"'
-      last_message: .last_message
-      last_message_at: .last_message_at
-      data.workspace: .workspace
-      data.user_turns: .user_turns
-      data.message_count: .message_count
-      content: .transcript
+    id: .id
+    name: .name
+    text: .last_message
+    content: .transcript
+    datePublished: .last_message_at
+    data.client: '"claude-desktop"'
+    data.workspace: .workspace
+    data.user_turns: .user_turns
+    data.message_count: .message_count
 
 operations:
-  model.list:
+  list_models:
     description: List available Claude models (via your Claude Desktop subscription)
     returns: model[]
     rest:
@@ -78,7 +52,7 @@ operations:
       response:
         root: /data
 
-  conversation.list:
+  list_conversations:
     description: >
       List Claude Code sessions from local JSONL transcripts in ~/.claude/projects/.
       Claude Code is the CLI that runs inside Claude Desktop for agentic coding tasks.
@@ -90,10 +64,11 @@ operations:
         description: Filter to sessions in a specific workspace path (e.g. /Users/joe/dev/myproject)
     command:
       binary: bash
-      args: ["-l", "-c", 'PARAM_WORKSPACE="$1"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.workspace"]
+      args: ["-l", "-c", 'PARAM_WORKSPACE="$1"; python3 ./list-sessions.py --json --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.workspace"]
+      working_dir: .
       timeout: 30
 
-  conversation.search:
+  search_conversations:
     description: >
       Search Claude Code session history by content.
       Searches through the full text of all local session transcripts.
@@ -108,10 +83,11 @@ operations:
         description: Optionally limit search to a specific workspace path
     command:
       binary: bash
-      args: ["-l", "-c", 'PARAM_QUERY="$1"; PARAM_WORKSPACE="$2"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --query "${PARAM_QUERY}" --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.query", ".params.workspace"]
+      args: ["-l", "-c", 'PARAM_QUERY="$1"; PARAM_WORKSPACE="$2"; python3 ./list-sessions.py --json --query "${PARAM_QUERY}" --workspace "${PARAM_WORKSPACE}" 2>/dev/null', "--", ".params.query", ".params.workspace"]
+      working_dir: .
       timeout: 30
 
-  conversation.get:
+  get_conversation:
     description: Get a Claude Code session by UUID with full conversation transcript
     returns: conversation
     params:
@@ -121,9 +97,10 @@ operations:
         description: Session UUID
     command:
       binary: bash
-      args: ["-l", "-c", 'PARAM_ID="$1"; python3 ~/dev/agentos-community/skills/claude-desktop/list-sessions.py --json --id "${PARAM_ID}" 2>/dev/null', "--", ".params.id"]
+      args: ["-l", "-c", 'PARAM_ID="$1"; python3 ./list-sessions.py --json --id "${PARAM_ID}" 2>/dev/null', "--", ".params.id"]
+      working_dir: .
       timeout: 15
-utilities:
+
   chat:
     description: Send a message to Claude (billed to your Claude Desktop Pro/Max subscription)
     returns:
@@ -196,7 +173,7 @@ AgentOS reads the OAuth token that Claude Desktop stores in its encrypted local 
 
 ## Session History
 
-Claude Code (the agentic CLI that runs inside Claude Desktop) stores conversation transcripts locally at `~/.claude/projects/{workspace}/`. The `session.list`, `session.search`, and `session.get` operations read these files directly — no credentials or network access needed.
+Claude Code (the agentic CLI that runs inside Claude Desktop) stores conversation transcripts locally at `~/.claude/projects/{workspace}/`. The `list_conversations`, `search_conversations`, and `get_conversation` operations read these files directly — no credentials or network access needed.
 
 **What's stored locally:**
 - Claude Code (CLI) sessions — full transcripts in `~/.claude/projects/`

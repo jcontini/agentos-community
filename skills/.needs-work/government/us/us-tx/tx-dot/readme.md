@@ -1016,73 +1016,73 @@ fillable: true                        # Has form fields (vs image-only PDF)
 
 # Discovered field names (use exactly as-is)
 fields:
-  owner.first:
+  first_owner:
     pdf_field: "First Name or Entity Name"
     type: text
     required: true
   
-  owner.middle:
+  middle_owner:
     pdf_field: "Middle Name"
     type: text
   
-  owner.last:
+  last_owner:
     pdf_field: "Last Name"
     type: text
     required: true
   
-  old_address.line1:
+  line1_old_addresses:
     pdf_field: "Current Address"
     type: text
     required: true
   
-  old_address.city:
+  city_old_addresses:
     pdf_field: "City"
     type: text
     required: true
   
-  old_address.state:
+  state_old_addresses:
     pdf_field: "State"
     type: text
     default: "TX"
   
-  old_address.county:
+  county_old_addresses:
     pdf_field: "County"
     type: text
     required: true                    # Important for TX!
   
-  old_address.zip:
+  zip_old_addresses:
     pdf_field: "ZIP"
     type: text
     pattern: "^\\d{5}$"
     required: true
   
-  vehicle.vin:
+  vin_vehicle:
     pdf_field: "Vehicle Identification Number"
     type: text
     required: true
     pattern: "^[A-HJ-NPR-Z0-9]{17}$"
   
-  vehicle.plate:
+  plate_vehicle:
     pdf_field: "Current TX License Plate"
     type: text
     required: true
   
-  new_address.line1:
+  line1_new_addresses:
     pdf_field: "Address"              # The NEW address field
     type: text
     required: true
   
-  new_address.city:
+  city_new_addresses:
     pdf_field: "City_2"
     type: text
     required: true
   
-  new_address.state:
+  state_new_addresses:
     pdf_field: "State_2"
     type: text
     default: "TX"
   
-  new_address.zip:
+  zip_new_addresses:
     pdf_field: "ZIP_2"
     type: text
     required: true

@@ -7,51 +7,19 @@ color: "#2EAD33"
 
 website: https://playwright.dev
 auth: none
-connects_to: playwright
-
-seed:
-  - id: playwright
-    types: [software]
-    name: Playwright
-    data:
-      software_type: library
-      url: https://playwright.dev
-      launched: "2020"
-      platforms: [macos, windows, linux]
-      pricing: open_source
-    relationships:
-      - role: offered_by
-        to: microsoft-corp
-
-  - id: cdp
-    types: [software]
-    name: Chrome DevTools Protocol
-    data:
-      software_type: protocol
-      url: https://chromedevtools.github.io/devtools-protocol/
-
-  - id: microsoft-corp
-    types: [organization]
-    name: Microsoft
-    data:
-      type: company
-      url: https://microsoft.com
-
-# Playwright's `cookies` utility can extract cookies from a live browser session,
+# Playwright's `cookies` operation can extract cookies from a live browser session,
 # but it's not a passive cookie provider — it requires an active CDP session.
 # Cookie reads for auth should go through passive providers like brave-browser.
 # Playwright's role in the cookie flow is the login phase (auth.cookies.login),
 # not providing cookies on demand.
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      url: .url
-      title: .title
-      id: .url
+    id: .url
+    name: '.title // .url'
+    url: .url
 
 operations:
-  webpage.get:
+  get_webpage:
     description: Navigate to a URL and return page info (title, URL)
     returns: webpage
     params:
@@ -64,11 +32,12 @@ operations:
         description: "Wait condition: load, domcontentloaded, networkidle (default: networkidle)"
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts goto"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts goto"]
+      working_dir: .
       stdin: '.params | {url: .url, wait_until: (.wait_until // "networkidle")}'
       timeout: 45
 
-  webpage.read:
+  read_webpage:
     description: Extract text or HTML content from the current page or a CSS selector
     returns: webpage
     params:
@@ -80,11 +49,11 @@ operations:
         description: "Output format: text or html (default: text)"
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts extract"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts extract"]
+      working_dir: .
       stdin: '.params | {selector: (.selector // "body"), format: (.format // "text")}'
       timeout: 30
 
-utilities:
   start:
     description: "Launch or connect to a persistent Chromium browser. If already running, returns immediately. Mode: 'headed' (default) shows a visible window, 'headless' runs invisibly."
     params:
@@ -100,7 +69,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts start"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts start"]
+      working_dir: .
       stdin: '.params | {mode: (.mode // "headed"), port: (.port // 9222)}'
       timeout: 30
 
@@ -109,7 +79,8 @@ utilities:
     returns: void
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts stop"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts stop"]
+      working_dir: .
       stdin: '.params | {port: (.port // 9222)}'
       timeout: 10
 
@@ -121,7 +92,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts status"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts status"]
+      working_dir: .
       stdin: '.params | {port: (.port // 9222)}'
       timeout: 10
 
@@ -141,7 +113,8 @@ utilities:
       path: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts screenshot"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts screenshot"]
+      working_dir: .
       stdin: '.params | {selector: .selector, path: (.path // "/tmp/screenshot.png"), full_page: (.full_page // false)}'
       timeout: 30
 
@@ -157,7 +130,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts click"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts click"]
+      working_dir: .
       stdin: '.params | {selector: .selector}'
       timeout: 15
 
@@ -177,7 +151,8 @@ utilities:
       value: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts fill"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fill"]
+      working_dir: .
       stdin: '.params | {selector: .selector, value: .value}'
       timeout: 15
 
@@ -197,7 +172,8 @@ utilities:
       value: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts select"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts select"]
+      working_dir: .
       stdin: '.params | {selector: .selector, value: .value}'
       timeout: 15
 
@@ -217,7 +193,8 @@ utilities:
       text: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts type"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts type"]
+      working_dir: .
       stdin: '.params | {selector: .selector, text: .text}'
       timeout: 30
 
@@ -232,7 +209,8 @@ utilities:
       result: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts evaluate"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts evaluate"]
+      working_dir: .
       stdin: '.params | {script: .script}'
       timeout: 30
 
@@ -243,7 +221,8 @@ utilities:
       title: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts url"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts url"]
+      working_dir: .
       timeout: 10
 
   inspect:
@@ -258,7 +237,8 @@ utilities:
       snapshot: object
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts inspect"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts inspect"]
+      working_dir: .
       stdin: '.params | {selector: (.selector // "body")}'
       timeout: 15
 
@@ -270,7 +250,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts errors"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts errors"]
+      working_dir: .
       timeout: 30
 
   wait:
@@ -286,7 +267,8 @@ utilities:
       status: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts wait"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts wait"]
+      working_dir: .
       stdin: '.params | {selector: .selector, timeout: (.timeout // 10000)}'
       timeout: 60
 
@@ -297,7 +279,8 @@ utilities:
       count: integer
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts tabs"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts tabs"]
+      working_dir: .
       timeout: 10
 
   new_tab:
@@ -311,7 +294,8 @@ utilities:
       title: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts new_tab"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts new_tab"]
+      working_dir: .
       stdin: '.params | {url: .url}'
       timeout: 30
 
@@ -320,7 +304,8 @@ utilities:
     returns: void
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts close_tab 2>/dev/null"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts close_tab 2>/dev/null"]
+      working_dir: .
       timeout: 10
 
   cookies:
@@ -345,11 +330,12 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts cookies"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts cookies"]
+      working_dir: .
       stdin: '.params | {domain: .domain, names: .names}'
       timeout: 15
 
-  network.capture:
+  capture_network:
     description: |
       Navigate to a URL and capture all network requests/responses.
       Optionally inject cookies before navigating (useful for authenticated pages).
@@ -387,7 +373,8 @@ utilities:
       count: integer
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/playwright/scripts/browser.ts network_capture"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts network_capture"]
+      working_dir: .
       stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), cookies: (.cookies // []), capture_body: (.capture_body // true)}'
       timeout: 60
 ---
@@ -400,9 +387,9 @@ Browser automation via a persistent Chromium session. Control a real browser —
 
 **Most web tasks do NOT need Playwright.** Before using this skill, check:
 
-- **"I need to read a web page"** → Use **Exa** (`webpage.read`) or **Firecrawl** (`webpage.read`). They're faster, cheaper, and purpose-built for content extraction. Don't launch a browser just to read a page.
-- **"I need to search the web"** → Use **Exa** (`search.create`) or **Brave** (`search.create`). Playwright is not a search engine.
-- **"I need to check what sites were visited"** → Use the **Chrome** or **Firefox** skill (`webpage.list`, `webpage.search`). They read local history databases directly.
+- **"I need to read a web page"** → Use **Exa** (`read_webpage`) or **Firecrawl** (`read_webpage`). They're faster, cheaper, and purpose-built for content extraction. Don't launch a browser just to read a page.
+- **"I need to search the web"** → Use **Exa** (`search`) or **Brave** (`search`). Playwright is not a search engine.
+- **"I need to check what sites were visited"** → Use the **Chrome** or **Firefox** skill (`list_webpages`, `search_webpages`). They read local history databases directly.
 
 **Use Playwright when you need to DO things in a browser:**
 
@@ -423,7 +410,7 @@ Playwright controls Chromium via the Chrome DevTools Protocol (CDP). The browser
 ```
 start → launches Chromium with --remote-debugging-port=9222
         ↓
-goto/click/fill/screenshot → connects via CDP, acts, returns (~100ms connect)
+get_webpage/click/fill/screenshot → connects via CDP, acts, returns (~100ms connect)
         ↓
 browser stays alive — sessions, cookies, tabs persist
         ↓
@@ -432,30 +419,30 @@ stop → kills the browser process (only when done)
 
 ## Operations
 
-### webpage.get
+### get_webpage
 
 Navigate to a URL. Returns the page title and final URL (after redirects).
 
 ```
-webpage.get { url: "https://example.com" }
+get_webpage { url: "https://example.com" }
 → { url: "https://example.com/", title: "Example Domain" }
 ```
 
-### webpage.read
+### read_webpage
 
 Extract text or HTML from the current page or a specific element.
 
 ```
-webpage.read { }                           → full page text
-webpage.read { selector: "h1" }            → text of first h1
-webpage.read { selector: "main", format: "html" } → HTML of main element
+read_webpage { }                           → full page text
+read_webpage { selector: "h1" }            → text of first h1
+read_webpage { selector: "main", format: "html" } → HTML of main element
 ```
 
-## Utilities
+## Additional Operations
 
 ### Lifecycle
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `start` | Launch browser (or confirm it's running). Pass `mode: "headed"` (default, visible window) or `mode: "headless"` (invisible). Optional — other operations auto-launch. |
 | `stop` | Kill the browser process. |
@@ -463,7 +450,7 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 
 ### Navigation & Inspection
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `inspect` | **Use this first.** Fast DOM snapshot — structured tree of tags, attributes, text. No pixels, just data. |
 | `url` | Get current URL and page title. |
@@ -473,7 +460,7 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 
 ### Interaction
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `click` | Click an element by CSS selector. |
 | `fill` | Set an input's value (clears first). |
@@ -483,7 +470,7 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 
 ### Tabs
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `tabs` | List all open tabs with URLs and titles. |
 | `new_tab` | Open a new tab, optionally navigate to URL. |
@@ -491,7 +478,7 @@ webpage.read { selector: "main", format: "html" } → HTML of main element
 
 ### Cookies
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `cookies` | Extract cookies for a domain from the active browser session. Returns HttpOnly cookies too (via CDP, not JS). Use after a login flow to capture session cookies. |
 
@@ -505,15 +492,15 @@ cookies { domain: ".chase.com", names: "JSESSIONID,auth_token" }
 
 ### Network Capture
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
-| `network.capture` | Navigate to a URL and capture all XHR/fetch responses. Optionally inject cookies first. Returns URL, method, status, content-type, and parsed JSON body for each matching response. **Use for endpoint discovery on authenticated pages.** |
+| `capture_network` | Navigate to a URL and capture all XHR/fetch responses. Optionally inject cookies first. Returns URL, method, status, content-type, and parsed JSON body for each matching response. **Use for endpoint discovery on authenticated pages.** |
 
 ```
-network.capture { url: "https://secure.chase.com/web/auth/dashboard", cookies: [...], wait: 8000 }
+capture_network { url: "https://secure.chase.com/web/auth/dashboard", cookies: [...], wait: 8000 }
 → { captured: [{url: "https://secure.chase.com/svc/rr/...", method: "POST", status: 200, body: {...}}, ...], count: 42 }
 
-network.capture { url: "https://example.com/dashboard", pattern: "**/api/**", wait: 3000 }
+capture_network { url: "https://example.com/dashboard", pattern: "**/api/**", wait: 3000 }
 → { captured: [{url: ".../api/user", method: "GET", status: 200, body: {name: "..."}}], count: 1 }
 ```
 
@@ -534,7 +521,7 @@ All selector parameters accept CSS selectors:
 
 ```
 start { }
-webpage.get { url: "https://app.example.com/login" }
+get_webpage { url: "https://app.example.com/login" }
 fill { selector: "input[type=email]", value: "user@example.com" }
 fill { selector: "input[type=password]", value: "..." }
 click { selector: "button[type=submit]" }

@@ -9,28 +9,7 @@ privacy_url: https://ollama.com/privacy
 terms_url: https://ollama.com/terms
 
 auth: none
-
-connects_to: ollama-daemon
-
-seed:
-  - id: ollama-inc
-    types: [organization]
-    name: Ollama
-    data:
-      type: company
-      url: https://ollama.com
-
-  - id: ollama-daemon
-    types: [software]
-    name: Ollama Local API
-    data:
-      software_type: api
-      url: https://ollama.com
-      platforms: [macos, linux, windows]
-    relationships:
-      - role: offered_by
-        to: ollama-inc
-utilities:
+operations:
   chat:
     description: Send a chat request to the local Ollama API
     returns:

@@ -7,38 +7,14 @@ color: "#1B3C27"
 
 website: https://lightpanda.io
 auth: none
-connects_to: lightpanda
-
-seed:
-  - id: lightpanda
-    types: [software]
-    name: Lightpanda
-    data:
-      software_type: tool
-      url: https://lightpanda.io
-      launched: "2024"
-      platforms: [macos, linux]
-      pricing: open_source
-    relationships:
-      - role: offered_by
-        to: lightpanda-io
-
-  - id: lightpanda-io
-    types: [organization]
-    name: Lightpanda IO
-    data:
-      type: company
-      url: https://lightpanda.io
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      url: .url
-      title: .title
-      id: .url
+    id: .url
+    name: '.title // .url'
+    url: .url
 
 operations:
-  webpage.get:
+  get_webpage:
     description: Navigate to a URL via the CDP session and return page info (title, URL). Executes JavaScript.
     returns: webpage
     params:
@@ -51,11 +27,12 @@ operations:
         description: "Wait condition: load, domcontentloaded, networkidle (default: domcontentloaded). Note: networkidle can cause errors with Lightpanda — stick with domcontentloaded unless you have a reason."
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts goto"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts goto"]
+      working_dir: .
       stdin: '.params | {url: .url, wait_until: (.wait_until // "domcontentloaded")}'
       timeout: 45
 
-  webpage.read:
+  read_webpage:
     description: Extract text or HTML content from the current page or a CSS selector
     returns: webpage
     params:
@@ -67,11 +44,11 @@ operations:
         description: "Output format: text or html (default: text)"
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts extract"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts extract"]
+      working_dir: .
       stdin: '.params | {selector: (.selector // "body"), format: (.format // "text")}'
       timeout: 30
 
-utilities:
   fetch:
     description: |
       Fast single-shot page fetch — no persistent process, no CDP overhead.
@@ -96,7 +73,8 @@ utilities:
       content: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts fetch"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fetch"]
+      working_dir: .
       stdin: '.params | {url: .url, format: (.format // "markdown"), strip_mode: (.strip_mode // "")}'
       timeout: 30
 
@@ -115,7 +93,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts start"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts start"]
+      working_dir: .
       stdin: '.params | {port: (.port // 9223), timeout: (.timeout // 30)}'
       timeout: 15
 
@@ -124,7 +103,8 @@ utilities:
     returns: void
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts stop"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts stop"]
+      working_dir: .
       stdin: '.params | {port: (.port // 9223)}'
       timeout: 10
 
@@ -136,7 +116,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts status"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts status"]
+      working_dir: .
       stdin: '.params | {port: (.port // 9223)}'
       timeout: 10
 
@@ -156,7 +137,8 @@ utilities:
       path: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts screenshot"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts screenshot"]
+      working_dir: .
       stdin: '.params | {selector: .selector, path: (.path // "/tmp/lp-screenshot.png"), full_page: (.full_page // false)}'
       timeout: 30
 
@@ -172,7 +154,8 @@ utilities:
       url: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts click"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts click"]
+      working_dir: .
       stdin: '.params | {selector: .selector}'
       timeout: 15
 
@@ -192,7 +175,8 @@ utilities:
       value: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts fill"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fill"]
+      working_dir: .
       stdin: '.params | {selector: .selector, value: .value}'
       timeout: 15
 
@@ -207,7 +191,8 @@ utilities:
       result: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts evaluate"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts evaluate"]
+      working_dir: .
       stdin: '.params | {script: .script}'
       timeout: 30
 
@@ -218,7 +203,8 @@ utilities:
       title: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts url"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts url"]
+      working_dir: .
       timeout: 10
 
   inspect:
@@ -233,7 +219,8 @@ utilities:
       snapshot: object
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts inspect"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts inspect"]
+      working_dir: .
       stdin: '.params | {selector: (.selector // "body")}'
       timeout: 15
 
@@ -250,11 +237,12 @@ utilities:
       status: string
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts wait"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts wait"]
+      working_dir: .
       stdin: '.params | {selector: .selector, timeout: (.timeout // 10000)}'
       timeout: 60
 
-  network.capture:
+  capture_network:
     description: |
       Navigate to a URL and capture all network requests/responses.
       Returns every XHR/fetch response matching the pattern, including parsed JSON bodies.
@@ -282,7 +270,8 @@ utilities:
       count: integer
     command:
       binary: bash
-      args: ["-l", "-c", "npx tsx ~/dev/agentos-community/skills/lightpanda/scripts/browser.ts network_capture"]
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts network_capture"]
+      working_dir: .
       stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), capture_body: (.capture_body // true)}'
       timeout: 60
 ---
@@ -296,9 +285,9 @@ Fast headless browser built from scratch for machines, not humans. 10x faster, 1
 **Use Lightpanda when you need speed and scale, not interactivity:**
 
 - **Scraping many pages at volume** — minimal memory, instant startup, can run many concurrent instances
-- **Fast one-shot page fetches** — use `fetch` utility for sub-second content extraction
+- **Fast one-shot page fetches** — use `fetch` for sub-second content extraction
 - **Automating simple headless flows** — forms, clicks, navigation, JS execution, without Chrome overhead
-- **Endpoint discovery** — `network.capture` to find what APIs a page calls
+- **Endpoint discovery** — `capture_network` to find what APIs a page calls
 - **AI agent web browsing** — fast browse-and-extract loops where Chrome's cost adds up
 
 **Use the Playwright skill instead when you need:**
@@ -325,7 +314,7 @@ Lightpanda fetches the URL, executes JS, dumps content, and exits. No server, no
 ```
 start → lightpanda serve --host 127.0.0.1 --port 9223
         ↓
-goto/click/fill/inspect → Playwright connects via CDP, acts, returns
+get_webpage/click/fill/inspect → Playwright connects via CDP, acts, returns
         ↓
 server stays alive for subsequent operations
         ↓
@@ -336,26 +325,26 @@ The CDP server uses port **9223** by default (not 9222, to avoid colliding with 
 
 ## Operations
 
-### webpage.get
+### get_webpage
 
 Navigate to a URL and execute JavaScript. Returns title and final URL.
 
 ```
-webpage.get { url: "https://news.ycombinator.com" }
+get_webpage { url: "https://news.ycombinator.com" }
 → { url: "https://news.ycombinator.com/", title: "Hacker News" }
 ```
 
-### webpage.read
+### read_webpage
 
 Extract text or HTML from the current page or a specific element.
 
 ```
-webpage.read { }                                   → full page text
-webpage.read { selector: "table.itemlist" }        → table text
-webpage.read { selector: "body", format: "html" }  → raw HTML
+read_webpage { }                                   → full page text
+read_webpage { selector: "table.itemlist" }        → table text
+read_webpage { selector: "body", format: "html" }  → raw HTML
 ```
 
-## Utilities
+## Additional Operations
 
 ### fetch (fastest path)
 
@@ -373,7 +362,7 @@ Formats: `markdown`, `html`, `semantic_tree`, `semantic_tree_text`
 
 ### Lifecycle
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `start` | Launch Lightpanda CDP server (headless always). Auto-launches on first operation. |
 | `stop` | Kill the CDP server process. |
@@ -381,7 +370,7 @@ Formats: `markdown`, `html`, `semantic_tree`, `semantic_tree_text`
 
 ### Navigation & Inspection
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `inspect` | **Use this first.** Fast DOM snapshot — structured tree of tags, attributes, text. |
 | `url` | Get current URL and title. |
@@ -390,7 +379,7 @@ Formats: `markdown`, `html`, `semantic_tree`, `semantic_tree_text`
 
 ### Interaction
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
 | `click` | Click an element by CSS selector. |
 | `fill` | Set an input's value (clears first). |
@@ -398,12 +387,12 @@ Formats: `markdown`, `html`, `semantic_tree`, `semantic_tree_text`
 
 ### Network Capture
 
-| Utility | What it does |
+| Operation | What it does |
 |---------|-------------|
-| `network.capture` | Navigate and capture all XHR/fetch responses. Returns URLs, methods, statuses, and JSON bodies. |
+| `capture_network` | Navigate and capture all XHR/fetch responses. Returns URLs, methods, statuses, and JSON bodies. |
 
 ```
-network.capture { url: "https://news.ycombinator.com", pattern: "**/api/**", wait: 3000 }
+capture_network { url: "https://news.ycombinator.com", pattern: "**/api/**", wait: 3000 }
 → { captured: [{url: ".../api/items", method: "GET", status: 200, body: {...}}], count: 5 }
 ```
 

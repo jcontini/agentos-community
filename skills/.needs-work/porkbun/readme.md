@@ -14,24 +14,12 @@ auth:
   label: API Keys
   help_url: https://porkbun.com/account/api
 
-instructions: |
-  Porkbun DNS management for domains you own.
-  
-  **Setup:**
-  1. Go to https://porkbun.com/account/api
-  2. Enable API access
-  3. Copy both API Key and Secret API Key
-  4. Store as `apikey:secretapikey` (colon-separated)
-  
-  **Note:** Domain registration not available via API - use web interface.
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   domain:
-    terminology: Domain
     mapping:
       fqdn: .domain
       status: .status
@@ -41,7 +29,6 @@ transformers:
       created_at: .createDate
 
   dns_record:
-    terminology: DNS Record
     mapping:
       id: .id
       name: .name
@@ -56,7 +43,7 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  domain.list:
+  list_domains:
     description: List all domains in your Porkbun account
     returns: domain[]
     rest:
@@ -68,7 +55,7 @@ operations:
       response:
         root: /domains
 
-  domain.get:
+  get_domain:
     description: Get details for a specific domain
     returns: domain
     params:
@@ -85,7 +72,7 @@ operations:
 # Utilities - entity-level operations that return dns_record model
   # Named domain.dns_* because they're utilities OF the domain entity
   
-  domain.dns_list:
+  dns_list_domain:
     description: List all DNS records for a domain
     returns: dns_record[]
     params:
@@ -101,7 +88,7 @@ operations:
         inject:
           domain: .params.domain
 
-  domain.dns_create:
+  dns_create_domain:
     description: Create a new DNS record
     returns: dns_record
     params:
@@ -125,7 +112,7 @@ operations:
       response:
         raw: true
 
-  domain.dns_update:
+  dns_update_domain:
     description: Update an existing DNS record
     returns: dns_record
     params:
@@ -150,7 +137,7 @@ operations:
       response:
         raw: true
 
-  domain.dns_delete:
+  dns_delete_domain:
     description: Delete a DNS record
     returns: void
     params:

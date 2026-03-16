@@ -12,29 +12,12 @@ auth:
   label: Personal Access Token
   help_url: https://admin.gandi.net/organizations/account/pat
 
-instructions: |
-  Gandi provides domain registration, DNS, and SSL certificate management.
-  
-  **Capabilities:**
-  - List and manage owned domains
-  - Full DNS record management (A, AAAA, CNAME, MX, TXT, etc.)
-  - Check domain availability
-  - Register new domains
-  
-  **Common workflows:**
-  1. Point domain to GitHub Pages: Add A records for 185.199.108-111.153
-  2. Add email: Create MX records
-  3. Verify domain: Add TXT record
-  
-  **Note:** Domain registration requires sufficient account balance.
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   domain:
-    terminology: Domain
     mapping:
       fqdn: .fqdn
       status: .status
@@ -44,7 +27,6 @@ transformers:
       nameservers: .nameserver.current
 
   dns_record:
-    terminology: DNS Record
     mapping:
       name: .rrset_name
       type: .rrset_type
@@ -57,7 +39,7 @@ transformers:
 
 operations:
   # Domain management
-  domain.list:
+  list_domains:
     description: List all domains in your Gandi account
     returns: domain[]
     rest:
@@ -66,7 +48,7 @@ operations:
       response:
         raw: true
 
-  domain.get:
+  get_domain:
     description: Get detailed information about a specific domain
     returns: domain
     params:
@@ -77,7 +59,7 @@ operations:
       response:
         raw: true
 
-  domain.check:
+  check_domain:
     description: Check if a domain is available for registration
     returns: void
     params:
@@ -93,7 +75,7 @@ operations:
   # Utilities - entity-level operations that return dns_record model
   # Named domain.dns_* because they're utilities OF the domain entity
 
-  domain.dns_list:
+  dns_list_domain:
     description: List all DNS records for a domain
     returns: dns_record[]
     params:
@@ -104,7 +86,7 @@ operations:
       response:
         raw: true
 
-  domain.dns_get:
+  dns_get_domain:
     description: Get a specific DNS record by name and type
     returns: dns_record
     params:
@@ -117,7 +99,7 @@ operations:
       response:
         raw: true
 
-  domain.dns_create:
+  dns_create_domain:
     description: Create or update a DNS record
     returns: dns_record
     params:
@@ -135,7 +117,7 @@ operations:
       response:
         raw: true
 
-  domain.dns_delete:
+  dns_delete_domain:
     description: Delete a DNS record by name and type
     returns: void
     params:

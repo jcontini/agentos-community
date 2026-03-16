@@ -9,20 +9,12 @@ website: https://example.com
 privacy_url: 
 terms_url: 
 
-instructions: |
-  SEO Scraper notes:
-  - Crawls sitemaps to find all pages
-  - Extracts meta tags from HTML
-  - Uses Googlebot user agent to simulate search engine crawler
-  - Outputs structured SEO data
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
     mapping:
       url: .url
       title: .title
@@ -35,7 +27,7 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.crawl_sitemap:
+  crawl_sitemap_webpage:
     description: Crawl a website's sitemap and extract SEO meta tags from all pages
     returns: webpage[]
     params:
@@ -44,7 +36,7 @@ operations:
     # TODO: Implement using command executor or Python script
     # Based on skills/seo/SEOcrawler.py and sitemap_seo_crawler.py
 
-  webpage.get_meta:
+  get_meta_webpage:
     description: Extract SEO meta tags from a single page
     returns: webpage
     params:
