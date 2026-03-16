@@ -1,57 +1,41 @@
 ---
 id: firefox
 name: Mozilla Firefox
-description: Browsing history, bookmarks, and cookies from Firefox
+description: Browsing history, bookmarks, and cookies from Firefox, including cookie provider access for auth consumers
 icon: icon.svg
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox
 auth: none
 
-connects_to: firefox
-
-seed:
-  - id: firefox
-    types: [software]
-    name: Mozilla Firefox
-    data:
-      software_type: browser
-      url: https://www.mozilla.org/firefox
-      platforms: [macos, windows, linux]
-      wikidata_id: Q698
-    relationships:
-      - role: offered_by
-        to: mozilla
-
-  - id: mozilla
-    types: [organization]
-    name: Mozilla Foundation
-    data:
-      type: nonprofit
-      url: https://mozilla.org
-      founded: "2003"
-      wikidata_id: Q9661
+# Firefox cookies are stored plaintext in SQLite, so this skill can act as a
+# lightweight cookie provider for consumer skills that declare auth.cookies.
+provides:
+  - service: cookies
+    description: "Extract plaintext Firefox cookies from local profiles for auth consumers."
+    via: cookie_get
+    account_param: domain
 
 database:
   macos: "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
 # ═══════════════════════════════════════════════════════════════════════════════
-# TRANSFORMERS
+# ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   webpage:
-    terminology: Page
-    mapping:
-      id: .url
-      url: .url
-      title: .title
+    id: .url
+    name: '.title // .url'
+    url: .url
+    data.visit_count: .visit_count
+    data.last_visit_unix: .last_visit_unix
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  webpage.list:
+  list_webpages:
     description: List recently visited pages from Firefox browsing history
     returns: webpage[]
     params:
@@ -73,7 +57,7 @@ operations:
       response:
         root: "/"
 
-  webpage.search:
+  search_webpages:
     description: Search Firefox browsing history by URL or title
     returns: webpage[]
     params:
@@ -102,10 +86,9 @@ operations:
         root: "/"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-utilities:
   list_bookmarks:
     description: List Firefox bookmarks (excluding folders and separators)
     returns:
@@ -165,6 +148,52 @@ utilities:
       params:
         domain: '"%" + .params.domain + "%"'
         limit: '.params.limit // 1000'
+
+  cookie_get:
+    description: |
+      Extract cookies for a domain from Firefox's local cookie database.
+      This is the provider interface for cookie matchmaking with consumer skills.
+      If multiple installed browser skills provide cookies, the agent should ask
+      the user which provider to use and retry with `cookie_provider`.
+    params:
+      domain:
+        type: string
+        required: true
+        description: "Cookie domain to match (e.g., '.claude.ai', '.amazon.com')"
+      names:
+        type: string
+        description: "Comma-separated cookie names to filter (e.g., 'sessionKey,csrf_token')"
+      limit:
+        type: integer
+        description: Maximum number of cookies
+    returns:
+      domain: string
+      cookies: array
+      count: integer
+      source: string
+    steps:
+      steps:
+        - id: get_cookies
+          sql:
+            database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
+            query: >
+              SELECT name, value, host, path, expiry,
+                     isSecure AS is_secure, isHttpOnly AS is_httponly
+              FROM moz_cookies
+              WHERE host LIKE :domain
+                AND (:names = '' OR instr(',' || :names || ',', ',' || name || ',') > 0)
+              ORDER BY name
+              LIMIT :limit
+            params:
+              domain: '"%" + .params.domain + "%"'
+              names: '.params.names // ""'
+              limit: '.params.limit // 1000'
+      response:
+        mapping:
+          domain: '.params.domain'
+          cookies: '.get_cookies'
+          count: '.get_cookies | length'
+          source: '"firefox"'
 ---
 
 # Mozilla Firefox
@@ -182,7 +211,7 @@ Firefox profile directories have random prefixes (e.g., `abc123.default-release`
 
 ## Operations
 
-### webpage.list / webpage.search
+### list_webpages / search_webpages
 
 Browse and search Firefox history.
 
@@ -193,3 +222,7 @@ List all bookmarks with URLs and dates.
 ### list_cookies
 
 List cookies for a domain. **Firefox cookies are plaintext** — no decryption needed, unlike Chromium-based browsers.
+
+### cookie_get
+
+Provider-facing cookie extraction for auth consumers. When multiple installed skills provide cookies, the runtime asks the agent to get a choice from the user and retry with `cookie_provider` set to the selected skill id.

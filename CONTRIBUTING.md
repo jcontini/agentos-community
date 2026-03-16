@@ -267,6 +267,7 @@ Useful rules:
 - Use per-operation `auth: none` for public signup/setup actions inside an otherwise-authenticated skill
 - Prefer provider auth when credentials come from another installed app or browser profile
 - If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
+- For cookie auth, retry with `params.cookie_provider` set to the chosen provider id, or persist that choice in account params for repeat use
 - `browser:` under `auth.cookies` is legacy compatibility only. Do not rely on it in new skills; prefer cookie provider skills instead
 - Today `provides:` is primarily an auth contract. Do not invent broader generic provider/consumer patterns in skill YAML unless the runtime and docs explicitly support them
 - For command auth templating or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
@@ -316,8 +317,8 @@ Example references:
 - OAuth consumer: `skills/gmail/readme.md`
 - OAuth provider: `skills/mimestream/readme.md`
 - Cookie consumer: `skills/claude/readme.md`
-- Cookie provider: `skills/brave-browser/readme.md`
-- Advanced keychain/crypto/steps: `skills/chrome/readme.md`, `skills/brave-browser/readme.md`
+- Cookie provider: `skills/brave-browser/readme.md`, `skills/firefox/readme.md`
+- Advanced keychain/crypto/steps: `skills/brave-browser/readme.md`, `skills/chrome/readme.md`
 
 ## Expressions
 
@@ -459,7 +460,7 @@ If you need something advanced, copy an existing skill:
 - `linear` for GraphQL
 - `youtube` for command execution
 - `gmail` + `mimestream` for provider-sourced OAuth
-- `claude` + `brave-browser` for cookie consumer/provider patterns
-- `chrome` / `brave-browser` for keychain, crypto, and multi-step extraction
+- `claude` + `brave-browser` / `firefox` for cookie consumer/provider patterns
+- `brave-browser` / `chrome` for keychain, crypto, and multi-step extraction
 
 If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.
