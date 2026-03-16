@@ -9,8 +9,8 @@ privacy_url: https://porkbun.com/products/privacy
 
 auth:
   body:
-    apikey: "{apikey}"
-    secretapikey: "{secretapikey}"
+    apikey: '.auth.key | split(":") | .[0]'
+    secretapikey: '.auth.key | split(":") | .[1]'
   label: API Keys
   help_url: https://porkbun.com/account/api
 

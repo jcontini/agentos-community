@@ -6,7 +6,7 @@ icon: icon.png
 website: https://hardcover.app
 
 auth:
-  header: { Authorization: "Bearer {token}" }
+  header: { Authorization: '"Bearer " + .auth.key' }
   label: Authorization Header
   placeholder: "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOi..."
   help_url: https://hardcover.app/account/api
