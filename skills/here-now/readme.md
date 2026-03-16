@@ -14,55 +14,30 @@ auth:
   label: API Key
   optional: true
   help_url: https://here.now
-
-connects_to: here-now
-
-seed:
-  - id: here-now
-    types: [software]
-    name: here.now
-    data:
-      software_type: service
-      url: https://here.now
-      launched: "2026"
-      platforms: [api, web]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: here-now-inc
-
-  - id: here-now-inc
-    types: [organization]
-    name: here.now
-    data:
-      type: company
-      url: https://here.now
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   website:
-    terminology: Publish
-    mapping:
-      id: .slug
-      name: .slug
-      title: '(.viewer.title? // .slug)'
-      url: .siteUrl
-      status: 'if .status == "active" then "active" else "pending" end'
-      published_at: .updatedAt
-      version_id: .currentVersionId
-      expires_at: '.expiresAt?'
-      data.anonymous: '.anonymous? // false'
-      data.claim_token: '.claimToken?'
-      data.claim_url: '.claimUrl?'
+    id: .slug
+    name: .slug
+    title: '(.viewer.title? // .slug)'
+    url: .siteUrl
+    status: 'if .status == "active" then "active" else "pending" end'
+    published_at: .updatedAt
+    version_id: .currentVersionId
+    expires_at: '.expiresAt?'
+    data.anonymous: '.anonymous? // false'
+    data.claim_token: '.claimToken?'
+    data.claim_url: '.claimUrl?'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  website.list:
+  list_websites:
     description: List all your published sites (requires authentication)
     returns: website[]
     rest:
@@ -71,7 +46,7 @@ operations:
       response:
         root: /publishes
 
-  website.create:
+  create_website:
     description: |
       Publish content to here.now. Handles the full create→upload→finalize flow.
       Returns the live website entity. If published anonymously, entity.data contains
@@ -108,7 +83,7 @@ operations:
           PARAM_TITLE="$1"; PARAM_DESCRIPTION="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
           TITLE="${PARAM_TITLE}"
           DESC="${PARAM_DESCRIPTION}"
-          python3 ~/dev/agentos-community/skills/here-now/publish.py \
+          python3 ./publish.py \
             --filename '${PARAM_FILENAME}' \
             --content-type '${PARAM_CONTENT_TYPE}' \
             ${TITLE:+--title "$TITLE"} \
@@ -120,10 +95,11 @@ operations:
         - ".params.filename"
         - ".params.content_type"
         - ".params.auth_key"
+      working_dir: .
       stdin: ".params.content"
       timeout: 60
 
-  website.update:
+  update_website:
     description: Redeploy an existing site with new content
     returns: website
     params:
@@ -151,7 +127,7 @@ operations:
         - |
           PARAM_TITLE="$1"; PARAM_SLUG="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
           TITLE="${PARAM_TITLE}"
-          python3 ~/dev/agentos-community/skills/here-now/publish.py \
+          python3 ./publish.py \
             --slug '${PARAM_SLUG}' \
             --filename '${PARAM_FILENAME}' \
             --content-type '${PARAM_CONTENT_TYPE}' \
@@ -163,10 +139,11 @@ operations:
         - ".params.filename"
         - ".params.content_type"
         - ".params.auth_key"
+      working_dir: .
       stdin: ".params.content"
       timeout: 60
 
-  website.delete:
+  delete_website:
     description: Delete a published site (requires authentication)
     returns: void
     params:
@@ -178,16 +155,14 @@ operations:
       method: DELETE
       url: '"https://here.now/api/v1/publish/" + .params.slug'
       response:
-        mapping:
+        static:
           success: 'true'
           id: .params.slug
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-# Helper operations that return custom shapes (not entity CRUD).
-
-utilities:
+# Additional operations that return custom shapes or support lifecycle flows.
   claim:
     description: |
       Claim an anonymous publish to make it permanent. Requires authentication.
