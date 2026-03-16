@@ -8,57 +8,29 @@ color: "#333333"
 website: https://www.apple.com/macos/
 
 auth: none
-connects_to: apple-contacts
-
-seed:
-  - id: apple-contacts
-    types: [software]
-    name: Apple Contacts
-    data:
-      software_type: app
-      url: https://support.apple.com/guide/contacts/welcome/mac
-      launched: "2001"
-      platforms: [macos, ios, ipados, watchos]
-      wikidata_id: Q621217
-    relationships:
-      - role: offered_by
-        to: apple
-
-  - id: apple
-    types: [organization]
-    name: Apple Inc.
-    data:
-      type: company
-      url: https://apple.com
-      founded: "1976"
-      ticker: AAPL
-      exchange: NASDAQ
-      wikidata_id: Q312
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   person:
-    terminology: Contact
-    mapping:
-      id: .id
-      name: '.display_name // (.first_name + " " + .last_name) // .organization'
-      first_name: .first_name
-      last_name: .last_name
-      middle_name: .middle_name
-      nickname: .nickname
-      phone: '.phones_json | fromjson | .[0].value? // null'
-      email: '.emails_json | fromjson | .[0].value? // null'
-      avatar: 'if .has_photo == 1 then "contacts://photo/" + .id else null end'
-      organization: .organization
-      job_title: .job_title
-      department: .department
-      birthday: .birthday
-      notes: .notes
-      
-      # Build unified accounts array from phones, emails, URLs, and social profiles
-      accounts: |
+    id: .id
+    name: '.display_name // (.first_name + " " + .last_name) // .organization'
+    first_name: .first_name
+    last_name: .last_name
+    middle_name: .middle_name
+    nickname: .nickname
+    phone: '.phones_json | fromjson | .[0].value? // null'
+    email: '.emails_json | fromjson | .[0].value? // null'
+    avatar: 'if .has_photo == 1 then "contacts://photo/" + .id else null end'
+    organization: .organization
+    job_title: .job_title
+    department: .department
+    birthday: .birthday
+    notes: .notes
+
+    # Build unified accounts array from phones, emails, URLs, and social profiles
+    accounts: |
         # Check if label is Apple internal format like _$!<Home>!$_
         def is_apple_label: . != null and test("^_\\$!<");
         
@@ -145,7 +117,7 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  person.list:
+  list_persons:
     description: List contacts from a specific account with optional filtering
     returns: person[]
     params:
@@ -193,7 +165,7 @@ operations:
       params:
         limit: '.params.limit // 1000'
 
-  person.get:
+  get_person:
     description: Get full contact details by ID including addresses, notes, birthday
     returns: person
     params:
@@ -310,7 +282,7 @@ operations:
           end try
         end tell
 
-  person.search:
+  search_persons:
     description: Search contacts by any text within a specific account
     returns: person[]
     params:
@@ -365,11 +337,6 @@ operations:
         query: .params.query
         limit: '.params.limit // 1000'
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
-# ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
   accounts:
     operation: read
     label: "List accounts"
@@ -568,9 +535,9 @@ macOS can have multiple contact accounts (iCloud, local, Exchange, etc.). Use th
 
 | Operation | Description |
 |-----------|-------------|
-| `person.list` | List contacts with phones, emails, organization |
-| `person.get` | Get full details: addresses, notes, birthday |
-| `person.search` | Search contacts by name, email, phone, organization |
+| `list_persons` | List contacts with phones, emails, organization |
+| `get_person` | Get full details: addresses, notes, birthday |
+| `search_persons` | Search contacts by name, email, phone, organization |
 
 ## Utilities
 
