@@ -19,7 +19,7 @@ auth:
   
   # Account-level params for auto-injection
   # These are configured per-account and injected into operations automatically
-  # AI should call `setup` utility after credential is added to auto-configure these
+  # AI should call `setup` after credential is added to auto-configure these
   account_params:
     workspace_slug:
       type: string
@@ -34,77 +34,61 @@ auth:
       description: "Filter operations to this team by default"
       discover: get_teams  # Returns team id and key
 
-connects_to: linear
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entity adapters transform API data into universal entity format.
 # Mapping defined ONCE per entity — applied automatically to all operations.
 
-transformers:
+adapters:
   task:
-    terminology: Issue
-    mapping:
-      id: .id
-      name: .title
-      description: .description
-      content: .description
-      priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
-      started_at: 'if .state.type == "started" then .updatedAt else null end'
-      target.date: .dueDate
-      data.remote_id: .identifier
-      data.url: .url
-      created_at: .createdAt
-      updated_at: .updatedAt
-      
-      # Assignee display fields (denormalized for views)
-      # Note: assignee, cycle, parent can be null — use (.x // {}).field for null safety
-      data.assignee.id: '(.assignee // {}).id'
-      data.assignee.name: '(.assignee // {}).name'
-      
-      # Typed reference: creates person entity + assigned_to relationship
-      assigned_to:
-        person:
-          id: '(.assignee // {}).id'
-          name: '(.assignee // {}).name'
-
-      # Relationship ref: look up project entity by project remote_id
-      project_id:
-        ref: project
-        value: '(.project // {}).id'
-      _project_name: '(.project // {}).name'
-      _team_id: '(.team // {}).id'
-      _team_name: '(.team // {}).name'
-      _cycle_id: '(.cycle // {}).id'
-      _cycle_number: '(.cycle // {}).number'
-      _state_id: '(.state // {}).id'
-      _state_name: '(.state // {}).name'
-      _state_type: '(.state // {}).type'
-      _parent_id: '(.parent // {}).id'
-      _labels: '[((.labels // {}).nodes // [])[] | .name]'
-      _children: '[((.children // {}).nodes // [])[] | .id]'
-
-      # Phase 2: these will become ref: task, rel: enables (needs array support)
-      _blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
-      _blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
-
+    id: .id
+    name: .title
+    description: .description
+    content: .description
+    priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
+    started_at: 'if .state.type == "started" then .updatedAt else null end'
+    target.date: .dueDate
+    data.remote_id: .identifier
+    data.url: .url
+    created_at: .createdAt
+    updated_at: .updatedAt
+    data.assignee.id: '(.assignee // {}).id'
+    data.assignee.name: '(.assignee // {}).name'
+    assigned_to:
+      person:
+        id: '(.assignee // {}).id'
+        name: '(.assignee // {}).name'
+    project_id:
+      ref: project
+      value: '(.project // {}).id'
+    _project_name: '(.project // {}).name'
+    _team_id: '(.team // {}).id'
+    _team_name: '(.team // {}).name'
+    _cycle_id: '(.cycle // {}).id'
+    _cycle_number: '(.cycle // {}).number'
+    _state_id: '(.state // {}).id'
+    _state_name: '(.state // {}).name'
+    _state_type: '(.state // {}).type'
+    _parent_id: '(.parent // {}).id'
+    _labels: '[((.labels // {}).nodes // [])[] | .name]'
+    _children: '[((.children // {}).nodes // [])[] | .id]'
+    _blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
+    _blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
   project:
-    terminology: Project
-    mapping:
-      id: .id
-      name: .name
-      data.state: .state
+    id: .id
+    name: .name
+    data.state: .state
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entity operations that return typed entities.
 # Mapping from `adapters` is applied automatically based on return type.
-# Naming convention: {entity}.{operation}
+# Naming convention: snake_case
 
 operations:
-  task.list:
+  list_tasks:
     description: List issues with optional filters
     returns: task[]
     web_url: '"https://linear.app/" + .params.workspace_slug'
@@ -145,7 +129,7 @@ operations:
       response:
         root: /data/issues/nodes
 
-  task.get:
+  get_task:
     description: Get a specific issue by ID
     returns: task
     params:
@@ -174,7 +158,7 @@ operations:
       response:
         root: /data/issue
 
-  task.create:
+  create_task:
     description: Create a new issue
     returns: task
     params:
@@ -213,7 +197,7 @@ operations:
       response:
         root: /data/issueCreate/issue
 
-  task.update:
+  update_task:
     description: Update an existing issue
     returns: task
     params:
@@ -250,7 +234,7 @@ operations:
       response:
         root: /data/issueUpdate/issue
 
-  task.delete:
+  delete_task:
     description: Delete an issue
     returns: void
     params:
@@ -263,7 +247,7 @@ operations:
       variables:
         id: .params.id
 
-  project.list:
+  list_projects:
     description: List all projects
     returns: project[]
     web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
@@ -273,12 +257,9 @@ operations:
         root: /data/projects/nodes
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-# Helper operations that return custom shapes (not entities).
-# Naming convention: verb_noun
-
-utilities:
+# Operations that return custom shapes or perform setup.
   setup:
     description: |
       Auto-configure account params. Call this after adding a Linear credential.
@@ -482,28 +463,6 @@ utilities:
         mapping:
           success: .success
           id: .issueRelation.id
-
-seed:
-  - id: linear
-    types: [software]
-    name: Linear
-    data:
-      software_type: app
-      url: https://linear.app
-      launched: "2019"
-      platforms: [web, ios, macos]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: linear-orbit
-
-  - id: linear-orbit
-    types: [organization]
-    name: Linear Orbit, Inc.
-    data:
-      type: company
-      url: https://linear.app
-      founded: "2019"
 ---
 
 # Linear
@@ -539,7 +498,7 @@ Linear uses customizable workflow states per team. Common patterns:
 | completed | Done | done |
 | canceled | Canceled | cancelled |
 
-To change an issue's state, use `task.update` with `state_id` from `get_workflow_states`.
+To change an issue's state, use `update_task` with `state_id` from `get_workflow_states`.
 
 ## Priority Scale
 
@@ -556,4 +515,4 @@ To change an issue's state, use `task.update` with `state_id` from `get_workflow
 To mark an issue complete:
 1. Call `get_workflow_states` with the issue's team_id
 2. Find the state with `type: "completed"`
-3. Call `task.update` with the issue id and state_id
+3. Call `update_task` with the issue id and state_id

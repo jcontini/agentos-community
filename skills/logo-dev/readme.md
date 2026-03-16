@@ -14,44 +14,19 @@ auth:
   label: Publishable Key
   help_url: https://www.logo.dev/dashboard
 
-connects_to: logo-dev
-
-transformers:
+adapters:
   image:
-    terminology: Logo
-    mapping:
-      id: .path
-      url: .url
-      alt: .name
-      size: .size
-      format: '.mime_type | split("/") | .[1]'
+    id: .path
+    url: .url
+    alt: .name
+    size: .size
+    format: '.mime_type | split("/") | .[1]'
 
-seed:
-  - id: logo-dev
-    types: [software]
-    name: Logo.dev
-    data:
-      software_type: api
-      url: https://logo.dev
-      launched: "2024"
-      platforms: [api]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: simple-casual
-
-  - id: simple-casual
-    types: [organization]
-    name: Simple Casual, LLC
-    data:
-      type: company
-      url: https://logo.dev
-      founded: "2024"
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES - URL generators (Logo.dev is a CDN, not a JSON API)
+# OPERATIONS - URL generators (Logo.dev is a CDN, not a JSON API)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-utilities:
+operations:
   # Download logo to A: drive
   download_logo:
     description: "Download company logo to A: drive. Returns image entity."
