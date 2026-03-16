@@ -14,41 +14,18 @@ auth:
   label: API Key
   help_url: https://openrouter.ai/keys
 
-connects_to: openrouter-api
-
-seed:
-  - id: openrouter-inc
-    types: [organization]
-    name: OpenRouter
-    data:
-      type: company
-      url: https://openrouter.ai
-
-  - id: openrouter-api
-    types: [software]
-    name: OpenRouter API
-    data:
-      software_type: api
-      url: https://openrouter.ai
-      platforms: [api]
-    relationships:
-      - role: offered_by
-        to: openrouter-inc
-
-transformers:
+adapters:
   model:
-    terminology: Model
-    mapping:
-      api_id: .id
-      title: .name
-      description: .description
-      released: '.created | todate'
-      provider: '.id | split("/") | .[0]'
-      model_type: '"llm"'
-      context_window: '.context_length | if . then (. | floor) else null end'
+    api_id: .id
+    title: .name
+    description: .description
+    released: '.created | todate'
+    provider: '.id | split("/") | .[0]'
+    model_type: '"llm"'
+    context_window: '.context_length | if . then (. | floor) else null end'
 
 operations:
-  model.list:
+  list_models:
     description: List available AI models from all providers via OpenRouter
     returns: model[]
     rest:
@@ -56,7 +33,7 @@ operations:
       url: https://openrouter.ai/api/v1/models
       response:
         root: /data
-utilities:
+
   chat:
     description: Send a chat completion request through OpenRouter
     returns:

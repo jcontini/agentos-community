@@ -8,80 +8,50 @@ color: "#F05032"
 website: https://git-scm.com
 
 auth: none
-
-connects_to: git-scm
-seed:
-  - id: git-scm
-    types: [software]
-    name: Git
-    data:
-      software_type: cli
-      url: https://git-scm.com
-      launched: "2005"
-      platforms: [macos, linux, windows]
-      pricing: open_source
-      wikidata_id: Q186055
-    relationships:
-      - role: created_by
-        to: linus-torvalds
-
-  - id: linus-torvalds
-    types: [person]
-    name: Linus Torvalds
-    data:
-      wikidata_id: Q34253
-transformers:
+adapters:
   git_commit:
-    terminology: Commit
-    mapping:
-      id: .hash
-      name: .message
-      content: .message
-      hash: .hash
-      short_hash: .short_hash
-      timestamp: .timestamp
-      author_name: .author_name
-      author_email: .author_email
-      committer_name: .committer_name
-      committer_email: .committer_email
-      files_changed: .files_changed
-      insertions: .insertions
-      deletions: .deletions
-      sender:
-        person:
-          name: .author_name
-          email: .author_email
+    id: .hash
+    name: .message
+    content: .message
+    hash: .hash
+    short_hash: .short_hash
+    timestamp: .timestamp
+    author_name: .author_name
+    author_email: .author_email
+    committer_name: .committer_name
+    committer_email: .committer_email
+    files_changed: .files_changed
+    insertions: .insertions
+    deletions: .deletions
+    sender:
+      person:
+        name: .author_name
+        email: .author_email
 
   branch:
-    terminology: Branch
-    mapping:
-      id: .name
-      name: .name
-      is_remote: .is_remote
-      upstream: .upstream
+    id: .name
+    name: .name
+    is_remote: .is_remote
+    upstream: .upstream
 
   repository:
-    terminology: Repository
-    mapping:
-      id: .full_name
-      name: .name
-      full_name: .full_name
-      url: .url
-      platform: .platform
-      default_branch: .default_branch
+    id: .full_name
+    name: .name
+    full_name: .full_name
+    url: .url
+    platform: .platform
+    default_branch: .default_branch
 
   tag:
-    terminology: Tag
-    mapping:
-      id: .name
-      name: .name
-      data.hash: .hash
-      data.date: .date
-      data.message: .message
-      data.annotated: .annotated
+    id: .name
+    name: .name
+    data.hash: .hash
+    data.date: .date
+    data.message: .message
+    data.annotated: .annotated
 
 operations:
-  git_commit.list:
+  list_git_commits:
     description: List recent commits in a git repository. Returns commits newest first with diff stats.
     returns: git_commit[]
     params:
@@ -129,7 +99,7 @@ operations:
         - ".params.limit"
       timeout: 30
 
-  git_commit.get:
+  get_git_commit:
     description: Get a single commit with full details and diff stats.
     returns: git_commit
     params:
@@ -166,7 +136,7 @@ operations:
         - ".params.id"
       timeout: 30
 
-  git_commit.search:
+  search_git_commits:
     description: Search commit messages by keyword.
     returns: git_commit[]
     params:
@@ -209,7 +179,7 @@ operations:
         - ".params.limit"
       timeout: 30
 
-  branch.list:
+  list_branches:
     description: List all branches (local and remote) in a repository.
     returns: branch[]
     params:
@@ -235,7 +205,7 @@ operations:
         - ".params.path"
       timeout: 15
 
-  branch.get:
+  get_branch:
     description: Get info about a specific branch.
     returns: branch
     params:
@@ -267,7 +237,7 @@ operations:
         - ".params.name"
       timeout: 15
 
-  repository.get:
+  get_repository:
     description: Get repository info from the local git repo — remote URL, platform, branch.
     returns: repository
     params:
@@ -297,7 +267,7 @@ operations:
         - ".params.path"
       timeout: 15
 
-  tag.list:
+  list_tags:
     description: List all tags in the repository.
     returns: tag[]
     params:
@@ -322,7 +292,7 @@ operations:
         - ".params.path"
       timeout: 15
 
-  tag.get:
+  get_tag:
     description: Get info about a specific tag.
     returns: tag
     params:
@@ -353,7 +323,7 @@ operations:
         - ".params.name"
       timeout: 15
 
-utilities:
+# Additional operations that return live custom shapes.
   status:
     description: Show working tree status — modified, staged, and untracked files. Returns live state, not stored data.
     returns: string
