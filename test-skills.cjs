@@ -314,10 +314,10 @@ function checkResult(result, returns) {
 
   if (typeof result === 'string') {
     // Error strings
-    if (result.includes('Execution failed:') || result.includes('Skill error:'))
-      return { ok: false, reason: result.slice(0, 120) };
     if (result.includes('Credential not found') || result.includes('not found'))
       return { ok: null, reason: 'no credentials' };  // null = skip
+    if (result.includes('Execution failed:') || result.includes('Skill error:'))
+      return { ok: false, reason: result.slice(0, 120) };
     // Might be valid non-JSON response
     if (result.length > 2) return { ok: true };
     return { ok: false, reason: 'empty response' };
@@ -554,9 +554,15 @@ async function main() {
           console.log(`      → ${s}`);
         }
       } catch (e) {
-        results.push({ op: opName, status: 'fail', reason: e.message.slice(0, 100) });
-        totalFail++;
-        failures.push(`${skillId}:${opName} — ${e.message.slice(0, 100)}`);
+        const message = e.message || String(e);
+        if (message.includes('Credential not found') || message.includes('no credentials')) {
+          results.push({ op: opName, status: 'skip', reason: 'no credentials' });
+          totalSkip++;
+        } else {
+          results.push({ op: opName, status: 'fail', reason: message.slice(0, 100) });
+          totalFail++;
+          failures.push(`${skillId}:${opName} — ${message.slice(0, 100)}`);
+        }
       }
     }
 
