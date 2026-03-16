@@ -17,73 +17,41 @@ auth:
     Authorization: "Bearer {token}"
   label: API Token
   help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
-
-connects_to: todoist
-
-seed:
-  - id: todoist
-    types: [software]
-    name: Todoist
-    data:
-      software_type: app
-      url: https://todoist.com
-      launched: "2007"
-      platforms: [web, ios, android, macos, windows]
-      pricing: freemium
-      wikidata_id: Q7812817
-    relationships:
-      - role: offered_by
-        to: doist
-
-  - id: doist
-    types: [organization]
-    name: Doist Inc.
-    data:
-      type: company
-      url: https://doist.com
-      founded: "2007"
-      wikidata_id: Q16249122
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entity adapters transform API data into universal entity format.
 # Mapping defined ONCE per entity — applied automatically to all operations.
 
-transformers:
+adapters:
   task:
-    terminology: Task
-    mapping:
-      id: .id
-      name: .content
-      description: .description
-      content: .description
-      priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
-      started_at: .added_at
-      target.date: .due.date?
-      created_at: .added_at
-      project_id:
-        ref: project
-        value: .project_id
-      _parent_id: .parent_id
-      _labels:
-        ref: tag
-        value: .labels
-        lookup: name
+    id: .id
+    name: .content
+    description: .description
+    content: .description
+    priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
+    started_at: .added_at
+    target.date: .due.date?
+    created_at: .added_at
+    project_id:
+      ref: project
+      value: .project_id
+    _parent_id: .parent_id
+    _labels:
+      ref: tag
+      value: .labels
+      lookup: name
 
   project:
-    terminology: Project
-    mapping:
-      id: .id
-      name: .name
-      data.color: .color
-      _parent_id: .parent_id
+    id: .id
+    name: .name
+    data.color: .color
+    _parent_id: .parent_id
 
   tag:
-    terminology: Label
-    mapping:
-      id: .id
-      name: .name
-      color: .color
+    id: .id
+    name: .name
+    color: .color
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -91,10 +59,10 @@ transformers:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entity operations that return typed entities.
 # Mapping from `adapters` is applied automatically based on return type.
-# Naming convention: {entity}.{operation}
+# Naming convention: snake_case
 
 operations:
-  task.list:
+  list_tasks:
     description: List actionable tasks (due today, overdue, or in inbox)
     returns: task[]
     web_url: https://app.todoist.com/app/today
@@ -108,7 +76,7 @@ operations:
       response:
         root: /results
 
-  task.list_all:
+  list_all_tasks:
     description: List all tasks with optional filters (no smart defaults)
     returns: task[]
     web_url: https://app.todoist.com/app/upcoming
@@ -128,7 +96,7 @@ operations:
       response:
         root: /results
 
-  task.filter:
+  filter_task:
     description: Get tasks matching a Todoist filter query
     returns: task[]
     web_url: https://app.todoist.com/app/today
@@ -142,7 +110,7 @@ operations:
       response:
         root: /results
 
-  task.get:
+  get_task:
     description: Get a specific task by ID
     returns: task
     web_url: '"https://app.todoist.com/app/task/" + .params.id'
@@ -152,7 +120,7 @@ operations:
       method: GET
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
-  task.create:
+  create_task:
     description: Create a new task
     returns: task
     params:
@@ -175,7 +143,7 @@ operations:
         parent_id: .params.parent_id
         labels: .params.labels
 
-  task.update:
+  update_task:
     description: Update an existing task (including moving to different project)
     returns: task
     params:
@@ -196,7 +164,7 @@ operations:
         priority: 5 - .params.priority  # Invert: AgentOS 1=highest → Todoist 4=urgent
         labels: .params.labels
 
-  task.complete:
+  complete_task:
     description: Mark a task as achieved
     returns: void
     params:
@@ -205,7 +173,7 @@ operations:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/close"'
 
-  task.reopen:
+  reopen_task:
     description: Reopen a task
     returns: void
     params:
@@ -214,7 +182,7 @@ operations:
       method: POST
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/reopen"'
 
-  task.delete:
+  delete_task:
     description: Delete a task
     returns: void
     params:
@@ -223,7 +191,7 @@ operations:
       method: DELETE
       url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
 
-  project.list:
+  list_projects:
     description: List all projects
     returns: project[]
     web_url: https://app.todoist.com/app/projects/active
@@ -233,7 +201,7 @@ operations:
       response:
         root: /results
 
-  tag.list:
+  list_tags:
     description: List all tags (labels)
     returns: tag[]
     web_url: https://app.todoist.com/app/labels
@@ -244,13 +212,9 @@ operations:
         root: /results
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
+# ADDITIONAL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-# Helper operations that return custom shapes (not entities).
-# Have inline return schemas since there's no entity to reference.
-# Naming convention: verb_noun
-
-utilities:
+# Additional operations that return entities or custom shapes.
   move_task:
     description: Move task to a different project, section, or parent
     params:
@@ -284,10 +248,10 @@ Todoist tasks map to **tasks** and projects map to **projects** in the AgentOS M
 - Full CRUD for tasks
 - Projects and tags (labels)
 - Sub-tasks via parent_id
-- **Smart defaults**: `task.list` returns actionable tasks (today, overdue, inbox)
+- **Smart defaults**: `list_tasks` returns actionable tasks (today, overdue, inbox)
 - Rich filters via `query` param: `today`, `overdue`, `7 days`, `#ProjectName`, `@label`
 - Move tasks between projects, sections, or parents
-- `task.list_all` for raw list when you need everything
+- `list_all_tasks` for raw list when you need everything
 
 ## Priority Scale
 
@@ -304,6 +268,6 @@ AgentOS uses a universal priority scale (1=highest, 4=lowest). This adapter maps
 
 - Uses Todoist Unified API v1 (REST v2 and Sync v9 are deprecated)
 - Moving tasks is handled via dedicated `/move` endpoint
-- Include `project_id` in `task.update` to move — routed to move endpoint automatically
+- Include `project_id` in `update_task` to move — routed to move endpoint automatically
 - Recurring due dates preserve the recurrence pattern
 - `project_id` in the mapping creates an `includes` relationship (project → task) via the ref system

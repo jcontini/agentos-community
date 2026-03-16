@@ -15,60 +15,36 @@ auth:
   label: API Key
   help_url: https://serpapi.com/manage-api-key
 
-connects_to: serpapi
-
-seed:
-  - id: serpapi
-    types: [software]
-    name: SerpAPI
-    data:
-      software_type: api
-      url: https://serpapi.com
-      launched: "2018"
-      platforms: [web]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: serpapi-llc
-
-  - id: serpapi-llc
-    types: [organization]
-    name: SerpAPI LLC
-    data:
-      type: company
-      url: https://serpapi.com
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   offer:
-    terminology: Flight Offer
-    mapping:
-      id: >
+    id: >
         ((.flights[0].departure_airport.id) + "-" +
          (.flights[-1].arrival_airport.id) + "-" +
          (.flights[0].departure_airport.time | split(" ") | .[0]) + "-" +
          (.flights[0].flight_number | gsub(" "; "-")))
-      name: >
+    name: >
         ((.flights[0].departure_airport.id) + " → " +
          (.flights[-1].arrival_airport.id) + " · " +
          (.flights[0].airline // "Unknown") +
          (if (.flights | length) > 1 then " +" + ((.flights | length) - 1 | tostring) + " stop" + (if ((.flights | length) - 1) > 1 then "s" else "" end) else " nonstop" end) +
          " · $" + (.price | tostring))
-      price: .price
-      currency: '"USD"'
-      offer_type: '"flight"'
-      data.trip_type: .type
-      data.total_duration: .total_duration
-      data.flights: .flights
-      data.layovers: .layovers
-      data.carbon_emissions: .carbon_emissions
-      data.airline_logo: .airline_logo
-      data.extensions: .extensions
-      data.departure_token: .departure_token
-      data.booking_token: .booking_token
-      content: >
+    price: .price
+    currency: '"USD"'
+    offer_type: '"flight"'
+    data.trip_type: .type
+    data.total_duration: .total_duration
+    data.flights: .flights
+    data.layovers: .layovers
+    data.carbon_emissions: .carbon_emissions
+    data.airline_logo: .airline_logo
+    data.extensions: .extensions
+    data.departure_token: .departure_token
+    data.booking_token: .booking_token
+    content: >
         ((.flights[0].departure_airport.id) + " → " +
          (.flights[-1].arrival_airport.id) + "\n" +
          "Price: $" + (.price | tostring) + " " + (.type // "") + "\n" +
@@ -88,21 +64,19 @@ transformers:
          else "" end))
 
   airport:
-    terminology: Airport
-    mapping:
-      id: .airport.id
-      name: .airport.name
-      iata_code: .airport.id
-      city: .city
-      country: .country
-      country_code: .country_code
+    id: .airport.id
+    name: .airport.name
+    iata_code: .airport.id
+    city: .city
+    country: .country
+    country_code: .country_code
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  offer.search:
+  search_offers:
     description: Search Google Flights for flight offers between airports
     returns: offer[]
     params:
@@ -190,7 +164,7 @@ operations:
       response:
         root: /other_flights
 
-  offer.list:
+  list_offers:
     description: Get the best/recommended flight offers (may not always be available)
     returns: offer[]
     params:
@@ -241,7 +215,7 @@ operations:
       response:
         root: /best_flights
 
-  offer.get:
+  get_offer:
     description: Get return flight offers using a departure token from a previous search
     returns: offer[]
     params:
@@ -268,11 +242,6 @@ operations:
       response:
         root: /other_flights
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
-# ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
   get_booking_options:
     description: Get booking options for selected flights using a booking token
     params:
@@ -361,12 +330,12 @@ Structured Google search results — starting with Google Flights.
 Search for flight offers using airport IATA codes and dates. Results are
 **offers** — priced itineraries containing one or more flight segments.
 
-### offer.search
+### search_offers
 
 Search for flight offers between airports.
 
 ```
-use({ skill: "serpapi", tool: "offer.search", params: {
+use({ skill: "serpapi", tool: "search_offers", params: {
   departure_id: "AUS",
   arrival_id: "JFK",
   outbound_date: "2026-04-15",
@@ -376,7 +345,7 @@ use({ skill: "serpapi", tool: "offer.search", params: {
 
 **One way:**
 ```
-use({ skill: "serpapi", tool: "offer.search", params: {
+use({ skill: "serpapi", tool: "search_offers", params: {
   departure_id: "SFO",
   arrival_id: "LHR",
   outbound_date: "2026-05-01",
@@ -386,7 +355,7 @@ use({ skill: "serpapi", tool: "offer.search", params: {
 
 **With filters:**
 ```
-use({ skill: "serpapi", tool: "offer.search", params: {
+use({ skill: "serpapi", tool: "search_offers", params: {
   departure_id: "LAX",
   arrival_id: "NRT",
   outbound_date: "2026-06-01",
@@ -398,12 +367,12 @@ use({ skill: "serpapi", tool: "offer.search", params: {
 }})
 ```
 
-### offer.list
+### list_offers
 
 Get recommended/best offers (Google's picks). May not always be available.
 
 ```
-use({ skill: "serpapi", tool: "offer.list", params: {
+use({ skill: "serpapi", tool: "list_offers", params: {
   departure_id: "AUS",
   arrival_id: "LHR",
   outbound_date: "2026-04-15",
@@ -411,12 +380,12 @@ use({ skill: "serpapi", tool: "offer.list", params: {
 }})
 ```
 
-### offer.get
+### get_offer
 
 Get return flight offers after selecting an outbound (round trip flow).
 
 ```
-use({ skill: "serpapi", tool: "offer.get", params: {
+use({ skill: "serpapi", tool: "get_offer", params: {
   departure_token: "W1siUEVLIi..."
 }})
 ```

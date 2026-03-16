@@ -15,69 +15,42 @@ auth:
   label: Personal API Key
   help_url: https://us.posthog.com/settings/user-api-keys
 
-connects_to: posthog
-
-seed:
-  - id: posthog
-    types: [software]
-    name: PostHog
-    data:
-      software_type: api
-      url: https://posthog.com
-      launched: "2020"
-      platforms: [web, api]
-      pricing: freemium
-    relationships:
-      - role: offered_by
-        to: posthog-inc
-
-  - id: posthog-inc
-    types: [organization]
-    name: PostHog Inc.
-    data:
-      type: company
-      url: https://posthog.com
-      founded: "2020"
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-transformers:
+adapters:
   person:
-    terminology: Person
-    mapping:
-      id: .uuid
-      name: '(.properties.name // .properties.email // .distinct_ids[0] // "Unknown")'
-      email: .properties.email
-      created_at: .created_at
-      data.distinct_ids: .distinct_ids
-      data.last_seen_at: .last_seen_at
-      data.browser: .properties."$browser"
-      data.os: .properties."$os"
-      data.initial_referrer: .properties."$initial_referrer"
-      data.initial_utm_source: .properties."$initial_utm_source"
-      data.posthog_uuid: .uuid
+    id: .uuid
+    name: '(.properties.name // .properties.email // .distinct_ids[0] // "Unknown")'
+    email: .properties.email
+    created_at: .created_at
+    data.distinct_ids: .distinct_ids
+    data.last_seen_at: .last_seen_at
+    data.browser: .properties."$browser"
+    data.os: .properties."$os"
+    data.initial_referrer: .properties."$initial_referrer"
+    data.initial_utm_source: .properties."$initial_utm_source"
+    data.posthog_uuid: .uuid
 
   event:
-    terminology: Event
-    mapping:
-      id: .id
-      title: .event
-      start: .timestamp
-      description: '(.properties | keys | join(", "))'
-      data.event_name: .event
-      data.distinct_id: .distinct_id
-      data.properties: .properties
-      data.timestamp: .timestamp
-      data.current_url: .properties."$current_url"
-      data.person: .person
+    id: .id
+    title: .event
+    start: .timestamp
+    description: '(.properties | keys | join(", "))'
+    data.event_name: .event
+    data.distinct_id: .distinct_id
+    data.properties: .properties
+    data.timestamp: .timestamp
+    data.current_url: .properties."$current_url"
+    data.person: .person
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  person.list:
+  list_persons:
     description: List persons in a project
     returns: person[]
     params:
@@ -95,7 +68,7 @@ operations:
       response:
         root: /results
 
-  person.get:
+  get_person:
     description: Get a person by UUID
     returns: person
     params:
@@ -105,7 +78,7 @@ operations:
       method: GET
       url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/persons/" + .params.id + "/"'
 
-  person.search:
+  search_persons:
     description: Search persons by email or name
     returns: person[]
     params:
@@ -121,7 +94,7 @@ operations:
       response:
         root: /results
 
-  event.list:
+  list_events:
     description: List recent events (deprecated API — use query utility for complex queries)
     returns: event[]
     params:
@@ -141,7 +114,7 @@ operations:
       response:
         root: /results
 
-  event.get:
+  get_event:
     description: Get a single event by ID
     returns: event
     params:
@@ -151,11 +124,6 @@ operations:
       method: GET
       url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/events/" + .params.id + "/"'
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# UTILITIES
-# ═══════════════════════════════════════════════════════════════════════════════
-
-utilities:
   get_projects:
     description: List all projects the authenticated user has access to
     returns:
