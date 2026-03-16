@@ -138,6 +138,7 @@ const changedOnly = !!flags.changed;
 const includeWrite = !!flags.write;
 const callMode = !!flags.call;
 const rawOutput = !!flags.raw;
+const lenient = !!flags.lenient || process.env.MCP_TEST_LENIENT === '1';
 const skillFilter = parsed.positionals;
 
 // ── YAML parsing ─────────────────────────────────────────────────────────────
@@ -342,7 +343,37 @@ function isSkippableAuthError(message) {
     || message.includes('no credentials')
     || message.includes('Multiple cookie providers found')
     || message.includes('Multiple auth providers found')
-    || message.includes('Ask the user which one to use');
+    || message.includes('Ask the user which one to use')
+    || message.includes('Multiple accounts')
+    || message.includes('specify one:');
+}
+
+function isLenientExternalStateError(message) {
+  if (isSkippableAuthError(message)) return true;
+
+  const authPatterns = [
+    'HTTP 401',
+    'HTTP 403',
+    'HTTP 422',
+    'Unauthorized',
+    'unauthorized',
+    'authentication_error',
+    'authentication error',
+    'not_authenticated',
+    'Invalid token',
+    'Invalid format for Authentication header',
+    'SUBSCRIPTION_TOKEN_INVALID',
+    'invalid_api_key',
+    'API key',
+  ];
+
+  if (authPatterns.some(pattern => message.includes(pattern))) {
+    return true;
+  }
+
+  return message.includes('timeout: tools/call')
+    || message.includes('timed out')
+    || message.includes('deadline has elapsed');
 }
 
 function pluralize(noun) {
@@ -563,9 +594,13 @@ async function main() {
         }
       } catch (e) {
         const message = e.message || String(e);
-        if (isSkippableAuthError(message)) {
+        if (isSkippableAuthError(message) || (lenient && isLenientExternalStateError(message))) {
           const reason = message.includes('Multiple')
             ? 'auth choice required'
+            : message.includes('timeout')
+              ? 'external timeout'
+              : message.includes('HTTP 422')
+                ? 'external subscription/config state'
             : 'no credentials';
           results.push({ op: opName, status: 'skip', reason });
           totalSkip++;

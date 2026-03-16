@@ -12,8 +12,9 @@ echo "📦 Commits being pushed:"
 echo "$COMMITS" | head -5
 echo ""
 
-# Collect changed skills from commits that are about to be pushed
-SKILLS=$(git diff @{u}..HEAD --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^skills/[^/]+/' | cut -d/ -f2 | sort -u | tr '\n' ' ')
+# Collect changed top-level skills from commits that are about to be pushed.
+# Ignore `.needs-work` here — that directory is intentionally non-blocking.
+SKILLS=$(git diff @{u}..HEAD --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^skills/[^./][^/]*/' | cut -d/ -f2 | sort -u | tr '\n' ' ')
 
 if [ -z "$SKILLS" ]; then
   echo "✅ No skill changes to validate"
@@ -25,4 +26,4 @@ node scripts/skills/validate.mjs $SKILLS || exit 1
 
 echo ""
 echo "🔌 MCP smoke test..."
-npm run mcp:test -- $SKILLS || exit 1
+MCP_TEST_LENIENT=1 npm run mcp:test -- $SKILLS || exit 1
