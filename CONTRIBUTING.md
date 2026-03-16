@@ -4,70 +4,82 @@ This file is for **skill authoring**. It is intentionally narrow.
 
 If you're editing `skills/*/readme.md`, start here. If you're working on apps, CSS, UI components, or unrelated repo infrastructure, this is the wrong doc.
 
-In development, AgentOS reads skills directly from this repo. Skill YAML changes are picked up on the next skill call. If you changed Rust core in `~/dev/agentos`, run `./restart.sh` there.
+In development, AgentOS reads skills directly from this repo. Skill YAML changes are picked up on the next skill call. If you changed Rust core in `~/dev/agentos`, restart the engine there before trusting live MCP results.
 
 ## Read This First
 
 Current source of truth:
 
-- `CONTRIBUTING.md` — the skill contract
-- `skills/exa/readme.md` — best current example
-- `~/dev/agentos/bin/audit-skills.py` — migration guardrail for stale patterns
+- `CONTRIBUTING.md` — the skill contract and workflow
+- `skills/exa/readme.md` — canonical entity-returning example
+- `skills/kitty/readme.md` — canonical local-control/action example
 - `test-skills.cjs` — direct MCP smoke testing
+- `tests/utils/mcp-client.ts` — Vitest wrapper for skill tests
 
-Useful example skills:
+Only treat two skills as primary copy-from examples:
 
-- `skills/exa/readme.md` — REST + canonical mapping + good preview/full output
-- `skills/todoist/readme.md` — CRUD-ish operations and task-style entities
-- `skills/linear/readme.md` — GraphQL
-- `skills/youtube/readme.md` — command executor
-- `skills/gmail/readme.md` — OAuth example
-- `skills/reddit/readme.md` — cookie auth example
-- `skills/chrome/readme.md` and `skills/brave-browser/readme.md` — advanced keychain/crypto/steps patterns only if you truly need them
+- `skills/exa/readme.md` for entity-returning skills
+- `skills/kitty/readme.md` for local-control/action skills
+
+You may inspect other skills for specialized auth or protocol details, but do not treat older mixed-pattern skills as the default scaffold.
 
 ## Workflow
+
+Each tool in the workflow proves something different:
 
 ```bash
 # 1. Edit the live skill definition
 $EDITOR skills/my-skill/readme.md
 
-# 2. Validate schema + coverage
-npm run validate
+# 2. Fast structural gate for hooks / local iteration
+npm run validate --pre-commit -- my-skill
 
-# 3. Directly inspect real MCP output
+# 3. Full structural + mapping + coverage-heuristic check
+npm run validate -- my-skill
+
+# 4. Filter large runs while cleaning up families of skills
+npm run validate -- --filter browser
+
+# 5. Ground-truth live MCP call through run({ skill, tool, params })
 npm run mcp:call -- \
   --skill exa \
   --tool search \
   --params '{"query":"rust ownership","limit":1}' \
   --format json \
-  --detail preview
+  --detail full
 
-# 4. Smoke-test the whole skill from its YAML
+# 6. Broader YAML-driven smoke test for a skill
 npm run mcp:test -- exa --verbose
-
-# 5. If you changed Rust core in ~/dev/agentos
-(cd ~/dev/agentos && ./restart.sh)
 ```
 
-`./restart.sh` also nudges Cursor's MCP config. If Cursor still looks stale, manually toggle the `agentOS` MCP connection once.
-If the editor MCP path is broken or lagging behind your changes, use `npm run mcp:call` and `npm run mcp:test` as the ground-truth validation path while you restart the engine or reconnect the editor.
+What each step means:
+
+- `validate --pre-commit` checks fast structural validity only
+- `validate` checks structure, entity refs, mapping sanity, icons, and observed test-call coverage
+- `mcp:call` proves the live runtime can load the skill and execute one real tool
+- `mcp:test` is a broader smoke path, not a substitute for targeted inspection
+
+Important runtime note:
+
+- `agentos mcp` is a proxy to the engine daemon
+- If you changed Rust core in `~/dev/agentos`, restart the engine before trusting `mcp:call`
+- If Cursor MCP looks stale, use `npm run mcp:call` and `npm run mcp:test` as the ground-truth path while you restart the engine or reconnect the editor
 
 ## The Short Version
 
 The current skill style is:
 
-- Use `adapters:`, not `transformers:`
-- Do not use `terminology:`
-- Do not use adapter-level `display:` blocks
-- Put canonical display fields directly in the adapter body
-- Use simple `snake_case` tool names like `search` or `read_webpage`
+- Use `adapters:` for entity mappings
+- Use simple `snake_case` tool names like `search`, `read_webpage`, or `send_text`
 - Do not use dotted names like `task.list` or `webpage.read`
-- The adapter body is the mapping
-- Do not add operation-level `response.mapping` unless the operation truly returns a different shape
-- Use `utilities:` for custom actions or non-entity return shapes
-- Validate output through the direct MCP path, not just by reading YAML
+- Do not use `transformers:`, `terminology:`, or adapter-level `display:`
+- Put canonical fields directly in the adapter body
+- Treat the adapter body itself as the default mapping
+- Use `operations:` for both entity-returning tools and local-control/action tools
+- Use inline `returns:` schemas for non-entity or action-style tools
+- Validate live behavior through the direct MCP path, not just by reading YAML
 
-## Minimal Skill Shape
+## Folder Shape
 
 Every skill is a folder like:
 
@@ -79,7 +91,11 @@ skills/
     tests/
 ```
 
-The `readme.md` starts with YAML front matter:
+After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
+
+## Entity Skill Shape
+
+Use this pattern for normal data-fetching or CRUD-ish skills.
 
 ```yaml
 id: my-skill
@@ -110,7 +126,7 @@ operations:
     returns: result[]
     params:
       query: { type: string, required: true }
-      limit: { type: integer }
+      limit: { type: integer, required: false }
     rest:
       method: POST
       url: https://api.example.com/search
@@ -121,13 +137,39 @@ operations:
         root: /results
 ```
 
-After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
+## Local Control Shape
+
+Use this pattern for command-backed skills such as terminal, browser, OS, or app control.
+
+```yaml
+id: my-local-skill
+name: My Local Skill
+description: Control a local surface
+icon: icon.svg
+website: https://example.com
+auth: none
+
+operations:
+  list_status:
+    description: Inspect local state
+    returns:
+      ok: boolean
+      cwd: string
+    command:
+      binary: python3
+      args:
+        - -c
+        - |
+          import json, os
+          print(json.dumps({"ok": True, "cwd": os.getcwd()}))
+      timeout: 10
+```
+
+If you are starting a new skill from scratch, use `npm run new-skill -- my-skill` for an entity scaffold or `npm run new-skill -- my-skill --local-control` for a local-control scaffold.
 
 ## Adapters
 
 Adapters map raw API responses into AgentOS entities. Define the shape once in `adapters:` and let operations reference it via `returns:`.
-
-The adapter body itself is the mapping object.
 
 Canonical fields for rendering:
 
@@ -141,7 +183,7 @@ Canonical fields for rendering:
 Rules:
 
 - Put canonical fields directly in the adapter body
-- Keep all default mapping in `adapters.<entity>`
+- Keep default mapping in `adapters.<entity>`
 - Use `data.*` for adapter-specific extra fields
 - Use `content` only for long body text that should be stored separately
 - Map to an existing entity type whenever possible
@@ -173,43 +215,32 @@ transformers:
 
 ## Operations
 
-Operations are the entity-returning skill tools.
+Operations are entity-returning skill tools.
 
-Naming rules:
+Rules:
 
 - Use `snake_case`
 - Prefer short, obvious names
 - Good: `search`, `read_webpage`, `list_tasks`, `get_task`, `create_task`
 - Bad: `task.list`, `webpage.read`
+- Use `returns: entity[]` for list/search results
+- Use `returns: entity` for single entities
+- Do not hardcode misleading low limits
+- Pass caller-provided limits through to the API when the backend supports them
 
-Return rules:
+## Action Operations
 
-- `returns: entity[]` for list/search results
-- `returns: entity` for single entities
-- If the result is not an entity shape, use `utilities:`
-
-Limit rules:
-
-- Do not hardcode hidden limits
-- If a skill accepts `limit`, do not give it a misleading low default
-- Pass caller-provided limits through to the API
-
-## Utilities
-
-Use `utilities:` when one of these is true:
+Use normal `operations:` with an inline `returns:` schema when one of these is true:
 
 - The return value is not an entity
 - The tool is an action, not a normal entity read/write
 - The tool returns a custom inline schema
 
-Examples:
+Rules:
 
-- `setup`
-- `whoami`
-- `signup`
-- `add_blocker`
-
-Utility names should also be `snake_case`.
+- Operation names should still be `snake_case`
+- Prefer direct, concrete verbs like `send_text`, `focus_tab`, `list_status`
+- Test them through `mcp:call` early, because runtime mismatches are easier to miss than YAML mismatches
 
 ## Auth
 
@@ -233,7 +264,7 @@ auth:
 Useful rules:
 
 - Use `optional: true` if the skill works anonymously but improves with credentials
-- Use per-operation `auth: none` for public signup/setup utilities inside an otherwise-authenticated skill
+- Use per-operation `auth: none` for public signup/setup actions inside an otherwise-authenticated skill
 - For cookie auth, OAuth, command auth templating, or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
 
 Example references:
@@ -244,10 +275,10 @@ Example references:
 
 ## Expressions
 
-You only need two expression styles:
+You only need one dynamic expression style plus one auth placeholder style:
 
-- `rest:` and `graphql:` use jq/jaq-style expressions
-- `command:` uses Handlebars-style templates
+- `rest:`, `graphql:`, and `command:` use jq/jaq-style expressions for dynamic values
+- `auth:` still uses `{token}`-style credential placeholders today
 
 Common jq/jaq patterns:
 
@@ -264,12 +295,14 @@ Common command patterns:
 
 ```yaml
 command:
-  binary: bash
+  binary: python3
   args:
-    - "-l"
-    - "-c"
-    - "my-script --query '{{params.query}}'"
+    - ./my_script.py
+    - run
+  stdin: '.params | tojson'
 ```
+
+When a `command:` argument or `working_dir:` looks like a relative file path, it is resolved relative to the skill folder. Prefer `./my_script.py` over machine-specific absolute paths.
 
 If you need advanced command, steps, or crypto behavior, copy from an existing skill.
 
@@ -368,7 +401,7 @@ Before you commit a skill:
 - [ ] Uses canonical mapping fields where available
 - [ ] Uses simple `snake_case` operation names
 - [ ] No unnecessary `response.mapping` overrides
-- [ ] Uses `utilities:` for non-entity or action-style tools
+- [ ] Uses inline `returns:` schemas for non-entity or action-style tools
 - [ ] Direct MCP preview/full output looks correct
 - [ ] `npm run validate` passes
 - [ ] `npm run mcp:test -- <skill> --verbose` passes

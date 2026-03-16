@@ -362,6 +362,47 @@ function prettyPrint(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function getDeclaredSkill(skillId) {
+  const skillDir = path.join(SKILLS_DIR, skillId);
+  if (!fs.existsSync(skillDir)) return null;
+  return loadSkill(skillDir);
+}
+
+function getDeclaredTools(skillId) {
+  const skill = getDeclaredSkill(skillId);
+  if (!skill) return [];
+  return [
+    ...Object.keys(skill.operations || {}),
+    ...Object.keys(skill.utilities || {}),
+  ];
+}
+
+function formatRunDiagnostics(skill, tool, error) {
+  const declaredTools = getDeclaredTools(skill);
+  const message = error?.message || String(error);
+  const lines = [
+    message,
+    '',
+    'Diagnostics:',
+    `- Binary: ${BINARY}`,
+    `- Call path: run({ skill: "${skill}", tool: "${tool}", params })`,
+    '- Note: `agentos mcp` is a proxy to the engine daemon; core Rust changes may require an engine restart.',
+  ];
+
+  if (declaredTools.length === 0) {
+    lines.push(`- Community YAML: no local skill declaration found at ${path.join(SKILLS_DIR, skill)}`);
+  } else {
+    lines.push(`- Community YAML tools: ${declaredTools.join(', ')}`);
+    if (!declaredTools.includes(tool)) {
+      lines.push('- Requested tool is not declared in the community YAML.');
+    } else if (message.includes(`Tool '${tool}' not found in skill '${skill}'`)) {
+      lines.push('- Requested tool is declared in community YAML but missing from the live runtime skill. This usually means the engine daemon is stale or the runtime loader/contract diverged.');
+    }
+  }
+
+  return new Error(lines.join('\n'));
+}
+
 function buildDirectRunArgs() {
   const params = parseJsonFlag(flags.params, {}, 'params');
   const view = parseJsonFlag(flags.view, {}, 'view');
@@ -385,6 +426,8 @@ function buildDirectRunArgs() {
 
 async function runDirectCall() {
   console.log('\nConnecting to MCP...');
+  console.log(`Binary: ${BINARY}`);
+  console.log('Call path: run({ skill, tool, params }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
   await mcp.connect();
   console.log('MCP ready.\n');
@@ -398,6 +441,8 @@ async function runDirectCall() {
     const result = await mcp.callTool('run', runArgs, rawOutput ? { rawText: true } : {});
     process.stdout.write(prettyPrint(result));
     process.stdout.write('\n');
+  } catch (error) {
+    throw formatRunDiagnostics(runArgs.skill, runArgs.tool, error);
   } finally {
     await mcp.disconnect();
   }
@@ -418,6 +463,8 @@ async function main() {
   }
 
   console.log(`\nConnecting to MCP...`);
+  console.log(`Binary: ${BINARY}`);
+  console.log('Call path: run({ skill, tool, params }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
   await mcp.connect();
   console.log(`MCP ready. Testing ${targets.length} skills.\n`);

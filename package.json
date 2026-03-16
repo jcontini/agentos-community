@@ -9,6 +9,8 @@
     "test:schema": "vitest run --config vitest.schema.config.ts",
     "test:capabilities": "vitest run tests/skills/operations.test.ts",
     "test:needs-work": "vitest run skills/.needs-work",
+    "mcp:call": "node test-skills.cjs --call",
+    "mcp:test": "node test-skills.cjs",
     "validate": "node tests/skills/scripts/validate.mjs",
     "validate:strict": "node tests/skills/scripts/validate.mjs --no-move",
     "validate:patterns": "node tests/skills/scripts/validate-patterns.mjs",

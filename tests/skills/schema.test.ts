@@ -4,7 +4,7 @@
  * Validates:
  * - All skill readme.md files have valid YAML frontmatter conforming to skill schema
  * - Required files (icon.svg or icon.png) exist
- * - Skills have operations or utilities
+ * - Skills have operations
  */
 
 import { describe, it, expect } from 'vitest';
@@ -118,23 +118,21 @@ describe('Schema Completeness', () => {
     }
   });
 
-  it('all skills have at least one operation, utility, action, or agent block', () => {
+  it('all skills have at least one operation, action, or agent block', () => {
     for (const skillPath of getSkills()) {
       const content = readFileSync(join(SKILLS_DIR, skillPath, 'readme.md'), 'utf-8');
       const frontmatter = parseFrontmatter(content);
       const operations = frontmatter?.operations as Record<string, unknown> | undefined;
-      const utilities = frontmatter?.utilities as Record<string, unknown> | undefined;
       const actions = frontmatter?.actions as Record<string, unknown> | undefined;
       const agent = frontmatter?.agent;
 
       const hasOperations = operations && Object.keys(operations).length > 0;
-      const hasUtilities = utilities && Object.keys(utilities).length > 0;
       const hasActions = actions && Object.keys(actions).length > 0;
       const isAgentSkill = !!agent;
 
       expect(
-        hasOperations || hasUtilities || hasActions || isAgentSkill,
-        `${skillPath} must have 'operations', 'utilities', 'actions', or 'agent' block`
+        hasOperations || hasActions || isAgentSkill,
+        `${skillPath} must have 'operations', 'actions', or 'agent' block`
       ).toBe(true);
     }
   });

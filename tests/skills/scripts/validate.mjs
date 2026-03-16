@@ -104,12 +104,24 @@ async function loadEntityPropertiesFromServer() {
 let validEntityIds = new Set();
 let entityProperties = {};
 let entityServerAvailable = false;
+const INLINE_PRIMITIVE_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']);
 
 async function initEntityData() {
   const result = await loadEntityIdsFromServer();
   validEntityIds = result.ids;
   entityServerAvailable = result.available;
   entityProperties = await loadEntityPropertiesFromServer();
+}
+
+function returnsEntity(op) {
+  if (!op || typeof op.returns !== 'string') return false;
+  if (op.returns === 'void') return false;
+  const entityName = op.returns.replace(/\[\]$/, '');
+  return !INLINE_PRIMITIVE_TYPES.has(entityName);
+}
+
+function returnsEntityArray(op) {
+  return returnsEntity(op) && typeof op.returns === 'string' && op.returns.endsWith('[]');
 }
 
 // ============================================================================
@@ -131,7 +143,7 @@ function checkSchema(frontmatter) {
   }
   
   // Guide-only skills (auth: none, no operations) are exempt from the operations check
-  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !frontmatter.utilities;
+  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations;
   // Agent skills run an AI loop instead of a single API call — exempt from service-specific checks
   const isAgentSkill = !!frontmatter.agent;
 
@@ -140,7 +152,7 @@ function checkSchema(frontmatter) {
     { name: 'website', pass: isAgentSkill || isGuideOnly || !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
     { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined },
-    { name: 'operations or utilities', pass: isAgentSkill || isGuideOnly || !!(frontmatter.operations || frontmatter.utilities) },
+    { name: 'operations', pass: isAgentSkill || isGuideOnly || !!frontmatter.operations },
   ];
   
   const passed = checks.filter(c => c.pass).length;
@@ -162,16 +174,10 @@ function checkEntities(frontmatter) {
   
   if (frontmatter.operations) {
     for (const [opName, op] of Object.entries(frontmatter.operations)) {
-      total++;
-      if (!op.returns || op.returns === 'void') {
-        const verb = opName.includes('.') ? opName.split('.')[1] : opName;
-        if (!['create', 'update', 'delete', 'archive', 'complete', 'reopen', 'send', 'modify', 'trash', 'untrash', 'batch_modify', 'batch_delete'].includes(verb)) {
-          errors.push(`'${opName}' returns void — write operations or read operations must return an entity`);
-        } else {
-          passed++;
-        }
+      if (!returnsEntity(op)) {
         continue;
       }
+      total++;
       const entityName = op.returns.replace(/\[\]$/, '');
       if (validEntityIds.has(entityName)) {
         passed++;
@@ -179,7 +185,7 @@ function checkEntities(frontmatter) {
         errors.push(`'${opName}' returns unknown entity '${entityName}'`);
       }
       // entity[] ops: rest/graphql must have response.root or response.transform for top-level array
-      if (op.returns.endsWith('[]') && (op.rest || op.graphql)) {
+      if (returnsEntityArray(op) && (op.rest || op.graphql)) {
         const resp = op.rest?.response || op.graphql?.response;
         const hasArrayExtraction = resp?.root || resp?.transform;
         if (!hasArrayExtraction) {
@@ -207,9 +213,11 @@ function checkMappings(frontmatter) {
   let total = 0;
   let passed = 0;
   const adapters = getAdapters(frontmatter);
+  const operations = Object.values(frontmatter.operations || {});
+  const hasEntityOperations = operations.some(op => returnsEntity(op));
   
   if (!adapters) {
-    if (frontmatter.operations && Object.keys(frontmatter.operations).length > 0) {
+    if (hasEntityOperations) {
       errors.push('Has operations but no adapters section — data won\'t flow through entities');
       total = 1;
     }
@@ -321,29 +329,71 @@ function checkIcon(adapterDir) {
   return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
 }
 
+function collectCoverageExemptions(content) {
+  const exemptions = new Map();
+  for (const line of content.split(/\r?\n/)) {
+    const match = line.match(/coverage-exempt:\s*([a-z0-9_,\s]+?)(?:\s*-\s*(.+))?$/i);
+    if (!match) continue;
+    const tools = match[1]
+      .split(',')
+      .map(tool => tool.trim())
+      .filter(Boolean);
+    const reason = match[2]?.trim() || 'explicit exemption';
+    for (const tool of tools) {
+      exemptions.set(tool, reason);
+    }
+  }
+  return exemptions;
+}
+
+function collectExecutedTools(content) {
+  const testedTools = new Set();
+  const invocationPatterns = [
+    /\.call\(\s*['"]UseAdapter['"]\s*,\s*\{[\s\S]*?\btool:\s*['"]([^'"]+)['"][\s\S]*?\}\s*\)/g,
+    /\.call\(\s*['"]run['"]\s*,\s*\{[\s\S]*?\btool:\s*['"]([^'"]+)['"][\s\S]*?\}\s*\)/g,
+    /\.run\(\s*[^,]+,\s*['"]([^'"]+)['"]/g,
+  ];
+
+  for (const pattern of invocationPatterns) {
+    for (const match of content.matchAll(pattern)) {
+      testedTools.add(match[1]);
+    }
+  }
+
+  return testedTools;
+}
+
 function checkTests(adapterDir, frontmatter) {
   const tools = [];
   if (frontmatter.operations) tools.push(...Object.keys(frontmatter.operations));
-  if (frontmatter.utilities) tools.push(...Object.keys(frontmatter.utilities));
   
   if (tools.length === 0) return { pass: true, errors: [], tested: 0, total: 0 };
   
   const testsDir = join(adapterDir, 'tests');
   const testedTools = new Set();
+  const exemptedTools = new Map();
   if (existsSync(testsDir)) {
     for (const file of readdirSync(testsDir).filter(f => f.endsWith('.test.ts'))) {
       const content = readFileSync(join(testsDir, file), 'utf-8');
-      for (const match of content.matchAll(/tool:\s*['"]([^'"]+)['"]/g)) {
-        testedTools.add(match[1]);
+      for (const [tool, reason] of collectCoverageExemptions(content)) {
+        exemptedTools.set(tool, reason);
+      }
+      for (const tool of collectExecutedTools(content)) {
+        testedTools.add(tool);
       }
     }
   }
   
-  const untested = tools.filter(t => !testedTools.has(t));
+  const missing = tools.filter(t => !testedTools.has(t) && !exemptedTools.has(t));
+  const satisfied = new Set([
+    ...[...testedTools].filter(tool => tools.includes(tool)),
+    ...[...exemptedTools.keys()].filter(tool => tools.includes(tool)),
+  ]);
+
   return {
-    pass: untested.length === 0,
-    errors: untested.length > 0 ? [`Missing: ${untested.join(', ')}`] : [],
-    tested: testedTools.size,
+    pass: missing.length === 0,
+    errors: missing.length > 0 ? [`No executed test call found for: ${missing.join(', ')}`] : [],
+    tested: satisfied.size,
     total: tools.length,
   };
 }
@@ -581,7 +631,7 @@ if (preCommit) {
     }
     process.exit(1);
   }
-  console.log(`✅ ${filtered.map(r => r.name).join(', ')}`);
+  console.log(`✅ structural pre-commit validation passed: ${filtered.map(r => r.name).join(', ')}`);
   process.exit(0);
 }
 
@@ -593,7 +643,8 @@ let needsWorkSkills = findSkills(NEEDS_WORK_DIR);
 
 if (skillNames.length > 0) {
   activeSkills = activeSkills.filter(a => skillNames.includes(a.name));
-  needsWorkSkills = needsWorkSkills.filter(a => skillNames.includes(a.name));
+  const matchedActive = new Set(activeSkills.map(a => a.name));
+  needsWorkSkills = needsWorkSkills.filter(a => skillNames.includes(a.name) && !matchedActive.has(a.name));
 } else if (filterValue) {
   activeSkills = activeSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
   needsWorkSkills = needsWorkSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
@@ -670,6 +721,7 @@ if (allPassing) {
   const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
   console.log(`⚠️  ${passing}/${activeResults.length} skills fully valid — fix errors and run again`);
 }
+console.log('ℹ️  `validate` checks structure, entity refs, mapping sanity, and observed test-call coverage. Use `npm run mcp:call` for live runtime proof and `npm run mcp:test` for broader smoke testing.');
 
 // Exit with error if any active adapters have critical failures
 const criticalFailures = activeResults.filter(r => !r.schema.structureValid || !r.entity.pass);

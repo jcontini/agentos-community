@@ -76,22 +76,12 @@
     },
     "operations": {
       "type": "object",
-      "description": "Entity-returning operations (e.g., search, read_webpage, list_tasks)",
+      "description": "Skill operations, including entity-returning reads/writes and inline-schema action tools",
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9_]*$"
       },
       "additionalProperties": {
         "$ref": "#/definitions/operation"
-      }
-    },
-    "utilities": {
-      "type": "object",
-      "description": "Helper operations that return custom shapes (not entities). Naming: verb_noun or entity.verb for credential providers",
-      "propertyNames": {
-        "pattern": "^[a-z_]+(\\.[a-z_]+)?$"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/utility"
       }
     },
     "requires": {
@@ -187,7 +177,7 @@
           },
           "via": {
             "type": "string",
-            "description": "Utility operation to call to get credentials (default: 'credential_get')"
+            "description": "Operation to call to get credentials (default: 'credential_get')"
           },
           "account_param": {
             "type": "string",
@@ -347,7 +337,7 @@
     },
     "operation": {
       "type": "object",
-      "description": "Entity operation that returns typed entities",
+      "description": "Skill operation that returns either entity refs or an inline schema",
       "required": ["returns"],
       "properties": {
         "description": {
@@ -355,72 +345,15 @@
           "description": "Human-readable description of what this operation does"
         },
         "returns": {
-          "type": "string",
-          "description": "Return type: entity name, entity[], or void",
-          "pattern": "^([a-z_]+(\\[\\])?|void)$"
-        },
-        "params": {
-          "type": "object",
-          "description": "Operation parameters",
-          "additionalProperties": {
-            "$ref": "#/definitions/paramDef"
-          }
-        },
-        "rest": {
-          "$ref": "#/definitions/restExecutor"
-        },
-        "graphql": {
-          "$ref": "#/definitions/graphqlExecutor"
-        },
-        "sql": {
-          "$ref": "#/definitions/sqlExecutor"
-        },
-        "command": {
-          "$ref": "#/definitions/commandExecutor"
-        },
-        "swift": {
-          "$ref": "#/definitions/swiftExecutor"
-        },
-        "csv": {
-          "$ref": "#/definitions/csvExecutor"
-        },
-        "keychain": {
-          "$ref": "#/definitions/keychainExecutor"
-        },
-        "crypto": {
-          "$ref": "#/definitions/cryptoExecutor"
-        },
-        "steps": {
-          "$ref": "#/definitions/stepsExecutor"
-        }
-      }
-    },
-    "utility": {
-      "type": "object",
-      "description": "Helper operation that returns a custom shape, model reference, or entity",
-      "required": ["returns"],
-      "properties": {
-        "description": {
-          "type": "string",
-          "description": "Human-readable description of what this utility does"
-        },
-        "params": {
-          "type": "object",
-          "description": "Utility parameters (inputs)",
-          "additionalProperties": {
-            "$ref": "#/definitions/paramDef"
-          }
-        },
-        "returns": {
           "oneOf": [
             {
               "type": "string",
-              "description": "Model/entity reference (e.g., 'dns_record', 'dns_record[]') or void",
+              "description": "Entity ref, primitive type name, or void (examples: 'webpage', 'webpage[]', 'boolean', 'void')",
               "pattern": "^([a-z_]+(\\[\\])?|void)$"
             },
-              {
-                "type": "object",
-                "description": "Inline schema for skill-specific return shapes",
+            {
+              "type": "object",
+              "description": "Inline schema for action/local-control return shapes",
               "additionalProperties": {
                 "oneOf": [
                   { "type": "string", "description": "Property type (string, boolean, integer, array, etc.)" },
@@ -436,6 +369,13 @@
               }
             }
           ]
+        },
+        "params": {
+          "type": "object",
+          "description": "Operation parameters",
+          "additionalProperties": {
+            "$ref": "#/definitions/paramDef"
+          }
         },
         "rest": {
           "$ref": "#/definitions/restExecutor"
@@ -578,7 +518,7 @@
           "properties": {
             "service": {
               "type": "string",
-              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds an installed skill with a matching provides: entry and calls its credential_get utility. client_id, client_secret, auth_url, token_url are not needed."
+              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds an installed skill with a matching provides: entry and calls its credential_get operation. client_id, client_secret, auth_url, token_url are not needed."
             },
             "client_id": {
               "type": "string",
@@ -981,7 +921,7 @@
         },
         "mapping": {
           "type": "object",
-          "description": "Field mappings for utilities (entity operations use the adapter mapping instead)",
+          "description": "Field mappings for inline-schema operations (entity-returning operations use the adapter mapping instead)",
           "additionalProperties": true
         },
         "static": {
