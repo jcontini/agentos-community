@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run full integration tests for changed apps
+# Run validation + MCP smoke checks for changed skills
 # Called by pre-push hook or manually
 #
 # Usage: ./scripts/test-changed.sh [--all] [--staged] [--committed]
@@ -21,8 +21,8 @@ for arg in "$@"; do
 done
 
 if [ "$RUN_ALL" = true ]; then
-  echo "🔄 Running all tests..."
-  npm test -- --run
+  echo "🔄 Running full validation..."
+  npm run validate
   exit 0
 fi
 
@@ -48,35 +48,16 @@ if [ -z "$AFFECTED_SKILLS" ]; then
   exit 0
 fi
 
-echo "📦 Testing skills: $AFFECTED_SKILLS"
+echo "📦 Checking skills: $AFFECTED_SKILLS"
 echo ""
 
-# First, run schema validation
-echo "📋 Schema validation..."
+# First, run structural validation
+echo "📋 Validation..."
 node tests/skills/scripts/validate.mjs $AFFECTED_SKILLS || exit 1
 echo ""
 
-TESTED=0
-SKIPPED=0
-
-for skill in $AFFECTED_SKILLS; do
-  SKILL_TEST_DIR="skills/$skill/tests"
-  
-  if [ -d "$SKILL_TEST_DIR" ]; then
-    TEST_COUNT=$(find "$SKILL_TEST_DIR" -name "*.test.ts" 2>/dev/null | wc -l | tr -d ' ')
-    if [ "$TEST_COUNT" -gt 0 ]; then
-      echo "🧪 Testing skills/$skill..."
-      npm test -- "$SKILL_TEST_DIR" --run || exit 1
-      TESTED=$((TESTED + 1))
-    else
-      echo "⏭️  skills/$skill: no test files"
-      SKIPPED=$((SKIPPED + 1))
-    fi
-  else
-    echo "⏭️  skills/$skill: no tests/ directory"
-    SKIPPED=$((SKIPPED + 1))
-  fi
-done
+echo "🔌 MCP smoke test..."
+npm run mcp:test -- $AFFECTED_SKILLS || exit 1
 
 echo ""
-echo "✅ Done: $TESTED tested, $SKIPPED skipped"
+echo "✅ Done: validated + MCP smoke tested"

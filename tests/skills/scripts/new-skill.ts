@@ -260,62 +260,6 @@ Use \`npm run mcp:call\` against this skill before trusting editor-side MCP outp
 `;
 }
 
-function entityTest(): string {
-  const declaredTools = [
-    'search',
-    'read_item',
-    ...(isReadonly ? [] : ['create_item', 'update_item', 'delete_item']),
-  ];
-
-  return `/**
- * ${displayName} Skill Tests
- *
- * Replace these placeholders with real runtime calls once the API contract is wired.
- * coverage-exempt: ${declaredTools.join(', ')} - scaffold placeholder until real MCP calls are implemented
- */
-
-import { describe, it } from 'vitest';
-
-describe('${displayName} Skill', () => {
-  it.todo('replace scaffold placeholders with real MCP test coverage');
-});
-`;
-}
-
-function localControlTest(): string {
-  return `import { describe, expect, it } from 'vitest';
-import { aos } from '@test/fixtures';
-
-const adapter = '${skillName}';
-
-describe('${displayName} Skill', () => {
-  it('lists local status', async () => {
-    const result = await aos().call('UseAdapter', {
-      adapter,
-      tool: 'list_status',
-      params: {},
-    }) as { ok: boolean; user: string; cwd: string };
-
-    expect(result.ok).toBe(true);
-    expect(result.user).toBeTruthy();
-    expect(result.cwd).toBeTruthy();
-  });
-
-  it('echoes text through the local action', async () => {
-    const token = 'agentos-local-control-template';
-    const result = await aos().call('UseAdapter', {
-      adapter,
-      tool: 'echo_text',
-      params: { text: token },
-    }) as { ok: boolean; text: string };
-
-    expect(result.ok).toBe(true);
-    expect(result.text).toBe(token);
-  });
-});
-`;
-}
-
 function iconSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <rect width="256" height="256" rx="52" fill="${isLocalControl ? '#805AD5' : '#4A5568'}"/>
@@ -326,21 +270,19 @@ function iconSvg(): string {
 }
 
 mkdirSync(skillDir, { recursive: true });
-mkdirSync(join(skillDir, 'tests'), { recursive: true });
 
 writeFileSync(join(skillDir, 'readme.md'), isLocalControl ? localControlReadme() : entityReadme());
 writeFileSync(join(skillDir, 'icon.svg'), iconSvg());
-writeFileSync(join(skillDir, 'tests', `${skillName}.test.ts`), isLocalControl ? localControlTest() : entityTest());
 
 console.log(`✅ Created ${skillDir}`);
 console.log(`   - readme.md`);
 console.log(`   - icon.svg`);
-console.log(`   - tests/${skillName}.test.ts`);
 console.log('');
 console.log('Next steps:');
 console.log(`  npm run validate -- ${skillName}`);
 if (isLocalControl) {
-  console.log(`  npm test -- skills/${skillName}/tests/${skillName}.test.ts`);
+  console.log(`  npm run mcp:call -- --skill ${skillName} --tool list_status --format json --detail full`);
 } else {
   console.log(`  npm run mcp:call -- --skill ${skillName} --tool search --params '{"query":"test"}' --format json --detail full`);
 }
+console.log(`  npm run mcp:test -- ${skillName} --verbose`);

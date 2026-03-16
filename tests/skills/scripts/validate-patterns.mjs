@@ -2,7 +2,7 @@
 /**
  * Pattern validation for adapter best practices.
  * 
- * This complements validate.mjs (schema + test coverage) with higher-level checks:
+ * This complements validate.mjs (schema + structural validation) with higher-level checks:
  * 
  * 1. TYPED REFERENCES — Adapters should create relationships, not just flat data
  *    - post adapter should have author → person typed reference

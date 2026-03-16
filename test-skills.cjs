@@ -6,7 +6,7 @@
  * - run coverage-style smoke tests across skill YAML definitions, or
  * - make a single direct `run` call with arbitrary params/view/execute flags.
  *
- * No vitest, no TypeScript compilation, no worker pools.
+ * No test runner, no TypeScript compilation, no worker pools.
  *
  * Usage:
  *   node test-skills.cjs                              # test all skills

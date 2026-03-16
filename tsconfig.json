@@ -5,11 +5,7 @@
     "moduleResolution": "bundler",
     "strict": false,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@test/*": ["tests/utils/*"]
-    }
+    "skipLibCheck": true
   },
   "include": [
     "**/*.ts"

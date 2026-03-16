@@ -4,17 +4,11 @@
   "description": "Apps and connectors for AgentOS",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:schema": "vitest run --config vitest.schema.config.ts",
-    "test:capabilities": "vitest run tests/skills/operations.test.ts",
-    "test:needs-work": "vitest run skills/.needs-work",
+    "test": "node tests/skills/scripts/validate.mjs",
     "mcp:call": "node test-skills.cjs --call",
     "mcp:test": "node test-skills.cjs",
     "validate": "node tests/skills/scripts/validate.mjs",
-    "validate:strict": "node tests/skills/scripts/validate.mjs --no-move",
     "validate:patterns": "node tests/skills/scripts/validate-patterns.mjs",
-    "lint:tests": "npx tsx tests/skills/scripts/lint-tests.ts",
     "new-skill": "npx tsx tests/skills/scripts/new-skill.ts",
     "test:changed": "./tests/test-changed.sh --staged",
     "prepare": "husky"
@@ -25,7 +19,6 @@
     "ajv-formats": "^3.0.1",
     "husky": "^9.1.7",
     "typescript": "^5.3.0",
-    "vitest": "^1.0.0",
     "yaml": "^2.8.2"
   },
   "dependencies": {

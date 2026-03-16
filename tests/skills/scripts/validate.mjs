@@ -7,7 +7,6 @@
  *   2. Entity  — All operations return valid entity types
  *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
  *   4. Icon    — icon.svg or icon.png exists
- *   5. Tests   — Every operation has a test file
  * 
  * Skills in .needs-work/ are shown separately but never auto-moved.
  * Fix errors, then manually move to skills/ when ready.
@@ -23,7 +22,7 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { parse as parseYaml, parseAllDocuments } from 'yaml';
+import { parse as parseYaml } from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
@@ -142,17 +141,26 @@ function checkSchema(frontmatter) {
     };
   }
   
-  // Guide-only skills (auth: none, no operations) are exempt from the operations check
-  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations;
+  const actions = frontmatter.actions && typeof frontmatter.actions === 'object'
+    ? Object.keys(frontmatter.actions).length
+    : 0;
+  const hasActions = actions > 0;
+
+  // Guide-only skills (auth: none, no operations/actions) are exempt from the operations check
+  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !hasActions;
   // Agent skills run an AI loop instead of a single API call — exempt from service-specific checks
   const isAgentSkill = !!frontmatter.agent;
 
   const checks = [
     { name: 'valid structure', pass: true },
+    { name: 'tags', pass: frontmatter.tags === undefined },
     { name: 'website', pass: isAgentSkill || isGuideOnly || !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
     { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined },
-    { name: 'operations', pass: isAgentSkill || isGuideOnly || !!frontmatter.operations },
+    {
+      name: 'operations/actions/agent',
+      pass: isAgentSkill || isGuideOnly || !!frontmatter.operations || hasActions,
+    },
   ];
   
   const passed = checks.filter(c => c.pass).length;
@@ -329,75 +337,6 @@ function checkIcon(adapterDir) {
   return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
 }
 
-function collectCoverageExemptions(content) {
-  const exemptions = new Map();
-  for (const line of content.split(/\r?\n/)) {
-    const match = line.match(/coverage-exempt:\s*([a-z0-9_,\s]+?)(?:\s*-\s*(.+))?$/i);
-    if (!match) continue;
-    const tools = match[1]
-      .split(',')
-      .map(tool => tool.trim())
-      .filter(Boolean);
-    const reason = match[2]?.trim() || 'explicit exemption';
-    for (const tool of tools) {
-      exemptions.set(tool, reason);
-    }
-  }
-  return exemptions;
-}
-
-function collectExecutedTools(content) {
-  const testedTools = new Set();
-  const invocationPatterns = [
-    /\.call\(\s*['"]UseAdapter['"]\s*,\s*\{[\s\S]*?\btool:\s*['"]([^'"]+)['"][\s\S]*?\}\s*\)/g,
-    /\.call\(\s*['"]run['"]\s*,\s*\{[\s\S]*?\btool:\s*['"]([^'"]+)['"][\s\S]*?\}\s*\)/g,
-    /\.run\(\s*[^,]+,\s*['"]([^'"]+)['"]/g,
-  ];
-
-  for (const pattern of invocationPatterns) {
-    for (const match of content.matchAll(pattern)) {
-      testedTools.add(match[1]);
-    }
-  }
-
-  return testedTools;
-}
-
-function checkTests(adapterDir, frontmatter) {
-  const tools = [];
-  if (frontmatter.operations) tools.push(...Object.keys(frontmatter.operations));
-  
-  if (tools.length === 0) return { pass: true, errors: [], tested: 0, total: 0 };
-  
-  const testsDir = join(adapterDir, 'tests');
-  const testedTools = new Set();
-  const exemptedTools = new Map();
-  if (existsSync(testsDir)) {
-    for (const file of readdirSync(testsDir).filter(f => f.endsWith('.test.ts'))) {
-      const content = readFileSync(join(testsDir, file), 'utf-8');
-      for (const [tool, reason] of collectCoverageExemptions(content)) {
-        exemptedTools.set(tool, reason);
-      }
-      for (const tool of collectExecutedTools(content)) {
-        testedTools.add(tool);
-      }
-    }
-  }
-  
-  const missing = tools.filter(t => !testedTools.has(t) && !exemptedTools.has(t));
-  const satisfied = new Set([
-    ...[...testedTools].filter(tool => tools.includes(tool)),
-    ...[...exemptedTools.keys()].filter(tool => tools.includes(tool)),
-  ]);
-
-  return {
-    pass: missing.length === 0,
-    errors: missing.length > 0 ? [`No executed test call found for: ${missing.join(', ')}`] : [],
-    tested: satisfied.size,
-    total: tools.length,
-  };
-}
-
 // ============================================================================
 // DISCOVER ADAPTERS
 // ============================================================================
@@ -449,7 +388,6 @@ function renderTable(sections) {
   
   const nameWidth = Math.max(16, ...allResults.map(r => r.name.length)) + 2;
   const colW = 9;
-  const testColW = 9;
   
   function centerText(text, width) {
     const lp = Math.floor((width - text.length) / 2);
@@ -458,13 +396,13 @@ function renderTable(sections) {
   }
   
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Tests', testColW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}`;
   
-  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(testColW)}┐${RESET}`;
-  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(testColW)}┘${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┘${RESET}`;
   
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 4 + testColW + 5;
+    const inner = nameWidth + 1 + colW * 4 + 4;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
@@ -495,16 +433,6 @@ function renderTable(sections) {
     return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
   }
   
-  function testCell(r, width) {
-    if (r.tests.total === 0 && !r.tests.pass) return cell(BLOCKED, width);
-    if (r.tests.total === 0) return cell(SKIP, width);
-    const label = `${r.tests.tested}/${r.tests.total}`;
-    const lp = Math.floor((width - label.length) / 2);
-    const rp = width - label.length - lp;
-    const color = r.tests.pass ? GREEN : r.tests.tested === 0 ? RED : YELLOW;
-    return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
-  }
-  
   console.log();
   console.log(topBorder);
   console.log(headerLine);
@@ -514,7 +442,7 @@ function renderTable(sections) {
     console.log(sectionDivider(section.label));
     
     for (const r of section.results) {
-      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass;
+      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass;
       const critical = !r.schema.structureValid || !r.entity.pass;
       const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
       
@@ -522,8 +450,7 @@ function renderTable(sections) {
         `${checkCell(r.schema, colW)}${SEP}` +
         `${checkCell(r.entity, colW)}${SEP}` +
         `${checkCell(r.mapping, colW)}${SEP}` +
-        `${iconCell(r.icon, colW)}${SEP}` +
-        `${testCell(r, testColW)}${SEP}`;
+        `${iconCell(r.icon, colW)}${SEP}`;
       console.log(line);
     }
   }
@@ -533,7 +460,7 @@ function renderTable(sections) {
   for (const section of sections) {
     if (section.results.length === 0) continue;
     const total = section.results.length;
-    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass).length;
     const passColor = passing === total ? GREEN : passing > 0 ? YELLOW : RED;
     console.log(`  ${section.icon} ${passColor}${passing}/${total}${RESET} ${section.label}`);
   }
@@ -541,7 +468,7 @@ function renderTable(sections) {
 }
 
 function renderErrors(results) {
-  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass || !r.tests.pass);
+  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass);
   if (failing.length === 0) return;
   
   for (const r of failing) {
@@ -550,7 +477,6 @@ function renderErrors(results) {
     if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
     if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
     if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
-    if (!r.tests.pass)   allErrors.push(...r.tests.errors.map(e => `tests: ${e}`));
     
     if (allErrors.length > 0) {
       console.log(`  ❌ ${r.name}`);
@@ -585,7 +511,6 @@ function validateSkill(skill) {
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
       icon: checkIcon(skill.dir),
-      tests: { pass: false, errors: ['Cannot check — no frontmatter'], tested: 0, total: 0 },
     };
   }
   
@@ -594,7 +519,6 @@ function validateSkill(skill) {
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const iconResult = checkIcon(skill.dir);
-  const testsResult = canCheck ? checkTests(skill.dir, frontmatter) : { pass: false, errors: ['Skipped — schema invalid'], tested: 0, total: 0 };
   
   return {
     name: skill.name,
@@ -602,7 +526,6 @@ function validateSkill(skill) {
     entity: entityResult,
     mapping: mappingResult,
     icon: iconResult,
-    tests: testsResult,
   };
 }
 
@@ -623,7 +546,7 @@ if (preCommit) {
   }
 
   const results = filtered.map(a => validateSkill(a));
-  // Pre-commit only blocks on structural YAML validity — not entity refs, not test coverage
+  // Pre-commit only blocks on structural YAML validity.
   const failures = results.filter(r => !r.schema.structureValid);
   if (failures.length > 0) {
     for (const r of failures) {
@@ -656,8 +579,8 @@ const needsWorkResults = needsWorkSkills.map(a => ({ ...validateSkill(a), _skill
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
-  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass && a.tests.pass;
-  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass && b.tests.pass;
+  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass;
+  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass;
   if (aPass !== bPass) return bPass - aPass;
   return a.name.localeCompare(b.name);
 });
@@ -696,7 +619,7 @@ if (verbose) renderErrors(needsWorkResults);
 
 // 6. Check for promotable .needs-work adapters
 const promotable = needsWorkResults.filter(r =>
-  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass
+  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass
 );
 if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
@@ -712,16 +635,16 @@ if (verbose) {
 }
 console.log();
 
-const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass);
+const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass);
 if (allPassing) {
   console.log('✅ All skills fully valid');
 } else if (activeResults.length === 0) {
   console.log('📭 No skills in skills/');
 } else {
-  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass && r.tests.pass).length;
+  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass).length;
   console.log(`⚠️  ${passing}/${activeResults.length} skills fully valid — fix errors and run again`);
 }
-console.log('ℹ️  `validate` checks structure, entity refs, mapping sanity, and observed test-call coverage. Use `npm run mcp:call` for live runtime proof and `npm run mcp:test` for broader smoke testing.');
+console.log('ℹ️  `validate` checks structure, entity refs, mapping sanity, and icons. Use `npm run mcp:call` for live runtime proof and `npm run mcp:test` for broader smoke testing.');
 
 // Exit with error if any active adapters have critical failures
 const criticalFailures = activeResults.filter(r => !r.schema.structureValid || !r.entity.pass);

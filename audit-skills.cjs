@@ -17,7 +17,7 @@
  *   instructions  — put skill instructions in the markdown body after front matter
  *   connects_to   — removed from the runtime contract
  *   seed          — removed from the runtime contract
- *   testing       — replaced by tests/mcp/skills.test.ts
+ *   testing       — replaced by direct MCP smoke checks
  *   platforms     — not in Skill struct, silently ignored by serde
  *   credits       — not in Skill struct, silently ignored by serde
  *   requires      — not in Skill struct, silently ignored by serde
@@ -74,7 +74,7 @@ const DEAD_KEYS = [
   'instructions',  // use the markdown body after front matter instead
   'connects_to',   // removed from the runtime contract
   'seed',          // removed from the runtime contract
-  'testing',       // replaced by skills.test.ts
+  'testing',       // replaced by direct MCP smoke checks
   'platforms',     // not in Skill struct
   'credits',       // not in Skill struct
   'requires',      // not in Skill struct

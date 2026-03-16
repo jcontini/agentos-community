@@ -14,7 +14,6 @@ Current source of truth:
 - `skills/exa/readme.md` — canonical entity-returning example
 - `skills/kitty/readme.md` — canonical local-control/action example
 - `test-skills.cjs` — direct MCP smoke testing
-- `tests/utils/mcp-client.ts` — Vitest wrapper for skill tests
 
 Only treat two skills as primary copy-from examples:
 
@@ -34,7 +33,7 @@ $EDITOR skills/my-skill/readme.md
 # 2. Fast structural gate for hooks / local iteration
 npm run validate --pre-commit -- my-skill
 
-# 3. Full structural + mapping + coverage-heuristic check
+# 3. Full structural + mapping check
 npm run validate -- my-skill
 
 # 4. Filter large runs while cleaning up families of skills
@@ -55,7 +54,7 @@ npm run mcp:test -- exa --verbose
 What each step means:
 
 - `validate --pre-commit` checks fast structural validity only
-- `validate` checks structure, entity refs, mapping sanity, icons, and observed test-call coverage
+- `validate` checks structure, entity refs, mapping sanity, and icons
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - `mcp:test` is a broader smoke path, not a substitute for targeted inspection
 
@@ -88,7 +87,6 @@ skills/
   my-skill/
     readme.md
     icon.svg
-    tests/
 ```
 
 After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
@@ -250,6 +248,7 @@ Most skills only need one of these:
 - header auth
 - query auth
 - body auth
+- provider-sourced OAuth or cookies
 
 Most common pattern:
 
@@ -265,12 +264,58 @@ Useful rules:
 
 - Use `optional: true` if the skill works anonymously but improves with credentials
 - Use per-operation `auth: none` for public signup/setup actions inside an otherwise-authenticated skill
-- For cookie auth, OAuth, command auth templating, or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
+- Prefer provider auth when credentials come from another installed app or browser profile
+- If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
+- `browser:` under `auth.cookies` is legacy compatibility only. Do not rely on it in new skills; prefer cookie provider skills instead
+- Today `provides:` is primarily an auth contract. Do not invent broader generic provider/consumer patterns in skill YAML unless the runtime and docs explicitly support them
+- For command auth templating or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
+
+Provider auth patterns:
+
+- OAuth consumer:
+
+```yaml
+auth:
+  oauth:
+    service: google
+    scopes:
+      - https://mail.google.com/
+```
+
+- OAuth provider:
+
+```yaml
+provides:
+  - service: google
+    via: credential_get
+    accounts_via: list_accounts
+    account_param: account
+```
+
+- Cookie consumer:
+
+```yaml
+auth:
+  cookies:
+    domain: ".claude.ai"
+    names: ["sessionKey"]
+```
+
+- Cookie provider:
+
+```yaml
+provides:
+  - service: cookies
+    via: cookie_get
+    account_param: domain
+```
 
 Example references:
 
-- Cookie auth: `skills/reddit/readme.md`
-- OAuth: `skills/gmail/readme.md`
+- OAuth consumer: `skills/gmail/readme.md`
+- OAuth provider: `skills/mimestream/readme.md`
+- Cookie consumer: `skills/claude/readme.md`
+- Cookie provider: `skills/brave-browser/readme.md`
 - Advanced keychain/crypto/steps: `skills/chrome/readme.md`, `skills/brave-browser/readme.md`
 
 ## Expressions
@@ -372,7 +417,7 @@ YAML-driven smoke test:
 npm run mcp:test -- exa --verbose
 ```
 
-Use `tests/utils/mcp-client.ts` only when you want reusable Vitest coverage. For quick validation, use `mcp:call` first.
+Do not add a `tests/` folder by default. For normal validation, use `mcp:call` first.
 
 ## Validation
 
@@ -381,14 +426,12 @@ Before committing:
 - Run `npm run validate`
 - Run direct MCP checks for the changed skill
 - Run `npm run mcp:test -- <skill> --verbose`
-- Run targeted tests if the skill already has them
 
 What `validate` should catch:
 
 - Required front matter
 - Schema shape
 - Icon presence
-- Test coverage references
 - Basic structural problems
 
 ## Checklist
@@ -414,8 +457,8 @@ If you need something advanced, copy an existing skill:
 
 - `linear` for GraphQL
 - `youtube` for command execution
-- `gmail` for OAuth
-- `reddit` for cookie auth
+- `gmail` + `mimestream` for provider-sourced OAuth
+- `claude` + `brave-browser` for cookie consumer/provider patterns
 - `chrome` / `brave-browser` for keychain, crypto, and multi-step extraction
 
 If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.
