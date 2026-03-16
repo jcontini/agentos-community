@@ -129,7 +129,7 @@ function returnsEntityArray(op) {
 
 function checkSchema(frontmatter) {
   const valid = validateSchema(frontmatter);
-  const ajvErrors = valid ? [] : validateSchema.errors.map(e => `${e.instancePath || '/'}: ${e.message}`);
+  const ajvErrors = valid ? [] : normalizeSchemaErrors(frontmatter, validateSchema.errors || []);
   
   if (!valid) {
     return {
@@ -168,6 +168,33 @@ function checkSchema(frontmatter) {
   const errors = checks.filter(c => !c.pass).map(c => `Missing: ${c.name}`);
   
   return { pass: passed === total, structureValid: true, passed, total, errors };
+}
+
+function findLegacyAdapterMappingWrappers(frontmatter) {
+  const adapters = frontmatter?.adapters;
+  if (!adapters || typeof adapters !== 'object') return [];
+  return Object.entries(adapters)
+    .filter(([, adapter]) => adapter && typeof adapter === 'object' && 'mapping' in adapter)
+    .map(([entityName]) => entityName);
+}
+
+function normalizeSchemaErrors(frontmatter, schemaErrors) {
+  const legacyWrappers = findLegacyAdapterMappingWrappers(frontmatter);
+  const wrapperBases = legacyWrappers.map(entityName => `/adapters/${entityName}/mapping`);
+
+  const filteredErrors = schemaErrors.filter(error => {
+    const instancePath = error.instancePath || '/';
+    return !wrapperBases.some(base => instancePath === base || instancePath.startsWith(`${base}/`));
+  });
+
+  const normalized = filteredErrors.map(error => `${error.instancePath || '/'}: ${error.message}`);
+  for (const entityName of legacyWrappers) {
+    normalized.push(
+      `/adapters/${entityName}: legacy adapter 'mapping:' wrapper — move fields directly under adapters.${entityName}`
+    );
+  }
+
+  return [...new Set(normalized)];
 }
 
 function checkEntities(frontmatter) {
