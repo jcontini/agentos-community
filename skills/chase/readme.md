@@ -2,7 +2,7 @@
 id: chase
 name: Chase Bank
 description: Chase Bank accounts, balances, and transactions — checking, savings, and credit cards
-icon: icon.png
+icon: icon.svg
 color: "#117ACA"
 website: https://www.chase.com
 
@@ -25,26 +25,26 @@ auth:
           steps:
             - { action: wait, url_contains: "/dashboard" }
           returns_to_agent: |
-            Login confirmed. Extract cookies via playwright cookies utility for domain .chase.com.
-transformers:
+            Login confirmed. Cookie provider matchmaking can extract `.chase.com`
+            cookies on the next API call. If multiple cookie providers are
+            installed, ask the user which browser/provider to use.
+adapters:
   account:
-    terminology: Account
-    mapping:
-      id: .accountId
-      name: .name
-      description: '(.type + " •••• " + .last4)'
-      data.account_type: .type
-      data.last4: .last4
-      data.balance: .balance
-      data.available: .available
-      data.card_type: .cardType
+    id: .accountId
+    name: .name
+    description: '(.type + " •••• " + .last4)'
+    data.account_type: .type
+    data.last4: .last4
+    data.balance: .balance
+    data.available: .available
+    data.card_type: .cardType
 
 # ==============================================================================
 # OPERATIONS
 # ==============================================================================
 
 operations:
-  account.list:
+  list_accounts:
     description: >
       List all Chase accounts with current balances.
       Returns checking, savings, and credit card accounts.
@@ -52,10 +52,11 @@ operations:
     returns: account[]
     command:
       binary: python3
-      args: ["skills/chase/chase-api.py", "accounts", "--cookies", ".auth.cookies"]
+      args: ["./chase-api.py", "accounts", "--cookies", ".auth.cookies"]
+      working_dir: .
       timeout: 20
 
-  transaction.list:
+  list_transactions:
     description: >
       List recent transactions for a Chase checking or savings account (DDA accounts only).
       Returns transactions with date, description, signed amount (negative=debit), running balance, and category.
@@ -71,7 +72,8 @@ operations:
     returns: transaction[]
     command:
       binary: python3
-      args: ["skills/chase/chase-api.py", "transactions", "--cookies", ".auth.cookies", "--account-id", ".params.account_id", "--limit", ".params.limit // 30"]
+      args: ["./chase-api.py", "transactions", "--cookies", ".auth.cookies", "--account-id", ".params.account_id", "--limit", ".params.limit // 30"]
+      working_dir: .
       timeout: 20
 
 ---
@@ -105,5 +107,5 @@ transaction.list { account_id: "123456789", limit: 10 }
 
 ## Notes
 - Transactions only work for DDA accounts (checking/savings). Credit card transactions TBD.
-- Session expires after ~8 hours. Re-login via Playwright when you get 401 errors.
+- Session expires after ~8 hours. Re-login in the browser/provider you want to use when you get 401 errors.
 - The `amount` field is signed: negative = money out, positive = money in.
