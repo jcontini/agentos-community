@@ -7,47 +7,33 @@ color: "#3B82F6"
 website: https://cursor.com
 
 auth: none
-connects_to: cursor-app
-
-seed:
-  - id: cursor-app
-    types: [software]
-    name: Cursor
-    data:
-      software_type: ai_client
-      url: https://cursor.com
-      platforms: [macos, windows, linux]
-    relationships: []
-
-transformers:
+adapters:
   document:
-    mapping:
-      id: .id
-      name: .title
-      data.source: .source
-      data.date: .date
-      data.searches: .searches
-      data.urls_fetched: .urls_fetched
-      data.conversation_steps: .conversation_steps
-      data.duration_ms: .duration_ms
-      data.agent_id: .agent_id
-      data.workspace: .workspace
-      data.blob_key: .blob_key
-      content: .content
+    id: .id
+    name: .title
+    datePublished: .date
+    data.source: .source
+    data.searches: .searches
+    data.urls_fetched: .urls_fetched
+    data.conversation_steps: .conversation_steps
+    data.duration_ms: .duration_ms
+    data.agent_id: .agent_id
+    data.workspace: .workspace
+    data.blob_key: .blob_key
+    content: .content
 
   session:
-    mapping:
-      id: .id
-      name: .name
-      client: '"cursor"'
-      workspace: .workspace
-      last_message: .last_message
-      last_message_at: .last_message_at
-      data.message_count: .message_count
-      content: .transcript
+    id: .id
+    name: .name
+    text: .last_message
+    datePublished: .last_message_at
+    data.client: '"cursor"'
+    data.workspace: .workspace
+    data.message_count: .message_count
+    content: .transcript
 
 operations:
-  document.pull:
+  pull_document:
     description: Extract research reports from Cursor sub-agent conversations into the Memex
     returns: document[]
     params: {}
@@ -56,10 +42,11 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/cursor/extract-research.py --json --all 2>/dev/null"
+        - "python3 ./extract-research.py --json --all 2>/dev/null"
+      working_dir: .
       timeout: 120
 
-  session.list:
+  list_sessions:
     description: >
       List Cursor AI sessions from local JSONL transcripts (fast, sub-second).
       Only includes recent sessions — Cursor started writing JSONL transcripts around Feb 2026.
@@ -71,10 +58,11 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json 2>/dev/null"
+        - "python3 ./list-conversations.py --json 2>/dev/null"
+      working_dir: .
       timeout: 60
 
-  session.backfill:
+  backfill_session:
     description: >
       Import ALL Cursor sessions including full history from SQLite databases.
       Reads both JSONL transcripts (recent) and Cursor's workspace/global SQLite
@@ -95,12 +83,13 @@ operations:
         - |
           PARAM_WORKSPACE="$1"
           WS="${PARAM_WORKSPACE}"
-          python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --json --backfill ${WS:+--workspace "$WS"} 2>/dev/null
+          python3 ./list-conversations.py --json --backfill ${WS:+--workspace "$WS"} 2>/dev/null
         - "--"
         - ".params.workspace"
+      working_dir: .
       timeout: 300
 
-  session.get:
+  get_session:
     description: Get a Cursor session by UUID with full transcript (checks both JSONL and SQLite sources)
     returns: session
     params:
@@ -113,9 +102,10 @@ operations:
       args:
         - "-l"
         - "-c"
-        - "python3 ~/dev/agentos-community/skills/cursor/list-conversations.py --id ${PARAM_ID} --json 2>/dev/null"
+        - "python3 ./list-conversations.py --id ${PARAM_ID} --json 2>/dev/null"
         - "--"
         - ".params.id"
+      working_dir: .
       timeout: 30
 ---
 
@@ -165,18 +155,18 @@ Cursor sessions become `session` entities on the Memex with `client: "cursor"`, 
 
 **Two data sources:**
 
-1. **JSONL transcripts** (`~/.cursor/projects/*/agent-transcripts/*.jsonl`) — Recent sessions. Cursor started writing these around Feb 2026. Fast to read (sub-second). This is what `session.list` reads.
+1. **JSONL transcripts** (`~/.cursor/projects/*/agent-transcripts/*.jsonl`) — Recent sessions. Cursor started writing these around Feb 2026. Fast to read (sub-second). This is what `list_sessions` reads.
 
-2. **SQLite databases** (`~/Library/Application Support/Cursor/User/workspaceStorage/*/state.vscdb` + `globalStorage/state.vscdb`) — Full history going back months. Composer metadata lives in each workspace DB; message blobs live in the 13+ GB global DB. This is what `session.backfill` reads.
+2. **SQLite databases** (`~/Library/Application Support/Cursor/User/workspaceStorage/*/state.vscdb` + `globalStorage/state.vscdb`) — Full history going back months. Composer metadata lives in each workspace DB; message blobs live in the 13+ GB global DB. This is what `backfill_session` reads.
 
 **Recommended workflow:**
 
 ```
 # One-time: import full history (all workspaces, ~7 seconds)
-use({ skill: "cursor", tool: "session.backfill" })
+use({ skill: "cursor", tool: "backfill_session" })
 
 # Or import just one workspace
-use({ skill: "cursor", tool: "session.backfill", params: { workspace: "/Users/joe/dev/agentos" } })
+use({ skill: "cursor", tool: "backfill_session", params: { workspace: "/Users/joe/dev/agentos" } })
 
 # Ongoing: session.list runs automatically via entity fan-out when anyone calls
 list({ type: "session" })
@@ -305,22 +295,22 @@ urls_fetched:
 
 ```bash
 # List new research (not yet saved)
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace .
+python3 ./extract-research.py --workspace .
 
 # Save all new research to .research/
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --save
+python3 ./extract-research.py --workspace . --save
 
 # Show all research including already-saved
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --all
+python3 ./extract-research.py --workspace . --all
 
 # Extract a specific blob by hash prefix
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --blob f0bc9dd6
+python3 ./extract-research.py --blob f0bc9dd6
 
 # Filter by keyword
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --filter "ontology"
+python3 ./extract-research.py --filter "ontology"
 
 # Custom output directory
-python3 ~/dev/agentos-community/skills/cursor/extract-research.py --workspace . --save --research-dir /path/to/.research
+python3 ./extract-research.py --workspace . --save --research-dir /path/to/.research
 ```
 
 **What qualifies as "research":** A Task tool result with at least 3 web searches, 3000+ chars of output, and 5+ conversation steps. These thresholds can be overridden with `--min-searches` and `--min-chars`.
