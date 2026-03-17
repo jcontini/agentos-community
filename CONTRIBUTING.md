@@ -14,6 +14,7 @@ Current source of truth:
 - `skills/exa/readme.md` — canonical entity-returning example
 - `skills/kitty/readme.md` — canonical local-control/action example
 - `test-skills.cjs` — direct MCP smoke testing
+- `docs/reverse-engineering/` — transport, discovery, and auth patterns for building skills against sites without public APIs
 
 Only treat two skills as primary copy-from examples:
 
@@ -96,11 +97,15 @@ Every skill is a folder like:
 ```text
 skills/
   my-skill/
-    readme.md
-    icon.svg
+    readme.md            # required — skill definition (YAML front matter + markdown docs)
+    icon.svg             # required — skill icon
+    requirements.md      # recommended — scope out the API, auth model, and entities before writing YAML
+    my_helper.py         # optional — Python helper when inline command logic gets complex
 ```
 
 After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
+
+Start with `requirements.md` before writing skill YAML. Use it to scope out what endpoints or data surfaces exist, what auth model the service uses, which entities map to what, and any decisions or trade-offs. This is useful for any skill — not just reverse-engineered ones. For web skills without public APIs, it also becomes the place to log endpoint discoveries, header mysteries, and auth boundary mappings. See `docs/reverse-engineering/` for that playbook.
 
 ## Entity Skill Shape
 
@@ -175,6 +180,48 @@ operations:
 ```
 
 If you are starting a new skill from scratch, use `npm run new-skill -- my-skill` for an entity scaffold or `npm run new-skill -- my-skill --local-control` for a local-control scaffold.
+
+## Python Executor Shape
+
+Use this pattern when a skill needs Python logic (parsing, API glue, multi-step flows). The `python:` executor calls a function directly in a Python module — no `binary: python3` boilerplate, no `sys.argv` dispatch, no `| tostring` on every arg.
+
+```yaml
+operations:
+  get_schedule:
+    description: Get today's class schedule
+    returns: class[]
+    params:
+      date: { type: string, required: false }
+      location_id: { type: integer, default: 6 }
+    python:
+      module: ./my_script.py
+      function: get_schedule
+      args:
+        date: .params.date
+        location_id: .params.location_id
+      timeout: 30
+```
+
+The Python function receives keyword arguments and returns JSON-serializable data:
+
+```python
+def get_schedule(date: str = None, location_id: int = 6) -> list[dict]:
+    ...
+    return results
+```
+
+Rules:
+
+- `module` is resolved relative to the skill folder (use `./my_script.py`)
+- `function` is the function name in the module
+- `args` values are jaq expressions resolved against the params context (same as `rest.body`)
+- Args are passed as typed JSON — integers stay integers, no `| tostring` needed
+- `timeout` defaults to 30 seconds
+- `response` mapping (root, transform) works the same as `rest:` and `graphql:`
+- Auth values are available via `.auth.*` in args expressions
+- Functions should not use `print(json.dumps(...))` or `sys.argv` — the runtime handles I/O
+
+Migration note: existing `command:` + `binary: python3` skills can adopt `python:` for cleaner YAML. See `skills/austin-boulder-project/` for a migrated example.
 
 ## Adapters
 
@@ -335,7 +382,7 @@ Example references:
 
 Use one expression style everywhere:
 
-- `rest:`, `graphql:`, `command:`, and `auth:` all use jq/jaq-style expressions
+- `rest:`, `graphql:`, `command:`, `python:`, and `auth:` all use jq/jaq-style expressions
 - Resolved credentials are available under `.auth.*` such as `.auth.key` or `.auth.access_token`
 
 Common jq/jaq patterns:
@@ -502,12 +549,15 @@ Move into helper files:
 Preferred patterns:
 
 - use `Swift` helper files for Apple framework integrations like Contacts, EventKit, or other native macOS APIs
-- use `Python` helper files for parsing, normalization, and API glue
+- use `Python` helper files for parsing, normalization, and API glue — prefer `python:` executor over `command:` + `binary: python3`
 - use `bash` only for thin wrappers or simple pipelines
 - keep `AppleScript` inline only when it is truly short; otherwise prefer a helper file
 
 Leading by example:
 
+- `skills/goodreads/public_graph.py` — GraphQL discovery, Apollo cache extraction, multi-tier runtime config
+- `skills/claude/claude-api.py` — API replay with session cookies and stealth headers
+- `skills/austin-boulder-project/abp.py` — bundle config extraction and tenant-namespace auth
 - `skills/reddit/comments_post.sh`
 - `skills/hackernews/comments_post.sh`
 - `skills/facebook/get_community.sh`
@@ -558,5 +608,11 @@ If you need something advanced, copy an existing skill:
 - `gmail` + `mimestream` for provider-sourced OAuth
 - `claude` plus any cookie-provider skill for consumer/provider patterns
 - an existing cookie-provider skill for keychain, crypto, and multi-step extraction
+
+For skills that reverse-engineer web services without public APIs (headless browser stealth, JS bundle extraction, GraphQL discovery, cookie-based auth), see `docs/reverse-engineering/`:
+
+- `1-transport.md` — TLS fingerprinting, WAF bypass, Playwright stealth
+- `2-discovery.md` — Next.js/Apollo caches, JS bundle config, GraphQL schema scanning
+- `3-auth.md` — session cookies, Cognito, cache+discovery+fallback architecture
 
 If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.

@@ -474,25 +474,8 @@ def get_my_passes(id_token: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# CLI entry point — called by agentOS skill runtime
-#
-# Usage:  python3 abp.py <operation> < params.json
-#
-# Operations:
-#   get_schedule   — public schedule, no credentials needed
-#   book_class     — book a class (credentials required)
-#   cancel_booking — cancel a reservation (credentials required)
-#   get_my_bookings   — list upcoming bookings (credentials required)
-#   get_my_memberships — check memberships (credentials required)
-#   get_my_passes     — check passes (credentials required)
-#
-# Params are read as JSON from stdin.
-# For authenticated ops, stdin JSON includes a "credentials" field: "email:password"
+# Entity helpers
 # ---------------------------------------------------------------------------
-
-def _emit(data) -> None:
-    print(json.dumps(data))
-
 
 def _booking_to_entity(b: dict) -> dict:
     """Normalise a BookingInstance from /cal into the agentOS class entity shape."""
@@ -538,70 +521,59 @@ def _get_id_token(credentials: str) -> str:
     return auth["IdToken"]
 
 
-def main() -> None:
-    import sys
+# ---------------------------------------------------------------------------
+# Operation entrypoints — called by the python: executor with kwargs
+# ---------------------------------------------------------------------------
 
-    if len(sys.argv) < 2:
-        raise SystemExit(
-            "Usage: abp.py <operation>\n"
-            "Operations: get_schedule, book_class, cancel_booking, "
-            "get_my_bookings, get_my_memberships, get_my_passes"
-        )
-
-    op = sys.argv[1]
-    params = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
-
-    if op == "get_schedule":
-        location_id = params.get("location_id", AUSTIN_SPRINGDALE["id"])
-        date = params.get("date") or None
-        raw_ids = params.get("activity_ids")
-        if isinstance(raw_ids, str):
-            activity_ids = [int(x.strip()) for x in raw_ids.split(",") if x.strip()]
-        elif isinstance(raw_ids, list):
-            activity_ids = [int(x) for x in raw_ids]
-        else:
-            activity_ids = [4, 5, 6]
-        result = get_schedule(location_id=location_id, activity_ids=activity_ids, date=date)
-        _emit([_booking_to_entity(b) for b in result.get("bookings", [])])
-        return
-
-    if op == "book_class":
-        creds = params.get("credentials", "")
-        id_token = _get_id_token(creds)
-        booking_id = int(params["params"]["booking_instance_id"])
-        num_guests = int(params.get("params", {}).get("num_guests", 0))
-        result = book_class(id_token, booking_id, num_guests=num_guests)
-        _emit({"ok": True, "message": "Booked successfully", "result": result})
-        return
-
-    if op == "cancel_booking":
-        creds = params.get("credentials", "")
-        id_token = _get_id_token(creds)
-        p = params.get("params", {})
-        result = cancel_booking(id_token, int(p["booking_instance_id"]), int(p["reservation_id"]))
-        _emit({"ok": True, "message": "Cancelled successfully", "result": result})
-        return
-
-    if op == "get_my_bookings":
-        creds = params.get("credentials", "")
-        id_token = _get_id_token(creds)
-        _emit(get_my_bookings(id_token))
-        return
-
-    if op == "get_my_memberships":
-        creds = params.get("credentials", "")
-        id_token = _get_id_token(creds)
-        _emit(get_my_memberships(id_token))
-        return
-
-    if op == "get_my_passes":
-        creds = params.get("credentials", "")
-        id_token = _get_id_token(creds)
-        _emit(get_my_passes(id_token))
-        return
-
-    raise SystemExit(f"Unknown operation: {op}")
+def op_get_schedule(
+    location_id: int = AUSTIN_SPRINGDALE["id"],
+    activity_ids: str = None,
+    date: str = None,
+) -> list[dict]:
+    """Get today's class schedule as entity-shaped dicts."""
+    if isinstance(activity_ids, str):
+        parsed_ids = [int(x.strip()) for x in activity_ids.split(",") if x.strip()]
+    elif isinstance(activity_ids, list):
+        parsed_ids = [int(x) for x in activity_ids]
+    else:
+        parsed_ids = [4, 5, 6]
+    result = get_schedule(
+        location_id=int(location_id),
+        activity_ids=parsed_ids,
+        date=date or None,
+    )
+    return [_booking_to_entity(b) for b in result.get("bookings", [])]
 
 
-if __name__ == "__main__":
-    main()
+def op_book_class(
+    credentials: str,
+    booking_instance_id: int,
+    num_guests: int = 0,
+) -> dict:
+    """Book a class using stored credentials."""
+    id_token = _get_id_token(credentials)
+    result = book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
+    return {"ok": True, "message": "Booked successfully", "result": result}
+
+
+def op_cancel_booking(
+    credentials: str,
+    booking_instance_id: int,
+    reservation_id: int,
+) -> dict:
+    """Cancel a class reservation."""
+    id_token = _get_id_token(credentials)
+    result = cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
+    return {"ok": True, "message": "Cancelled successfully", "result": result}
+
+
+def op_get_my_memberships(credentials: str) -> list[dict]:
+    """List active memberships for the logged-in account."""
+    id_token = _get_id_token(credentials)
+    return get_my_memberships(id_token)
+
+
+def op_get_my_passes(credentials: str) -> list[dict]:
+    """List active class passes for the logged-in account."""
+    id_token = _get_id_token(credentials)
+    return get_my_passes(id_token)

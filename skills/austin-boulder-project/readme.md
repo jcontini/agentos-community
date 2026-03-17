@@ -48,13 +48,13 @@ operations:
         type: string
         required: false
         description: "Comma-separated activity IDs (default: 4,5,6 = Climbing, Yoga, Fitness)"
-    command:
-      binary: python3
+    python:
+      module: ./abp.py
+      function: op_get_schedule
       args:
-        - ./abp.py
-        - get_schedule
-      stdin: .params | tojson
-      working_dir: .
+        location_id: .params.location_id
+        activity_ids: .params.activity_ids
+        date: .params.date
       timeout: 30
     test:
       mode: read
@@ -75,13 +75,13 @@ operations:
         required: false
         default: 0
         description: "Number of additional guests to bring"
-    command:
-      binary: python3
+    python:
+      module: ./abp.py
+      function: op_book_class
       args:
-        - ./abp.py
-        - book_class
-      stdin: '{ "credentials": .auth.key, "params": .params }'
-      working_dir: .
+        credentials: .auth.key
+        booking_instance_id: .params.booking_instance_id
+        num_guests: .params.num_guests
       timeout: 30
     test:
       mode: write
@@ -100,13 +100,13 @@ operations:
         type: integer
         required: true
         description: "Reservation ID returned when the class was booked"
-    command:
-      binary: python3
+    python:
+      module: ./abp.py
+      function: op_cancel_booking
       args:
-        - ./abp.py
-        - cancel_booking
-      stdin: '{ "credentials": .auth.key, "params": .params }'
-      working_dir: .
+        credentials: .auth.key
+        booking_instance_id: .params.booking_instance_id
+        reservation_id: .params.reservation_id
       timeout: 30
     test:
       mode: write
@@ -115,13 +115,11 @@ operations:
     description: List active memberships for the logged-in ABP account
     returns: array
     params: {}
-    command:
-      binary: python3
+    python:
+      module: ./abp.py
+      function: op_get_my_memberships
       args:
-        - ./abp.py
-        - get_my_memberships
-      stdin: '{ "credentials": .auth.key }'
-      working_dir: .
+        credentials: .auth.key
       timeout: 30
     test:
       mode: read
@@ -130,13 +128,11 @@ operations:
     description: List active class passes for the logged-in ABP account
     returns: array
     params: {}
-    command:
-      binary: python3
+    python:
+      module: ./abp.py
+      function: op_get_my_passes
       args:
-        - ./abp.py
-        - get_my_passes
-      stdin: '{ "credentials": .auth.key }'
-      working_dir: .
+        credentials: .auth.key
       timeout: 30
     test:
       mode: read

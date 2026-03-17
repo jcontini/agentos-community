@@ -11,7 +11,7 @@ const SKILLS_DIR = join(ROOT, 'skills');
 
 const INLINE_PRIMITIVE_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null', 'void']);
 const REQUEST_TEMPLATE_ROOTS = new Set(['params', 'auth', 'item']);
-const EXECUTOR_KEYS = ['rest', 'graphql', 'command'];
+const EXECUTOR_KEYS = ['rest', 'graphql', 'command', 'python'];
 const LEGACY_AUTH_PATTERNS = [
   /(^|[^A-Za-z0-9_])\.params\.auth(?:[.\[]|$)/,
   /(^|[^A-Za-z0-9_])\.params\.auth_key(?:[^A-Za-z0-9_]|$)/,
