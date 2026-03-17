@@ -210,18 +210,14 @@ operations:
       cookies: array
       count: integer
       source: string
-    command:
-      binary: python3
+    python:
+      module: ./get-cookie.py
+      function: op_cookie_get
       args:
-        - "./get-cookie.py"
-        - "--domain"
-        - ".params.domain"
-        - if .params.names then "--names" else "" end
-        - if .params.names then .params.names else "" end
-        - if .params.host then "--host" else "" end
-        - if .params.host then .params.host else "" end
-        - if .params.profile then "--profile" else "" end
-        - if .params.profile then .params.profile else "" end
+        domain: .params.domain
+        names: .params.names
+        host: .params.host
+        profile: .params.profile
       timeout: 15
 ---
 

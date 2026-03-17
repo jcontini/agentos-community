@@ -162,6 +162,28 @@ def get_cookies(domain: str, names: list[str] | None = None,
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+def op_cookie_get(
+    domain: str,
+    names: str = None,
+    host: str = None,
+    profile: str = "Default",
+) -> dict:
+    """Extract and decrypt cookies — called by the python: executor with kwargs.
+
+    `names` is a comma-separated string (matching the YAML param type: string).
+    """
+    names_list = [n.strip() for n in names.split(",") if n.strip()] if names else None
+    profile = profile or "Default"
+    cookies = get_cookies(domain, names_list, host=host or None, profile=profile)
+    return {
+        "domain": domain,
+        "cookies": cookies,
+        "count": len(cookies),
+        "source": "brave",
+        "profile": profile,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Extract decrypted cookies from Brave Browser")
     parser.add_argument("--domain", help="Cookie domain (e.g., .claude.ai, .chase.com)")
