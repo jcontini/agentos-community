@@ -19,12 +19,11 @@ operations:
         type: array
         description: Installed applications
       count: integer
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: list_apps
       args:
-        - ./macos_control.py
-        - list_apps
-      stdin: '.params // {}'
+        params: .params
       timeout: 60
 
   list_processes:
@@ -38,12 +37,11 @@ operations:
         type: array
         description: Running processes
       count: integer
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: list_processes
       args:
-        - ./macos_control.py
-        - list_processes
-      stdin: '.params // {}'
+        params: .params
       timeout: 15
 
   list_displays:
@@ -53,12 +51,11 @@ operations:
         type: array
         description: Connected displays
       count: integer
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: list_displays
       args:
-        - ./macos_control.py
-        - list_displays
-      stdin: '.params // {}'
+        params: .params
       timeout: 15
 
   list_windows:
@@ -72,12 +69,11 @@ operations:
         type: array
         description: User-facing application windows
       count: integer
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: list_windows
       args:
-        - ./macos_control.py
-        - list_windows
-      stdin: '.params // {}'
+        params: .params
       timeout: 30
 
   screenshot_window:
@@ -96,12 +92,11 @@ operations:
       title: string
       path: string
       captured_at: string
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: screenshot_window
       args:
-        - ./macos_control.py
-        - screenshot_window
-      stdin: '.params // {}'
+        params: .params
       timeout: 20
 
   screenshot_display:
@@ -121,12 +116,11 @@ operations:
       display_index: integer
       path: string
       captured_at: string
-    command:
-      binary: python3
+    python:
+      module: ./macos_control.py
+      function: screenshot_display
       args:
-        - ./macos_control.py
-        - screenshot_display
-      stdin: '.params // {}'
+        params: .params
       timeout: 20
 ---
 
