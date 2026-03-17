@@ -247,6 +247,35 @@ def format_conversation(conv, org_uuid):
     }
 
 
+# -- Operation entrypoints — called by the python: executor with kwargs --------
+
+def op_list_conversations(session_key: str, account: str = None, limit: int = 50, offset: int = 0) -> list:
+    org = resolve_org_uuid(session_key, account or None)
+    convs = get_conversations(session_key, org, limit=int(limit or 50), offset=int(offset or 0))
+    return format_conversation_list(convs, org)
+
+
+def op_get_conversation(session_key: str, id: str, account: str = None) -> dict:
+    org = resolve_org_uuid(session_key, account or None)
+    conv = get_conversation(session_key, org, id)
+    return format_conversation(conv, org)
+
+
+def op_search_conversations(session_key: str, query: str, account: str = None, limit: int = 20) -> list:
+    org = resolve_org_uuid(session_key, account or None)
+    convs = search_conversations(session_key, org, query, limit=int(limit or 20))
+    return format_conversation_list(convs, org)
+
+
+def op_import_conversation(session_key: str, account: str = None, limit: int = 5, offset: int = 0) -> list:
+    org = resolve_org_uuid(session_key, account or None)
+    return import_conversations(session_key, org, limit=int(limit or 5), offset=int(offset or 0))
+
+
+def op_list_orgs(session_key: str) -> list:
+    return get_organizations(session_key)
+
+
 # -- CLI entry point -----------------------------------------------------------
 
 def main():

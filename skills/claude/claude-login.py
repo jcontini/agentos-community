@@ -217,6 +217,12 @@ def check_logged_in(ws_url):
     return False, None, None
 
 
+# -- Operation entrypoint — called by the python: executor with kwargs ---------
+
+def op_extract_magic_link(raw_email: str) -> dict:
+    return extract_magic_link_from_raw_email(raw_email)
+
+
 # -- Entry point ---------------------------------------------------------------
 
 def main():

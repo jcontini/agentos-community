@@ -78,20 +78,14 @@ operations:
       account: { type: string, description: "Org UUID to use (omit to use session default). Use list_orgs to discover available orgs." }
       limit: { type: integer, default: 50, description: "Max conversations to return (max 250)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
-    command:
-      binary: python3
+    python:
+      module: ./claude-api.py
+      function: op_list_conversations
       args:
-        - "./claude-api.py"
-        - "--op"
-        - "conversations"
-        - "--session-key"
-        - ".auth.sessionKey"
-        - if .params.account then "--org" else "" end
-        - if .params.account then .params.account else "" end
-        - "--limit"
-        - ".params.limit"
-        - "--offset"
-        - ".params.offset"
+        session_key: .auth.sessionKey
+        account: .params.account
+        limit: '.params.limit // 50'
+        offset: '.params.offset // 0'
       timeout: 30
 
   get_conversation:
@@ -102,18 +96,13 @@ operations:
     params:
       id: { type: string, required: true, description: "Conversation UUID" }
       account: { type: string, description: "Org UUID (omit to use session default)" }
-    command:
-      binary: python3
+    python:
+      module: ./claude-api.py
+      function: op_get_conversation
       args:
-        - "./claude-api.py"
-        - "--op"
-        - "conversation"
-        - "--session-key"
-        - ".auth.sessionKey"
-        - "--id"
-        - ".params.id"
-        - if .params.account then "--org" else "" end
-        - if .params.account then .params.account else "" end
+        session_key: .auth.sessionKey
+        id: .params.id
+        account: .params.account
       timeout: 30
 
   search_conversations:
@@ -127,20 +116,14 @@ operations:
       query: { type: string, required: true, description: "Text to search for in conversation titles" }
       account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 20, description: "Max results" }
-    command:
-      binary: python3
+    python:
+      module: ./claude-api.py
+      function: op_search_conversations
       args:
-        - "./claude-api.py"
-        - "--op"
-        - "search"
-        - "--session-key"
-        - ".auth.sessionKey"
-        - "--query"
-        - ".params.query"
-        - if .params.account then "--org" else "" end
-        - if .params.account then .params.account else "" end
-        - "--limit"
-        - ".params.limit"
+        session_key: .auth.sessionKey
+        query: .params.query
+        account: .params.account
+        limit: '.params.limit // 20'
       timeout: 30
 
   import_conversation:
@@ -155,20 +138,14 @@ operations:
       account: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 5, description: "Conversations per batch (keep ≤10 to avoid DB lock)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
-    command:
-      binary: python3
+    python:
+      module: ./claude-api.py
+      function: op_import_conversation
       args:
-        - "./claude-api.py"
-        - "--op"
-        - "import"
-        - "--session-key"
-        - ".auth.sessionKey"
-        - if .params.account then "--org" else "" end
-        - if .params.account then .params.account else "" end
-        - "--limit"
-        - ".params.limit"
-        - "--offset"
-        - ".params.offset"
+        session_key: .auth.sessionKey
+        account: .params.account
+        limit: '.params.limit // 5'
+        offset: '.params.offset // 0'
       timeout: 60
 
   list_orgs:
@@ -180,14 +157,11 @@ operations:
       uuid: string
       name: string
       capabilities: array
-    command:
-      binary: python3
+    python:
+      module: ./claude-api.py
+      function: op_list_orgs
       args:
-        - "./claude-api.py"
-        - "--op"
-        - "organizations"
-        - "--session-key"
-        - ".auth.sessionKey"
+        session_key: .auth.sessionKey
       timeout: 15
 
   extract_magic_link:
@@ -202,12 +176,11 @@ operations:
         description: "Base64url-encoded raw RFC 2822 email content"
     returns:
       magic_link: string
-    command:
-      binary: python3
+    python:
+      module: ./claude-login.py
+      function: op_extract_magic_link
       args:
-        - "./claude-login.py"
-        - "--extract-link-from-raw"
-        - ".params.raw_email"
+        raw_email: .params.raw_email
       timeout: 10
 
 ---
