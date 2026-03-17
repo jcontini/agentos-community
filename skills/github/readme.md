@@ -49,12 +49,11 @@ operations:
       limit:
         type: integer
         description: Maximum number of issues to return
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: list_tasks
       args:
-        - ./github-cli.py
-        - list_tasks
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   get_task:
@@ -69,12 +68,11 @@ operations:
         type: integer
         required: true
         description: Issue number
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: get_task
       args:
-        - ./github-cli.py
-        - get_task
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   create_task:
@@ -95,12 +93,11 @@ operations:
       body:
         type: string
         description: Issue body
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: create_task
       args:
-        - ./github-cli.py
-        - create_task
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   close_task:
@@ -116,12 +113,11 @@ operations:
         type: integer
         required: true
         description: Issue number
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: close_task
       args:
-        - ./github-cli.py
-        - close_task
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   reopen_task:
@@ -137,12 +133,11 @@ operations:
         type: integer
         required: true
         description: Issue number
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: reopen_task
       args:
-        - ./github-cli.py
-        - reopen_task
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   list_pull_requests:
@@ -159,12 +154,11 @@ operations:
       limit:
         type: integer
         description: Maximum number of pull requests to return
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: list_pull_requests
       args:
-        - ./github-cli.py
-        - list_pull_requests
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   create_pull_request:
@@ -190,12 +184,11 @@ operations:
       base:
         type: string
         description: Target branch
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: create_pull_request
       args:
-        - ./github-cli.py
-        - create_pull_request
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   list_documents:
@@ -212,12 +205,11 @@ operations:
       ref:
         type: string
         description: Branch, tag, or commit
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: list_documents
       args:
-        - ./github-cli.py
-        - list_documents
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   read_document:
@@ -235,24 +227,22 @@ operations:
       ref:
         type: string
         description: Branch, tag, or commit
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: read_document
       args:
-        - ./github-cli.py
-        - read_document
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 
   status:
     description: Show GitHub CLI status for the current machine
     returns:
       output: string
-    command:
-      binary: python3
+    python:
+      module: ./github-cli.py
+      function: status
       args:
-        - ./github-cli.py
-        - status
-      stdin: '{params: .params} | tojson'
+        params: .params
       timeout: 30
 ---
 

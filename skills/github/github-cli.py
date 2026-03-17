@@ -53,7 +53,7 @@ def list_tasks(params):
                 "author": ((item.get("user") or {}).get("login")),
             }
         )
-    print(json.dumps(result))
+    return result
 
 
 def get_task(params):
@@ -63,23 +63,19 @@ def get_task(params):
     item = json.loads(output)
     if item.get("pull_request"):
         fail(f"{repo}#{number} is a pull request, not an issue")
-    print(
-        json.dumps(
-            {
-                "number": item["number"],
-                "title": item.get("title"),
-                "body": item.get("body"),
-                "url": item.get("html_url"),
-                "state": item.get("state"),
-                "created_at": item.get("created_at"),
-                "updated_at": item.get("updated_at"),
-                "closed_at": item.get("closed_at"),
-                "repository": repo,
-                "labels": [label.get("name") for label in item.get("labels") or [] if label.get("name")],
-                "author": ((item.get("user") or {}).get("login")),
-            }
-        )
-    )
+    return {
+        "number": item["number"],
+        "title": item.get("title"),
+        "body": item.get("body"),
+        "url": item.get("html_url"),
+        "state": item.get("state"),
+        "created_at": item.get("created_at"),
+        "updated_at": item.get("updated_at"),
+        "closed_at": item.get("closed_at"),
+        "repository": repo,
+        "labels": [label.get("name") for label in item.get("labels") or [] if label.get("name")],
+        "author": ((item.get("user") or {}).get("login")),
+    }
 
 
 def create_task(params):
@@ -87,21 +83,21 @@ def create_task(params):
     title = params["title"]
     body = params.get("body", "")
     url = run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
-    print(json.dumps({"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}))
+    return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
 def close_task(params):
     repo = params["repo"]
     number = str(params["number"])
     run_gh(["issue", "close", number, "--repo", repo])
-    print(json.dumps({"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}))
+    return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
 def reopen_task(params):
     repo = params["repo"]
     number = str(params["number"])
     run_gh(["issue", "reopen", number, "--repo", repo])
-    print(json.dumps({"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}))
+    return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
 def list_pull_requests(params):
@@ -122,7 +118,7 @@ def list_pull_requests(params):
             "number,title,url,state,headRefName,baseRefName,createdAt,updatedAt,author",
         ]
     )
-    print(output)
+    return json.loads(output)
 
 
 def create_pull_request(params):
@@ -142,7 +138,7 @@ def create_pull_request(params):
     if params.get("base"):
         args.extend(["--base", params["base"]])
     url = run_gh(args).strip()
-    print(json.dumps({"url": url}))
+    return {"url": url}
 
 
 def contents_endpoint(params):
@@ -173,7 +169,7 @@ def list_documents(params):
                 "repository": params["repo"],
             }
         )
-    print(json.dumps(result))
+    return result
 
 
 def read_document(params):
@@ -183,25 +179,21 @@ def read_document(params):
     content = data.get("content")
     if content is not None:
         content = base64.b64decode(content.encode("utf-8")).decode("utf-8", errors="replace")
-    print(
-        json.dumps(
-            {
-                "sha": data.get("sha"),
-                "path": data.get("path"),
-                "name": data.get("name"),
-                "url": data.get("html_url"),
-                "size": data.get("size"),
-                "kind": data.get("type"),
-                "repository": params["repo"],
-                "content": content,
-            }
-        )
-    )
+    return {
+        "sha": data.get("sha"),
+        "path": data.get("path"),
+        "name": data.get("name"),
+        "url": data.get("html_url"),
+        "size": data.get("size"),
+        "kind": data.get("type"),
+        "repository": params["repo"],
+        "content": content,
+    }
 
 
-def status(_params):
+def status(params=None):
     output = run_gh(["status"])
-    print(json.dumps({"output": output}))
+    return {"output": output}
 
 
 def main():
@@ -224,7 +216,7 @@ def main():
     handler = operations.get(operation)
     if not handler:
         fail(f"Unknown operation: {operation}")
-    handler(params)
+    print(json.dumps(handler(params)))
 
 
 if __name__ == "__main__":
