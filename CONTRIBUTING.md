@@ -42,7 +42,7 @@ npm run lint:semantic -- my-skill
 # 5. Filter large runs while cleaning up families of skills
 npm run validate -- --filter browser
 
-# 6. Ground-truth live MCP call through run({ skill, tool, params, account? })
+# 6. Ground-truth live MCP call through run({ skill, tool, params, account?, remember? })
 npm run mcp:call -- \
   --skill exa \
   --tool search \
@@ -61,6 +61,7 @@ What each step means:
 - `lint:semantic` is an advisory semantic pass for legacy placeholder/auth patterns, dead `api.base_url`, suspicious request roots, returns/adapters drift, mixed executor types, and GraphQL endpoint drift
 - Pass `--strict` to `lint:semantic` if you want it to fail on semantic errors
 - The pre-push hook runs `lint:semantic --strict` on changed top-level skills, so the main skill set is expected to stay semantically clean
+- Step 6 is the ground-truth live `run()` path; `run()` is always live, and `remember` defaults to true when you want imported graph state to reflect the result
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
 - `mcp:test` is a broader smoke path, not a substitute for targeted inspection
