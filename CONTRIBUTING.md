@@ -221,7 +221,7 @@ Rules:
 - Auth values are available via `.auth.*` in args expressions
 - Functions should not use `print(json.dumps(...))` or `sys.argv` — the runtime handles I/O
 
-Migration note: existing `command:` + `binary: python3` skills can adopt `python:` for cleaner YAML. See `skills/austin-boulder-project/` for a migrated example.
+Migration note: existing `command:` + `binary: python3` skills can adopt `python:` for cleaner YAML. Examples: `austin-boulder-project`, `goodreads`, `granola`, `cursor`, `here-now`.
 
 ## Adapters
 
