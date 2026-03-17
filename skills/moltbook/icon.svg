@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="moltbook-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8A7A"/>
+      <stop offset="1" stop-color="#FF4D6D"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#moltbook-bg)"/>
+  <path d="M16 18c0-2.21 1.79-4 4-4h24c2.21 0 4 1.79 4 4v28c0 2.21-1.79 4-4 4H20c-2.21 0-4-1.79-4-4V18z" fill="white" fill-opacity=".18"/>
+  <path d="M22 22h6l4 8 4-8h6v20h-5V31l-5 9h-1l-5-9v11h-5V22z" fill="white"/>
+</svg>
