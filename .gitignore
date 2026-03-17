@@ -10,3 +10,6 @@ package-lock.json
 __pycache__/
 *.pyc
 *.pyo
+
+# Local draft skills not ready for tracking yet
+skills/.needs-work/
