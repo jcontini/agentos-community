@@ -6,13 +6,17 @@ icon: icon.svg
 color: "#372213"
 website: https://goodreads.com
 
-auth:
-  cookies:
-    domain: ".goodreads.com"
-    names: ["session_id", "__Secure-user_session"]
-  optional: true
-  label: Goodreads Session
-  help_url: https://www.goodreads.com/user/sign_in
+connections:
+  graphql:
+    description: "Public AppSync GraphQL — API key auto-discovered from JS bundles"
+  web:
+    description: "Goodreads user cookies for viewer-scoped data"
+    cookies:
+      domain: ".goodreads.com"
+      names: ["session_id", "__Secure-user_session"]
+    optional: true
+    label: Goodreads Session
+    help_url: https://www.goodreads.com/user/sign_in
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS - Entity Mappings
@@ -179,6 +183,7 @@ operations:
   get_profile:
     description: Get a public Goodreads profile and import bounded public relationships like favorite books, currently reading, and shelves
     returns: account
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID (e.g., '26631647')" }
       limit: { type: integer, default: 10, description: "Max related books or shelves to import per profile section" }
@@ -198,7 +203,7 @@ operations:
   search_people:
     description: Search for Goodreads users by name
     returns: account[]
-    auth: none
+    connection: graphql
     params:
       query: { type: string, required: true, description: "Name to search" }
       limit: { type: integer, default: 10, description: "Max results (default 10)" }
@@ -228,7 +233,7 @@ operations:
   list_friends:
     description: List a user's friends
     returns: account[]
-    auth: none
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID" }
       page: { type: integer, default: 1, description: "Page number" }
@@ -260,7 +265,7 @@ operations:
   list_books:
     description: List a user's books organized by shelf (reading, want_to_read, read, did_not_finish)
     returns: book[]
-    auth: none
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf: { type: string, description: "Shelf: all, read, currently-reading, to-read, did-not-finish (default: all)" }
@@ -298,6 +303,7 @@ operations:
   get_book:
     description: Get structured public book details from Goodreads hydration and Apollo state
     returns: book
+    connection: graphql
     params:
       book_id: { type: string, required: true, description: "Book ID" }
     python:
@@ -314,6 +320,7 @@ operations:
   list_book_reviews:
     description: List public Goodreads reviews for a book via the AppSync GraphQL backend
     returns: review[]
+    connection: graphql
     params:
       book_id: { type: string, required: true, description: "Book ID" }
       limit: { type: integer, default: 30, description: "Max reviews to return" }
@@ -333,6 +340,7 @@ operations:
   list_similar_books:
     description: List similar books from Goodreads' public AppSync GraphQL backend
     returns: book[]
+    connection: graphql
     params:
       book_id: { type: string, required: true, description: "Book ID" }
       limit: { type: integer, default: 20, description: "Max similar books to return" }
@@ -352,6 +360,7 @@ operations:
   list_series_books:
     description: List all books in a series, given any book that belongs to it
     returns: book[]
+    connection: graphql
     params:
       book_id: { type: string, required: true, description: "Book ID of any book in the series" }
       limit: { type: integer, default: 20, description: "Max books to return" }
@@ -371,6 +380,7 @@ operations:
   search_books:
     description: Search for books by title, author, or ISBN via the public AppSync GraphQL backend
     returns: book[]
+    connection: graphql
     params:
       query: { type: string, required: true, description: "Search query (title, author, or ISBN)" }
       limit: { type: integer, default: 10, description: "Max results" }
@@ -390,6 +400,7 @@ operations:
   get_author:
     description: Get a public Goodreads author profile and import bounded authored books
     returns: author
+    connection: graphql
     params:
       author_id: { type: string, required: true, description: "Author ID" }
       limit: { type: integer, default: 10, description: "Max authored books to import" }
@@ -409,6 +420,7 @@ operations:
   list_author_books:
     description: List a public Goodreads author's books
     returns: book[]
+    connection: graphql
     params:
       author_id: { type: string, required: true, description: "Author ID" }
       limit: { type: integer, default: 10, description: "Max books to return" }
@@ -432,7 +444,7 @@ operations:
   list_reviews:
     description: List your book reviews with ratings and dates
     returns: review[]
-    auth: none
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID" }
       sort: { type: string, default: "date", description: "Sort by: date, rating, title" }
@@ -472,7 +484,7 @@ operations:
   list_shelves:
     description: List a user's bookshelves including default shelves (read, currently-reading, want-to-read)
     returns: shelf[]
-    auth: none
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID" }
     rest:
@@ -498,7 +510,7 @@ operations:
   list_shelf_books:
     description: List books on a specific user shelf
     returns: book[]
-    auth: none
+    connection: graphql
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf_name: { type: string, required: true, description: "Shelf name (e.g., 'read', 'currently-reading', 'to-read')" }
