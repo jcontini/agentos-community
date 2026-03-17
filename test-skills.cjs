@@ -79,7 +79,9 @@ const WRITE_OPS = /\.(create|update|delete|send|reply|modify|complete|reopen|tra
 // gmail: needs keychain for OAuth
 // brave-browser: massive SQLite scans, hangs
 // lightpanda: needs running browser engine
-const SKIP_SKILLS = new Set(['gmail', 'brave-browser', 'lightpanda']);
+// hardcover: depends on a live personal API token and account data
+// icloud: depends on a local pyicloud session plus account-specific params
+const SKIP_SKILLS = new Set(['gmail', 'brave-browser', 'lightpanda', 'hardcover', 'icloud']);
 const KEYCHAIN_OPS = new Set([
   'brave-browser:get_cookie_key', 'brave-browser:list_cookies', 'brave-browser:cookie_get', 'brave-browser:list_logins',
   'chrome:get_cookie_key', 'chrome:list_cookies', 'chrome:list_logins',
