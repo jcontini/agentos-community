@@ -48,16 +48,12 @@ operations:
     params:
       limit: { type: integer, description: "Number of meetings to return" }
       page: { type: integer, default: 0, description: "Page number (0-indexed)" }
-    command:
-      binary: bash
+    python:
+      module: ./granola.py
+      function: op_list_meetings
       args:
-        - "-l"
-        - "-c"
-        - "python3 ./granola.py list ${PARAM_LIMIT} ${PARAM_PAGE}"
-        - "--"
-        - ".params.limit"
-        - ".params.page"
-      working_dir: .
+        limit: '.params.limit // 20'
+        page: '.params.page // 0'
       timeout: 30
 
   get_meeting:
@@ -65,15 +61,11 @@ operations:
     returns: meeting
     params:
       id: { type: string, required: true, description: "Granola document ID (UUID)" }
-    command:
-      binary: bash
+    python:
+      module: ./granola.py
+      function: op_get_meeting
       args:
-        - "-l"
-        - "-c"
-        - "python3 ./granola.py get ${PARAM_ID}"
-        - "--"
-        - ".params.id"
-      working_dir: .
+        id: .params.id
       timeout: 60
 
 ---

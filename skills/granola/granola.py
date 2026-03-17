@@ -215,6 +215,18 @@ def cmd_get(token: str, doc_id: str) -> dict:
     return meeting
 
 
+def op_list_meetings(limit: int = 20, page: int = 0) -> list:
+    """Entry point for python: executor. List recent meetings."""
+    token = get_token()
+    return cmd_list(token, limit, page)
+
+
+def op_get_meeting(id: str) -> dict:
+    """Entry point for python: executor. Get a meeting with full transcript."""
+    token = get_token()
+    return cmd_get(token, id)
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         die("Usage: granola.py <list|get|search> [args...]")
