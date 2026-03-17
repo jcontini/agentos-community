@@ -156,18 +156,59 @@ function checkSchema(frontmatter) {
     { name: 'tags', pass: frontmatter.tags === undefined },
     { name: 'website', pass: isAgentSkill || isGuideOnly || !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
-    { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined },
+    { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined || (frontmatter.connections && Object.keys(frontmatter.connections).length > 0) },
     {
       name: 'operations/actions/agent',
       pass: isAgentSkill || isGuideOnly || !!frontmatter.operations || hasActions,
     },
   ];
-  
+
   const passed = checks.filter(c => c.pass).length;
   const total = checks.length;
-  const errors = checks.filter(c => !c.pass).map(c => `Missing: ${c.name}`);
-  
-  return { pass: passed === total, structureValid: true, passed, total, errors };
+  let errors = checks.filter(c => !c.pass).map(c => `Missing: ${c.name}`);
+
+  // Connections vs auth: mutual exclusion and operation.connection consistency
+  const connectionErrors = checkConnections(frontmatter);
+  if (connectionErrors.length > 0) {
+    errors = errors.concat(connectionErrors);
+  }
+
+  return { pass: passed === total && connectionErrors.length === 0, structureValid: errors.length === 0, passed, total, errors };
+}
+
+function checkConnections(frontmatter) {
+  const errors = [];
+  const hasAuth = frontmatter.auth !== undefined && frontmatter.auth !== null && frontmatter.auth !== 'none';
+  const hasConnections = frontmatter.connections && typeof frontmatter.connections === 'object' && Object.keys(frontmatter.connections).length > 0;
+
+  if (hasAuth && hasConnections) {
+    errors.push('Skill cannot have both auth: and connections: — use one model or the other');
+  }
+
+  if (hasConnections) {
+    const connNames = new Set(Object.keys(frontmatter.connections));
+    const ops = frontmatter.operations || {};
+    for (const [opName, op] of Object.entries(ops)) {
+      if (!op || typeof op !== 'object') continue;
+      const conn = op.connection;
+      if (conn === undefined || conn === null || conn === '') {
+        errors.push(`'${opName}' must specify connection: when skill uses connections:`);
+      } else if (!connNames.has(conn)) {
+        errors.push(`'${opName}' references connection '${conn}' which is not in connections: (available: ${[...connNames].join(', ')})`);
+      }
+    }
+  }
+
+  if (hasAuth && !hasConnections) {
+    const ops = frontmatter.operations || {};
+    for (const [opName, op] of Object.entries(ops)) {
+      if (op && typeof op === 'object' && op.connection !== undefined && op.connection !== null && op.connection !== '') {
+        errors.push(`'${opName}' has connection: but skill uses auth: — use connections: for multi-connection skills`);
+      }
+    }
+  }
+
+  return errors;
 }
 
 function findLegacyAdapterMappingWrappers(frontmatter) {

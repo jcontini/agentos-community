@@ -50,6 +50,13 @@
         { "$ref": "#/definitions/auth" }
       ]
     },
+    "connections": {
+      "type": "object",
+      "description": "Named auth contexts for multi-connection skills. Mutually exclusive with auth:. Each operation references one via connection: <name>.",
+      "additionalProperties": {
+        "$ref": "#/definitions/connection"
+      }
+    },
     "api": {
       "$ref": "#/definitions/api"
     },
@@ -340,8 +347,28 @@
         },
         "steps": {
           "$ref": "#/definitions/stepsExecutor"
+        },
+        "connection": {
+          "type": "string",
+          "description": "Named connection reference (connections model). Must match a key in skill.connections."
         }
       }
+    },
+    "connection": {
+      "type": "object",
+      "description": "Named auth context. Same auth fields as auth (cookies, header, query, body, oauth, label, help_url), plus optional description.",
+      "properties": {
+        "description": { "type": "string" },
+        "header": { "type": "object", "additionalProperties": { "type": "string" } },
+        "query": { "type": "object", "additionalProperties": { "type": "string" } },
+        "body": { "type": "object", "additionalProperties": { "type": "string" } },
+        "cookies": { "$ref": "#/definitions/auth/properties/cookies" },
+        "oauth": { "$ref": "#/definitions/auth/properties/oauth" },
+        "label": { "type": "string" },
+        "help_url": { "type": "string", "format": "uri" },
+        "optional": { "type": "boolean" }
+      },
+      "additionalProperties": false
     },
     "auth": {
       "type": "object",
