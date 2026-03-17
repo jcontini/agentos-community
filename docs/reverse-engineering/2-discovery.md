@@ -9,6 +9,8 @@ This is Layer 2 of three reverse-engineering docs:
 - **Layer 2: Discovery** (this file) — finding structured data in pages and bundles
 - **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md)
 
+**Tool:** The Playwright skill (`skills/playwright/readme.md`) is the primary browser-based discovery tool. Use it to probe pages, inspect DOM/hydration state, capture network traffic, and extract cookies. The patterns in this doc tell you what to do with what Playwright finds.
+
 ---
 
 ## Next.js + Apollo Cache Extraction

@@ -361,7 +361,7 @@ operations:
         description: "Milliseconds to wait after navigation for async requests (default: 5000)"
       cookies:
         type: array
-        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use a cookie-provider skill if you need to source these from a browser session."
+        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use brave-browser cookie_get to get these."
       capture_body:
         type: boolean
         description: "Capture JSON response bodies (default: true)"
@@ -415,7 +415,7 @@ Use these together:
 - **Exa** for web research, finding unofficial docs, GitHub repos, forum threads, and prior art before you start probing blindly.
 - **Firecrawl** when a page needs browser rendering but you mostly want content extraction instead of browser control.
 - **Curl / direct HTTP** once you know the endpoint, headers, and payload. At that point the browser has done its job.
-- **Cookie provider skills** when you need passive cookie access for runtime auth.
+- **Cookie provider skills** such as `brave-browser` or `firefox` when you need passive cookie access for runtime auth.
 
 Good reverse engineering is usually a progression:
 
@@ -455,102 +455,63 @@ Once you have the real endpoint, switch away from Playwright and implement or te
 
 ## Reverse Engineering Patterns
 
+Playwright is the primary discovery tool for reverse engineering web services. Use it to find the data surfaces, then switch to direct HTTP replay for production skill operations.
+
+For the full methodology — Next.js/Apollo extraction, GraphQL schema discovery, JS bundle scanning, auth boundary mapping — see `docs/reverse-engineering/` (especially `2-discovery.md` and `3-auth.md`). The patterns below are Playwright-specific workflows.
+
 ### Pattern: DOM Is Sparse But The Page Is Rich
 
-If `inspect` shows a shallow or placeholder-heavy DOM but the page clearly has rich data, the app is probably hydrating from framework state or lazy-loading API data.
-
-Try these next:
+If `inspect` shows a shallow or placeholder-heavy DOM but the page clearly has rich data, the app is hydrating from framework state. Try these before scraping visible HTML:
 
 - `read_webpage { selector: "script#__NEXT_DATA__", format: "text" }`
 - `evaluate { script: "JSON.stringify(window.__NEXT_DATA__ || null)" }`
 - `evaluate { script: "JSON.stringify(window.__APOLLO_STATE__ || null)" }`
 - `evaluate { script: "JSON.stringify(Object.keys(window).filter(k => /apollo|graphql|next|appsync/i.test(k)))" }`
 
-This is often faster and more stable than scraping visible HTML.
+See `docs/reverse-engineering/2-discovery.md` for how to work with `__NEXT_DATA__`, Apollo normalized caches, and `__ref` pointer resolution once you have the raw data.
 
-### Pattern: Next.js Site
+### Pattern: GraphQL / AppSync Discovery
 
-For Next.js pages, check `script#__NEXT_DATA__` or `window.__NEXT_DATA__` first.
+Use `capture_network` to find GraphQL endpoints:
 
-Common places to look:
+- Pattern: `**graphql**` or `**appsync-api**`
+- Increase `wait` to `8000`–`15000` for SPAs with deferred calls
+- Inspect response bodies for operation names, entity shapes, and auth errors
 
-- `props.pageProps`
-- `props.pageProps.apolloState`
-- route params and legacy IDs embedded in page props
-- server-rendered entities that are easier to map than the DOM
+If a response contains `Not Authorized to access ...`, that's a signal to split public and authenticated slices — not a dead end. See `docs/reverse-engineering/2-discovery.md` for the full boundary mapping technique.
 
-If the site uses Apollo, `__NEXT_DATA__` may already contain a normalized cache you can map directly.
-
-### Pattern: Apollo Or Normalized Cache
-
-If you find Apollo-style data:
-
-- look for `ROOT_QUERY`
-- find references such as `Book:...`, `User:...`, `Review:...`
-- use the cache to infer stable entity IDs, connection edges, and field names
-- prefer this public hydrated data for initial read-only operations before trying to replay private requests
-
-This is especially useful when network replay is incomplete but page hydration is intact.
-
-### Pattern: GraphQL Or AppSync
-
-If you suspect GraphQL:
-
-- run `capture_network` with a narrow pattern like `**graphql**` or `**appsync-api**`
-- increase `wait` to `8000` to `15000` for SPAs with deferred calls
-- inspect response bodies for operation names, entity types, pagination, and auth errors
-
-If the response body contains messages like `Not Authorized to access ...`, that usually means:
-
-- the endpoint itself is reachable
-- some fields are public
-- some fields are viewer-specific
-
-Treat that as a signal to split public and authenticated slices, not as a dead end.
-
-After you discover the GraphQL document and auth material:
-
-- replay it directly with `curl`, Python, or the target skill implementation
-- keep Playwright for discovery, not for every production read
-- prefer browser-free replays for repeatability, speed, and clearer failure modes
+After discovery, replay directly with Python/HTTP. Keep Playwright for discovery, not production reads.
 
 ### Pattern: Authenticated Discovery
 
-Use passive cookie provider skills for runtime cookie auth in product skills. Use Playwright for:
+Use passive cookie provider skills (`brave-browser`, `firefox`) for runtime cookie auth in product skills. Use Playwright for:
 
-- login flows
-- session establishment
-- interactive auth debugging
-- network capture against an already-authenticated page
+- Login flows and session establishment
+- Network capture against already-authenticated pages
+- Interactive auth debugging
 
 Do not treat Playwright as the default passive cookie source for other skills.
 
 ### Pattern: Use The Browser To Learn, Then Leave The Browser
 
-This is often the right progression for modern sites:
+The right progression for modern sites:
 
-1. Use Playwright to inspect the page and capture network traffic.
-2. Extract the GraphQL query, REST URL, headers, cookies, page hydration data, or API key.
+1. Inspect the page and capture network traffic with Playwright.
+2. Extract the GraphQL query, REST URL, headers, cookies, or API key.
 3. Reproduce the request outside the browser with direct HTTP.
-4. Build the real skill operation on the direct replay, not on continued browser automation.
+4. Build the real skill operation on the direct replay, not continued browser automation.
 
-Example:
-
-- Goodreads public book pages were best discovered with Playwright.
-- Once the AppSync endpoint, API key, and query documents were known, direct Python/HTTP replay was the better implementation path for public book reads, reviews, and similar books.
+Goodreads is a good example: pages were best *discovered* with Playwright, but once the AppSync endpoint and query documents were known, direct Python replay was the better implementation.
 
 ### Pattern: Navigation Is Flaky But Network Capture Works
 
-Some sites are fragile under ordinary page extraction but still produce useful data through `capture_network`.
+If `get_webpage`, `read_webpage`, or `evaluate` are inconsistent, `capture_network` often still works:
 
-If `get_webpage`, `read_webpage`, or `evaluate` are inconsistent:
+- Keep the browser running, verify with `status`
+- Call `capture_network` directly on the target URL
+- Narrow the pattern to reduce noise
 
-- keep the browser running
-- verify the current tab with `status`
-- call `capture_network` directly on the target URL
-- narrow the pattern to reduce noise
-
-That can still surface the backend contract even when DOM extraction is unreliable.
+This can surface the backend contract even when DOM extraction is unreliable.
 
 ## Operations
 

@@ -230,7 +230,7 @@ The discovery path was:
 - inspect JavaScript/frontend state for GraphQL and AppSync references
 - replay the discovered GraphQL requests directly outside the browser
 
-The reverse-engineering patterns that proved useful are now documented in `skills/playwright/readme.md`.
+The reverse-engineering patterns that proved useful are documented in `docs/reverse-engineering/` (1-transport, 2-discovery, 3-auth).
 
 The most important discovery sequence is:
 
