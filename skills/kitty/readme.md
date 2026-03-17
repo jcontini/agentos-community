@@ -15,12 +15,11 @@ operations:
         type: string
         required: false
         description: Optional Kitty remote-control socket (for example unix:/tmp/kitty-socket-12345)
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_list_os_windows
       args:
-        - ./kitty-control.py
-        - list_os_windows
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   list_tabs:
@@ -35,12 +34,11 @@ operations:
         type: integer
         required: false
         description: Filter results to a single Kitty OS window id
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_list_tabs
       args:
-        - ./kitty-control.py
-        - list_tabs
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   list_panes:
@@ -59,12 +57,11 @@ operations:
         type: integer
         required: false
         description: Filter results to a single Kitty tab id
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_list_panes
       args:
-        - ./kitty-control.py
-        - list_panes
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   launch_tab:
@@ -97,12 +94,11 @@ operations:
         required: false
         default: false
         description: Keep focus on the current tab after launching the new one
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_launch_tab
       args:
-        - ./kitty-control.py
-        - launch_tab
-      stdin: .params | tojson
+        params: .params
       timeout: 20
 
   focus_tab:
@@ -120,12 +116,11 @@ operations:
         type: integer
         required: true
         description: Kitty tab id to focus
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_focus_tab
       args:
-        - ./kitty-control.py
-        - focus_tab
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   focus_os_window:
@@ -145,12 +140,11 @@ operations:
         type: integer
         required: true
         description: Kitty OS window id to focus
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_focus_os_window
       args:
-        - ./kitty-control.py
-        - focus_os_window
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   send_text:
@@ -182,12 +176,11 @@ operations:
         required: false
         default: false
         description: Append carriage return after sending the text
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_send_text
       args:
-        - ./kitty-control.py
-        - send_text
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   get_text:
@@ -216,12 +209,11 @@ operations:
         required: false
         default: false
         description: Include ANSI escape sequences in the returned text
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_get_text
       args:
-        - ./kitty-control.py
-        - get_text
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 
   close_tab:
@@ -239,12 +231,11 @@ operations:
         type: integer
         required: true
         description: Kitty tab id to close
-    command:
-      binary: python3
+    python:
+      module: ./kitty-control.py
+      function: command_close_tab
       args:
-        - ./kitty-control.py
-        - close_tab
-      stdin: .params | tojson
+        params: .params
       timeout: 15
 ---
 
