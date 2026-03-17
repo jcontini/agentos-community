@@ -18,8 +18,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_list_os_windows
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   list_tabs:
@@ -37,8 +36,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_list_tabs
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   list_panes:
@@ -60,8 +58,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_list_panes
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   launch_tab:
@@ -97,8 +94,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_launch_tab
-      args:
-        params: .params
+      params: true
       timeout: 20
 
   focus_tab:
@@ -119,8 +115,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_focus_tab
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   focus_os_window:
@@ -143,8 +138,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_focus_os_window
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   send_text:
@@ -179,8 +173,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_send_text
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   get_text:
@@ -212,8 +205,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_get_text
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   close_tab:
@@ -234,8 +226,7 @@ operations:
     python:
       module: ./kitty-control.py
       function: command_close_tab
-      args:
-        params: .params
+      params: true
       timeout: 15
 ---
 

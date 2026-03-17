@@ -22,8 +22,7 @@ operations:
     python:
       module: ./macos_control.py
       function: list_apps
-      args:
-        params: .params
+      params: true
       timeout: 60
 
   list_processes:
@@ -40,8 +39,7 @@ operations:
     python:
       module: ./macos_control.py
       function: list_processes
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   list_displays:
@@ -54,8 +52,7 @@ operations:
     python:
       module: ./macos_control.py
       function: list_displays
-      args:
-        params: .params
+      params: true
       timeout: 15
 
   list_windows:
@@ -72,8 +69,7 @@ operations:
     python:
       module: ./macos_control.py
       function: list_windows
-      args:
-        params: .params
+      params: true
       timeout: 30
 
   screenshot_window:
@@ -95,8 +91,7 @@ operations:
     python:
       module: ./macos_control.py
       function: screenshot_window
-      args:
-        params: .params
+      params: true
       timeout: 20
 
   screenshot_display:
@@ -119,8 +114,7 @@ operations:
     python:
       module: ./macos_control.py
       function: screenshot_display
-      args:
-        params: .params
+      params: true
       timeout: 20
 ---
 

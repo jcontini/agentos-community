@@ -215,6 +215,7 @@ Rules:
 - `module` is resolved relative to the skill folder (use `./my_script.py`)
 - `function` is the function name in the module
 - `args` values are jaq expressions resolved against the params context (same as `rest.body`)
+- **Shorthand:** When the Python function expects a single `params` dict, use `params: true` instead of `args: { params: .params }`
 - Args are passed as typed JSON — integers stay integers, no `| tostring` needed
 - `timeout` defaults to 30 seconds
 - `response` mapping (root, transform) works the same as `rest:` and `graphql:`
