@@ -182,14 +182,12 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID (e.g., '26631647')" }
       limit: { type: integer, default: 10, description: "Max related books or shelves to import per profile section" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: get_public_profile
       args:
-        - "./public_graph.py"
-        - "get_public_profile"
-        - ".params.user_id"
-        - '.params.limit // 10 | tostring'
-      working_dir: .
+        user_id: .params.user_id
+        limit: '.params.limit // 10'
       timeout: 15
     test:
       mode: read
@@ -302,13 +300,11 @@ operations:
     returns: book
     params:
       book_id: { type: string, required: true, description: "Book ID" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: get_public_book
       args:
-        - "./public_graph.py"
-        - "get_public_book"
-        - ".params.book_id"
-      working_dir: .
+        book_id: .params.book_id
       timeout: 30
     test:
       mode: read
@@ -321,14 +317,12 @@ operations:
     params:
       book_id: { type: string, required: true, description: "Book ID" }
       limit: { type: integer, default: 30, description: "Max reviews to return" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: list_book_reviews
       args:
-        - "./public_graph.py"
-        - "list_book_reviews"
-        - ".params.book_id"
-        - '.params.limit // 30 | tostring'
-      working_dir: .
+        book_id: .params.book_id
+        limit: '.params.limit // 30'
       timeout: 30
     test:
       mode: read
@@ -342,14 +336,12 @@ operations:
     params:
       book_id: { type: string, required: true, description: "Book ID" }
       limit: { type: integer, default: 20, description: "Max similar books to return" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: list_similar_books
       args:
-        - "./public_graph.py"
-        - "list_similar_books"
-        - ".params.book_id"
-        - '.params.limit // 20 | tostring'
-      working_dir: .
+        book_id: .params.book_id
+        limit: '.params.limit // 20'
       timeout: 30
     test:
       mode: read
@@ -363,14 +355,12 @@ operations:
     params:
       book_id: { type: string, required: true, description: "Book ID of any book in the series" }
       limit: { type: integer, default: 20, description: "Max books to return" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: list_series_books
       args:
-        - "./public_graph.py"
-        - "list_series_books"
-        - ".params.book_id"
-        - '.params.limit // 20 | tostring'
-      working_dir: .
+        book_id: .params.book_id
+        limit: '.params.limit // 20'
       timeout: 30
     test:
       mode: read
@@ -384,14 +374,12 @@ operations:
     params:
       query: { type: string, required: true, description: "Search query (title, author, or ISBN)" }
       limit: { type: integer, default: 10, description: "Max results" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: search_books
       args:
-        - "./public_graph.py"
-        - "search_books"
-        - ".params.query"
-        - '.params.limit // 10 | tostring'
-      working_dir: .
+        query: .params.query
+        limit: '.params.limit // 10'
       timeout: 15
     test:
       mode: read
@@ -405,14 +393,12 @@ operations:
     params:
       author_id: { type: string, required: true, description: "Author ID" }
       limit: { type: integer, default: 10, description: "Max authored books to import" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: get_public_author
       args:
-        - "./public_graph.py"
-        - "get_public_author"
-        - ".params.author_id"
-        - '.params.limit // 10 | tostring'
-      working_dir: .
+        author_id: .params.author_id
+        limit: '.params.limit // 10'
       timeout: 30
     test:
       mode: read
@@ -426,14 +412,12 @@ operations:
     params:
       author_id: { type: string, required: true, description: "Author ID" }
       limit: { type: integer, default: 10, description: "Max books to return" }
-    command:
-      binary: python3
+    python:
+      module: ./public_graph.py
+      function: parse_author_books
       args:
-        - "./public_graph.py"
-        - "list_author_books"
-        - ".params.author_id"
-        - '.params.limit // 10 | tostring'
-      working_dir: .
+        author_id: .params.author_id
+        limit: '.params.limit // 10'
       timeout: 30
     test:
       mode: read
