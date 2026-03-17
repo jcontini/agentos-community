@@ -64,10 +64,9 @@ operations:
   list_accounts:
     description: List all financial accounts with balances and institution info
     returns: account[]
-    command:
-      binary: python3
-      args:
-        - "./copilot-accounts.py"
+    python:
+      module: ./copilot-accounts.py
+      function: load_accounts
 
   list_transactions:
     description: List recent transactions, optionally filtered by account, with category tags (emoji + color)
@@ -75,11 +74,12 @@ operations:
     params:
       account_id: { type: string, description: "Filter by account ID" }
       limit: { type: integer }
-    command:
-      binary: python3
+    python:
+      module: ./copilot-transactions.py
+      function: fetch_transactions
       args:
-        - "./copilot-transactions.py"
-        - '{account_id: .params.account_id, limit: (.params.limit // 100), query: null} | tojson'
+        account_id: .params.account_id
+        limit: '.params.limit // 100'
 
   search_transactions:
     description: Search transactions by merchant name or notes, with category tags (emoji + color)
@@ -87,11 +87,12 @@ operations:
     params:
       query: { type: string, required: true }
       limit: { type: integer }
-    command:
-      binary: python3
+    python:
+      module: ./copilot-transactions.py
+      function: fetch_transactions
       args:
-        - "./copilot-transactions.py"
-        - '{account_id: null, limit: (.params.limit // 100), query: .params.query} | tojson'
+        query: .params.query
+        limit: '.params.limit // 100'
 
 ---
 
