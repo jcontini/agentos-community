@@ -59,26 +59,19 @@ def make_request(url, method="GET", body=None, headers=None, content_type="appli
         sys.exit(1)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Publish files to here.now")
-    parser.add_argument("--filename", default="index.html", help="File path within the publish")
-    parser.add_argument("--content-type", default="text/html; charset=utf-8", dest="content_type")
-    parser.add_argument("--content", help="File content (reads from stdin if omitted)")
-    parser.add_argument("--title", help="Human-readable site title")
-    parser.add_argument("--description", help="Site description")
-    parser.add_argument("--ttl", type=int, help="TTL in seconds (authenticated only)")
-    parser.add_argument("--token", default="", help="here.now API key (omit for anonymous)")
-    parser.add_argument("--slug", help="Existing slug to update (omit to create new)")
-    args = parser.parse_args()
-
-    # Read content from stdin if not provided as arg
-    if args.content:
-        content = args.content
-    else:
-        content = sys.stdin.read()
-
+def do_publish(
+    content,
+    filename="index.html",
+    content_type="text/html; charset=utf-8",
+    title=None,
+    description=None,
+    slug=None,
+    token=None,
+    ttl=None,
+):
+    """Core publish logic. Content can be str or bytes. Returns website entity dict."""
     content_bytes = content.encode("utf-8") if isinstance(content, str) else content
-    token = args.token.strip() if args.token else ""
+    token = (token or "").strip()
     if not token:
         creds_path = os.path.expanduser("~/.herenow/credentials")
         try:
@@ -91,76 +84,131 @@ def main():
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    # Step 1: Create or update publish — declare files and get presigned URLs
     create_body = {
         "files": [
             {
-                "path": args.filename,
+                "path": filename,
                 "size": len(content_bytes),
-                "contentType": args.content_type,
+                "contentType": content_type,
             }
         ]
     }
 
-    if args.title or args.description:
+    if title or description:
         create_body["viewer"] = {}
-        if args.title:
-            create_body["viewer"]["title"] = args.title
-        if args.description:
-            create_body["viewer"]["description"] = args.description
+        if title:
+            create_body["viewer"]["title"] = title
+        if description:
+            create_body["viewer"]["description"] = description
 
-    if args.ttl and token:
-        create_body["ttlSeconds"] = args.ttl
+    if ttl and token:
+        create_body["ttlSeconds"] = ttl
 
-    if args.slug:
-        # Update existing publish
-        url = f"{BASE_URL}/publish/{args.slug}"
+    if slug:
+        url = f"{BASE_URL}/publish/{slug}"
         response = make_request(url, method="PUT", body=create_body, headers=dict(headers))
     else:
-        # Create new publish
         url = f"{BASE_URL}/publish"
         response = make_request(url, method="POST", body=create_body, headers=dict(headers))
 
-    slug = response.get("slug")
+    slug_val = response.get("slug")
     site_url = response.get("siteUrl")
     upload_info = response.get("upload", {})
     uploads = upload_info.get("uploads", [])
     finalize_url = upload_info.get("finalizeUrl")
     version_id = upload_info.get("versionId")
 
-    # Step 2: Upload each file to its presigned URL
     for upload in uploads:
         put_url = upload["url"]
         put_headers = dict(upload.get("headers", {}))
-        make_request(put_url, method="PUT", body=content_bytes, headers=put_headers, content_type=args.content_type)
+        make_request(put_url, method="PUT", body=content_bytes, headers=put_headers, content_type=content_type)
 
-    # Step 3: Finalize — make it live
     finalize_headers = {}
     if token:
         finalize_headers["Authorization"] = f"Bearer {token}"
     make_request(finalize_url, method="POST", body={"versionId": version_id}, headers=finalize_headers)
 
-    # Output raw here.now API format — the transformer maps this to the website entity.
-    # Fields match what the transformer expects: slug, siteUrl, claimToken, claimUrl,
-    # expiresAt, anonymous (we inject status and viewer.title manually below).
     output = {
-        "slug": slug,
+        "slug": slug_val,
         "siteUrl": site_url,
         "status": "active",
         "currentVersionId": version_id,
     }
-
-    if args.title:
-        output["viewer"] = {"title": args.title}
-
+    if title:
+        output["viewer"] = {"title": title}
     if response.get("expiresAt"):
         output["expiresAt"] = response["expiresAt"]
-
     if response.get("anonymous"):
         output["anonymous"] = True
         output["claimToken"] = response.get("claimToken", "")
         output["claimUrl"] = response.get("claimUrl", "")
 
+    return output
+
+
+def op_create_website(
+    content,
+    filename="index.html",
+    content_type="text/html; charset=utf-8",
+    title=None,
+    description=None,
+    ttl=None,
+    token=None,
+):
+    """Entry point for python: executor. Create a new publish."""
+    return do_publish(
+        content=content,
+        filename=filename,
+        content_type=content_type,
+        title=title,
+        description=description,
+        ttl=ttl,
+        token=token,
+    )
+
+
+def op_update_website(
+    slug,
+    content,
+    filename="index.html",
+    content_type="text/html; charset=utf-8",
+    title=None,
+    token=None,
+):
+    """Entry point for python: executor. Update an existing publish."""
+    return do_publish(
+        content=content,
+        filename=filename,
+        content_type=content_type,
+        title=title,
+        slug=slug,
+        token=token,
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Publish files to here.now")
+    parser.add_argument("--filename", default="index.html", help="File path within the publish")
+    parser.add_argument("--content-type", default="text/html; charset=utf-8", dest="content_type")
+    parser.add_argument("--content", help="File content (reads from stdin if omitted)")
+    parser.add_argument("--title", help="Human-readable site title")
+    parser.add_argument("--description", help="Site description")
+    parser.add_argument("--ttl", type=int, help="TTL in seconds (authenticated only)")
+    parser.add_argument("--token", default="", help="here.now API key (omit for anonymous)")
+    parser.add_argument("--slug", help="Existing slug to update (omit to create new)")
+    args = parser.parse_args()
+
+    content = args.content if args.content else sys.stdin.read()
+    output = do_publish(
+        content=content,
+        filename=args.filename,
+        content_type=args.content_type,
+        title=args.title,
+        description=args.description,
+        slug=args.slug,
+        token=args.token or "",
+        ttl=args.ttl,
+    )
     print(json.dumps(output))
 
 

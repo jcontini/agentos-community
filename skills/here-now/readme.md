@@ -74,29 +74,17 @@ operations:
       ttl:
         type: integer
         description: Time-to-live in seconds (authenticated only, omit for permanent)
-    command:
-      binary: bash
+    python:
+      module: ./publish.py
+      function: op_create_website
       args:
-        - "-l"
-        - "-c"
-        - |
-          PARAM_TITLE="$1"; PARAM_DESCRIPTION="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
-          TITLE="${PARAM_TITLE}"
-          DESC="${PARAM_DESCRIPTION}"
-          python3 ./publish.py \
-            --filename '${PARAM_FILENAME}' \
-            --content-type '${PARAM_CONTENT_TYPE}' \
-            ${TITLE:+--title "$TITLE"} \
-            ${DESC:+--description "$DESC"} \
-            --token '${PARAM_AUTH_KEY}'
-        - "--"
-        - ".params.title"
-        - ".params.description"
-        - ".params.filename"
-        - ".params.content_type"
-        - ".auth.key"
-      working_dir: .
-      stdin: ".params.content"
+        content: .params.content
+        filename: '.params.filename // "index.html"'
+        content_type: '.params.content_type // "text/html; charset=utf-8"'
+        title: .params.title
+        description: .params.description
+        ttl: .params.ttl
+        token: .auth.key
       timeout: 60
 
   update_website:
@@ -119,28 +107,16 @@ operations:
         default: "text/html; charset=utf-8"
       title:
         type: string
-    command:
-      binary: bash
+    python:
+      module: ./publish.py
+      function: op_update_website
       args:
-        - "-l"
-        - "-c"
-        - |
-          PARAM_TITLE="$1"; PARAM_SLUG="$2"; PARAM_FILENAME="$3"; PARAM_CONTENT_TYPE="$4"; PARAM_AUTH_KEY="$5"
-          TITLE="${PARAM_TITLE}"
-          python3 ./publish.py \
-            --slug '${PARAM_SLUG}' \
-            --filename '${PARAM_FILENAME}' \
-            --content-type '${PARAM_CONTENT_TYPE}' \
-            ${TITLE:+--title "$TITLE"} \
-            --token '${PARAM_AUTH_KEY}'
-        - "--"
-        - ".params.title"
-        - ".params.slug"
-        - ".params.filename"
-        - ".params.content_type"
-        - ".auth.key"
-      working_dir: .
-      stdin: ".params.content"
+        slug: .params.slug
+        content: .params.content
+        filename: '.params.filename // "index.html"'
+        content_type: '.params.content_type // "text/html; charset=utf-8"'
+        title: .params.title
+        token: .auth.key
       timeout: 60
 
   delete_website:
