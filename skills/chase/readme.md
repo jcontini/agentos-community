@@ -62,10 +62,11 @@ operations:
       Returns checking, savings, and credit card accounts.
       Balance = current balance. Available = available to spend/credit available.
     returns: account[]
-    command:
-      binary: python3
-      args: ["./chase-api.py", "accounts", "--cookies", ".auth.cookies"]
-      working_dir: .
+    python:
+      module: ./chase-api.py
+      function: get_accounts
+      args:
+        cookies: .auth.cookies
       timeout: 20
 
   list_transactions:
@@ -82,10 +83,13 @@ operations:
         type: integer
         description: "Number of transactions to return (default: 30, max: 100)"
     returns: transaction[]
-    command:
-      binary: python3
-      args: ["./chase-api.py", "transactions", "--cookies", ".auth.cookies", "--account-id", ".params.account_id", "--limit", ".params.limit // 30"]
-      working_dir: .
+    python:
+      module: ./chase-api.py
+      function: get_transactions
+      args:
+        cookies: .auth.cookies
+        account_id: .params.account_id
+        limit: '.params.limit // 30'
       timeout: 20
 
 ---
