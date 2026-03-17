@@ -28,9 +28,39 @@ adapters:
     text: .about
     location: .location
     data.books_count: .books_count
+    data.ratings_count: .ratings_count
+    data.avg_rating: .avg_rating
+    data.reviews_count: .reviews_count
+    data.website: .website
     data.birthday: .birthday
     data.joined_date: .joined_date
     data.favorite_genres: .favorite_genres
+
+    favorite_books:
+      book[]:
+        _source: .favorite_books
+        id: .book_id
+        name: .title
+        url: .web_url
+        image: .cover_url
+        author: .primary_author
+
+    currently_reading:
+      book[]:
+        _source: .currently_reading
+        id: .book_id
+        name: .title
+        url: .web_url
+        image: .cover_url
+        author: .primary_author
+
+    shelves:
+      shelf[]:
+        _source: .shelves
+        id: .shelf_id
+        name: .name
+        url: .url
+        data.book_count: .book_count
 
   book:
     id: .book_id
@@ -54,12 +84,26 @@ adapters:
     data.original_title: .original_title
     data.currently_reading_count: .currently_reading_count
     data.to_read_count: .to_read_count
-    data.contributors: .contributors
     data.places: .places
     data.characters: .characters
     data.awards_won: .awards_won
     data.work_url: .work_url
-    
+
+    written_by:
+      author:
+        id: '.primary_author_id // .primary_author'
+        name: .primary_author
+        url: .primary_author_url
+
+    contributors:
+      author[]:
+        _source: '.contributors // []'
+        id: '.author_id // .name'
+        name: .name
+        url: .url
+        image: .image_url
+        data.role: .role
+
   review:
     id: .review_id
     name: '.title // ("Review of " + (.book_title // "book"))'
@@ -98,6 +142,21 @@ adapters:
     data.average_rating: .average_rating
     data.works_count: .works_count
     data.birth_date: .birth_date
+    data.website: .website
+    data.twitter: .twitter
+    data.member_since: .member_since
+    data.followers_count: .followers_count
+
+    books:
+      book[]:
+        _source: .books
+        id: .book_id
+        name: .title
+        url: .web_url
+        image: .cover_url
+        author: .primary_author
+        data.average_rating: .average_rating
+        data.ratings_count: .ratings_count
 
   shelf:
     id: .shelf_id
@@ -118,31 +177,30 @@ operations:
   # ───────────────────────────────────────────────────────────────────────────
   
   get_profile:
-    description: Get a Goodreads user profile with stats, books count, location, and photo
+    description: Get a public Goodreads profile and import bounded public relationships like favorite books, currently reading, and shelves
     returns: account
     params:
       user_id: { type: string, required: true, description: "User ID (e.g., '26631647')" }
+      limit: { type: integer, default: 10, description: "Max related books or shelves to import per profile section" }
     command:
-      binary: bash
+      binary: python3
       args:
-        - "-c"
-        - |
-          USER_ID="$1"
-          # Fetch user profile page and extract structured data
-          curl -s -A "Mozilla/5.0 (compatible; AgentOS/1.0)" "https://www.goodreads.com/user/show/${USER_ID}" 2>/dev/null | \
-          perl -ne '
-            if (/Joe Contini.*?(\d+) books/) { print "books_count: $1\n"; }
-            if (/location: ([^<]+)</) { print "location: $1\n"; }
-            if (/property="og:image".*?content="([^"]+)"/) { print "photo_url: $1\n"; }
-            if (/<h1>([^<]+)<\/h1>/) { print "name: $1\n"; }
-          ' | jq -R -s 'split("\n") | map(select(. != "") | split(": ") | {(.[0]): (.[1] // "")}) | add + {user_id: env.USER_ID}'
-        - "--"
+        - "./public_graph.py"
+        - "get_public_profile"
         - ".params.user_id"
+        - '.params.limit // 10 | tostring'
+      working_dir: .
       timeout: 15
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
+        limit: 3
 
   search_people:
     description: Search for Goodreads users by name
     returns: account[]
+    auth: none
     params:
       query: { type: string, required: true, description: "Name to search" }
       limit: { type: integer, default: 10, description: "Max results (default 10)" }
@@ -163,10 +221,16 @@ operations:
              name: .[1]
            }] |
            .[0:.params.limit]
+    test:
+      mode: read
+      fixtures:
+        query: "Malcolm Gladwell"
+        limit: 3
 
   list_friends:
     description: List a user's friends
     returns: account[]
+    auth: none
     params:
       user_id: { type: string, required: true, description: "User ID" }
       page: { type: integer, default: 1, description: "Page number" }
@@ -186,6 +250,10 @@ operations:
              user_id: .[0],
              name: .[1]
            }]
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
 
   # ───────────────────────────────────────────────────────────────────────────
   # BOOK OPERATIONS
@@ -194,6 +262,7 @@ operations:
   list_books:
     description: List a user's books organized by shelf (reading, want_to_read, read, did_not_finish)
     returns: book[]
+    auth: none
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf: { type: string, description: "Shelf: all, read, currently-reading, to-read, did-not-finish (default: all)" }
@@ -222,23 +291,32 @@ operations:
            } |
            select(.book_id != null)] |
            .[0:25]
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
+        shelf: read
 
   get_book:
-    description: Get structured public book details from Goodreads' Next.js and Apollo page payload
+    description: Get structured public book details from Goodreads hydration and Apollo state
     returns: book
     params:
       book_id: { type: string, required: true, description: "Book ID" }
     command:
       binary: python3
       args:
-        - "./public_book.py"
-        - "get_book"
+        - "./public_graph.py"
+        - "get_public_book"
         - ".params.book_id"
       working_dir: .
       timeout: 30
+    test:
+      mode: read
+      fixtures:
+        book_id: "4934"
 
   list_book_reviews:
-    description: List public Goodreads reviews for a book via the public AppSync GraphQL endpoint
+    description: List public Goodreads reviews for a book via the AppSync GraphQL backend
     returns: review[]
     params:
       book_id: { type: string, required: true, description: "Book ID" }
@@ -246,15 +324,20 @@ operations:
     command:
       binary: python3
       args:
-        - "./public_book.py"
+        - "./public_graph.py"
         - "list_book_reviews"
         - ".params.book_id"
         - '.params.limit // 30 | tostring'
       working_dir: .
       timeout: 30
+    test:
+      mode: read
+      fixtures:
+        book_id: "4934"
+        limit: 3
 
   list_similar_books:
-    description: List similar books from Goodreads' public AppSync GraphQL endpoint
+    description: List similar books from Goodreads' public AppSync GraphQL backend
     returns: book[]
     params:
       book_id: { type: string, required: true, description: "Book ID" }
@@ -262,59 +345,101 @@ operations:
     command:
       binary: python3
       args:
-        - "./public_book.py"
+        - "./public_graph.py"
         - "list_similar_books"
         - ".params.book_id"
         - '.params.limit // 20 | tostring'
       working_dir: .
       timeout: 30
+    test:
+      mode: read
+      fixtures:
+        book_id: "4934"
+        limit: 3
+
+  list_series_books:
+    description: List all books in a series, given any book that belongs to it
+    returns: book[]
+    params:
+      book_id: { type: string, required: true, description: "Book ID of any book in the series" }
+      limit: { type: integer, default: 20, description: "Max books to return" }
+    command:
+      binary: python3
+      args:
+        - "./public_graph.py"
+        - "list_series_books"
+        - ".params.book_id"
+        - '.params.limit // 20 | tostring'
+      working_dir: .
+      timeout: 30
+    test:
+      mode: read
+      fixtures:
+        book_id: "3"
+        limit: 5
 
   search_books:
-    description: Search for books by title, author, or ISBN across all Goodreads
+    description: Search for books by title, author, or ISBN via the public AppSync GraphQL backend
     returns: book[]
     params:
       query: { type: string, required: true, description: "Search query (title, author, or ISBN)" }
       limit: { type: integer, default: 10, description: "Max results" }
-    rest:
-      method: GET
-      url: "https://www.goodreads.com/search"
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        q: .params.query
-        search_type: "books"
-      response:
-        transform: |
-          [.html | 
-           scan("<a href=\"/book/show/([0-9]+)[^>]*>([^<]+)</a>") |
-           {
-             book_id: (.[0] | tonumber),
-             title: .[1]
-           } | 
-           select(.book_id != null)] |
-           .[0:.params.limit]
+    command:
+      binary: python3
+      args:
+        - "./public_graph.py"
+        - "search_books"
+        - ".params.query"
+        - '.params.limit // 10 | tostring'
+      working_dir: .
+      timeout: 15
+    test:
+      mode: read
+      fixtures:
+        query: "Brothers Karamazov"
+        limit: 3
 
   get_author:
-    description: Get author profile including bio, average rating, and works count
+    description: Get a public Goodreads author profile and import bounded authored books
     returns: author
     params:
       author_id: { type: string, required: true, description: "Author ID" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/author/show/" + .params.author_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      response:
-        transform: |
-          {
-            author_id: (.params.author_id | tonumber),
-            name: (.html | match("<h1[^>]*>([^<]+)</h1>") | .captures[0].string // ""),
-            bio: (.html | match("<div class=\"about\"[^>]*>([^<]+)") | .captures[0].string // ""),
-            average_rating: (.html | match("average rating: ([0-9.]+)") | .captures[0].string // "0"),
-            works_count: (.html | match("([0-9,]+) books") | .captures[0].string // "0")
-          }
+      limit: { type: integer, default: 10, description: "Max authored books to import" }
+    command:
+      binary: python3
+      args:
+        - "./public_graph.py"
+        - "get_public_author"
+        - ".params.author_id"
+        - '.params.limit // 10 | tostring'
+      working_dir: .
+      timeout: 30
+    test:
+      mode: read
+      fixtures:
+        author_id: "3137322"
+        limit: 3
+
+  list_author_books:
+    description: List a public Goodreads author's books
+    returns: book[]
+    params:
+      author_id: { type: string, required: true, description: "Author ID" }
+      limit: { type: integer, default: 10, description: "Max books to return" }
+    command:
+      binary: python3
+      args:
+        - "./public_graph.py"
+        - "list_author_books"
+        - ".params.author_id"
+        - '.params.limit // 10 | tostring'
+      working_dir: .
+      timeout: 30
+    test:
+      mode: read
+      fixtures:
+        author_id: "3137322"
+        limit: 3
 
   # ───────────────────────────────────────────────────────────────────────────
   # REVIEW & RATING OPERATIONS
@@ -323,6 +448,7 @@ operations:
   list_reviews:
     description: List your book reviews with ratings and dates
     returns: review[]
+    auth: none
     params:
       user_id: { type: string, required: true, description: "User ID" }
       sort: { type: string, default: "date", description: "Sort by: date, rating, title" }
@@ -350,6 +476,10 @@ operations:
            } |
            select(.review_id != null)] |
            .[0:25]
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
 
   # ───────────────────────────────────────────────────────────────────────────
   # SHELF OPERATIONS
@@ -358,6 +488,7 @@ operations:
   list_shelves:
     description: List a user's bookshelves including default shelves (read, currently-reading, want-to-read)
     returns: shelf[]
+    auth: none
     params:
       user_id: { type: string, required: true, description: "User ID" }
     rest:
@@ -375,10 +506,15 @@ operations:
              name: .[1],
              book_count: (.[2] | tonumber)
            }]
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
 
   list_shelf_books:
     description: List books on a specific user shelf
     returns: book[]
+    auth: none
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf_name: { type: string, required: true, description: "Shelf name (e.g., 'read', 'currently-reading', 'to-read')" }
@@ -404,6 +540,11 @@ operations:
            } |
            select(.book_id != null)] |
            .[0:25]
+    test:
+      mode: read
+      fixtures:
+        user_id: "26631647"
+        shelf_name: read
 
 ---
 
@@ -538,18 +679,30 @@ This means the best public-first strategy is:
 2. Keep older HTML scraping for profile, author, and search pages until those are replaced
 3. Use GraphQL discovery to expand from the public book slice into similar books, quotes, shelves, and eventually authenticated views
 
+### GraphQL Discovery
+
+The AppSync endpoint and API key are **discovered at runtime**, not hardcoded. The discovery chain is:
+
+1. **Cache** — `.runtime-cache.json` with 1-hour TTL (instant)
+2. **JS Bundle** — extract Prod config from the Next.js `_app` chunk (~1-2s, no browser needed)
+3. **Browser Capture** — stealth Playwright watches AppSync network traffic (~15-20s fallback)
+4. **Hardcoded Fallback** — known-good values as last resort
+
+This means the skill self-heals when Goodreads rotates keys or redeploys.
+
 ## Scope Vision: Feature Parity with Reddit Skill
 
 This skill is built to reach feature parity with the Reddit skill:
 
-### Current Implementation ✅
+### Current Implementation
 - Read user profiles and social connections (friends, followers)
 - Access books across shelves (reading, want-to-read, read, custom)
 - View reviews, ratings, and quotes
 - Search books and people
 - Get book and author metadata (ISBN, genres, ratings)
+- Runtime AppSync discovery (no hardcoded API keys required)
 
-### Future Enhancements 🚧
+### Future Enhancements
 - Write operations (rate books, write reviews, add to shelves)
 - Feed/activity stream (what friends are reading, recommendations)
 - Reading statistics and yearly reading summaries
@@ -572,11 +725,5 @@ This makes a mixed reverse-engineering approach the most reliable path today:
 
 - structured public page parsing where Goodreads already hydrates data
 - targeted HTML parsing for older pages
+- JS bundle extraction for transport config (endpoint, API key)
 - authenticated cookie-backed expansion for private shelves, feed, and social views
-
-## References
-
-Built with reverse-engineering patterns from:
-- [goodreads-user-scraper](https://github.com/YashTotale/goodreads-user-scraper) — 25,000+ downloads
-- [goodreads-bookshelf-api](https://github.com/tnmyk/goodreads-bookshelf-api)
-- Goodreads public pages and HTML structure
