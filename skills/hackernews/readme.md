@@ -64,6 +64,11 @@ operations:
         hitsPerPage: .params.limit
       response:
         root: "/hits"
+    test:
+      mode: read
+      fixtures:
+        feed: front
+        limit: 3
 
   search_posts:
     description: Search Hacker News stories
@@ -86,6 +91,8 @@ operations:
         hitsPerPage: .params.limit
       response:
         root: "/hits"
+    test:
+      mode: read
 
   get_post:
     description: Get a Hacker News story with comments
@@ -128,6 +135,15 @@ operations:
             created_at: .created_at,
             replies: [.children[]? | map_comment]
           }
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          feed: front
+          limit: 3
+        map:
+          id: id
 
   comments_post:
     description: |
@@ -144,19 +160,18 @@ operations:
     command:
       binary: bash
       args:
-        - "-c"
-        - |
-          PARAM_ID="$1"
-          curl -s "https://hn.algolia.com/api/v1/items/${PARAM_ID}" | jq '
-            def flatten_tree($parent_id):
-              {objectID: (.id | tostring), text: .text, author: .author, created_at: .created_at, parent_id: $parent_id},
-              (.children[]? | flatten_tree((.id | tostring)));
-            (.id | tostring) as $story_id |
-            [{objectID: $story_id, title: .title, text: .text, url: .url, author: .author, points: .points, num_comments: (.children | length), created_at: .created_at}]
-            + [.children[]? | flatten_tree($story_id)]'
-        - "--"
+        - ./comments_post.sh
         - ".params.id"
       timeout: 30
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          feed: front
+          limit: 3
+        map:
+          id: id
 ---
 
 # Hacker News

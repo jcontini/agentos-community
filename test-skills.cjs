@@ -56,24 +56,31 @@ function resolveBinary() {
 
 const BINARY = resolveBinary();
 
-// Default param values keyed by param name
-const FIXTURES = {
-  query: 'test', limit: 3, lang: 'en', format: 'text',
-  feed: 'front', filter: 'today', sort: 'new',
+// Shared, smoke-safe fallback fixtures.
+// Skill-specific fixtures should live in operation-level `test.fixtures`.
+const SHARED_FIXTURES = {
+  query: 'test',
+  limit: 3,
+  lang: 'en',
+  format: 'text',
+  feed: 'front',
+  filter: 'all',
+  sort: 'new',
   url: 'https://example.com',
   path: process.env.HOME + '/dev/agentos',
-  subreddit: 'programming',
 };
 
-// Per-skill fixture overrides
+// Legacy per-skill fixture overrides for skills not yet migrated
+// to operation-level `test.fixtures`.
 const SKILL_FIXTURES = {
   youtube: { url: 'https://www.youtube.com/@theo' },
   linear: { account: 'AgentOS' },
   todoist: { filter: 'today | overdue' },
 };
 
-// Write ops — skip unless --write flag
-const WRITE_OPS = /\.(create|update|delete|send|reply|modify|complete|reopen|trash|untrash|batch|import|pull|backfill|set_|forward)/;
+// Legacy fallback for skills that have not declared `test.mode`.
+const LEGACY_WRITE_OPS = /\.(create|update|delete|send|reply|modify|complete|reopen|trash|untrash|batch|import|pull|backfill|set_|forward|upvote|downvote|follow|unfollow|subscribe|unsubscribe|verify)/;
+const SMOKE_VIEW = { format: 'json', detail: 'full' };
 
 // Skills to skip entirely in automated runs
 // gmail: needs keychain for OAuth
@@ -82,11 +89,6 @@ const WRITE_OPS = /\.(create|update|delete|send|reply|modify|complete|reopen|tra
 // hardcover: depends on a live personal API token and account data
 // icloud: depends on a local pyicloud session plus account-specific params
 const SKIP_SKILLS = new Set(['gmail', 'brave-browser', 'lightpanda', 'hardcover', 'icloud']);
-const KEYCHAIN_OPS = new Set([
-  'brave-browser:get_cookie_key', 'brave-browser:list_cookies', 'brave-browser:cookie_get', 'brave-browser:list_logins',
-  'chrome:get_cookie_key', 'chrome:list_cookies', 'chrome:list_logins',
-  'mimestream:credential_get',
-]);
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
@@ -179,7 +181,8 @@ function getTargetSkills() {
     .filter(d => {
       const sk = loadSkill(path.join(SKILLS_DIR, d));
       return sk && (sk.operations || sk.utilities);
-    });
+    })
+    .filter(d => !SKIP_SKILLS.has(d));
 }
 
 // ── MCP client (minimal, synchronous-feeling with promises) ──────────────────
@@ -289,93 +292,251 @@ class MCP {
 
 // ── Test execution ───────────────────────────────────────────────────────────
 
-function buildParams(opDef, skillId, opName) {
+function getTestConfig(opDef) {
+  return opDef?.test && typeof opDef.test === 'object' ? opDef.test : null;
+}
+
+function getOperationMode(opName, opDef) {
+  const test = getTestConfig(opDef);
+  if (!test) return null;
+  if (typeof test.mode === 'string' && test.mode.length > 0) return test.mode;
+  return LEGACY_WRITE_OPS.test('.' + opName) ? 'write' : 'read';
+}
+
+function getRunOptions(opDef) {
+  const test = getTestConfig(opDef);
+  const options = {
+    view: SMOKE_VIEW,
+    remember: false,
+  };
+  if (test.account) options.account = test.account;
+  return options;
+}
+
+function buildParams(opDef, skillId) {
   const params = {};
-  if (!opDef?.params) return params;
-  const overrides = { ...FIXTURES, ...(SKILL_FIXTURES[skillId] || {}) };
+  const missing = [];
+
+  const test = getTestConfig(opDef);
+  const explicit = test.fixtures && typeof test.fixtures === 'object' ? test.fixtures : {};
+  const shared = SHARED_FIXTURES;
+  const legacy = SKILL_FIXTURES[skillId] || {};
+
+  if (!opDef?.params) {
+    return { params: { ...explicit }, missing };
+  }
 
   for (const [name, def] of Object.entries(opDef.params)) {
     const d = typeof def === 'object' ? def : {};
-    if (d.required) {
-      // Must provide required params
-      if (name in overrides) params[name] = overrides[name];
-      else if (d.default !== undefined) params[name] = d.default;
-      else return null; // Can't satisfy
-    } else {
-      // Optional: only inject if there's a default in the YAML
-      if (d.default !== undefined) params[name] = d.default;
+    if (Object.prototype.hasOwnProperty.call(explicit, name)) {
+      params[name] = explicit[name];
+      continue;
+    }
+    if (d.default !== undefined) {
+      params[name] = d.default;
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(shared, name)) {
+      params[name] = shared[name];
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(legacy, name)) {
+      params[name] = legacy[name];
+      continue;
+    }
+    if (d.required) missing.push(name);
+  }
+  for (const [name, value] of Object.entries(explicit)) {
+    if (!Object.prototype.hasOwnProperty.call(params, name)) {
+      params[name] = value;
     }
   }
-  return params;
+  return { params, missing };
+}
+
+function normalizeDiscoverConfig(discoverFrom) {
+  if (!discoverFrom) return [];
+  if (Array.isArray(discoverFrom)) {
+    return discoverFrom.map(item => typeof item === 'string' ? { op: item } : item).filter(Boolean);
+  }
+  if (typeof discoverFrom === 'string') return [{ op: discoverFrom }];
+  if (typeof discoverFrom === 'object') return [discoverFrom];
+  return [];
+}
+
+function unwrapSmokeData(result) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && 'data' in result && 'meta' in result) {
+    return result.data;
+  }
+  return result;
+}
+
+function firstFromCollection(value) {
+  if (Array.isArray(value)) return value[0] || null;
+  if (!value || typeof value !== 'object') return null;
+  if (Array.isArray(value.items)) return value.items[0] || null;
+  if (Array.isArray(value.results)) return value.results[0] || null;
+  if (Array.isArray(value.posts)) return value.posts[0] || null;
+  if (value.requests?.items?.[0]) return value.requests.items[0];
+  if (value.conversations?.items?.[0]) return value.conversations.items[0];
+  if (value.agent && typeof value.agent === 'object') return value.agent;
+  if (value.post && typeof value.post === 'object') return value.post;
+  return value;
+}
+
+function extractDiscoveredValue(source, targetParam, sourceKey) {
+  if (!source || typeof source !== 'object') return undefined;
+  const keys = [
+    sourceKey,
+    targetParam,
+    targetParam.endsWith('_id') ? 'id' : null,
+    targetParam === 'name' ? 'id' : null,
+  ].filter(Boolean);
+
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
+      return source[key];
+    }
+  }
+  return undefined;
+}
+
+async function resolveDiscoveryParams(skillId, opName, opDef, ops, mcp, params, missing, stack) {
+  const test = getTestConfig(opDef);
+  const discoverConfigs = normalizeDiscoverConfig(test.discover_from);
+  const unresolved = [...missing];
+  if (unresolved.length === 0 || discoverConfigs.length === 0) {
+    return { ok: unresolved.length === 0, params, missing: unresolved };
+  }
+
+  for (const discover of discoverConfigs) {
+    if (unresolved.length === 0) break;
+    const discoverOpName = discover.op;
+    const discoverOp = ops[discoverOpName];
+    if (!discoverOp) {
+      return { ok: false, reason: `discover_from op not found: ${discoverOpName}` };
+    }
+
+    const discoverMode = getOperationMode(discoverOpName, discoverOp);
+    if (discoverMode !== 'read') {
+      return { ok: false, reason: `discover_from op is not smoke-safe: ${discoverOpName}` };
+    }
+
+    const discoverInvocation = await resolveSmokeInvocation(
+      skillId,
+      discoverOpName,
+      discoverOp,
+      ops,
+      mcp,
+      stack,
+    );
+    if (!discoverInvocation.ok) {
+      return { ok: false, reason: `discover_from ${discoverOpName} failed: ${discoverInvocation.reason}` };
+    }
+    const discoverParams = {
+      ...discoverInvocation.params,
+      ...(discover.params && typeof discover.params === 'object' ? discover.params : {}),
+    };
+
+    let discoverResult;
+    try {
+      discoverResult = await mcp.call(skillId, discoverOpName, discoverParams, discoverInvocation.runOptions);
+    } catch (error) {
+      return { ok: false, reason: `discover_from ${discoverOpName} failed: ${(error.message || String(error)).slice(0, 120)}` };
+    }
+
+    const check = checkResult(discoverResult, discoverOp?.returns);
+    if (!check.ok) {
+      return { ok: false, reason: `discover_from ${discoverOpName} failed: ${check.reason}` };
+    }
+
+    const source = firstFromCollection(unwrapSmokeData(discoverResult));
+    if (!source) {
+      return { ok: false, reason: `discover_from ${discoverOpName} returned no data` };
+    }
+
+    const paramMap = discover.map && typeof discover.map === 'object' ? discover.map : {};
+    for (let i = unresolved.length - 1; i >= 0; i--) {
+      const targetParam = unresolved[i];
+      const sourceKey = paramMap[targetParam];
+      const value = extractDiscoveredValue(source, targetParam, sourceKey);
+      if (value !== undefined) {
+        params[targetParam] = value;
+        unresolved.splice(i, 1);
+      }
+    }
+  }
+
+  if (unresolved.length > 0) {
+    return { ok: false, reason: `fixture missing for required param(s): ${unresolved.join(', ')}` };
+  }
+
+  return { ok: true, params, missing: [] };
+}
+
+async function resolveSmokeInvocation(skillId, opName, opDef, ops, mcp, stack = []) {
+  if (stack.includes(opName)) {
+    return { ok: false, reason: `discover_from cycle: ${[...stack, opName].join(' -> ')}` };
+  }
+  const nextStack = [...stack, opName];
+  const built = buildParams(opDef, skillId);
+  if (built.missing.length === 0) {
+    return { ok: true, params: built.params, runOptions: getRunOptions(opDef) };
+  }
+
+  const discovered = await resolveDiscoveryParams(skillId, opName, opDef, ops, mcp, built.params, built.missing, nextStack);
+  if (!discovered.ok) return discovered;
+  return { ok: true, params: discovered.params, runOptions: getRunOptions(opDef) };
 }
 
 function checkResult(result, returns) {
+  const payload = unwrapSmokeData(result);
+
   if (!returns || returns === 'void') return { ok: true };
-  if (typeof returns !== 'string') return { ok: true };
 
-  const isArray = returns.endsWith('[]');
-
-  if (typeof result === 'string') {
-    // Error strings
-    if (result.includes('Credential not found') || result.includes('not found'))
-      return { ok: null, reason: 'no credentials' };  // null = skip
-    if (result.includes('Execution failed:') || result.includes('Skill error:'))
-      return { ok: false, reason: result.slice(0, 120) };
-    // Might be valid non-JSON response
-    if (result.length > 2) return { ok: true };
-    return { ok: false, reason: 'empty response' };
+  if (typeof payload === 'string') {
+    if (payload.includes('Execution failed:') || payload.includes('Skill error:')) {
+      return { ok: false, reason: payload.slice(0, 120) };
+    }
+    return payload.length > 0
+      ? { ok: true }
+      : { ok: false, reason: 'empty response' };
   }
 
-  if (isArray) {
-    if (!Array.isArray(result))
-      return { ok: false, reason: `expected array, got ${typeof result}` };
-    if (result.length > 0 && !result[0].id && !result[0].name)
-      return { ok: false, reason: 'array items missing id/name' };
-    return { ok: true, count: result.length };
+  if (typeof returns === 'string') {
+    const isArray = returns.endsWith('[]');
+    if (isArray) {
+      if (!Array.isArray(payload)) {
+        return { ok: false, reason: `expected array, got ${Array.isArray(payload) ? 'array' : typeof payload}` };
+      }
+      if (payload.some(item => typeof item !== 'object' || item === null)) {
+        return { ok: false, reason: 'array contains non-object items' };
+      }
+      if (payload.length > 0 && !payload[0].id && !payload[0].name && !payload[0].url) {
+        return { ok: false, reason: 'array items missing id/name/url' };
+      }
+      return { ok: true, count: payload.length };
+    }
+
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+      return { ok: false, reason: `expected object, got ${Array.isArray(payload) ? 'array' : typeof payload}` };
+    }
+    if (returns !== 'object' && !payload.id && !payload.name && !payload.url) {
+      return { ok: false, reason: 'entity missing id/name/url' };
+    }
+    return { ok: true };
   }
 
-  // Single entity
-  if (typeof result !== 'object' || result === null)
-    return { ok: false, reason: `expected object, got ${typeof result}` };
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    return { ok: false, reason: `expected object, got ${Array.isArray(payload) ? 'array' : typeof payload}` };
+  }
+
+  const requiredKeys = Object.keys(returns);
+  const missingKeys = requiredKeys.filter(key => payload[key] === undefined);
+  if (missingKeys.length > 0) {
+    return { ok: false, reason: `object missing key(s): ${missingKeys.join(', ')}` };
+  }
   return { ok: true };
-}
-
-function isSkippableAuthError(message) {
-  return message.includes('Credential not found')
-    || message.includes('no credentials')
-    || message.includes('Multiple cookie providers found')
-    || message.includes('Multiple auth providers found')
-    || message.includes('Ask the user which one to use')
-    || message.includes('Multiple accounts')
-    || message.includes('specify one:');
-}
-
-function isLenientExternalStateError(message) {
-  if (isSkippableAuthError(message)) return true;
-
-  const authPatterns = [
-    'HTTP 401',
-    'HTTP 403',
-    'HTTP 422',
-    'Unauthorized',
-    'unauthorized',
-    'authentication_error',
-    'authentication error',
-    'not_authenticated',
-    'Invalid token',
-    'Invalid format for Authentication header',
-    'SUBSCRIPTION_TOKEN_INVALID',
-    'invalid_api_key',
-    'API key',
-  ];
-
-  if (authPatterns.some(pattern => message.includes(pattern))) {
-    return true;
-  }
-
-  return message.includes('timeout: tools/call')
-    || message.includes('timed out')
-    || message.includes('deadline has elapsed');
 }
 
 function pluralize(noun) {
@@ -512,7 +673,11 @@ async function main() {
   await mcp.connect();
   console.log(`MCP ready. Testing ${targets.length} skills.\n`);
 
-  let totalPass = 0, totalFail = 0, totalSkip = 0;
+  if (lenient) {
+    console.error('Warning: --lenient is deprecated in strict smoke mode and is currently ignored.');
+  }
+
+  let totalPass = 0, totalFail = 0, totalWriteSkip = 0;
   const failures = [];
 
   for (const skillId of targets.sort()) {
@@ -526,61 +691,38 @@ async function main() {
     const results = [];
 
     for (const [opName, opDef] of Object.entries(ops)) {
-      // Skip writes
-      if (!includeWrite && WRITE_OPS.test('.' + opName)) {
-        results.push({ op: opName, status: 'skip', reason: 'write' });
-        totalSkip++;
+      if (!getTestConfig(opDef)) {
         continue;
       }
+      const mode = getOperationMode(opName, opDef);
 
-      // Skip blocked skills/ops
-      if (SKIP_SKILLS.has(skillId) || KEYCHAIN_OPS.has(`${skillId}:${opName}`)) {
-        results.push({ op: opName, status: 'skip', reason: 'keychain' });
-        totalSkip++;
+      if (!includeWrite && mode === 'write') {
+        results.push({ op: opName, status: 'skip_write', reason: 'write' });
+        totalWriteSkip++;
         continue;
       }
 
       const returns = opDef?.returns;
-      const params = buildParams(opDef, skillId, opName);
-
-      if (params === null) {
-        results.push({ op: opName, status: 'skip', reason: 'missing required param' });
-        totalSkip++;
+      const invocation = await resolveSmokeInvocation(skillId, opName, opDef, ops, mcp);
+      if (!invocation.ok) {
+        results.push({ op: opName, status: 'fail', reason: invocation.reason });
+        totalFail++;
+        failures.push(`${skillId}:${opName} — ${invocation.reason}`);
         continue;
       }
 
-      // For get-like ops, try to get an id from a list op first
-      if ((opName.endsWith('.get') || opName.startsWith('get_')) && opDef?.params?.id && !params.id) {
-        const listOp = guessListOperation(opName, ops);
-        if (listOp) {
-          try {
-            const listParams = buildParams(ops[listOp], skillId, listOp) || {};
-            const listResult = await mcp.call(skillId, listOp, listParams);
-            if (Array.isArray(listResult) && listResult[0]?.id) {
-              params.id = String(listResult[0].id);
-            }
-          } catch {}
-        }
-        if (!params.id) {
-          results.push({ op: opName, status: 'skip', reason: 'no id from list' });
-          totalSkip++;
-          continue;
-        }
-      }
+      const { params, runOptions } = invocation;
 
       if (verbose) console.log(`    ${skillId}:${opName} params=${JSON.stringify(params)}`);
 
       try {
         const t0 = Date.now();
-        const result = await mcp.call(skillId, opName, params);
+        const result = await mcp.call(skillId, opName, params, runOptions);
         const ms = Date.now() - t0;
 
         const check = checkResult(result, returns);
 
-        if (check.ok === null) {
-          results.push({ op: opName, status: 'skip', reason: check.reason });
-          totalSkip++;
-        } else if (check.ok) {
+        if (check.ok) {
           const extra = check.count !== undefined ? ` (${check.count})` : '';
           results.push({ op: opName, status: 'pass', ms, extra });
           totalPass++;
@@ -595,34 +737,22 @@ async function main() {
           console.log(`      → ${s}`);
         }
       } catch (e) {
-        const message = e.message || String(e);
-        if (isSkippableAuthError(message) || (lenient && isLenientExternalStateError(message))) {
-          const reason = message.includes('Multiple')
-            ? 'auth choice required'
-            : message.includes('timeout')
-              ? 'external timeout'
-              : message.includes('HTTP 422')
-                ? 'external subscription/config state'
-            : 'no credentials';
-          results.push({ op: opName, status: 'skip', reason });
-          totalSkip++;
-        } else {
-          results.push({ op: opName, status: 'fail', reason: message.slice(0, 100) });
-          totalFail++;
-          failures.push(`${skillId}:${opName} — ${message.slice(0, 100)}`);
-        }
+        const message = (e.message || String(e)).slice(0, 160);
+        results.push({ op: opName, status: 'fail', reason: message });
+        totalFail++;
+        failures.push(`${skillId}:${opName} — ${message}`);
       }
     }
 
     // Print skill summary line
     const pass = results.filter(r => r.status === 'pass').length;
     const fail = results.filter(r => r.status === 'fail').length;
-    const skip = results.filter(r => r.status === 'skip').length;
+    const skipWrite = results.filter(r => r.status === 'skip_write').length;
     const total = pass + fail;
 
     let status;
     if (fail > 0) status = `\x1b[31m${pass}/${total} FAIL\x1b[0m`;
-    else if (pass === 0 && skip > 0) status = `\x1b[33mskipped\x1b[0m`;
+    else if (total === 0 && skipWrite > 0) status = `\x1b[33mwrite-only\x1b[0m`;
     else status = `\x1b[32m${pass}/${total} PASS\x1b[0m`;
 
     const details = results
@@ -630,17 +760,17 @@ async function main() {
       .map(r => `\x1b[31m✗ ${r.op}: ${r.reason}\x1b[0m`);
 
     const skipped = results
-      .filter(r => r.status === 'skip' && r.reason !== 'write')
+      .filter(r => r.status === 'skip_write')
       .map(r => `\x1b[33m⊘ ${r.op}: ${r.reason}\x1b[0m`);
 
-    console.log(`  ${skillId}: ${status}${skip > 0 ? ` (${skip} skipped)` : ''}`);
+    console.log(`  ${skillId}: ${status}${skipWrite > 0 ? ` (${skipWrite} write skipped)` : ''}`);
     for (const d of details) console.log(`    ${d}`);
     if (verbose) for (const s of skipped) console.log(`    ${s}`);
   }
 
   // Summary
   console.log(`\n${'─'.repeat(50)}`);
-  console.log(`${totalPass} passed  ${totalFail} failed  ${totalSkip} skipped`);
+  console.log(`${totalPass} passed  ${totalFail} failed  ${totalWriteSkip} write skipped`);
 
   if (failures.length > 0) {
     console.log(`\nFailures:`);

@@ -50,7 +50,7 @@ npm run mcp:call -- \
   --format json \
   --detail full
 
-# 7. Broader YAML-driven smoke test for a skill
+# 7. Strict smoke test for a skill
 npm run mcp:test -- exa --verbose
 ```
 
@@ -64,7 +64,10 @@ What each step means:
 - Step 6 is the ground-truth live `run()` path; `run()` is always live, and `remember` defaults to true when you want imported graph state to reflect the result
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
-- `mcp:test` is a broader smoke path, not a substitute for targeted inspection
+- `mcp:test` is the strict smoke path for explicitly annotated runtime coverage
+- Only operations with a `test:` block are included in default smoke
+- The only intended skip class is `skip_write` for mutating or human-gated operations
+- If a read-safe operation cannot be exercised because required params are unresolved, that is a failure, not a skip
 
 Important runtime note:
 
@@ -276,9 +279,7 @@ Useful rules:
 - Use per-operation `auth: none` for public signup/setup actions inside an otherwise-authenticated skill
 - Prefer provider auth when credentials come from another installed app or browser profile
 - If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
-- For cookie auth, retry with `params.cookie_provider` set to the chosen provider id, or persist that choice in account params for repeat use
-- `browser:` under `auth.cookies` is legacy compatibility only. Do not rely on it in new skills; prefer cookie provider skills instead
-- Prefer `brave-browser` or `firefox` as the concrete cookie-provider examples. Treat `chrome` as a lower-level Chromium keychain/decryption helper unless the runtime and docs explicitly promote it to a provider.
+- Do not encode a specific provider skill id into consumer skill YAML or smoke fixtures
 - Today `provides:` is primarily an auth contract. Do not invent broader generic provider/consumer patterns in skill YAML unless the runtime and docs explicitly support them
 - For command auth templating or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
 
@@ -327,8 +328,8 @@ Example references:
 - OAuth consumer: `skills/gmail/readme.md`
 - OAuth provider: `skills/mimestream/readme.md`
 - Cookie consumer: `skills/claude/readme.md`
-- Cookie provider: `skills/brave-browser/readme.md`, `skills/firefox/readme.md`
-- Advanced keychain/crypto/steps: `skills/brave-browser/readme.md`, `skills/chrome/readme.md`
+- Cookie provider: any skill declaring `provides: [{ service: "cookies" }]`
+- Advanced keychain/crypto/steps: see an existing cookie-provider skill
 
 ## Expressions
 
@@ -432,7 +433,86 @@ YAML-driven smoke test:
 npm run mcp:test -- exa --verbose
 ```
 
+## Smoke Metadata
+
+Use per-operation `test:` metadata to opt an operation into smoke coverage and provide fixtures, discovery, or explicit write classification.
+
+```yaml
+operations:
+  get_post:
+    description: Get one post
+    returns: post
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          limit: 3
+        map:
+          id: id
+
+  create_post:
+    description: Create one post
+    returns: post
+    test:
+      mode: write
+```
+
+Supported fields:
+
+- `test.mode: read | write`
+- `test.fixtures: { ... }`
+- `test.discover_from: <string | object | array>`
+- `test.account: <name>` when a run-level account must be passed to `run()`
+
+Fixture resolution order in `mcp:test`:
+
+1. `test.fixtures`
+2. YAML param `default`
+3. shared smoke-safe defaults from the runner
+4. declared `test.discover_from`
+
+Use `test.mode: write` for:
+
+- mutating operations
+- destructive operations
+- human-gated flows
+- actions that would send messages, emails, follows, votes, registrations, or state changes during smoke testing
+
+If an operation should not be part of default smoke, omit the `test:` block entirely.
+
 Do not add a `tests/` folder by default. For normal validation, use `mcp:call` first.
+
+## Helper Files
+
+Keep skill YAML readable. When executor logic starts looking like real code, extract it into a helper file in the skill folder and have the operation call that file.
+
+Keep in `readme.md`:
+
+- skill metadata, auth, adapters, params, returns, and short executor wiring
+- short SQL queries and short jq transforms
+- simple one-step commands where the logic is still obvious inline
+
+Move into helper files:
+
+- long AppleScript, Swift, Python, or shell logic
+- anything with loops, branching, string escaping, or manual JSON construction
+- anything large enough that syntax highlighting, direct local execution, or isolated debugging would help
+
+Preferred patterns:
+
+- use `Swift` helper files for Apple framework integrations like Contacts, EventKit, or other native macOS APIs
+- use `Python` helper files for parsing, normalization, and API glue
+- use `bash` only for thin wrappers or simple pipelines
+- keep `AppleScript` inline only when it is truly short; otherwise prefer a helper file
+
+Leading by example:
+
+- `skills/reddit/comments_post.sh`
+- `skills/hackernews/comments_post.sh`
+- `skills/facebook/get_community.sh`
+- `skills/apple-contacts/accounts.swift`
+- `skills/apple-contacts/get_person.swift`
 
 ## Validation
 
@@ -461,6 +541,9 @@ Before you commit a skill:
 - [ ] No unnecessary `response.mapping` overrides
 - [ ] Uses inline `returns:` schemas for non-entity or action-style tools
 - [ ] Direct MCP preview/full output looks correct
+- [ ] Read-safe ops are smoke-testable with `test.fixtures` and/or `test.discover_from`
+- [ ] Mutating or human-gated ops declare `test.mode: write`
+- [ ] Ops without a sensible default smoke check simply omit `test:`
 - [ ] `npm run validate` passes
 - [ ] `npm run mcp:test -- <skill> --verbose` passes
 
@@ -473,7 +556,7 @@ If you need something advanced, copy an existing skill:
 - `linear` for GraphQL
 - `youtube` for command execution
 - `gmail` + `mimestream` for provider-sourced OAuth
-- `claude` + `brave-browser` / `firefox` for cookie consumer/provider patterns
-- `brave-browser` / `chrome` for keychain, crypto, and multi-step extraction
+- `claude` plus any cookie-provider skill for consumer/provider patterns
+- an existing cookie-provider skill for keychain, crypto, and multi-step extraction
 
 If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.

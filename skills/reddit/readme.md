@@ -41,7 +41,7 @@ adapters:
     replies: .replies
 
     publish:
-      forum:
+      community:
         id: .subreddit
         name: .subreddit
         url: '"https://reddit.com/r/" + .subreddit'
@@ -60,7 +60,7 @@ adapters:
       value: .parent_id
       rel: replies_to
 
-  forum:
+  community:
     id: .name
     name: .display_name
     description: .public_description
@@ -95,6 +95,8 @@ operations:
         sort: .params.sort
       response:
         transform: '[.data.children[] | .data]'
+    test:
+      mode: read
 
   list_posts:
     description: List posts from a subreddit
@@ -114,6 +116,12 @@ operations:
         limit: .params.limit
       response:
         transform: '[.data.children[] | .data]'
+    test:
+      mode: read
+      fixtures:
+        subreddit: programming
+        sort: hot
+        limit: 3
 
   get_post:
     description: Get a Reddit post with comments
@@ -152,6 +160,16 @@ operations:
           .[0].data.children[0].data + {
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          subreddit: programming
+          sort: hot
+          limit: 3
+        map:
+          id: id
 
   comments_post:
     description: |
@@ -166,70 +184,43 @@ operations:
     command:
       binary: bash
       args:
-        - "-c"
-        - |
-          PARAM_ID="$1"; PARAM_COMMENT_LIMIT="$2"
-          curl -s -A "AgentOS/1.0" "https://www.reddit.com/comments/${PARAM_ID}.json?limit=${PARAM_COMMENT_LIMIT}" | jq '
-            def flatten_tree:
-              (. + {parent_id: (.parent_id | split("_") | .[1:] | join("_"))}),
-              (if .replies == "" then empty
-               else (.replies.data.children[] | select(.kind == "t1") | .data | flatten_tree)
-               end);
-            .[0].data.children[0].data as $post |
-            [$post] + [.[1].data.children[] | select(.kind == "t1") | .data | flatten_tree]'
-        - "--"
+        - ./comments_post.sh
         - ".params.id"
         - ".params.comment_limit"
       timeout: 30
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          subreddit: programming
+          sort: hot
+          limit: 3
+        map:
+          id: id
 
-  get_forum:
-    description: Get a subreddit with its top posts
-    returns: forum
+  get_community:
+    description: Get subreddit metadata
+    returns: community
     web_url: '"https://www.reddit.com/r/" + .params.subreddit'
     params:
       subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
-      limit: { type: integer, description: "Number of posts to include" }
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_SUBREDDIT="$1"; PARAM_LIMIT="$2"
-          SUBREDDIT="${PARAM_SUBREDDIT}"
-          LIMIT="${PARAM_LIMIT}"
-          
-          # Fetch subreddit metadata and posts
-          ABOUT=$(curl -s -A "AgentOS/1.0" "https://www.reddit.com/r/${SUBREDDIT}/about.json")
-          POSTS=$(curl -s -A "AgentOS/1.0" "https://www.reddit.com/r/${SUBREDDIT}/hot.json?limit=${LIMIT}")
-          
-          # Transform posts to entity format and combine with group metadata
-          echo "$ABOUT" | jq --argjson posts "$(echo "$POSTS" | jq '[.data.children[] | {
-            id: .data.id,
-            title: .data.title,
-            content: .data.selftext,
-            url: ("https://reddit.com" + .data.permalink),
-            author: .data.author,
-            forum: { name: .data.subreddit, url: ("https://reddit.com/r/" + .data.subreddit) },
-            engagement: { score: .data.score, comment_count: .data.num_comments },
-            published_at: (.data.created_utc | todate)
-          }]')" '
-          {
-            name: .data.name,
-            display_name: .data.display_name,
-            public_description: .data.public_description,
-            community_icon: .data.community_icon,
-            subscribers: .data.subscribers,
-            posts: $posts
-          }
-          '
-        - "--"
-        - ".params.subreddit"
-        - ".params.limit"
-      timeout: 30
+    rest:
+      method: GET
+      url: '"https://www.reddit.com/r/" + .params.subreddit + "/about.json"'
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      response:
+        root: "/data"
+    test:
+      mode: read
+      fixtures:
+        subreddit: programming
 
-  search_forums:
+  search_communities:
     description: Search for subreddits
-    returns: forum[]
+    returns: community[]
     web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
     params:
       query: { type: string, required: true, description: "Search query" }
@@ -245,6 +236,8 @@ operations:
         limit: .params.limit
       response:
         root: "/data/children"
+    test:
+      mode: read
 ---
 
 # Reddit
@@ -279,8 +272,8 @@ No authentication required, just a custom User-Agent header to avoid rate limiti
 | `search_posts` | Search posts across all of Reddit |
 | `list_posts` | List posts from a specific subreddit |
 | `get_post` | Get a single post with comments |
-| `search_forums` | Search for subreddits |
-| `get_forum` | Get metadata for a specific subreddit |
+| `search_communities` | Search for subreddits |
+| `get_community` | Get metadata for a specific subreddit |
 
 ## Examples
 

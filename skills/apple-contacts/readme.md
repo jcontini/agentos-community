@@ -164,123 +164,35 @@ operations:
         LIMIT :limit
       params:
         limit: '.params.limit // 1000'
+    test:
+      mode: read
+      fixtures:
+        limit: 10
+      discover_from:
+        op: accounts
+        map:
+          account: id
 
   get_person:
     description: Get full contact details by ID including addresses, notes, birthday
     returns: person
     params:
       id: { type: string, required: true, description: "Contact ID (ZUNIQUEID)" }
-    applescript:
-      script: |
-        set contactId to "${PARAM_ID}"
-        if contactId does not end with ":ABPerson" then
-          set contactId to contactId & ":ABPerson"
-        end if
-        
-        tell application "Contacts"
-          try
-            set p to person id contactId
-            
-            set pFirst to first name of p
-            set pLast to last name of p
-            set pMiddle to middle name of p
-            set pNick to nickname of p
-            set pOrg to organization of p
-            set pJob to job title of p
-            set pDept to department of p
-            set pNote to note of p
-            set pBday to birth date of p
-            set pImage to image of p
-            
-            if pFirst is missing value then set pFirst to ""
-            if pLast is missing value then set pLast to ""
-            if pMiddle is missing value then set pMiddle to ""
-            if pNick is missing value then set pNick to ""
-            if pOrg is missing value then set pOrg to ""
-            if pJob is missing value then set pJob to ""
-            if pDept is missing value then set pDept to ""
-            if pNote is missing value then set pNote to ""
-            
-            set hasPhoto to "false"
-            if pImage is not missing value then set hasPhoto to "true"
-            
-            set bdayStr to ""
-            if pBday is not missing value then
-              set bdayStr to (year of pBday as string) & "-" & text -2 thru -1 of ("0" & ((month of pBday) as integer)) & "-" & text -2 thru -1 of ("0" & (day of pBday))
-            end if
-            
-            set displayName to ""
-            if pFirst is not "" then set displayName to pFirst
-            if pLast is not "" then
-              if displayName is not "" then set displayName to displayName & " "
-              set displayName to displayName & pLast
-            end if
-            if displayName is "" and pOrg is not "" then set displayName to pOrg
-            
-            -- Build phones array
-            set phoneList to ""
-            repeat with ph in phones of p
-              if phoneList is not "" then set phoneList to phoneList & ","
-              set phoneList to phoneList & "{\"label\":\"" & label of ph & "\",\"value\":\"" & value of ph & "\"}"
-            end repeat
-            
-            -- Build emails array
-            set emailList to ""
-            repeat with em in emails of p
-              if emailList is not "" then set emailList to emailList & ","
-              set emailList to emailList & "{\"label\":\"" & label of em & "\",\"value\":\"" & value of em & "\"}"
-            end repeat
-            
-            -- Build URLs array
-            set urlList to ""
-            repeat with u in urls of p
-              if urlList is not "" then set urlList to urlList & ","
-              set urlList to urlList & "{\"label\":\"" & label of u & "\",\"value\":\"" & value of u & "\"}"
-            end repeat
-            
-            -- Build addresses array
-            set addrList to ""
-            repeat with a in addresses of p
-              if addrList is not "" then set addrList to addrList & ","
-              set aLabel to label of a
-              set aStreet to street of a
-              set aCity to city of a
-              set aState to state of a
-              set aZip to zip of a
-              set aCountry to country of a
-              if aLabel is missing value then set aLabel to ""
-              if aStreet is missing value then set aStreet to ""
-              if aCity is missing value then set aCity to ""
-              if aState is missing value then set aState to ""
-              if aZip is missing value then set aZip to ""
-              if aCountry is missing value then set aCountry to ""
-              set addrList to addrList & "{\"label\":\"" & aLabel & "\",\"street\":\"" & aStreet & "\",\"city\":\"" & aCity & "\",\"state\":\"" & aState & "\",\"postal_code\":\"" & aZip & "\",\"country\":\"" & aCountry & "\"}"
-            end repeat
-            
-            set output to "{"
-            set output to output & "\"id\":\"" & id of p & "\","
-            set output to output & "\"first_name\":\"" & pFirst & "\","
-            set output to output & "\"last_name\":\"" & pLast & "\","
-            set output to output & "\"middle_name\":\"" & pMiddle & "\","
-            set output to output & "\"nickname\":\"" & pNick & "\","
-            set output to output & "\"display_name\":\"" & displayName & "\","
-            set output to output & "\"organization\":\"" & pOrg & "\","
-            set output to output & "\"job_title\":\"" & pJob & "\","
-            set output to output & "\"department\":\"" & pDept & "\","
-            set output to output & "\"birthday\":\"" & bdayStr & "\","
-            set output to output & "\"notes\":\"" & pNote & "\","
-            set output to output & "\"has_photo\":" & hasPhoto & ","
-            set output to output & "\"phones\":[" & phoneList & "],"
-            set output to output & "\"emails\":[" & emailList & "],"
-            set output to output & "\"urls\":[" & urlList & "],"
-            set output to output & "\"addresses\":[" & addrList & "]"
-            set output to output & "}"
-            
-            return output
-          on error errMsg
-            return "{\"error\":\"" & errMsg & "\"}"
-          end try
-        end tell
+    command:
+      binary: swift
+      args:
+        - ./get_person.swift
+        - ".params.id"
+      working_dir: .
+      timeout: 20
+    test:
+      mode: read
+      discover_from:
+        op: list_persons
+        params:
+          limit: 10
+        map:
+          id: id
 
   search_persons:
     description: Search contacts by any text within a specific account
@@ -336,60 +248,29 @@ operations:
       params:
         query: .params.query
         limit: '.params.limit // 1000'
+    test:
+      mode: read
+      fixtures:
+        query: a
+        limit: 10
+      discover_from:
+        op: accounts
+        map:
+          account: id
 
   accounts:
     operation: read
     label: "List accounts"
     description: List available contact accounts/containers (iCloud, local, work, etc.)
-    returns:
-      id: string
-      name: string
-      count: integer
-      is_default: boolean
-    swift:
-      script: |
-        import Contacts
-        import Foundation
-        
-        let store = CNContactStore()
-        let semaphore = DispatchSemaphore(value: 0)
-        var accessGranted = false
-        
-        store.requestAccess(for: .contacts) { granted, _ in
-            accessGranted = granted
-            semaphore.signal()
-        }
-        semaphore.wait()
-        
-        guard accessGranted else {
-            fputs("{\"error\": \"Contacts access denied. Grant in System Settings > Privacy > Contacts\"}\n", stderr)
-            exit(1)
-        }
-        
-        let defaultId = store.defaultContainerIdentifier()
-        let containers = try! store.containers(matching: nil)
-        var results: [[String: Any]] = []
-        
-        for c in containers {
-            let pred = CNContact.predicateForContactsInContainer(withIdentifier: c.identifier)
-            let count = try! store.unifiedContacts(matching: pred, keysToFetch: []).count
-            // Strip :ABAccount suffix to match directory names in AddressBook/Sources/
-            let dirId = c.identifier.replacingOccurrences(of: ":ABAccount", with: "")
-            let defaultDirId = defaultId.replacingOccurrences(of: ":ABAccount", with: "")
-            results.append([
-                "id": dirId,
-                "name": c.name,
-                "count": count,
-                "is_default": dirId == defaultDirId
-            ])
-        }
-        
-        if let jsonData = try? JSONSerialization.data(withJSONObject: results, options: []),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            print(jsonString)
-        } else {
-            print("[]")
-        }
+    returns: object[]
+    command:
+      binary: swift
+      args:
+        - ./accounts.swift
+      working_dir: .
+      timeout: 20
+    test:
+      mode: read
 
   create:
     operation: create
@@ -407,38 +288,13 @@ operations:
       job_title: { type: string, description: "Job title" }
       phones: { type: array, description: "Phones [{label, value}]" }
       emails: { type: array, description: "Emails [{label, value}]" }
-    applescript:
-      script: |
-        tell application "Contacts"
-          set props to {}
-          
-          if "${PARAM_FIRST_NAME}" is not "" then set props to props & {first name:"${PARAM_FIRST_NAME}"}
-          if "${PARAM_LAST_NAME}" is not "" then set props to props & {last name:"${PARAM_LAST_NAME}"}
-          if "${PARAM_ORGANIZATION}" is not "" then set props to props & {organization:"${PARAM_ORGANIZATION}"}
-          if "${PARAM_JOB_TITLE}" is not "" then set props to props & {job title:"${PARAM_JOB_TITLE}"}
-          
-          set newPerson to make new person with properties props
-          
-          -- Add phones from array
-          ${#EACH PARAMS_PHONES}
-          make new phone at end of phones of newPerson with properties {label:"${THIS_LABEL}", value:"${THIS_VALUE}"}
-          ${/EACH}
-          
-          -- Add emails from array
-          ${#EACH PARAMS_EMAILS}
-          make new email at end of emails of newPerson with properties {label:"${THIS_LABEL}", value:"${THIS_VALUE}"}
-          ${/EACH}
-          
-          save
-          
-          set newId to id of newPerson
-          set displayName to ""
-          if first name of newPerson is not missing value then set displayName to first name of newPerson
-          if last name of newPerson is not missing value then set displayName to displayName & " " & last name of newPerson
-          if displayName is "" and organization of newPerson is not missing value then set displayName to organization of newPerson
-          
-          return "{\"id\":\"" & newId & "\",\"display_name\":\"" & displayName & "\",\"status\":\"created\"}"
-        end tell
+    command:
+      binary: swift
+      args:
+        - ./create.swift
+      stdin: '.params | tojson'
+      working_dir: .
+      timeout: 20
 
   update:
     operation: update
@@ -453,28 +309,13 @@ operations:
       last_name: { type: string, description: "Last name" }
       organization: { type: string, description: "Organization" }
       job_title: { type: string, description: "Job title" }
-    applescript:
-      script: |
-        set contactId to "${PARAM_ID}"
-        if contactId does not end with ":ABPerson" then
-          set contactId to contactId & ":ABPerson"
-        end if
-        
-        tell application "Contacts"
-          try
-            set p to person id contactId
-            
-            if "${PARAM_FIRST_NAME}" is not "" then set first name of p to "${PARAM_FIRST_NAME}"
-            if "${PARAM_LAST_NAME}" is not "" then set last name of p to "${PARAM_LAST_NAME}"
-            if "${PARAM_ORGANIZATION}" is not "" then set organization of p to "${PARAM_ORGANIZATION}"
-            if "${PARAM_JOB_TITLE}" is not "" then set job title of p to "${PARAM_JOB_TITLE}"
-            
-            save
-            return "{\"id\":\"" & id of p & "\",\"status\":\"updated\"}"
-          on error errMsg
-            return "{\"error\":\"" & errMsg & "\"}"
-          end try
-        end tell
+    command:
+      binary: swift
+      args:
+        - ./update.swift
+      stdin: '.params | tojson'
+      working_dir: .
+      timeout: 20
 
   delete:
     operation: delete
@@ -485,26 +326,13 @@ operations:
       name: string
     params:
       id: { type: string, required: true, description: "Contact ID" }
-    applescript:
-      script: |
-        set contactId to "${PARAM_ID}"
-        if contactId does not end with ":ABPerson" then
-          set contactId to contactId & ":ABPerson"
-        end if
-        
-        tell application "Contacts"
-          try
-            set p to person id contactId
-            set pName to ""
-            if first name of p is not missing value then set pName to first name of p
-            if last name of p is not missing value then set pName to pName & " " & last name of p
-            delete p
-            save
-            return "{\"status\":\"deleted\",\"name\":\"" & pName & "\"}"
-          on error errMsg
-            return "{\"error\":\"" & errMsg & "\"}"
-          end try
-        end tell
+    command:
+      binary: swift
+      args:
+        - ./delete.swift
+      stdin: '.params | tojson'
+      working_dir: .
+      timeout: 20
 
 ---
 
@@ -552,7 +380,7 @@ macOS can have multiple contact accounts (iCloud, local, Exchange, etc.). Use th
 
 | Operation | Executor | Notes |
 |-----------|----------|-------|
-| accounts | Swift (CNContactStore) | Lists contact containers |
+| accounts | Swift helper | Lists contact containers |
 | list/search | SQL | Fast indexed queries on AddressBook DB |
-| get | AppleScript | Full details with arrays |
-| create/update/delete | AppleScript | Reliable iCloud sync |
+| get | Swift helper | Full details with structured arrays |
+| create/update/delete | Swift helpers | Mutations with native Contacts APIs |

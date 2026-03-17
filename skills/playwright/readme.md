@@ -7,11 +7,6 @@ color: "#2EAD33"
 
 website: https://playwright.dev
 auth: none
-# Playwright's `cookies` operation can extract cookies from a live browser session,
-# but it's not a passive cookie provider — it requires an active CDP session.
-# Cookie reads for auth should go through passive providers like brave-browser.
-# Playwright's role in the cookie flow is the login phase (auth.cookies.login),
-# not providing cookies on demand.
 adapters:
   webpage:
     id: .url
@@ -38,7 +33,7 @@ operations:
       timeout: 45
 
   read_webpage:
-    description: Extract text or HTML content from the current page or a CSS selector
+    description: Extract text or HTML content from the current page or a CSS selector. Useful for reading `script#__NEXT_DATA__` or specific app containers before falling back to screenshots.
     returns: webpage
     params:
       selector:
@@ -199,7 +194,7 @@ operations:
       timeout: 30
 
   evaluate:
-    description: Execute arbitrary JavaScript in the page context and return the result
+    description: Execute arbitrary JavaScript in the page context and return the result. Useful for dumping `window.__NEXT_DATA__`, Apollo caches, route state, or framework globals.
     params:
       script:
         type: string
@@ -344,6 +339,10 @@ operations:
       that a page calls — e.g. to find the real backend endpoint Chase's dashboard
       hits when it loads account data.
 
+      This is especially useful for GraphQL and AppSync-backed sites. Even when
+      request metadata is limited, response bodies often reveal operation names,
+      entity shapes, pagination structure, and field-level authorization errors.
+
       Pattern uses glob syntax: "**" matches everything, "**/svc/**" matches any
       URL with /svc/ in the path. Default pattern captures all non-asset requests.
 
@@ -362,7 +361,7 @@ operations:
         description: "Milliseconds to wait after navigation for async requests (default: 5000)"
       cookies:
         type: array
-        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use brave-browser cookie_get to get these."
+        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use a cookie-provider skill if you need to source these from a browser session."
       capture_body:
         type: boolean
         description: "Capture JSON response bodies (default: true)"
@@ -390,6 +389,8 @@ Browser automation via a persistent Chromium session. Control a real browser —
 - **"I need to read a web page"** → Use **Exa** (`read_webpage`) or **Firecrawl** (`read_webpage`). They're faster, cheaper, and purpose-built for content extraction. Don't launch a browser just to read a page.
 - **"I need to search the web"** → Use **Exa** (`search`) or **Brave** (`search`). Playwright is not a search engine.
 - **"I need to check what sites were visited"** → Use the **Chrome** or **Firefox** skill (`list_webpages`, `search_webpages`). They read local history databases directly.
+- **"I already know the endpoint and just need to replay HTTP"** → Use direct HTTP (`curl` skill, shell `curl`, or a small Python script). Don't keep a browser in the loop once the browser has already taught you the contract.
+- **"I need very fast headless HTML/JS fetches"** → Use **Lightpanda** first. It is often better for high-throughput reverse engineering or quick page fetches where you do not need a visible browser or sticky session state.
 
 **Use Playwright when you need to DO things in a browser:**
 
@@ -402,6 +403,26 @@ Browser automation via a persistent Chromium session. Control a real browser —
 - Anything where cookies/auth/session state must persist across steps
 
 **Rule of thumb:** Reading content = Exa/Firecrawl. Controlling a browser = Playwright.
+
+## Complementary Tools
+
+Playwright is the main browser reverse-engineering tool, but it is not the only one you should consider.
+
+Use these together:
+
+- **Playwright** for login flows, persistent browser sessions, DOM inspection, JS evaluation, and network capture.
+- **Lightpanda** for fast headless fetches when you want HTML or rendered content quickly without Chrome overhead.
+- **Exa** for web research, finding unofficial docs, GitHub repos, forum threads, and prior art before you start probing blindly.
+- **Firecrawl** when a page needs browser rendering but you mostly want content extraction instead of browser control.
+- **Curl / direct HTTP** once you know the endpoint, headers, and payload. At that point the browser has done its job.
+- **Cookie provider skills** when you need passive cookie access for runtime auth.
+
+Good reverse engineering is usually a progression:
+
+1. Search the web for prior art with Exa or Brave.
+2. Probe the live site with Playwright when you need to inspect DOM, hydration state, or network calls.
+3. Switch to direct HTTP or small scripts as soon as you have enough information to replay requests reliably.
+4. Use Lightpanda or Firecrawl when you need a cheaper or faster page-fetching path than a full browser session.
 
 ## How It Works
 
@@ -416,6 +437,120 @@ browser stays alive — sessions, cookies, tabs persist
         ↓
 stop → kills the browser process (only when done)
 ```
+
+## Recommended Workflow
+
+When using Playwright for reverse engineering, prefer this order:
+
+1. `status` or `tabs` to see whether a useful browser session already exists.
+2. `get_webpage` to load the target page, or `new_tab` if you want to preserve the current page.
+3. `inspect` before `screenshot` to understand the DOM cheaply.
+4. `read_webpage` for targeted extraction of a container, script tag, or hidden data block.
+5. `evaluate` when the page is framework-heavy and the interesting data is already in JS memory.
+6. `capture_network` when you need the real XHR/fetch/GraphQL endpoints.
+7. `cookies` only after a login flow that happened in the Playwright browser itself.
+
+Use `screenshot` only when pixels matter or the user explicitly wants visual verification.
+Once you have the real endpoint, switch away from Playwright and implement or test the replay with direct HTTP.
+
+## Reverse Engineering Patterns
+
+### Pattern: DOM Is Sparse But The Page Is Rich
+
+If `inspect` shows a shallow or placeholder-heavy DOM but the page clearly has rich data, the app is probably hydrating from framework state or lazy-loading API data.
+
+Try these next:
+
+- `read_webpage { selector: "script#__NEXT_DATA__", format: "text" }`
+- `evaluate { script: "JSON.stringify(window.__NEXT_DATA__ || null)" }`
+- `evaluate { script: "JSON.stringify(window.__APOLLO_STATE__ || null)" }`
+- `evaluate { script: "JSON.stringify(Object.keys(window).filter(k => /apollo|graphql|next|appsync/i.test(k)))" }`
+
+This is often faster and more stable than scraping visible HTML.
+
+### Pattern: Next.js Site
+
+For Next.js pages, check `script#__NEXT_DATA__` or `window.__NEXT_DATA__` first.
+
+Common places to look:
+
+- `props.pageProps`
+- `props.pageProps.apolloState`
+- route params and legacy IDs embedded in page props
+- server-rendered entities that are easier to map than the DOM
+
+If the site uses Apollo, `__NEXT_DATA__` may already contain a normalized cache you can map directly.
+
+### Pattern: Apollo Or Normalized Cache
+
+If you find Apollo-style data:
+
+- look for `ROOT_QUERY`
+- find references such as `Book:...`, `User:...`, `Review:...`
+- use the cache to infer stable entity IDs, connection edges, and field names
+- prefer this public hydrated data for initial read-only operations before trying to replay private requests
+
+This is especially useful when network replay is incomplete but page hydration is intact.
+
+### Pattern: GraphQL Or AppSync
+
+If you suspect GraphQL:
+
+- run `capture_network` with a narrow pattern like `**graphql**` or `**appsync-api**`
+- increase `wait` to `8000` to `15000` for SPAs with deferred calls
+- inspect response bodies for operation names, entity types, pagination, and auth errors
+
+If the response body contains messages like `Not Authorized to access ...`, that usually means:
+
+- the endpoint itself is reachable
+- some fields are public
+- some fields are viewer-specific
+
+Treat that as a signal to split public and authenticated slices, not as a dead end.
+
+After you discover the GraphQL document and auth material:
+
+- replay it directly with `curl`, Python, or the target skill implementation
+- keep Playwright for discovery, not for every production read
+- prefer browser-free replays for repeatability, speed, and clearer failure modes
+
+### Pattern: Authenticated Discovery
+
+Use passive cookie provider skills for runtime cookie auth in product skills. Use Playwright for:
+
+- login flows
+- session establishment
+- interactive auth debugging
+- network capture against an already-authenticated page
+
+Do not treat Playwright as the default passive cookie source for other skills.
+
+### Pattern: Use The Browser To Learn, Then Leave The Browser
+
+This is often the right progression for modern sites:
+
+1. Use Playwright to inspect the page and capture network traffic.
+2. Extract the GraphQL query, REST URL, headers, cookies, page hydration data, or API key.
+3. Reproduce the request outside the browser with direct HTTP.
+4. Build the real skill operation on the direct replay, not on continued browser automation.
+
+Example:
+
+- Goodreads public book pages were best discovered with Playwright.
+- Once the AppSync endpoint, API key, and query documents were known, direct Python/HTTP replay was the better implementation path for public book reads, reviews, and similar books.
+
+### Pattern: Navigation Is Flaky But Network Capture Works
+
+Some sites are fragile under ordinary page extraction but still produce useful data through `capture_network`.
+
+If `get_webpage`, `read_webpage`, or `evaluate` are inconsistent:
+
+- keep the browser running
+- verify the current tab with `status`
+- call `capture_network` directly on the target URL
+- narrow the pattern to reduce noise
+
+That can still surface the backend contract even when DOM extraction is unreliable.
 
 ## Operations
 
@@ -503,6 +638,72 @@ capture_network { url: "https://secure.chase.com/web/auth/dashboard", cookies: [
 capture_network { url: "https://example.com/dashboard", pattern: "**/api/**", wait: 3000 }
 → { captured: [{url: ".../api/user", method: "GET", status: 200, body: {name: "..."}}], count: 1 }
 ```
+
+Targeted patterns are usually better than `**`:
+
+```text
+"**graphql**"         → GraphQL endpoints
+"**appsync-api**"     → AWS AppSync backends
+"**/api/**"           → REST APIs
+"**/svc/**"           → service-style backends
+"**/ajax/**"          → older AJAX endpoints
+```
+
+If a page makes deferred async requests, increase `wait` before assuming nothing interesting happened.
+
+## Examples: Reverse Engineering
+
+### Example: Next.js Hydration Probe
+
+```text
+get_webpage { url: "https://example.com/product/123" }
+inspect { selector: "body" }
+read_webpage { selector: "script#__NEXT_DATA__", format: "text" }
+evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps ?? null)" }
+```
+
+### Example: Apollo Cache Probe
+
+```text
+evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps?.apolloState ?? null)" }
+evaluate { script: "JSON.stringify(window.__APOLLO_STATE__ || null)" }
+```
+
+### Example: GraphQL Discovery
+
+```text
+capture_network {
+  url: "https://example.com/dashboard",
+  pattern: "**graphql**",
+  wait: 10000,
+  capture_body: true
+}
+```
+
+### Example: Goodreads Public Book Page
+
+Goodreads book pages are a good example of why you should not jump straight to DOM scraping.
+
+Useful sequence:
+
+```text
+get_webpage { url: "https://www.goodreads.com/book/show/4934" }
+inspect { selector: "body" }
+read_webpage { selector: "script#__NEXT_DATA__", format: "text" }
+evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps?.apolloState ?? null)" }
+capture_network {
+  url: "https://www.goodreads.com/book/show/4934",
+  pattern: "**appsync-api**",
+  wait: 8000,
+  capture_body: true
+}
+```
+
+In practice this surfaces:
+
+- normalized Apollo data already embedded in `__NEXT_DATA__`
+- AppSync GraphQL responses for things like genres, similar books, and reviews
+- field-level auth errors that help distinguish public data from viewer-only enrichments
 
 ## Selectors
 

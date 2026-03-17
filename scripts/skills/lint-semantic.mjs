@@ -220,7 +220,7 @@ function lintSkill(frontmatter) {
   }
 
   if (frontmatter.auth?.cookies && Object.prototype.hasOwnProperty.call(frontmatter.auth.cookies, 'browser')) {
-    issues.push(issue('warn', 'auth.cookies.browser', 'legacy cookie-browser shortcut found; prefer cookie provider skills'));
+    issues.push(issue('error', 'auth.cookies.browser', 'unsupported cookie-browser field found; use cookie provider skills instead'));
   }
 
   walkStrings(frontmatter, '', (value, path) => {

@@ -376,11 +376,6 @@
               "items": { "type": "string" },
               "description": "Specific cookie names to extract. If omitted, all cookies for the domain are used."
             },
-            "browser": {
-              "type": "string",
-              "enum": ["firefox", "chrome"],
-              "description": "Legacy browser hint kept for compatibility with older skills. Prefer cookie provider discovery instead of relying on this field in new skills."
-            },
             "session_duration": {
               "type": "string",
               "description": "Estimated session lifetime (e.g., '30d', '8h'). Used for credential expiry."

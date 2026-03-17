@@ -15,7 +15,7 @@ auth: none
 # ═══════════════════════════════════════════════════════════════════════════════
 
 adapters:
-  forum:
+  community:
     id: .id
     name: .name
     description: .description
@@ -30,9 +30,9 @@ adapters:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  get_forum:
+  get_community:
     description: Get metadata for a public Facebook group
-    returns: forum
+    returns: community
     params:
       group:
         type: string
@@ -45,115 +45,15 @@ operations:
     command:
       binary: bash
       args:
-        - "-c"
-        - |
-          PARAM_GROUP="$1"; PARAM_INCLUDE_MEMBERS="$2"
-          set -e
-          GROUP_PARAM="${PARAM_GROUP}"
-          INCLUDE_MEMBERS="${PARAM_INCLUDE_MEMBERS}"
-          
-          # Extract group name/ID from parameter
-          # Handle: "becomingaportuguesecitizen", "23386646249", or full URL
-          if [[ "$GROUP_PARAM" == *"facebook.com/groups/"* ]]; then
-            GROUP_NAME=$(echo "$GROUP_PARAM" | sed -E 's|.*facebook.com/groups/([^/]+).*|\1|')
-          else
-            GROUP_NAME="$GROUP_PARAM"
-          fi
-          
-          GROUP_URL="https://www.facebook.com/groups/$GROUP_NAME/"
-          
-          # Step 1: Fetch og meta tags with curl (fast)
-          HTML=$(curl -sL -H "User-Agent: Mozilla/5.0" "$GROUP_URL" 2>/dev/null || echo "")
-          
-          if [ -z "$HTML" ]; then
-            echo '{"error": "Failed to fetch group page. Group may be private or not found."}'
-            exit 1
-          fi
-          
-          # Extract group ID from al:ios:url or al:android:url
-          GROUP_ID=$(echo "$HTML" | grep -oE 'fb://group/[0-9]+' | head -1 | sed 's|fb://group/||' || echo "")
-          
-          # Extract og:title (e.g., "Becoming a Portuguese Citizen | Facebook")
-          TITLE=$(echo "$HTML" | grep -oE '<meta[^>]*property="og:title"[^>]*content="([^"]+)"' | sed -E 's/.*content="([^"]+)".*/\1/' | sed 's/ | Facebook$//' || echo "")
-          
-          # Extract og:description
-          DESCRIPTION=$(echo "$HTML" | grep -oE '<meta[^>]*property="og:description"[^>]*content="([^"]+)"' | sed -E 's/.*content="([^"]+)".*/\1/' || echo "")
-          
-          # Extract og:image (group cover/icon)
-          OG_IMAGE=$(echo "$HTML" | grep -oE '<meta[^>]*property="og:image"[^>]*content="([^"]+)"' | sed -E 's/.*content="([^"]+)".*/\1/' || echo "")
-          
-          # Step 2: Get member count with Chromium (if requested and available)
-          MEMBER_COUNT_RAW=""
-          MEMBER_COUNT_NUMERIC=""
-          
-          if [ "$INCLUDE_MEMBERS" = "true" ]; then
-            # Check if Chromium is available
-            CHROMIUM_PATH=""
-            if command -v chromium >/dev/null 2>&1; then
-              CHROMIUM_PATH="chromium"
-            elif [ -f "/Applications/Chromium.app/Contents/MacOS/Chromium" ]; then
-              CHROMIUM_PATH="/Applications/Chromium.app/Contents/MacOS/Chromium"
-            elif command -v chromium-browser >/dev/null 2>&1; then
-              CHROMIUM_PATH="chromium-browser"
-            fi
-            
-            if [ -n "$CHROMIUM_PATH" ]; then
-              # Use Chromium to get rendered DOM
-              DOM=$("$CHROMIUM_PATH" --headless --dump-dom "$GROUP_URL" 2>/dev/null || echo "")
-              
-              if [ -n "$DOM" ]; then
-                # Extract member count (e.g., "2.3K members" or "78,000 members")
-                MEMBER_COUNT_RAW=$(echo "$DOM" | grep -oE '[0-9,.]+K?\s*members?' | head -1 | sed 's/\s*members\?//' || echo "")
-                
-                # Parse to integer
-                if [ -n "$MEMBER_COUNT_RAW" ]; then
-                  # Remove commas
-                  CLEANED=$(echo "$MEMBER_COUNT_RAW" | tr -d ',')
-                  
-                  # Handle K suffix (×1000)
-                  if [[ "$CLEANED" == *K ]]; then
-                    NUM=$(echo "$CLEANED" | sed 's/K//' | awk '{printf "%.0f", $1 * 1000}')
-                    MEMBER_COUNT_NUMERIC="$NUM"
-                  # Handle M suffix (×1,000,000)
-                  elif [[ "$CLEANED" == *M ]]; then
-                    NUM=$(echo "$CLEANED" | sed 's/M//' | awk '{printf "%.0f", $1 * 1000000}')
-                    MEMBER_COUNT_NUMERIC="$NUM"
-                  # Plain number
-                  elif [[ "$CLEANED" =~ ^[0-9]+$ ]]; then
-                    MEMBER_COUNT_NUMERIC="$CLEANED"
-                  fi
-                fi
-              fi
-            fi
-          fi
-          
-          # Determine privacy (default to OPEN for public groups)
-          PRIVACY="OPEN"
-          
-          # Output JSON
-          jq -n \
-            --arg id "$GROUP_ID" \
-            --arg name "$TITLE" \
-            --arg description "$DESCRIPTION" \
-            --arg url "$GROUP_URL" \
-            --arg icon "$OG_IMAGE" \
-            --arg member_count_raw "$MEMBER_COUNT_RAW" \
-            --argjson member_count_numeric "${MEMBER_COUNT_NUMERIC:-null}" \
-            --arg privacy "$PRIVACY" \
-            '{
-              id: $id,
-              name: $name,
-              description: $description,
-              url: $url,
-              icon: $icon,
-              member_count_raw: $member_count_raw,
-              member_count_numeric: $member_count_numeric,
-              privacy: $privacy
-            }'
-        - "--"
+        - ./get_community.sh
         - ".params.group"
         - ".params.include_members"
       timeout: 35
+    test:
+      mode: read
+      fixtures:
+        group: becomingaportuguesecitizen
+        include_members: false
 ---
 
 # Facebook
