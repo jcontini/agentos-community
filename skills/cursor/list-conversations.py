@@ -450,6 +450,42 @@ def show_stats():
     print()
 
 
+# ─── python: executor entry points ───────────────────────────────────────────
+
+
+def op_list_sessions():
+    """Entry point for python: executor. List sessions from JSONL only (fast)."""
+    conversations = get_jsonl_conversations()
+    return sorted(
+        conversations.values(),
+        key=lambda c: c.get("last_message_at", ""),
+        reverse=True,
+    )
+
+
+def op_backfill_session(workspace=None):
+    """Entry point for python: executor. List sessions including SQLite history."""
+    conversations = get_jsonl_conversations()
+    backfill = get_backfill_conversations(
+        workspace_filter=workspace,
+        exclude_ids=set(conversations.keys()),
+    )
+    conversations.update(backfill)
+    return sorted(
+        conversations.values(),
+        key=lambda c: c.get("last_message_at", ""),
+        reverse=True,
+    )
+
+
+def op_get_session(id):
+    """Entry point for python: executor. Get a session by UUID."""
+    conv = get_by_id(id)
+    if not conv:
+        raise ValueError(f"No transcript found for {id}")
+    return conv
+
+
 def main():
     parser = argparse.ArgumentParser(description="List Cursor session conversations")
     parser.add_argument("--id", default=None, help="Get a specific conversation by UUID")

@@ -680,5 +680,20 @@ def main():
     conn.close()
 
 
+def op_pull_document():
+    """Entry point for python: executor. Returns list of document dicts (--json --all)."""
+    import subprocess
+    script = Path(__file__).resolve()
+    result = subprocess.run(
+        [sys.executable, str(script), "--json", "--all"],
+        capture_output=True,
+        text=True,
+        cwd=script.parent,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr or result.stdout or "extract-research failed")
+    return json.loads(result.stdout)
+
+
 if __name__ == "__main__":
     main()

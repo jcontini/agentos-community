@@ -37,13 +37,9 @@ operations:
     description: Extract research reports from Cursor sub-agent conversations into the Memex
     returns: document[]
     params: {}
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "python3 ./extract-research.py --json --all 2>/dev/null"
-      working_dir: .
+    python:
+      module: ./extract-research.py
+      function: op_pull_document
       timeout: 120
 
   list_sessions:
@@ -53,13 +49,9 @@ operations:
       For full history including older sessions, use session.backfill.
     returns: session[]
     params: {}
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - "python3 ./list-conversations.py --json 2>/dev/null"
-      working_dir: .
+    python:
+      module: ./list-conversations.py
+      function: op_list_sessions
       timeout: 60
 
   backfill_session:
@@ -75,18 +67,11 @@ operations:
       workspace:
         type: string
         description: Filter to workspace path (e.g. /Users/joe/dev/agentos). Omit for all workspaces.
-    command:
-      binary: bash
+    python:
+      module: ./list-conversations.py
+      function: op_backfill_session
       args:
-        - "-l"
-        - "-c"
-        - |
-          PARAM_WORKSPACE="$1"
-          WS="${PARAM_WORKSPACE}"
-          python3 ./list-conversations.py --json --backfill ${WS:+--workspace "$WS"} 2>/dev/null
-        - "--"
-        - ".params.workspace"
-      working_dir: .
+        workspace: .params.workspace
       timeout: 300
 
   get_session:
@@ -97,15 +82,11 @@ operations:
         type: string
         required: true
         description: Session UUID
-    command:
-      binary: bash
+    python:
+      module: ./list-conversations.py
+      function: op_get_session
       args:
-        - "-l"
-        - "-c"
-        - "python3 ./list-conversations.py --id ${PARAM_ID} --json 2>/dev/null"
-        - "--"
-        - ".params.id"
-      working_dir: .
+        id: .params.id
       timeout: 30
 ---
 
