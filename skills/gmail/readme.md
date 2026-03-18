@@ -10,11 +10,13 @@ privacy_url: https://policies.google.com/privacy
 # No client_id or client_secret needed when a Google provider skill is installed.
 # For example, the system can find Mimestream's `provides: [{ service: google }]`
 # declaration and call its `credential_get` operation to get a live access token.
-auth:
-  oauth:
-    service: google
-    scopes:
-      - https://mail.google.com/
+connections:
+  gmail:
+    base_url: "https://gmail.googleapis.com/gmail/v1/users/me"
+    oauth:
+      service: google
+      scopes:
+        - https://mail.google.com/
 
 # ==============================================================================
 # ADAPTERS
@@ -109,7 +111,7 @@ operations:
       limit: { type: integer, description: "Max results (default: 20)" }
       page_token: { type: string, description: "Token for next page of results" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      url: "/messages"
       method: GET
       query:
         maxResults: ".params.limit // 20"
@@ -126,7 +128,7 @@ operations:
       id: { type: string, required: true, description: "Message ID from email.list" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id'
+      url: '"/messages/" + .params.id'
       method: GET
       query:
         format: full
@@ -139,7 +141,7 @@ operations:
       account: { type: string, description: "Gmail address" }
       limit: { type: integer, description: "Max results (default: 20)" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      url: "/messages"
       method: GET
       query:
         q: ".params.query"
@@ -157,7 +159,7 @@ operations:
       limit: { type: integer, description: "Max results (default: 20)" }
       page_token: { type: string, description: "Token for next page of results" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/threads"
+      url: "/threads"
       method: GET
       query:
         maxResults: ".params.limit // 20"
@@ -174,7 +176,7 @@ operations:
       id: { type: string, required: true, description: "Thread ID from conversation.list or email's conversation_id" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/threads/" + .params.id'
+      url: '"/threads/" + .params.id'
       method: GET
       query:
         format: full
@@ -193,7 +195,7 @@ operations:
       cc: { type: string, description: "CC recipients (comma-separated)" }
       bcc: { type: string, description: "BCC recipients (comma-separated)" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+      url: "/messages/send"
       method: POST
       body: |
         {
@@ -215,7 +217,7 @@ operations:
       bcc: { type: string, description: "BCC recipients (comma-separated)" }
       references: { type: string, description: "References header chain (from original email's data.references + message_id)" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+      url: "/messages/send"
       method: POST
       body: |
         {
@@ -236,7 +238,7 @@ operations:
       bcc: { type: string, description: "BCC recipients (comma-separated)" }
       thread_id: { type: string, description: "Original thread ID (to keep forward in same thread)" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+      url: "/messages/send"
       method: POST
       body: |
         {
@@ -255,7 +257,7 @@ operations:
       add_labels: { type: array, description: "Label IDs to add (e.g. ['STARRED', 'UNREAD', 'Label_123'])" }
       remove_labels: { type: array, description: "Label IDs to remove (e.g. ['INBOX', 'UNREAD'])" }
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/modify"'
+      url: '"/messages/" + .params.id + "/modify"'
       method: POST
       body: |
         {
@@ -270,7 +272,7 @@ operations:
       id: { type: string, required: true, description: "Message ID" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/trash"'
+      url: '"/messages/" + .params.id + "/trash"'
       method: POST
 
   untrash_email:
@@ -280,7 +282,7 @@ operations:
       id: { type: string, required: true, description: "Message ID" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id + "/untrash"'
+      url: '"/messages/" + .params.id + "/untrash"'
       method: POST
 
   batch_modify_email:
@@ -292,7 +294,7 @@ operations:
       add_labels: { type: array, description: "Label IDs to add" }
       remove_labels: { type: array, description: "Label IDs to remove" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchModify"
+      url: "/messages/batchModify"
       method: POST
       body: |
         {
@@ -308,7 +310,7 @@ operations:
       account: { type: string, description: "Gmail address" }
       ids: { type: array, required: true, description: "Array of message IDs to permanently delete (max 1000)" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchDelete"
+      url: "/messages/batchDelete"
       method: POST
       body: |
         {
@@ -330,7 +332,7 @@ operations:
       id: string
       message: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts"
+      url: "/drafts"
       method: GET
       query:
         maxResults: ".params.limit // 20"
@@ -348,7 +350,7 @@ operations:
       id: string
       message: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
+      url: '"/drafts/" + .params.id'
       method: GET
       query:
         format: full
@@ -367,7 +369,7 @@ operations:
     returns:
       id: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts"
+      url: "/drafts"
       method: POST
       body: |
         {
@@ -391,7 +393,7 @@ operations:
     returns:
       id: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
+      url: '"/drafts/" + .params.id'
       method: PUT
       body: |
         {
@@ -409,7 +411,7 @@ operations:
       id: string
       threadId: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/drafts/send"
+      url: "/drafts/send"
       method: POST
       body: |
         {
@@ -424,7 +426,7 @@ operations:
     returns:
       status: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/drafts/" + .params.id'
+      url: '"/drafts/" + .params.id'
       method: DELETE
 
   # --- Account ---
@@ -439,7 +441,7 @@ operations:
       threadsTotal: integer
       historyId: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/profile"
+      url: "/profile"
       method: GET
 
   list_labels:
@@ -451,7 +453,7 @@ operations:
       name: string
       type: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/labels"
+      url: "/labels"
       method: GET
       response:
         transform: ".labels // []"
@@ -466,7 +468,7 @@ operations:
       data: string
       size: integer
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.message_id + "/attachments/" + .params.attachment_id'
+      url: '"/messages/" + .params.message_id + "/attachments/" + .params.attachment_id'
       method: GET
 
   get_raw:
@@ -479,7 +481,7 @@ operations:
       id: string
       threadId: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + .params.id'
+      url: '"/messages/" + .params.id'
       method: GET
       query:
         format: raw
@@ -498,7 +500,7 @@ operations:
       historyId: string
       nextPageToken: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/history"
+      url: "/history"
       method: GET
       query:
         startHistoryId: ".params.start_history_id"
@@ -516,7 +518,7 @@ operations:
       responseSubject: string
       responseBodyPlainText: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/vacation"
+      url: "/settings/vacation"
       method: GET
 
   set_vacation:
@@ -535,7 +537,7 @@ operations:
       start_time: { type: integer, description: "Start time in milliseconds since epoch" }
       end_time: { type: integer, description: "End time in milliseconds since epoch" }
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/vacation"
+      url: "/settings/vacation"
       method: PUT
       body: |
         {
@@ -561,7 +563,7 @@ operations:
       name: string
       type: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/labels"
+      url: "/labels"
       method: POST
       body: |
         {
@@ -582,7 +584,7 @@ operations:
       id: string
       name: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/labels/" + .params.id'
+      url: '"/labels/" + .params.id'
       method: PATCH
       body: |
         {
@@ -599,7 +601,7 @@ operations:
     returns:
       status: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/labels/" + .params.id'
+      url: '"/labels/" + .params.id'
       method: DELETE
 
   list_filters:
@@ -611,7 +613,7 @@ operations:
       criteria: string
       action: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/filters"
+      url: "/settings/filters"
       method: GET
       response:
         transform: ".filter // []"
@@ -631,7 +633,7 @@ operations:
     returns:
       id: string
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/filters"
+      url: "/settings/filters"
       method: POST
       body: |
         {
@@ -657,7 +659,7 @@ operations:
     returns:
       status: string
     rest:
-      url: '"https://gmail.googleapis.com/gmail/v1/users/me/settings/filters/" + .params.id'
+      url: '"/settings/filters/" + .params.id'
       method: DELETE
 
   list_send_as:
@@ -670,7 +672,7 @@ operations:
       isDefault: boolean
       isPrimary: boolean
     rest:
-      url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs"
+      url: "/settings/sendAs"
       method: GET
       response:
         transform: ".sendAs // []"

@@ -52,7 +52,7 @@
     },
     "connections": {
       "type": "object",
-      "description": "Named auth contexts for multi-connection skills. Mutually exclusive with auth:. Each operation references one via connection: <name>.",
+      "description": "Named service dependencies. Each connection declares an external service with optional base_url and auth. Single-connection skills auto-infer; multi-connection skills use connection: on operations.",
       "additionalProperties": {
         "$ref": "#/definitions/connection"
       }
@@ -351,14 +351,42 @@
         "connection": {
           "type": "string",
           "description": "Named connection reference (connections model). Must match a key in skill.connections."
+        },
+        "python": {
+          "oneOf": [
+            { "type": "string", "description": "Python module path (relative to skill dir)" },
+            { "type": "object", "description": "Python executor config", "properties": {
+              "module": { "type": "string" },
+              "function": { "type": "string" }
+            }}
+          ]
+        },
+        "applescript": {
+          "type": "string",
+          "description": "AppleScript code to execute"
+        },
+        "provides": {
+          "type": "string",
+          "description": "Capability this operation provides (e.g., 'email_lookup', 'web_search')"
+        },
+        "test": {
+          "type": "object",
+          "description": "Test configuration for this operation",
+          "additionalProperties": true
+        },
+        "memex": {
+          "type": "object",
+          "description": "Memex-specific configuration",
+          "additionalProperties": true
         }
       }
     },
     "connection": {
       "type": "object",
-      "description": "Named auth context. Same auth fields as auth (cookies, header, query, body, oauth, label, help_url), plus optional description.",
+      "description": "Named service dependency. Declares a service the skill connects to, with optional base_url for URL resolution and optional auth fields.",
       "properties": {
         "description": { "type": "string" },
+        "base_url": { "type": "string", "description": "Base URL for this service. Operations with relative URLs resolve against this." },
         "header": { "type": "object", "additionalProperties": { "type": "string" } },
         "query": { "type": "object", "additionalProperties": { "type": "string" } },
         "body": { "type": "object", "additionalProperties": { "type": "string" } },

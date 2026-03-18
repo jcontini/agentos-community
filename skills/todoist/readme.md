@@ -12,11 +12,13 @@ terms_url: https://doist.com/terms-of-service
 # API: Todoist Unified API v1 (https://developer.todoist.com/api/v1/)
 # Note: REST API v2 and Sync API v9 are deprecated as of 2025
 
-auth:
-  header:
-    Authorization: '"Bearer " + .auth.key'
-  label: API Token
-  help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
+connections:
+  api:
+    base_url: "https://api.todoist.com/api/v1"
+    header:
+      Authorization: '"Bearer " + .auth.key'
+    label: API Token
+    help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -70,7 +72,7 @@ operations:
       query: { type: string, default: "today | overdue | #Inbox", description: "Todoist filter query" }
     rest:
       method: GET
-      url: https://api.todoist.com/api/v1/tasks/filter
+      url: /tasks/filter
       query:
         query: .params.query
       response:
@@ -87,7 +89,7 @@ operations:
       label: { type: string, description: "Filter by label name" }
     rest:
       method: GET
-      url: https://api.todoist.com/api/v1/tasks
+      url: /tasks
       query:
         project_id: .params.project_id
         section_id: .params.section_id
@@ -104,7 +106,7 @@ operations:
       filter: { type: string, required: true, description: "Todoist filter (e.g., 'today', 'overdue', '7 days')" }
     rest:
       method: GET
-      url: https://api.todoist.com/api/v1/tasks/filter
+      url: /tasks/filter
       query:
         query: .params.filter
       response:
@@ -118,7 +120,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: GET
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
+      url: '"/tasks/" + .params.id'
 
   create_task:
     description: Create a new task
@@ -133,7 +135,7 @@ operations:
       labels: { type: array, description: "Label names" }
     rest:
       method: POST
-      url: https://api.todoist.com/api/v1/tasks
+      url: /tasks
       body:
         content: .params.name
         description: .params.description
@@ -156,7 +158,7 @@ operations:
       project_id: { type: string, description: "Move to different project" }
     rest:
       method: POST
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
+      url: '"/tasks/" + .params.id'
       body:
         content: .params.name
         description: .params.description
@@ -171,7 +173,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/close"'
+      url: '"/tasks/" + .params.id + "/close"'
 
   reopen_task:
     description: Reopen a task
@@ -180,7 +182,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: POST
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/reopen"'
+      url: '"/tasks/" + .params.id + "/reopen"'
 
   delete_task:
     description: Delete a task
@@ -189,7 +191,7 @@ operations:
       id: { type: string, required: true, description: "Task ID" }
     rest:
       method: DELETE
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id'
+      url: '"/tasks/" + .params.id'
 
   list_projects:
     description: List all projects
@@ -197,7 +199,7 @@ operations:
     web_url: https://app.todoist.com/app/projects/active
     rest:
       method: GET
-      url: https://api.todoist.com/api/v1/projects
+      url: /projects
       response:
         root: /results
 
@@ -207,7 +209,7 @@ operations:
     web_url: https://app.todoist.com/app/labels
     rest:
       method: GET
-      url: https://api.todoist.com/api/v1/labels
+      url: /labels
       response:
         root: /results
 
@@ -225,7 +227,7 @@ operations:
     returns: task
     rest:
       method: POST
-      url: '"https://api.todoist.com/api/v1/tasks/" + .params.id + "/move"'
+      url: '"/tasks/" + .params.id + "/move"'
       body:
         project_id: .params.project_id
         section_id: .params.section_id

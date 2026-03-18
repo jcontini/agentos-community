@@ -3,10 +3,14 @@
  * Skill validation — validate, report, enforce.
  * 
  * Checks per skill:
- *   1. Schema  — YAML frontmatter matches skill.schema.json
- *   2. Entity  — All operations return valid entity types
- *   3. Mapping — Adapter mappings use valid entity properties + jaq syntax
- *   4. Icon    — icon.svg or icon.png exists
+ *   1. Schema   — YAML frontmatter matches skill.schema.json
+ *   2. Entity   — All operations return valid entity types
+ *   3. Mapping  — Adapter mappings use valid entity properties + jaq syntax
+ *   4. Icon     — icon.svg or icon.png exists
+ *   5. Semantic — Warns on structurally valid but logically wrong YAML:
+ *        • connection with no auth fields (no runtime effect)
+ *        • operation with no executor (rest/graphql/sql/command/python/etc.)
+ *        • adapter defined but no operation returns that entity type
  * 
  * Skills in .needs-work/ are shown separately but never auto-moved.
  * Fix errors, then manually move to skills/ when ready.
@@ -187,12 +191,17 @@ function checkConnections(frontmatter) {
 
   if (hasConnections) {
     const connNames = new Set(Object.keys(frontmatter.connections));
+    const singleConnection = connNames.size === 1;
     const ops = frontmatter.operations || {};
     for (const [opName, op] of Object.entries(ops)) {
       if (!op || typeof op !== 'object') continue;
       const conn = op.connection;
       if (conn === undefined || conn === null || conn === '') {
-        errors.push(`'${opName}' must specify connection: when skill uses connections:`);
+        // Auto-inference: when exactly one connection is declared, operations
+        // can omit connection: and the runtime infers the sole connection.
+        if (!singleConnection) {
+          errors.push(`'${opName}' must specify connection: when skill has multiple connections (available: ${[...connNames].join(', ')})`);
+        }
       } else if (!connNames.has(conn)) {
         errors.push(`'${opName}' references connection '${conn}' which is not in connections: (available: ${[...connNames].join(', ')})`);
       }
@@ -398,6 +407,54 @@ function collectJaqExpressions(mapping, parentPath) {
   return exprs;
 }
 
+// ============================================================================
+// SEMANTIC CHECKS — structurally valid YAML that is logically wrong or useless
+// ============================================================================
+
+const AUTH_FIELDS = new Set(['header', 'query', 'body', 'cookies', 'oauth']);
+const EXECUTOR_FIELDS = new Set(['rest', 'graphql', 'sql', 'command', 'swift', 'csv', 'keychain', 'crypto', 'steps', 'python', 'applescript', 'memex', 'plist']);
+
+function checkSemantics(frontmatter) {
+  const warnings = [];
+  const ops = frontmatter.operations || {};
+  const adapters = frontmatter.adapters || {};
+  const connections = frontmatter.connections || {};
+  const isAgentSkill = !!frontmatter.agent;
+
+  // 1. Connections are a service permission manifest. Auth-less connections are valid:
+  //    they may provide base_url for URL resolution, declare runtime dependencies,
+  //    or represent services where auth is handled internally (e.g., runtime-discovered APIs).
+  //    No warning needed for connections without explicit auth fields.
+
+  // 2. Operation has no executor — will fail at runtime
+  if (!isAgentSkill) {
+    for (const [opName, op] of Object.entries(ops)) {
+      if (!op || typeof op !== 'object') continue;
+      const hasExecutor = [...EXECUTOR_FIELDS].some(f => op[f] !== undefined && op[f] !== null);
+      if (!hasExecutor) {
+        warnings.push(`'${opName}' has no executor (rest, graphql, sql, command, python, etc.) — will fail at runtime`);
+      }
+    }
+  }
+
+  // 3. Adapter defined but no operation returns that entity type
+  if (Object.keys(adapters).length > 0 && Object.keys(ops).length > 0) {
+    const returnedTypes = new Set();
+    for (const op of Object.values(ops)) {
+      if (op && typeof op.returns === 'string' && op.returns !== 'void') {
+        returnedTypes.add(op.returns.replace(/\[\]$/, ''));
+      }
+    }
+    for (const entityName of Object.keys(adapters)) {
+      if (!returnedTypes.has(entityName)) {
+        warnings.push(`adapter '${entityName}' is defined but no operation returns '${entityName}' — unused adapter`);
+      }
+    }
+  }
+
+  return warnings;
+}
+
 function checkIcon(adapterDir) {
   const hasSvg = existsSync(join(adapterDir, 'icon.svg'));
   const hasPng = existsSync(join(adapterDir, 'icon.png'));
@@ -463,14 +520,15 @@ function renderTable(sections) {
     return ' '.repeat(lp) + text + ' '.repeat(rp);
   }
   
+  const semW = 10;
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Semantic', semW)}${RESET}${SEP}`;
   
-  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┐${RESET}`;
-  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┘${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(semW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(semW)}┘${RESET}`;
   
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 4 + 4;
+    const inner = nameWidth + 1 + colW * 4 + semW + 5;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
@@ -510,15 +568,27 @@ function renderTable(sections) {
     console.log(sectionDivider(section.label));
     
     for (const r of section.results) {
+      const warnCount = (r.semanticWarnings || []).length;
       const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass;
       const critical = !r.schema.structureValid || !r.entity.pass;
-      const nameColor = allPass ? GREEN : critical ? RED : YELLOW;
+      const nameColor = allPass && warnCount === 0 ? GREEN : allPass && warnCount > 0 ? YELLOW : critical ? RED : YELLOW;
       
+      let semCell;
+      if (warnCount === 0) {
+        semCell = cell(`${GREEN}ok${RESET}`, semW);
+      } else {
+        const label = `${warnCount} warn`;
+        const lp = Math.floor((semW - label.length) / 2);
+        const rp = semW - label.length - lp;
+        semCell = ' '.repeat(lp) + `${YELLOW}${label}${RESET}` + ' '.repeat(rp);
+      }
+
       const line = `${SEP} ${nameColor}${pad(r.name, nameWidth)}${RESET}${SEP}` +
         `${checkCell(r.schema, colW)}${SEP}` +
         `${checkCell(r.entity, colW)}${SEP}` +
         `${checkCell(r.mapping, colW)}${SEP}` +
-        `${iconCell(r.icon, colW)}${SEP}`;
+        `${iconCell(r.icon, colW)}${SEP}` +
+        `${semCell}${SEP}`;
       console.log(line);
     }
   }
@@ -537,23 +607,34 @@ function renderTable(sections) {
 
 function renderErrors(results) {
   const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass);
-  if (failing.length === 0) return;
-  
-  for (const r of failing) {
-    const allErrors = [];
-    if (!r.schema.pass)  allErrors.push(...r.schema.errors.map(e => `schema: ${e}`));
-    if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
-    if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
-    if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
-    
-    if (allErrors.length > 0) {
-      console.log(`  ❌ ${r.name}`);
-      for (const err of allErrors) {
-        console.log(`     ${err}`);
+  if (failing.length > 0) {
+    for (const r of failing) {
+      const allErrors = [];
+      if (!r.schema.pass)  allErrors.push(...r.schema.errors.map(e => `schema: ${e}`));
+      if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
+      if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
+      if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
+      
+      if (allErrors.length > 0) {
+        console.log(`  ❌ ${r.name}`);
+        for (const err of allErrors) {
+          console.log(`     ${err}`);
+        }
       }
     }
+    console.log();
   }
-  console.log();
+
+  const withWarnings = results.filter(r => (r.semanticWarnings || []).length > 0);
+  if (withWarnings.length > 0) {
+    for (const r of withWarnings) {
+      console.log(`  ⚠️  ${r.name}`);
+      for (const w of r.semanticWarnings) {
+        console.log(`     ${YELLOW}warning:${RESET} ${w}`);
+      }
+    }
+    console.log();
+  }
 }
 
 // ============================================================================
@@ -587,6 +668,7 @@ function validateSkill(skill) {
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const iconResult = checkIcon(skill.dir);
+  const semanticWarnings = canCheck ? checkSemantics(frontmatter) : [];
   
   return {
     name: skill.name,
@@ -594,6 +676,7 @@ function validateSkill(skill) {
     entity: entityResult,
     mapping: mappingResult,
     icon: iconResult,
+    semanticWarnings,
   };
 }
 
@@ -614,7 +697,7 @@ if (preCommit) {
   }
 
   const results = filtered.map(a => validateSkill(a));
-  // Pre-commit only blocks on structural YAML validity.
+
   const failures = results.filter(r => !r.schema.structureValid);
   if (failures.length > 0) {
     for (const r of failures) {
@@ -622,7 +705,18 @@ if (preCommit) {
     }
     process.exit(1);
   }
-  console.log(`✅ structural pre-commit validation passed: ${filtered.map(r => r.name).join(', ')}`);
+
+  const withWarnings = results.filter(r => (r.semanticWarnings || []).length > 0);
+  if (withWarnings.length > 0) {
+    for (const r of withWarnings) {
+      for (const w of r.semanticWarnings) {
+        console.error(`❌ ${r.name}: ${w}`);
+      }
+    }
+    process.exit(1);
+  }
+
+  console.log(`✅ pre-commit validation passed: ${filtered.map(r => r.name).join(', ')}`);
   process.exit(0);
 }
 

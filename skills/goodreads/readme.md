@@ -11,6 +11,7 @@ connections:
     description: "Public AppSync GraphQL — API key auto-discovered from JS bundles"
   web:
     description: "Goodreads user cookies for viewer-scoped data (friends, shelves, books, reviews)"
+    base_url: "https://www.goodreads.com"
     cookies:
       domain: ".goodreads.com"
     optional: true
