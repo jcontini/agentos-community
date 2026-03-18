@@ -13,10 +13,13 @@ Internal API (api.granola.ai):
   POST /v1/get-documents-batch  {"document_ids": [...]}    → {"docs": [...]}
   POST /v1/get-document-transcript {"document_id": id}     → [utterance, ...]
   POST /v1/get-document-panels  {"document_id": id}        → [panel, ...]
+  POST /v1/get-entity-set       {"entity_type": str}       → {"data": [{id, ...}]}
+  POST /v1/get-entity-batch     {"entity_type", "entity_ids"} → {"data": [full entities]}
 
-Official Enterprise API (public-api.granola.ai):
-  GET  /v1/notes           cursor pagination, API key auth (Enterprise plan only)
-  GET  /v1/notes/{id}      ?include=transcript returns transcript + summary_markdown
+Q&A/chat: chat_thread (grouping_key "meeting:{doc_id}") links to document; chat_message has thread_id.
+Web: https://notes.granola.ai/t/{thread_id}
+
+Local cache: ~/Library/Application Support/Granola/cache-v6.json — same entity shape, works offline.
 """
 
 import gzip
@@ -30,6 +33,7 @@ from urllib.request import Request, urlopen
 
 BASE_URL = "https://api.granola.ai"
 AUTH_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "supabase.json"
+CACHE_PATH = Path.home() / "Library" / "Application Support" / "Granola" / "cache-v6.json"
 
 
 def get_token() -> str:
@@ -215,39 +219,266 @@ def cmd_get(token: str, doc_id: str) -> dict:
     return meeting
 
 
-def op_list_meetings(limit: int = 20, page: int = 0) -> list:
-    """Entry point for python: executor. List recent meetings."""
-    token = get_token()
-    return cmd_list(token, limit, page)
+def cmd_list_conversations(token: str, document_id: str) -> list:
+    """List Q&A chat threads linked to a meeting document."""
+    # get-entity-set returns IDs only; we need batch to get grouping_key
+    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_thread"})
+    thread_ids = [e["id"] for e in (set_resp.get("data") or [])]
+    if not thread_ids:
+        return []
+
+    batch_resp = api_post(token, "/v1/get-entity-batch", {
+        "entity_type": "chat_thread",
+        "entity_ids": thread_ids,
+    })
+    target_key = f"meeting:{document_id}"
+    threads = []
+    for t in (batch_resp.get("data") or []):
+        gk = (t.get("data") or {}).get("grouping_key", "")
+        if gk != target_key:
+            continue
+        threads.append({
+            "id": t["id"],
+            "title": (t.get("data") or {}).get("title"),
+            "created_at": t.get("created_at"),
+            "updated_at": t.get("updated_at"),
+            "document_id": document_id,
+            "notes_url": f"https://notes.granola.ai/t/{t['id']}",
+        })
+    return sorted(threads, key=lambda x: (x["updated_at"] or ""), reverse=True)
+
+
+def cmd_get_conversation(token: str, thread_id: str) -> dict:
+    """Get a Q&A conversation thread with all messages."""
+    # Fetch thread
+    batch_resp = api_post(token, "/v1/get-entity-batch", {
+        "entity_type": "chat_thread",
+        "entity_ids": [thread_id],
+    })
+    threads = batch_resp.get("data") or []
+    if not threads:
+        die(f"Thread {thread_id} not found")
+    thread = threads[0]
+
+    # Fetch all messages and filter by thread_id
+    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_message"})
+    msg_ids = [e["id"] for e in (set_resp.get("data") or [])]
+    if not msg_ids:
+        messages = []
+    else:
+        msg_batch = api_post(token, "/v1/get-entity-batch", {
+            "entity_type": "chat_message",
+            "entity_ids": msg_ids,
+        })
+        raw_msgs = [m for m in (msg_batch.get("data") or []) if (m.get("data") or {}).get("thread_id") == thread_id]
+        raw_msgs.sort(key=lambda m: ((m.get("data") or {}).get("turn_index", 0), m.get("created_at", "")))
+        messages = []
+        for m in raw_msgs:
+            d = m.get("data") or {}
+            role = d.get("role", "unknown")
+            text = d.get("raw_text") or ""
+            for out in d.get("outputs") or []:
+                if out.get("type") == "text" and out.get("text"):
+                    text = out["text"]
+                    break
+            messages.append({
+                "role": role,
+                "text": text,
+                "turn_index": d.get("turn_index"),
+                "created_at": m.get("created_at"),
+            })
+
+    tdata = thread.get("data") or {}
+    return {
+        "id": thread["id"],
+        "title": tdata.get("title"),
+        "grouping_key": tdata.get("grouping_key"),
+        "created_at": thread.get("created_at"),
+        "updated_at": thread.get("updated_at"),
+        "notes_url": f"https://notes.granola.ai/t/{thread_id}",
+        "messages": messages,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Cache path — read from local cache-v6.json (instant, offline, no token)
+# -----------------------------------------------------------------------------
+
+
+def load_cache() -> dict:
+    """Load the Granola app's local entity cache."""
+    if not CACHE_PATH.exists():
+        die("Granola cache not found. Install and run Granola at least once.")
+    with open(CACHE_PATH) as f:
+        return json.load(f)
+
+
+def cmd_list_from_cache(limit: int = 20, page: int = 0) -> list:
+    """List meetings from local cache."""
+    data = load_cache()
+    docs = (data.get("cache", {}).get("state", {}) or {}).get("documents", {})
+    if not docs:
+        return []
+    items = [normalize_meeting(d) for d in docs.values() if not d.get("deleted_at")]
+    items.sort(key=lambda x: (x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+    start = page * limit
+    return items[start : start + limit]
+
+
+def cmd_list_conversations_from_cache(document_id: str) -> list:
+    """List Q&A threads for a meeting from local cache."""
+    data = load_cache()
+    threads = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_thread", {})
+    target_key = f"meeting:{document_id}"
+    out = []
+    for t in threads.values():
+        if t.get("deleted_at"):
+            continue
+        gk = (t.get("data") or {}).get("grouping_key", "")
+        if gk != target_key:
+            continue
+        out.append({
+            "id": t["id"],
+            "title": (t.get("data") or {}).get("title"),
+            "created_at": t.get("created_at"),
+            "updated_at": t.get("updated_at"),
+            "document_id": document_id,
+            "notes_url": f"https://notes.granola.ai/t/{t['id']}",
+        })
+    return sorted(out, key=lambda x: (x["updated_at"] or ""), reverse=True)
+
+
+def cmd_get_conversation_from_cache(thread_id: str) -> dict:
+    """Get a Q&A conversation from local cache."""
+    data = load_cache()
+    threads = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_thread", {})
+    msgs = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_message", {})
+    thread = threads.get(thread_id)
+    if not thread or thread.get("deleted_at"):
+        die(f"Thread {thread_id} not found in cache")
+    raw_msgs = [m for m in msgs.values() if (m.get("data") or {}).get("thread_id") == thread_id and not m.get("deleted_at")]
+    raw_msgs.sort(key=lambda m: ((m.get("data") or {}).get("turn_index", 0), m.get("created_at", "")))
+    messages = []
+    for m in raw_msgs:
+        d = m.get("data") or {}
+        role = d.get("role", "unknown")
+        text = d.get("raw_text") or ""
+        for out in d.get("outputs") or []:
+            if out.get("type") == "text" and out.get("text"):
+                text = out["text"]
+                break
+        messages.append({
+            "role": role,
+            "text": text,
+            "turn_index": d.get("turn_index"),
+            "created_at": m.get("created_at"),
+        })
+    tdata = thread.get("data") or {}
+    return {
+        "id": thread["id"],
+        "title": tdata.get("title"),
+        "grouping_key": tdata.get("grouping_key"),
+        "created_at": thread.get("created_at"),
+        "updated_at": thread.get("updated_at"),
+        "notes_url": f"https://notes.granola.ai/t/{thread_id}",
+        "messages": messages,
+        "source": "cache",
+    }
+
+
+def op_list_meetings(limit: int = 20, page: int = 0, source: str = "api") -> list:
+    """Entry point for python: executor. List recent meetings. source: api|cache|auto."""
+    if source == "cache":
+        return cmd_list_from_cache(limit, page)
+    if source == "api":
+        token = get_token()
+        return cmd_list(token, limit, page)
+    # auto: try API, fall back to cache
+    try:
+        token = get_token()
+        return cmd_list(token, limit, page)
+    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
+        return cmd_list_from_cache(limit, page)
 
 
 def op_get_meeting(id: str) -> dict:
-    """Entry point for python: executor. Get a meeting with full transcript."""
+    """Entry point for python: executor. Get a meeting with full transcript. API only (cache has no transcript)."""
     token = get_token()
     return cmd_get(token, id)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        die("Usage: granola.py <list|get|search> [args...]")
-
+def op_list_conversations(document_id: str, source: str = "api") -> list:
+    """Entry point for python: executor. List Q&A conversations for a meeting. source: api|cache|auto."""
+    if source == "cache":
+        return cmd_list_conversations_from_cache(document_id)
+    if source == "api":
+        token = get_token()
+        return cmd_list_conversations(token, document_id)
+    # auto: try API, fall back to cache
     try:
         token = get_token()
-    except SystemExit:
-        raise
-    except Exception as e:
-        die(f"Auth error: {e}")
+        return cmd_list_conversations(token, document_id)
+    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
+        return cmd_list_conversations_from_cache(document_id)
+
+
+def op_get_conversation(thread_id: str, source: str = "api") -> dict:
+    """Entry point for python: executor. Get a Q&A conversation with messages. source: api|cache|auto."""
+    if source == "cache":
+        return cmd_get_conversation_from_cache(thread_id)
+    if source == "api":
+        token = get_token()
+        return cmd_get_conversation(token, thread_id)
+    # auto: try API, fall back to cache
+    try:
+        token = get_token()
+        out = cmd_get_conversation(token, thread_id)
+        out["source"] = "api"
+        return out
+    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
+        return cmd_get_conversation_from_cache(thread_id)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        die("Usage: granola.py <list|get|list_conversations|get_conversation> [args...]")
 
     cmd = sys.argv[1]
     try:
         if cmd == "list":
             limit = int(sys.argv[2]) if len(sys.argv) > 2 else 20
             page = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-            result = cmd_list(token, limit, page)
+            source = sys.argv[4] if len(sys.argv) > 4 else "api"
+            if source == "cache":
+                result = cmd_list_from_cache(limit, page)
+            else:
+                token = get_token()
+                result = cmd_list(token, limit, page)
         elif cmd == "get":
             if len(sys.argv) < 3:
                 die("Usage: granola.py get <doc_id>")
+            token = get_token()
             result = cmd_get(token, sys.argv[2])
+        elif cmd == "list_conversations":
+            if len(sys.argv) < 3:
+                die("Usage: granola.py list_conversations <document_id> [api|cache]")
+            doc_id = sys.argv[2]
+            source = sys.argv[3] if len(sys.argv) > 3 else "api"
+            if source == "cache":
+                result = cmd_list_conversations_from_cache(doc_id)
+            else:
+                token = get_token()
+                result = cmd_list_conversations(token, doc_id)
+        elif cmd == "get_conversation":
+            if len(sys.argv) < 3:
+                die("Usage: granola.py get_conversation <thread_id> [api|cache]")
+            thread_id = sys.argv[2]
+            source = sys.argv[3] if len(sys.argv) > 3 else "api"
+            if source == "cache":
+                result = cmd_get_conversation_from_cache(thread_id)
+            else:
+                token = get_token()
+                result = cmd_get_conversation(token, thread_id)
         else:
             die(f"Unknown command: {cmd}")
 
