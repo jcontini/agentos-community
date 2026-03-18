@@ -1,7 +1,8 @@
-# Pre-commit: structural YAML validation + security checks, scoped to staged skills
+# Pre-commit: structural + semantic YAML validation + security checks, scoped to staged skills
 #
 # Checks (blocking):
 # - Structural validation — is the YAML frontmatter valid?
+# - Semantic validation — connections have auth, operations have executors, adapters are used
 # - Security checks — no credential exposure patterns
 #
 # NOT checked here (belong in `npm run validate` / CI):

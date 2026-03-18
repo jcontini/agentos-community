@@ -2,7 +2,6 @@
 
 import html
 import json
-import os
 import re
 import subprocess
 import sys
@@ -19,8 +18,6 @@ FALLBACK_GRAPHQL_ENDPOINT = (
     "https://kxbwmqov6jgg3daaamb744ycu4.appsync-api.us-east-1.amazonaws.com/graphql"
 )
 FALLBACK_GRAPHQL_API_KEY = "da2-xpgsdydkbregjhpr6ejzqdhuwy"
-RUNTIME_CACHE_TTL_SECONDS = 60 * 60
-RUNTIME_CACHE_PATH = os.path.join(os.path.dirname(__file__), ".runtime-cache.json")
 APPSYNC_ENDPOINT_RE = re.compile(
     r'"graphql":\{"apiKey":"(da2-[a-z0-9]+)","endpoint":"(https://[a-z0-9]+\.appsync-api\.[a-z0-9-]+\.amazonaws\.com/graphql)"'
 )
@@ -161,31 +158,6 @@ def parse_review_id(review: dict[str, Any]) -> str | None:
     return str(review_id) if review_id else None
 
 
-def read_runtime_cache() -> dict[str, Any] | None:
-    try:
-        with open(RUNTIME_CACHE_PATH, "r", encoding="utf-8") as handle:
-            cached = json.load(handle)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return None
-
-    discovered_at = cached.get("discovered_at")
-    if not isinstance(discovered_at, (int, float)):
-        return None
-    if time.time() - discovered_at > RUNTIME_CACHE_TTL_SECONDS:
-        return None
-    return cached
-
-
-def write_runtime_cache(runtime: dict[str, Any]) -> None:
-    payload = dict(runtime)
-    payload["discovered_at"] = time.time()
-    try:
-        with open(RUNTIME_CACHE_PATH, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle)
-    except OSError:
-        pass
-
-
 def _make_runtime(endpoint: str, api_key: str, source: str) -> dict[str, Any]:
     return {
         "graphql_endpoint": endpoint,
@@ -314,48 +286,59 @@ def discover_runtime(
     *,
     html_text: str | None = None,
     page_url: str | None = None,
-) -> dict[str, Any]:
+    cache: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], bool]:
     """Resolve AppSync transport config.
 
-    Priority: cache → JS bundle extraction → browser capture → hardcoded fallback.
+    Priority: graph cache → JS bundle extraction → browser capture → hardcoded fallback.
+    Returns (runtime, was_cached) — callers use was_cached to decide whether to
+    write back via __cache__.
     """
-    cached = read_runtime_cache()
-    if cached:
+    if cache and cache.get("graphql_endpoint") and cache.get("x_api_key"):
         return _make_runtime(
-            cached["graphql_endpoint"],
-            cached["x_api_key"],
-            cached.get("source", "runtime_cache"),
-        )
+            cache["graphql_endpoint"],
+            cache["x_api_key"],
+            cache.get("source", "graph_cache"),
+        ), True
 
     if html_text:
         runtime = discover_from_bundle(html_text)
         if runtime:
-            write_runtime_cache(runtime)
-            return runtime
+            return runtime, False
 
     if page_url:
-        # Fetch HTML ourselves if the caller didn't provide it
         try:
             html_text = fetch_html(page_url)
             runtime = discover_from_bundle(html_text)
             if runtime:
-                write_runtime_cache(runtime)
-                return runtime
+                return runtime, False
         except (HTTPError, URLError, OSError):
             pass
 
         runtime = discover_via_browser(page_url)
         if runtime:
-            write_runtime_cache(runtime)
-            return runtime
+            return runtime, False
 
-    runtime = _make_runtime(
+    return _make_runtime(
         FALLBACK_GRAPHQL_ENDPOINT,
         FALLBACK_GRAPHQL_API_KEY,
         "hardcoded_fallback",
-    )
-    write_runtime_cache(runtime)
-    return runtime
+    ), False
+
+
+def _wrap_result(result: Any, runtime: dict[str, Any], was_cached: bool) -> Any:
+    """If runtime was freshly discovered, wrap the result with __cache__ for
+    graph-backed persistence. Otherwise return the result unchanged."""
+    if was_cached:
+        return result
+    return {
+        "__cache__": {
+            "graphql_endpoint": runtime["graphql_endpoint"],
+            "x_api_key": runtime["x_api_key"],
+            "source": runtime.get("source", "discovered"),
+        },
+        "__result__": result,
+    }
 
 
 def graphql_request(
@@ -570,7 +553,7 @@ def get_public_book(book_id: str) -> dict[str, Any]:
     return map_book_payload(load_book_page(book_id))
 
 
-def list_book_reviews(book_id: str, limit: int) -> list[dict[str, Any]]:
+def list_book_reviews(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     page = load_book_page(book_id)
     work = page["work"] or {}
     work_id = work.get("id")
@@ -629,7 +612,7 @@ query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput
   }
 }
 """.strip()
-    runtime = discover_runtime(html_text=page["html"], page_url=page["url"])
+    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
     data = graphql_request(
         query,
         {
@@ -639,10 +622,11 @@ query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput
         runtime,
     )
     edges = (((data.get("getReviews") or {}).get("edges")) or [])
-    return map_review_list(apollo, edges, book)
+    reviews = map_review_list(apollo, edges, book)
+    return _wrap_result(reviews, runtime, was_cached)
 
 
-def list_similar_books(book_id: str, limit: int) -> list[dict[str, Any]]:
+def list_similar_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     page = load_book_page(book_id)
     book = page["book"]
     query = """
@@ -669,7 +653,7 @@ query getSimilarBooks($id: ID!, $limit: Int!) {
   }
 }
 """.strip()
-    runtime = discover_runtime(html_text=page["html"], page_url=page["url"])
+    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
     data = graphql_request(query, {"id": book.get("id"), "limit": limit}, runtime)
     edges = (((data.get("getSimilarBooks") or {}).get("edges")) or [])
     books = []
@@ -688,10 +672,10 @@ query getSimilarBooks($id: ID!, $limit: Int!) {
                 "web_url": web_url,
             }
         )
-    return books
+    return _wrap_result(books, runtime, was_cached)
 
 
-def search_books(query: str, limit: int) -> list[dict[str, Any]]:
+def search_books(query: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     """Search books via the public AppSync getSearchSuggestions endpoint."""
     gql = """
 query getSearchSuggestions($searchQuery: String!) {
@@ -712,7 +696,7 @@ query getSearchSuggestions($searchQuery: String!) {
   }
 }
 """.strip()
-    runtime = discover_runtime(page_url=f"{BASE_URL}/book/show/1")
+    runtime, was_cached = discover_runtime(page_url=f"{BASE_URL}/book/show/1", cache=cache)
     data = graphql_request(gql, {"searchQuery": query}, runtime)
     edges = (((data.get("getSearchSuggestions") or {}).get("edges")) or [])
     books = []
@@ -733,10 +717,10 @@ query getSearchSuggestions($searchQuery: String!) {
                 "web_url": web_url,
             }
         )
-    return books
+    return _wrap_result(books, runtime, was_cached)
 
 
-def list_series_books(book_id: str, limit: int) -> list[dict[str, Any]]:
+def list_series_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     """List all books in a series, given any book_id that belongs to a series."""
     page = load_book_page(book_id)
     apollo = page["apollo"]
@@ -771,7 +755,7 @@ query getWorksForSeries($input: GetWorksForSeriesInput!, $pagination: Pagination
   }
 }
 """.strip()
-    runtime = discover_runtime(html_text=page["html"], page_url=page["url"])
+    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
     data = graphql_request(gql, {"input": {"id": series_id}, "pagination": {"limit": limit}}, runtime)
     edges = (((data.get("getWorksForSeries") or {}).get("edges")) or [])
     books = []
@@ -794,7 +778,7 @@ query getWorksForSeries($input: GetWorksForSeriesInput!, $pagination: Pagination
                 "is_primary": edge.get("isPrimary"),
             }
         )
-    return books
+    return _wrap_result(books, runtime, was_cached)
 
 
 def section_between(html_text: str, start_marker: str, end_marker: str) -> str:
@@ -984,6 +968,8 @@ def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
 
 
 def emit_json(value: Any) -> None:
+    if isinstance(value, dict) and "__result__" in value:
+        value = value["__result__"]
     print(json.dumps(value, ensure_ascii=False))
 
 
@@ -999,7 +985,8 @@ def main() -> None:
     mode = sys.argv[1]
     if mode == "discover_runtime":
         page_url = sys.argv[2] if len(sys.argv) > 2 else None
-        emit_json(discover_runtime(page_url=page_url))
+        runtime, _was_cached = discover_runtime(page_url=page_url)
+        emit_json(runtime)
         return
 
     if mode == "search_books":

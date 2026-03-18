@@ -11,6 +11,7 @@ This is Layer 4 of the reverse-engineering docs:
 - **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md) — credentials, sessions, rotating config
 - **Layer 4: Content** (this file) — extracting data from HTML when there is no API
 - **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
 
 ---
 

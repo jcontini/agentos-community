@@ -405,6 +405,7 @@ operations:
       args:
         book_id: .params.book_id
         limit: '.params.limit // 30'
+        cache: .cache
       timeout: 30
     test:
       mode: read
@@ -425,6 +426,7 @@ operations:
       args:
         book_id: .params.book_id
         limit: '.params.limit // 20'
+        cache: .cache
       timeout: 30
     test:
       mode: read
@@ -445,6 +447,7 @@ operations:
       args:
         book_id: .params.book_id
         limit: '.params.limit // 20'
+        cache: .cache
       timeout: 30
     test:
       mode: read
@@ -465,6 +468,7 @@ operations:
       args:
         query: .params.query
         limit: '.params.limit // 10'
+        cache: .cache
       timeout: 15
     test:
       mode: read
@@ -774,7 +778,7 @@ This means the best public-first strategy is:
 
 The AppSync endpoint and API key are **discovered at runtime**, not hardcoded. The discovery chain is:
 
-1. **Cache** — `.runtime-cache.json` with 1-hour TTL (instant)
+1. **Graph Cache** — sandbox storage on the skill's graph node (instant, persisted across restarts)
 2. **JS Bundle** — extract Prod config from the Next.js `_app` chunk (~1-2s, no browser needed)
 3. **Browser Capture** — stealth Playwright watches AppSync network traffic (~15-20s fallback)
 4. **Hardcoded Fallback** — known-good values as last resort

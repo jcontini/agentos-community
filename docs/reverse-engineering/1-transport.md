@@ -2,13 +2,14 @@
 
 How to get a response from a server that doesn't want to talk to you.
 
-This is Layer 1 of three reverse-engineering docs:
+This is Layer 1 of the reverse-engineering docs:
 
 - **Layer 1: Transport** (this file) — TLS fingerprinting, headers, WAF bypass, headless stealth
 - **Layer 2: Discovery** — [2-discovery.md](2-discovery.md) — finding structured data in pages and bundles
 - **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md) — credentials, sessions, rotating config
 - **Layer 4: Content** — [4-content.md](4-content.md) — extracting data from HTML when there is no API
 - **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
 
 ---
 

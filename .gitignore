@@ -11,8 +11,5 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Skill runtime artifacts
-.runtime-cache.json
-
 # Local draft skills not ready for tracking yet
 skills/.needs-work/

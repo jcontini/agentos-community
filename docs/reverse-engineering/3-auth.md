@@ -3,13 +3,14 @@
 How to get credentials, handle rotating config, and manage authentication for
 reverse-engineered web skills.
 
-This is Layer 3 of three reverse-engineering docs:
+This is Layer 3 of the reverse-engineering docs:
 
 - **Layer 1: Transport** — [1-transport.md](1-transport.md)
 - **Layer 2: Discovery** — [2-discovery.md](2-discovery.md)
 - **Layer 3: Auth & Runtime** (this file) — credentials, sessions, rotating config
 - **Layer 4: Content** — [4-content.md](4-content.md) — HTML scraping when there is no API
 - **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
 
 ---
 
@@ -88,16 +89,20 @@ def discover_runtime(**kwargs) -> dict:
 | Headless browser capture | 10-15s | High | Site deploys new bot detection, browser not available |
 | Hardcoded fallback | ~0ms | Low (degrades over time) | API key rotated since skill was last updated |
 
-### Cache file management
+### Cache management
 
-Add `.runtime-cache.json` to `.gitignore` — it's a local runtime artifact.
-The cache stores the discovered endpoint, API key, and a timestamp. The 24-hour TTL
-balances freshness against avoiding unnecessary discovery overhead.
+> **Update:** File-based caching (`.runtime-cache.json`) has been replaced by
+> sandbox storage — the executor reads/writes `cache` vals on the skill's graph
+> node. See `spec/sandbox-storage.md` for details.
+
+The cache stores the discovered endpoint and API key. Sandbox storage persists
+across restarts and can be cleared via the standard "clear cache" action.
 
 ### Real example
 
 See `skills/goodreads/public_graph.py` `discover_runtime()` for a full
-implementation of all four tiers against Goodreads' AppSync GraphQL backend.
+implementation of all four tiers against Goodreads' AppSync GraphQL backend,
+using sandbox storage for the cache tier.
 
 ---
 

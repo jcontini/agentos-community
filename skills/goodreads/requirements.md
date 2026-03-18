@@ -266,7 +266,7 @@ The AppSync endpoint and API key are **not hardcoded as the primary path**. Inst
 
 ### Tier 1: Cache (instant)
 
-A local `.runtime-cache.json` file stores the last discovered config with a 1-hour TTL. Subsequent calls within that window are instant.
+Sandbox storage on the skill's graph node stores the last discovered config. Subsequent calls read from the graph cache — no file I/O, persists across restarts.
 
 ### Tier 2: JS Bundle Extraction (~1-2 seconds)
 
