@@ -9,10 +9,12 @@ website: https://openrouter.ai
 privacy_url: https://openrouter.ai/privacy
 terms_url: https://openrouter.ai/terms
 
-auth:
-  header: { Authorization: '"Bearer " + .auth.key' }
-  label: API Key
-  help_url: https://openrouter.ai/keys
+connections:
+  api:
+    base_url: "https://openrouter.ai/api/v1"
+    header: { Authorization: '"Bearer " + .auth.key' }
+    label: API Key
+    help_url: https://openrouter.ai/keys
 
 adapters:
   model:
@@ -30,7 +32,7 @@ operations:
     returns: model[]
     rest:
       method: GET
-      url: https://openrouter.ai/api/v1/models
+      url: /models
       response:
         root: /data
 
@@ -74,7 +76,7 @@ operations:
         description: "Optional system prompt"
     rest:
       method: POST
-      url: https://openrouter.ai/api/v1/chat/completions
+      url: /chat/completions
       body:
         model: .params.model
         messages: 'def to_openai_msg: if .role == "assistant" and .tool_calls then {role: "assistant", content: (.content // ""), tool_calls: [.tool_calls[] | {id: .id, type: "function", function: {name: .name, arguments: (.input | tojson)}}]} elif .role == "tool" then {role: "tool", tool_call_id: .tool_call_id, content: .content} else {role: .role, content: .content} end; (if .params.system then [{role: "system", content: .params.system}] else [] end) + [.params.messages[] | to_openai_msg]'

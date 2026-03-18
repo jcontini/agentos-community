@@ -5,7 +5,7 @@ description: Control Kitty windows, tabs, and panes through Kitty remote control
 icon: icon.svg
 color: "#C34C89"
 website: https://sw.kovidgoyal.net/kitty/
-auth: none
+connections: {}
 operations:
   list_os_windows:
     description: List Kitty OS windows with their focused tab state

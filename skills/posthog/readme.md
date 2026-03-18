@@ -9,11 +9,12 @@ website: https://posthog.com
 privacy_url: https://posthog.com/privacy
 terms_url: https://posthog.com/terms
 
-auth:
-  header:
-    Authorization: '"Bearer " + .auth.key'
-  label: Personal API Key
-  help_url: https://us.posthog.com/settings/user-api-keys
+connections:
+  api:
+    header:
+      Authorization: '"Bearer " + .auth.key'
+    label: Personal API Key
+    help_url: https://us.posthog.com/settings/user-api-keys
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS

@@ -1,14 +1,14 @@
 ---
 id: granola
 name: Granola
-description: Meeting transcripts and AI summaries from Granola
+description: Meeting transcripts, AI summaries, and Q&A conversations from Granola
 icon: icon.svg
 color: "#2D6A4F"
 
 website: https://granola.ai
 privacy_url: https://granola.ai/privacy
 
-auth: none
+connections: {}
 
 adapters:
   meeting:
@@ -48,12 +48,14 @@ operations:
     params:
       limit: { type: integer, description: "Number of meetings to return" }
       page: { type: integer, default: 0, description: "Page number (0-indexed)" }
+      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
     python:
       module: ./granola.py
       function: op_list_meetings
       args:
         limit: '.params.limit // 20'
         page: '.params.page // 0'
+        source: '.params.source // "api"'
       timeout: 30
 
   get_meeting:
@@ -68,6 +70,34 @@ operations:
         id: .params.id
       timeout: 60
 
+  list_conversations:
+    description: List Q&A/AI chat threads linked to a meeting transcript
+    returns: conversation[]
+    params:
+      document_id: { type: string, required: true, description: "Meeting document ID (UUID)" }
+      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
+    python:
+      module: ./granola.py
+      function: op_list_conversations
+      args:
+        document_id: .params.document_id
+        source: '.params.source // "api"'
+      timeout: 30
+
+  get_conversation:
+    description: Get a Q&A conversation with full message history
+    returns: conversation
+    params:
+      thread_id: { type: string, required: true, description: "Chat thread ID (UUID)" }
+      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
+    python:
+      module: ./granola.py
+      function: op_get_conversation
+      args:
+        thread_id: .params.thread_id
+        source: '.params.source // "api"'
+      timeout: 30
+
 ---
 
 # Granola
@@ -79,6 +109,18 @@ Meeting transcripts and AI summaries from [Granola](https://granola.ai) — auto
 Granola must be installed and have run at least once. No API key needed — auth is read directly from Granola's local token file.
 
 If you see auth errors, open the Granola app to refresh the token.
+
+## API + Cache
+
+This skill supports two data sources:
+
+| Source | When | Use case |
+|--------|------|----------|
+| **api** | Live calls with token | Freshest data, full transcripts |
+| **cache** | Reads local cache-v6.json | Instant, works offline, token expired |
+| **auto** | Try API, fall back to cache | Resilient — best of both |
+
+Pass `source: "cache"` or `source: "auto"` on `list_meetings`, `list_conversations`, and `get_conversation` to use the cache. `get_meeting` is API-only (cache has no transcript text).
 
 ## What gets created in the graph
 
@@ -132,3 +174,43 @@ Transcripts are stored as plain text in the `transcript` entity body:
 ```
 
 Speaker labels: `You` (microphone) and `Other` (system audio).
+
+## Q&A conversations
+
+Granola lets you chat with AI about meeting transcripts. Each meeting can have one or more Q&A threads.
+
+### Workflow: Find AI chats about a meeting
+
+1. **Get the meeting id** — `list_meetings` (or use the id from a meeting summary)
+2. **List threads** — `list_conversations(document_id: meeting_id)` → returns thread(s) with titles and ids
+3. **Read a thread** — `get_conversation(thread_id: thread_id)` → full user/assistant message history
+
+Via AgentOS MCP:
+
+```
+run({ skill: "granola", tool: "list_meetings", params: { limit: 10 } })
+run({ skill: "granola", tool: "list_conversations", params: { document_id: "<id from step 1>" } })
+run({ skill: "granola", tool: "get_conversation", params: { thread_id: "<id from step 2>" } })
+```
+
+### `list_conversations` — Q&A threads for a meeting
+
+```bash
+curl -X POST http://localhost:3456/api/skills/granola/conversation.list \
+  -H "X-Agent: cursor" \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "6dc09094-1c7e-421d-86c1-2b23f924b34e"}'
+```
+
+Returns threads linked to that meeting (e.g. "Validator Agent and Auto Rewrite Loop"). Use `get_conversation` with a thread ID to read the full exchange.
+
+### `get_conversation` — Full Q&A thread
+
+```bash
+curl -X POST http://localhost:3456/api/skills/granola/conversation.get \
+  -H "X-Agent: cursor" \
+  -H "Content-Type: application/json" \
+  -d '{"thread_id": "5c4516ae-1224-4e39-a642-a1b9b7e0e279"}'
+```
+
+Returns the thread with all user/assistant messages in order.

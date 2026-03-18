@@ -9,10 +9,12 @@ website: https://brave.com/search
 privacy_url: https://search.brave.com/help/privacy-policy
 terms_url: https://brave.com/terms-of-use
 
-auth:
-  header: { X-Subscription-Token: .auth.key }
-  label: API Key
-  help_url: https://api-dashboard.search.brave.com/app/keys
+connections:
+  api:
+    base_url: "https://api.search.brave.com/res/v1"
+    header: { X-Subscription-Token: .auth.key }
+    label: API Key
+    help_url: https://api-dashboard.search.brave.com/app/keys
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -42,7 +44,7 @@ operations:
       freshness: { type: string, description: "Filter by date: pd (24h), pw (week), pm (month), py (year)" }
     rest:
       method: GET
-      url: https://api.search.brave.com/res/v1/web/search
+      url: /web/search
       query:
         q: ".params.query"
         count: ".params.limit // 20"

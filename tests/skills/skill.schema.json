@@ -394,9 +394,14 @@
         "oauth": { "$ref": "#/definitions/auth/properties/oauth" },
         "label": { "type": "string" },
         "help_url": { "type": "string", "format": "uri" },
-        "optional": { "type": "boolean" }
+        "optional": { "type": "boolean" },
+        "account_params": {
+          "type": "object",
+          "description": "Account-level params for auto-injection (e.g., workspace_slug, team_id)",
+          "additionalProperties": true
+        }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "auth": {
       "type": "object",

@@ -9,10 +9,12 @@ website: https://www.anthropic.com
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
 
-auth:
-  header: { x-api-key: .auth.key }
-  label: API Key
-  help_url: https://console.anthropic.com/settings/keys
+connections:
+  api:
+    base_url: "https://api.anthropic.com/v1"
+    header: { x-api-key: .auth.key }
+    label: API Key
+    help_url: https://console.anthropic.com/settings/keys
 
 adapters:
   model:
@@ -28,7 +30,7 @@ operations:
     returns: model[]
     rest:
       method: GET
-      url: https://api.anthropic.com/v1/models
+      url: /models
       query:
         limit: '"1000"'
       headers:
@@ -76,7 +78,7 @@ operations:
         description: "Optional system prompt"
     rest:
       method: POST
-      url: https://api.anthropic.com/v1/messages
+      url: /messages
       headers:
         anthropic-version: '"2023-06-01"'
       body:

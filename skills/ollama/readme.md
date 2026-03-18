@@ -8,7 +8,8 @@ website: https://ollama.com
 privacy_url: https://ollama.com/privacy
 terms_url: https://ollama.com/terms
 
-auth: none
+connections: {}
+
 operations:
   chat:
     description: Send a chat request to the local Ollama API

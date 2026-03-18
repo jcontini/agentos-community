@@ -8,37 +8,38 @@ website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy
 terms_url: https://www.anthropic.com/terms-of-service
 
-auth:
-  cookies:
-    domain: ".claude.ai"
-    names: ["sessionKey"]
-    session_duration: "30d"
-    login:
-      account_prompt: "What email do you use for claude.ai?"
-      phases:
-        - name: request_login
-          description: "Submit email on the Claude login page to trigger a magic link email"
-          steps:
-            - { action: goto, url: "https://claude.ai/login" }
-            - { action: fill, selector: "input[type=email]", value: "${ACCOUNT}" }
-            - { action: click, selector: "button[type=submit]" }
-          returns_to_agent: >
-            Magic link requested. Check the user's email for a message from Anthropic
-            containing a claude.ai/magic-link URL. Use the Gmail skill to search for it,
-            or ask the user to paste it.
-        - name: complete_login
-          description: "Navigate to the magic link URL to complete authentication"
-          requires: [magic_link]
-          steps:
-            - { action: goto, url: "${MAGIC_LINK}" }
-            - { action: wait, url_contains: "/new" }
-          returns_to_agent: >
-            Login complete. The sessionKey cookie is now in the browser.
-            Cookie provider matchmaking will extract it automatically on the next API call.
-    verify:
-      url: "https://claude.ai/api/organizations"
-      method: GET
-      expect_status: 200
+connections:
+  web:
+    cookies:
+      domain: ".claude.ai"
+      names: ["sessionKey"]
+      session_duration: "30d"
+      login:
+        account_prompt: "What email do you use for claude.ai?"
+        phases:
+          - name: request_login
+            description: "Submit email on the Claude login page to trigger a magic link email"
+            steps:
+              - { action: goto, url: "https://claude.ai/login" }
+              - { action: fill, selector: "input[type=email]", value: "${ACCOUNT}" }
+              - { action: click, selector: "button[type=submit]" }
+            returns_to_agent: |
+              Magic link requested. Check the user's email for a message from Anthropic
+              containing a claude.ai/magic-link URL. Use the Gmail skill to search for it,
+              or ask the user to paste it.
+          - name: complete_login
+            description: "Navigate to the magic link URL to complete authentication"
+            requires: [magic_link]
+            steps:
+              - { action: goto, url: "${MAGIC_LINK}" }
+              - { action: wait, url_contains: "/new" }
+            returns_to_agent: |
+              Login complete. The sessionKey cookie is now in the browser.
+              Cookie provider matchmaking will extract it automatically on the next API call.
+      verify:
+        url: "https://claude.ai/api/organizations"
+        method: GET
+        expect_status: 200
 adapters:
   conversation:
     id: .uuid

@@ -8,12 +8,14 @@ website: https://www.moltbook.com
 privacy_url: https://www.moltbook.com/privacy
 terms_url: https://www.moltbook.com/terms
 
-auth:
-  header:
-    Authorization: '"Bearer " + .auth.key'
-  label: API Key
-  help_url: https://www.moltbook.com/skill.md
-  optional: true
+connections:
+  api:
+    base_url: "https://www.moltbook.com/api/v1"
+    header:
+      Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    help_url: https://www.moltbook.com/skill.md
+    optional: true
 
 adapters:
   post:
@@ -84,7 +86,6 @@ operations:
   list_posts:
     description: List Moltbook posts from the global feed or a specific submolt
     returns: post[]
-    auth: none
     params:
       sort:
         type: string
@@ -130,7 +131,6 @@ operations:
   get_post:
     description: Get a single Moltbook post with its current metadata
     returns: post
-    auth: none
     params:
       id:
         type: string
@@ -167,7 +167,6 @@ operations:
   search_posts:
     description: Search Moltbook posts and comments semantically
     returns: result[]
-    auth: none
     params:
       query:
         type: string
@@ -390,7 +389,6 @@ operations:
   list_comments:
     description: List comments for a Moltbook post
     returns: post[]
-    auth: none
     params:
       post_id:
         type: string
@@ -490,7 +488,6 @@ operations:
   list_communities:
     description: List Moltbook submolts (communities)
     returns: community[]
-    auth: none
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/submolts
@@ -502,7 +499,6 @@ operations:
   get_community:
     description: Get a single Moltbook submolt (community)
     returns: community
-    auth: none
     params:
       name:
         type: string
@@ -593,7 +589,6 @@ operations:
   get_account:
     description: Get another Moltbook agent profile by name
     returns: account
-    auth: none
     params:
       name:
         type: string
@@ -905,7 +900,6 @@ operations:
       api_key: string
       claim_url: string
       verification_code: string
-    auth: none
     params:
       name:
         type: string

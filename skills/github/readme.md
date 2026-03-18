@@ -5,7 +5,8 @@ description: Work with GitHub issues, pull requests, and repository files throug
 icon: icon.svg
 color: "#24292F"
 website: https://github.com
-auth: none
+
+connections: {}
 
 adapters:
   task:

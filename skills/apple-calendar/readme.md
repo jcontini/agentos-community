@@ -7,7 +7,7 @@ color: "#000000"
 
 website: https://www.apple.com/macos/
 
-auth: none
+connections: {}
 
 adapters:
   calendar:

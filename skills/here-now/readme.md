@@ -9,11 +9,13 @@ website: https://here.now
 privacy_url: https://here.now/privacy
 terms_url: https://here.now/terms
 
-auth:
-  header: { Authorization: '"Bearer " + .auth.key' }
-  label: API Key
-  optional: true
-  help_url: https://here.now
+connections:
+  api:
+    base_url: "https://here.now/api/v1"
+    header: { Authorization: '"Bearer " + .auth.key' }
+    label: API Key
+    optional: true
+    help_url: https://here.now
 # ═══════════════════════════════════════════════════════════════════════════════
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -42,7 +44,7 @@ operations:
     returns: website[]
     rest:
       method: GET
-      url: '"https://here.now/api/v1/publishes"'
+      url: /publishes
       response:
         root: /publishes
 
@@ -171,7 +173,6 @@ operations:
       dashboard, and copy their API key. Then add it to AgentOS credentials for
       permanent publishes (no 24h expiry, 60/hour rate limit).
       After getting the key: POST /sys/accounts { "skill": "here-now", "account": "default", "api_key": "..." }
-    auth: none
     params:
       email:
         type: string

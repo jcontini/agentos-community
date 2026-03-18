@@ -7,7 +7,8 @@ color: "#10B981"
 
 website: https://github.com/jcontini/agentos-community
 
-auth: none
+connections: {}
+
 ---
 
 # Code Editing

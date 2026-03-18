@@ -8,7 +8,8 @@ color: "#6366F1"
 website: https://copilot.money
 privacy_url: https://copilot.money/privacy
 
-auth: none
+connections: {}
+
 database: "~/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
 
 # ==============================================================================

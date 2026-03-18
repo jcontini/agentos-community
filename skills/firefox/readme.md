@@ -6,8 +6,7 @@ icon: icon.svg
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox
-auth: none
-
+connections: {}
 # Firefox cookies are stored plaintext in SQLite, so this skill can act as a
 # lightweight cookie provider for consumer skills that declare auth.cookies.
 provides:

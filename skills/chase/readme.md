@@ -6,28 +6,29 @@ icon: icon.svg
 color: "#117ACA"
 website: https://www.chase.com
 
-auth:
-  cookies:
-    domain: ".chase.com"
-    names: ["AMSESSION", "sessioncacheid", "auth-guid", "dps-pod-id", "x-auth-activity-info", "akaalb_secure_chase_com", "auth-site-info"]
-    session_duration: "8h"
-    login:
-      account_prompt: "What is your Chase username?"
-      phases:
-        - name: navigate_to_login
-          steps:
-            - { action: goto, url: "https://secure.chase.com/web/auth/dashboard#/dashboard/overview" }
-          returns_to_agent: |
-            The Chase login page is open in the browser.
-            Ask the user to log in (username, password, MFA). Tell them to let you know when they can see their accounts dashboard.
+connections:
+  web:
+    cookies:
+      domain: ".chase.com"
+      names: ["AMSESSION", "sessioncacheid", "auth-guid", "dps-pod-id", "x-auth-activity-info", "akaalb_secure_chase_com", "auth-site-info"]
+      session_duration: "8h"
+      login:
+        account_prompt: "What is your Chase username?"
+        phases:
+          - name: navigate_to_login
+            steps:
+              - { action: goto, url: "https://secure.chase.com/web/auth/dashboard#/dashboard/overview" }
+            returns_to_agent: |
+              The Chase login page is open in the browser.
+              Ask the user to log in (username, password, MFA). Tell them to let you know when they can see their accounts dashboard.
 
-        - name: complete_login
-          steps:
-            - { action: wait, url_contains: "/dashboard" }
-          returns_to_agent: |
-            Login confirmed. Cookie provider matchmaking can extract `.chase.com`
-            cookies on the next API call. If multiple cookie providers are
-            installed, ask the user which browser/provider to use.
+          - name: complete_login
+            steps:
+              - { action: wait, url_contains: "/dashboard" }
+            returns_to_agent: |
+              Login confirmed. Cookie provider matchmaking can extract `.chase.com`
+              cookies on the next API call. If multiple cookie providers are
+              installed, ask the user which browser/provider to use.
 adapters:
   account:
     id: .accountId

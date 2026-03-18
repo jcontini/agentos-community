@@ -7,7 +7,7 @@ color: "#2CD46B"
 
 website: https://www.whatsapp.com/
 
-auth: none
+connections: {}
 
 database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
 # ═══════════════════════════════════════════════════════════════════════════════

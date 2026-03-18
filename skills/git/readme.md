@@ -7,7 +7,8 @@ color: "#F05032"
 
 website: https://git-scm.com
 
-auth: none
+connections: {}
+
 adapters:
   git_commit:
     id: .hash

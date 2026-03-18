@@ -6,7 +6,8 @@ icon: icon.svg
 color: "#333333"
 
 website: https://curl.se
-auth: none
+
+connections: {}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS

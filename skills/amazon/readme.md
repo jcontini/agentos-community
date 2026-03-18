@@ -6,10 +6,12 @@ icon: icon.svg
 color: "#FF9900"
 
 website: https://www.amazon.com
-auth:
-  cookies:
-    domain: ".amazon.com"
-    names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
+connections:
+  web:
+    base_url: "https://www.amazon.com"
+    cookies:
+      domain: ".amazon.com"
+      names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
 
 # ==============================================================================
 # OPERATIONS
@@ -27,7 +29,7 @@ operations:
       status_code: integer
     rest:
       method: GET
-      url: "https://www.amazon.com/gp/css/homepage.html"
+      url: /gp/css/homepage.html
       headers:
         User-Agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         Accept: "text/html,application/xhtml+xml"

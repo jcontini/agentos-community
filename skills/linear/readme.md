@@ -9,19 +9,17 @@ website: https://linear.app
 privacy_url: https://linear.app/privacy
 terms_url: https://linear.app/terms
 
-api:
-  graphql_endpoint: "https://api.linear.app/graphql"
-
-auth:
-  header: { Authorization: '"Bearer " + .auth.key' }
-  label: API Key
-  help_url: https://linear.app/settings/api
-  
-  # Account-level params for auto-injection
-  # These are configured per-account and injected into operations automatically
-  # AI should call `setup` after credential is added to auto-configure these
-  account_params:
-    workspace_slug:
+connections:
+  api:
+    base_url: "https://api.linear.app/graphql"
+    header: { Authorization: '"Bearer " + .auth.key' }
+    label: API Key
+    help_url: https://linear.app/settings/api
+    # Account-level params for auto-injection
+    # These are configured per-account and injected into operations automatically
+    # AI should call `setup` after credential is added to auto-configure these
+    account_params:
+      workspace_slug:
       type: string
       required: false
       label: "Workspace URL"

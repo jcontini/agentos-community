@@ -150,8 +150,9 @@ function checkSchema(frontmatter) {
     : 0;
   const hasActions = actions > 0;
 
-  // Guide-only skills (auth: none, no operations/actions) are exempt from the operations check
-  const isGuideOnly = frontmatter.auth === 'none' && !frontmatter.operations && !hasActions;
+  // Guide-only skills (no auth deps, no operations/actions) are exempt from the operations check
+  const hasNoAuthDeps = frontmatter.auth === 'none' || (frontmatter.auth === undefined && (!frontmatter.connections || Object.keys(frontmatter.connections).length === 0));
+  const isGuideOnly = hasNoAuthDeps && !frontmatter.operations && !hasActions;
   // Agent skills run an AI loop instead of a single API call — exempt from service-specific checks
   const isAgentSkill = !!frontmatter.agent;
 
@@ -160,7 +161,7 @@ function checkSchema(frontmatter) {
     { name: 'tags', pass: frontmatter.tags === undefined },
     { name: 'website', pass: isAgentSkill || isGuideOnly || !!frontmatter.website },
     { name: 'color', pass: !!frontmatter.color },
-    { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined || (frontmatter.connections && Object.keys(frontmatter.connections).length > 0) },
+    { name: 'auth', pass: isAgentSkill || isGuideOnly || frontmatter.auth !== undefined || frontmatter.connections !== undefined },
     {
       name: 'operations/actions/agent',
       pass: isAgentSkill || isGuideOnly || !!frontmatter.operations || hasActions,
@@ -412,7 +413,7 @@ function collectJaqExpressions(mapping, parentPath) {
 // ============================================================================
 
 const AUTH_FIELDS = new Set(['header', 'query', 'body', 'cookies', 'oauth']);
-const EXECUTOR_FIELDS = new Set(['rest', 'graphql', 'sql', 'command', 'swift', 'csv', 'keychain', 'crypto', 'steps', 'python', 'applescript', 'memex', 'plist']);
+const EXECUTOR_FIELDS = new Set(['rest', 'graphql', 'sql', 'command', 'swift', 'csv', 'keychain', 'crypto', 'steps', 'python', 'applescript', 'memex', 'plist', 'download']);
 
 function checkSemantics(frontmatter) {
   const warnings = [];

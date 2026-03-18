@@ -6,7 +6,9 @@ icon: icon.svg
 color: "#2EAD33"
 
 website: https://playwright.dev
-auth: none
+
+connections: {}
+
 adapters:
   webpage:
     id: .url

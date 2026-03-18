@@ -6,8 +6,7 @@ icon: icon.svg
 color: "#34C759"
 
 website: https://support.apple.com/messages
-
-auth: none
+connections: {}
 database: "~/Library/Messages/chat.db"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS

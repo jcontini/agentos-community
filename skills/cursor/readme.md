@@ -6,7 +6,8 @@ icon: icon.png
 color: "#3B82F6"
 website: https://cursor.com
 
-auth: none
+connections: {}
+
 adapters:
   document:
     id: .id

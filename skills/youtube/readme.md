@@ -6,7 +6,8 @@ icon: icon.png
 color: "#FF0808"
 website: https://youtube.com
 
-auth: none
+connections: {}
+
 # External sources this adapter needs (for CSP)
 # Note: Specifying "ytimg.com" allows all subdomains (i.ytimg.com, i9.ytimg.com, etc.)
 sources:

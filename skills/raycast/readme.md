@@ -6,7 +6,8 @@ icon: icon.png
 color: "#FF6363"
 website: https://raycast.com
 
-auth: none
+connections: {}
+
 ---
 
 # Raycast

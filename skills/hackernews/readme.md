@@ -8,8 +8,7 @@ color: "#FF6600"
 website: https://news.ycombinator.com
 privacy_url: https://www.ycombinator.com/legal#privacy
 terms_url: https://www.ycombinator.com/legal
-
-auth: none
+connections: {}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS

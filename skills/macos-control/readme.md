@@ -5,8 +5,7 @@ description: Inspect macOS apps, processes, displays, windows, and screenshots w
 icon: icon.svg
 color: "#111827"
 website: https://www.apple.com/macos/
-
-auth: none
+connections: {}
 operations:
   list_apps:
     description: List installed macOS applications using system_profiler

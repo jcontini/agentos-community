@@ -8,7 +8,7 @@ color: "#3B82F6"
 website: https://mimestream.com
 privacy_url: https://mimestream.com/privacy
 
-auth: none
+connections: {}
 
 # Mimestream stores Google OAuth tokens in the macOS Keychain under
 # "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.

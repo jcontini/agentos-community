@@ -9,10 +9,12 @@ website: https://firecrawl.dev
 privacy_url: https://www.firecrawl.dev/privacy
 terms_url: https://www.firecrawl.dev/terms-and-conditions
 
-auth:
-  header: { Authorization: '"Bearer " + .auth.key' }
-  label: API Key
-  help_url: https://www.firecrawl.dev/app/api-keys
+connections:
+  api:
+    base_url: "https://api.firecrawl.dev/v1"
+    header: { Authorization: '"Bearer " + .auth.key' }
+    label: API Key
+    help_url: https://www.firecrawl.dev/app/api-keys
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -43,7 +45,7 @@ operations:
       timeout: { type: integer, default: 30000, description: "Request timeout in ms" }
     rest:
       method: POST
-      url: https://api.firecrawl.dev/v1/scrape
+      url: /scrape
       body:
         url: .params.url
         formats:

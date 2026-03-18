@@ -6,7 +6,8 @@ icon: icon.svg
 color: "#F83B1D"
 
 website: https://brave.com
-auth: none
+
+connections: {}
 
 # Brave (Chromium-based) stores cookies encrypted in SQLite.
 # The encryption key lives in macOS Keychain under "Brave Safe Storage" / "Brave".

@@ -6,12 +6,13 @@ icon: icon.svg
 color: "#1e3a2f"
 website: https://boulderingproject.portal.approach.app
 
-auth:
-  header:
-    Authorization: .auth.key
-  label: "ABP credentials — enter as email:password"
-  help_url: https://boulderingproject.portal.approach.app/login
-  optional: true
+connections:
+  api:
+    header:
+      Authorization: .auth.key
+    label: "ABP credentials — enter as email:password"
+    help_url: https://boulderingproject.portal.approach.app/login
+    optional: true
 
 adapters:
   class:
@@ -32,7 +33,6 @@ adapters:
 operations:
   get_schedule:
     description: Get today's class schedule at Austin Bouldering Project — no login needed
-    auth: none
     returns: class[]
     params:
       date:

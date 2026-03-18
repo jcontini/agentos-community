@@ -9,11 +9,13 @@ website: https://serpapi.com
 privacy_url: https://serpapi.com/privacy
 terms_url: https://serpapi.com/terms-and-conditions
 
-auth:
-  query:
-    api_key: .auth.key
-  label: API Key
-  help_url: https://serpapi.com/manage-api-key
+connections:
+  api:
+    base_url: "https://serpapi.com"
+    query:
+      api_key: .auth.key
+    label: API Key
+    help_url: https://serpapi.com/manage-api-key
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS

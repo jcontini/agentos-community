@@ -9,10 +9,12 @@ website: https://exa.ai
 privacy_url: https://exa.ai/privacy
 terms_url: https://exa.ai/terms
 
-auth:
-  header: { x-api-key: .auth.key }
-  label: API Key
-  help_url: https://dashboard.exa.ai/api-keys
+connections:
+  api:
+    base_url: "https://api.exa.ai"
+    header: { x-api-key: .auth.key }
+    label: API Key
+    help_url: https://dashboard.exa.ai/api-keys
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -57,7 +59,7 @@ operations:
       include_text: { type: boolean, description: "Include full text of the results (default: true)" }
     rest:
       method: POST
-      url: https://api.exa.ai/search
+      url: /search
       body:
         query: .params.query
         numResults: .params.limit
@@ -77,7 +79,7 @@ operations:
       url: { type: string, required: true, description: "URL to fetch" }
     rest:
       method: POST
-      url: https://api.exa.ai/contents
+      url: /contents
       body:
         urls:
           - .params.url

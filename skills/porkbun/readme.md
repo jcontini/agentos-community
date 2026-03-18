@@ -8,12 +8,14 @@ color: "#D62F53"
 website: https://porkbun.com
 privacy_url: https://porkbun.com/products/privacy
 
-auth:
-  body:
-    apikey: '.auth.key | split(":") | .[0]'
-    secretapikey: '.auth.key | split(":") | .[1]'
-  label: API key and secret
-  help_url: https://porkbun.com/account/api
+connections:
+  api:
+    base_url: "https://api.porkbun.com/api/json/v3"
+    body:
+      apikey: '.auth.key | split(":") | .[0]'
+      secretapikey: '.auth.key | split(":") | .[1]'
+    label: API key and secret
+    help_url: https://porkbun.com/account/api
 
 adapters:
   domain:
@@ -43,7 +45,7 @@ operations:
     returns: domain[]
     rest:
       method: POST
-      url: https://api.porkbun.com/api/json/v3/domain/listAll
+      url: /domain/listAll
       body:
         apikey: '.auth.key | split(":") | .[0]'
         secretapikey: '.auth.key | split(":") | .[1]'

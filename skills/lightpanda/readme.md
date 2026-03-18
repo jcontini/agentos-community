@@ -6,7 +6,7 @@ icon: icon.svg
 color: "#1B3C27"
 
 website: https://lightpanda.io
-auth: none
+connections: {}
 adapters:
   webpage:
     id: .url
