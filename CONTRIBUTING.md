@@ -80,6 +80,7 @@ Important runtime note:
 
 The current skill style is:
 
+- Use `connections:` for external service dependencies (auth, base URLs)
 - Use `adapters:` for entity mappings
 - Use simple `snake_case` tool names like `search`, `read_webpage`, or `send_text`
 - Do not use dotted names like `task.list` or `webpage.read`
@@ -117,11 +118,14 @@ name: My Skill
 description: One-line description
 icon: icon.svg
 website: https://example.com
-auth:
-  header:
-    Authorization: '"Bearer " + .auth.key'
-  label: API Key
-  help_url: https://example.com/api-keys
+
+connections:
+  api:
+    base_url: "https://api.example.com"
+    header:
+      Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    help_url: https://example.com/api-keys
 
 adapters:
   result:
@@ -143,7 +147,7 @@ operations:
       limit: { type: integer, required: false }
     rest:
       method: POST
-      url: https://api.example.com/search
+      url: /search
       body:
         query: .params.query
         limit: '.params.limit // 10'
@@ -153,7 +157,7 @@ operations:
 
 ## Local Control Shape
 
-Use this pattern for command-backed skills such as terminal, browser, OS, or app control.
+Use this pattern for command-backed skills such as terminal, browser, OS, or app control. Local skills have no `connections:` block — they don't need external auth.
 
 ```yaml
 id: my-local-skill
@@ -161,7 +165,6 @@ name: My Local Skill
 description: Control a local surface
 icon: icon.svg
 website: https://example.com
-auth: none
 
 operations:
   list_status:
@@ -284,8 +287,8 @@ Rules:
 - Use `returns: entity` for single entities
 - Do not hardcode misleading low limits
 - Pass caller-provided limits through to the API when the backend supports them
-- REST operations must use full absolute `rest.url` values; there is no `api.base_url` shortcut
-- Only GraphQL supports a shared API default, via `api.graphql_endpoint`
+- Use relative `rest.url` paths (e.g. `/tasks/filter`) when the connection has a `base_url`
+- Use absolute URLs only when a skill has no connection or the endpoint is on a different domain
 
 ## Action Operations
 
@@ -301,50 +304,88 @@ Rules:
 - Prefer direct, concrete verbs like `send_text`, `focus_tab`, `list_status`
 - Test them through `mcp:call` early, because runtime mismatches are easier to miss than YAML mismatches
 
-## Auth
+## Connections
 
-Most skills only need one of these:
+Every skill declares its external service dependencies as named connections. Connections carry `base_url`, auth configuration, and metadata. Local skills (no external services) simply omit the `connections:` block.
 
-- `auth: none`
-- header auth
-- query auth
-- body auth
-- provider-sourced OAuth or cookies
-
-Most common pattern:
+Most common pattern — single API key connection:
 
 ```yaml
-auth:
-  header:
-    x-api-key: .auth.key
-  label: API Key
-  help_url: https://example.com/api-keys
+connections:
+  api:
+    base_url: "https://api.example.com/v1"
+    header:
+      x-api-key: .auth.key
+    label: API Key
+    help_url: https://example.com/api-keys
 ```
 
-Useful rules:
+Multi-connection pattern — public GraphQL + authenticated web session:
 
+```yaml
+connections:
+  graphql:
+    base_url: "https://api.example.com/graphql"
+  web:
+    cookies:
+      domain: ".example.com"
+```
+
+Rules:
+
+- `base_url` on a connection is used to resolve relative `rest.url` and `graphql.endpoint` values
+- Single-connection skills auto-infer the connection — no `connection:` needed on each operation
+- Multi-connection skills must declare `connection: <name>` on each operation
+- Set `connection: none` on operations that should skip auth entirely
 - Use `optional: true` if the skill works anonymously but improves with credentials
-- For skills with mixed auth (some ops public, some need credentials or cookies), use `connections:` and set `connection: <name>` on each operation instead of a single `auth:` plus per-operation `auth: none` (see **Connections** below)
-- Use per-operation `auth: none` only for legacy or one-off public actions; new multi-auth skills should use `connections:`
-- Prefer provider auth when credentials come from another installed app or browser profile
-- If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
-- Do not encode a specific provider skill id into consumer skill YAML or smoke fixtures
-- Today `provides:` is primarily an auth contract. Do not invent broader generic provider/consumer patterns in skill YAML unless the runtime and docs explicitly support them
-- For command auth templating or advanced multi-step auth flows, copy an existing skill instead of inventing from scratch
+- Connections without any auth fields (just `base_url` and/or `description`) are valid — they serve as service declarations
 
-Provider auth patterns:
+Connection names are arbitrary. Common conventions:
 
-- OAuth consumer:
+- `api` — REST API with key/token auth
+- `graphql` — GraphQL/AppSync (may or may not have auth)
+- `web` — cookie-authenticated website (user session)
+
+### Auth types on connections
+
+Three auth resolution mechanisms exist:
+
+**Template auth** (API keys, tokens) — `header`, `query`, or `body` fields with jaq expressions:
 
 ```yaml
-auth:
-  oauth:
-    service: google
-    scopes:
-      - https://mail.google.com/
+connections:
+  api:
+    header:
+      Authorization: '"Bearer " + .auth.key'
+    label: API Key
 ```
 
-- OAuth provider:
+**Cookie auth** — extracted from installed browsers via provider skills:
+
+```yaml
+connections:
+  web:
+    cookies:
+      domain: ".claude.ai"
+      names: ["sessionKey"]
+```
+
+**OAuth** — token refresh and provider-based acquisition:
+
+```yaml
+connections:
+  gmail:
+    oauth:
+      service: google
+      scopes:
+        - https://mail.google.com/
+```
+
+### Provider auth
+
+Credentials can come from other installed apps (e.g. Mimestream provides Google OAuth tokens, Brave provides browser cookies).
+
+Provider declaration:
 
 ```yaml
 provides:
@@ -354,70 +395,91 @@ provides:
     account_param: account
 ```
 
-- Cookie consumer:
-
-```yaml
-auth:
-  cookies:
-    domain: ".claude.ai"
-    names: ["sessionKey"]
-```
-
-- Cookie provider:
-
-```yaml
-provides:
-  - service: cookies
-    via: cookie_get
-    account_param: domain
-```
+Consumer skills don't name a specific provider — the runtime discovers installed providers automatically.
 
 Example references:
 
 - OAuth consumer: `skills/gmail/readme.md`
 - OAuth provider: `skills/mimestream/readme.md`
 - Cookie consumer: `skills/claude/readme.md`
-- Cookie provider: any skill declaring `provides: [{ service: "cookies" }]`
-- Advanced keychain/crypto/steps: see an existing cookie-provider skill
+- Cookie provider: `skills/brave-browser/readme.md`
+- Multi-connection: `skills/goodreads/readme.md` (graphql + web)
 
-## Connections
+## Sandbox Storage
 
-Use `connections:` when a skill has more than one auth context (e.g. public API + user cookies, or public schedule + authenticated bookings). Each operation then declares `connection: <name>` instead of relying on a single skill-level `auth:` and per-operation `auth: none`.
+Skills can persist state across runs using two reserved keys on their graph node:
 
-Conventions for connection names:
+- **`cache`** — regeneratable state (discovered endpoints, scraped tokens). Can be cleared at any time; the skill re-discovers on next run.
+- **`data`** — persistent state (settings, preferences, sync timestamps). Survives cache clears.
 
-- `graphql` — public GraphQL/AppSync (no user auth)
-- `web` — cookie-authenticated website (user session)
-- `api` — public REST/API (no auth)
-- `account` — credential-authenticated (header/body/query or OAuth)
+If losing it requires user action to recover (re-entering a setting), it's data. If the skill can regenerate it, it's cache.
 
-Rules:
+### Reading
 
-- A skill has either `auth:` or `connections:`, not both
-- Every operation must have `connection:` when the skill uses `connections:`
-- Each `connection:` value must match a key in `connections:`
+The execution context always includes `.data` and `.cache`:
 
-Leading by example: `skills/goodreads/readme.md` (graphql + web).
+```json
+{ "params": { ... }, "auth": { ... }, "data": { ... }, "cache": { ... } }
+```
+
+In YAML expressions:
+
+```yaml
+rest:
+  url: '(.cache.graphql_endpoint // "https://fallback.example.com/graphql")'
+```
+
+In Python, pass `cache` and/or `data` via `args:`:
+
+```yaml
+python:
+  module: ./my_script.py
+  function: search
+  args:
+    query: .params.query
+    cache: .cache
+```
+
+### Writing back
+
+Python and command executors write back using reserved keys in their return value:
+
+- `__cache__` — merged into the skill node's cache
+- `__data__` — merged into the skill node's data
+- `__result__` — the actual result callers see
+
+```python
+def discover_endpoint(cache=None, **kwargs):
+    if cache and cache.get("graphql_endpoint"):
+        return {"endpoint": cache["graphql_endpoint"]}
+
+    endpoint = _discover()
+    return {
+        "__cache__": {"graphql_endpoint": endpoint},
+        "__result__": {"endpoint": endpoint},
+    }
+```
+
+If neither `__cache__` nor `__data__` is present, the result passes through unchanged. Fully backward compatible.
+
+Leading by example: `skills/goodreads/public_graph.py` (GraphQL endpoint discovery cached via `__cache__`).
 
 ## Expressions
 
 Use one expression style everywhere:
 
-- `rest:`, `graphql:`, `command:`, `python:`, and `auth:` all use jq/jaq-style expressions
+- `rest:`, `graphql:`, `command:`, `python:`, and connection auth fields all use jq/jaq-style expressions
 - Resolved credentials are available under `.auth.*` such as `.auth.key` or `.auth.access_token`
 
 Common jq/jaq patterns:
 
 ```yaml
-url: '"https://api.example.com/items/" + .params.id'
+url: '"/items/" + .params.id'
 query:
   q: .params.query
   limit: .params.limit // 10
 body:
   title: .params.title
-auth:
-  header:
-    Authorization: '"Bearer " + .auth.key'
 ```
 
 Common command patterns:
@@ -557,7 +619,7 @@ Keep skill YAML readable. When executor logic starts looking like real code, ext
 
 Keep in `readme.md`:
 
-- skill metadata, auth, adapters, params, returns, and short executor wiring
+- skill metadata, connections, adapters, params, returns, and short executor wiring
 - short SQL queries and short jq transforms
 - simple one-step commands where the logic is still obvious inline
 
@@ -617,7 +679,9 @@ Before you commit a skill:
 - [ ] Ops without a sensible default smoke check simply omit `test:`
 - [ ] `npm run validate` passes
 - [ ] `npm run mcp:test -- <skill> --verbose` passes
-- [ ] Multi-auth skill uses `connections:` and per-operation `connection:`, not `auth:` plus `auth: none` overrides
+- [ ] Uses `connections:` for external service dependencies (not bare `auth:`)
+- [ ] Multi-connection skill declares `connection:` on each operation
+- [ ] REST URLs are relative when the connection has a `base_url`
 
 ## Advanced Stuff
 
@@ -625,10 +689,11 @@ This guide does not try to document every executor or every edge case.
 
 If you need something advanced, copy an existing skill:
 
-- `linear` for GraphQL
+- `linear` for GraphQL with connections
 - `youtube` for command execution
 - `gmail` + `mimestream` for provider-sourced OAuth
-- `claude` plus any cookie-provider skill for consumer/provider patterns
+- `claude` + `brave-browser` for consumer/provider cookie patterns
+- `goodreads` for multi-connection (graphql + web) and sandbox storage
 - an existing cookie-provider skill for keychain, crypto, and multi-step extraction
 
 For skills that reverse-engineer web services without public APIs (headless browser stealth, JS bundle extraction, GraphQL discovery, cookie-based auth), see `docs/reverse-engineering/`:
@@ -636,5 +701,8 @@ For skills that reverse-engineer web services without public APIs (headless brow
 - `1-transport.md` — TLS fingerprinting, WAF bypass, Playwright stealth
 - `2-discovery.md` — Next.js/Apollo caches, JS bundle config, GraphQL schema scanning
 - `3-auth.md` — session cookies, Cognito, cache+discovery+fallback architecture
+- `4-content.md` — pagination strategies, infinite scroll, content extraction
+- `5-social.md` — social graph traversal, friend lists, activity feeds
+- `6-desktop-apps.md` — Electron asar extraction, native app IPC, plist configs
 
 If a pattern is rare enough that Exa-like skills do not need it, it does not belong in this doc.
