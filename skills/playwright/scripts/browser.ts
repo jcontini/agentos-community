@@ -30,6 +30,7 @@
  *   new_tab [url]                   Open a new tab
  *   close_tab                       Close current tab
  *   cookies --domain D [--names N]  Extract cookies for a domain via CDP
+ *   clear_cookies --domain D         Clear cookies for a domain (e.g. .goodreads.com) so login form is visible
  *   network_capture --url URL [--pattern P] [--wait N] [--cookies JSON]
  *                               Navigate and capture all XHR/fetch responses
  */
@@ -512,6 +513,7 @@ async function cmdNetworkCapture(): Promise<void> {
     status: number;
     contentType: string;
     resourceType: string;
+    requestHeaders?: Record<string, string>;
     body?: unknown;
     size?: number;
   }> = [];
@@ -547,12 +549,14 @@ async function cmdNetworkCapture(): Promise<void> {
     )
       return;
 
+    const req = response.request();
     const entry: (typeof captured)[0] = {
       url: respUrl,
-      method: response.request().method(),
+      method: req.method(),
       status,
       contentType,
       resourceType,
+      requestHeaders: req.headers(),
     };
 
     // Capture JSON response bodies
@@ -640,6 +644,36 @@ async function cmdCookies(): Promise<void> {
   await browser.close();
 }
 
+async function cmdClearCookies(): Promise<void> {
+  const port = getPort();
+  const domain = (stdinParams.domain as string) || getOption("domain");
+  if (!domain) err("Usage: clear_cookies --domain <domain>");
+
+  const browser = await connectBrowser(port);
+  const context = browser.contexts()[0];
+  if (!context) err("No browser context found");
+
+  const filterDomain = domain.startsWith(".") ? domain : `.${domain}`;
+  const allCookies = await context.cookies();
+
+  const keep = allCookies.filter((c) => {
+    const cookieDomain = c.domain.startsWith(".") ? c.domain : `.${c.domain}`;
+    return !cookieDomain.endsWith(filterDomain) && !filterDomain.endsWith(cookieDomain);
+  });
+
+  await context.clearCookies();
+  if (keep.length > 0) {
+    await context.addCookies(keep);
+  }
+
+  out({
+    cleared_domain: domain,
+    cleared_count: allCookies.length - keep.length,
+    kept_count: keep.length,
+  });
+  await browser.close();
+}
+
 // --- Dispatch ---
 
 const commands: Record<string, () => Promise<void>> = {
@@ -662,6 +696,7 @@ const commands: Record<string, () => Promise<void>> = {
   new_tab: cmdNewTab,
   close_tab: cmdCloseTab,
   cookies: cmdCookies,
+  clear_cookies: cmdClearCookies,
   network_capture: cmdNetworkCapture,
 };
 

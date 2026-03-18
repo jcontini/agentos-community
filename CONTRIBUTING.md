@@ -324,7 +324,8 @@ auth:
 Useful rules:
 
 - Use `optional: true` if the skill works anonymously but improves with credentials
-- Use per-operation `auth: none` for public signup/setup actions inside an otherwise-authenticated skill
+- For skills with mixed auth (some ops public, some need credentials or cookies), use `connections:` and set `connection: <name>` on each operation instead of a single `auth:` plus per-operation `auth: none` (see **Connections** below)
+- Use per-operation `auth: none` only for legacy or one-off public actions; new multi-auth skills should use `connections:`
 - Prefer provider auth when credentials come from another installed app or browser profile
 - If multiple installed providers can satisfy the same auth need, the runtime surfaces the options and the agent should ask the user which provider to use
 - Do not encode a specific provider skill id into consumer skill YAML or smoke fixtures
@@ -378,6 +379,25 @@ Example references:
 - Cookie consumer: `skills/claude/readme.md`
 - Cookie provider: any skill declaring `provides: [{ service: "cookies" }]`
 - Advanced keychain/crypto/steps: see an existing cookie-provider skill
+
+## Connections
+
+Use `connections:` when a skill has more than one auth context (e.g. public API + user cookies, or public schedule + authenticated bookings). Each operation then declares `connection: <name>` instead of relying on a single skill-level `auth:` and per-operation `auth: none`.
+
+Conventions for connection names:
+
+- `graphql` — public GraphQL/AppSync (no user auth)
+- `web` — cookie-authenticated website (user session)
+- `api` — public REST/API (no auth)
+- `account` — credential-authenticated (header/body/query or OAuth)
+
+Rules:
+
+- A skill has either `auth:` or `connections:`, not both
+- Every operation must have `connection:` when the skill uses `connections:`
+- Each `connection:` value must match a key in `connections:`
+
+Leading by example: `skills/goodreads/readme.md` (graphql + web).
 
 ## Expressions
 
@@ -597,6 +617,7 @@ Before you commit a skill:
 - [ ] Ops without a sensible default smoke check simply omit `test:`
 - [ ] `npm run validate` passes
 - [ ] `npm run mcp:test -- <skill> --verbose` passes
+- [ ] Multi-auth skill uses `connections:` and per-operation `connection:`, not `auth:` plus `auth: none` overrides
 
 ## Advanced Stuff
 

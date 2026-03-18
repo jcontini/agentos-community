@@ -330,6 +330,26 @@ operations:
       stdin: '.params | {domain: .domain, names: .names}'
       timeout: 15
 
+  clear_cookies:
+    description: |
+      Clear cookies for a domain. Use when persistent cookies (e.g. from capture_network
+      cookie injection) prevent reaching the login form. Preserves cookies for other domains.
+    params:
+      domain:
+        type: string
+        required: true
+        description: "Domain whose cookies to clear (e.g. '.goodreads.com', '.claude.ai')"
+    returns:
+      cleared_domain: string
+      cleared_count: integer
+      kept_count: integer
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts clear_cookies"]
+      working_dir: .
+      stdin: '.params | {domain: .domain}'
+      timeout: 10
+
   capture_network:
     description: |
       Navigate to a URL and capture all network requests/responses.

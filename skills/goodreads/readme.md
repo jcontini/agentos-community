@@ -10,10 +10,9 @@ connections:
   graphql:
     description: "Public AppSync GraphQL — API key auto-discovered from JS bundles"
   web:
-    description: "Goodreads user cookies for viewer-scoped data"
+    description: "Goodreads user cookies for viewer-scoped data (friends, shelves, books, reviews)"
     cookies:
       domain: ".goodreads.com"
-      names: ["session_id", "__Secure-user_session"]
     optional: true
     label: Goodreads Session
     help_url: https://www.goodreads.com/user/sign_in
@@ -23,11 +22,55 @@ connections:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 adapters:
+  person:
+    id: .user_id
+    name: .name
+    image: .photo_url
+    location: .location
+    data.gender: .gender
+    data.age: .age
+    data.birthday: .birthday
+    data.website: .website
+    data.about: .about
+    data.interests: .interests
+    data.joined_date: .joined_date
+    data.last_active: .last_active
+    data.ratings_count: .ratings_count
+    data.avg_rating: .avg_rating
+    data.reviews_count: .reviews_count
+    data.friends_count: .friends_count
+    data.favorite_genres: .favorite_genres
+
+    has_account:
+      account:
+        id: .user_id
+        name: .name
+        handle: .handle
+        url: '.url // ("https://goodreads.com/user/show/" + (.user_id | tostring))'
+        image: .photo_url
+        data.books_count: .books_count
+        data.friends_count: .friends_count
+
+    favorite_books:
+      book[]:
+        _source: '.favorite_books // []'
+        id: .book_id
+        name: .title
+        image: .cover_url
+
+    currently_reading:
+      book[]:
+        _source: '.currently_reading // []'
+        id: .book_id
+        name: .title
+        author: .author
+        data.date_added: .date_added
+
   account:
     id: .user_id
     name: .name
     handle: .username
-    url: '"https://goodreads.com/user/show/" + (.user_id | tostring)'
+    url: '.url // ("https://goodreads.com/user/show/" + (.user_id | tostring))'
     image: .photo_url
     text: .about
     location: .location
@@ -42,7 +85,7 @@ adapters:
 
     favorite_books:
       book[]:
-        _source: .favorite_books
+        _source: '.favorite_books // []'
         id: .book_id
         name: .title
         url: .web_url
@@ -51,7 +94,7 @@ adapters:
 
     currently_reading:
       book[]:
-        _source: .currently_reading
+        _source: '.currently_reading // []'
         id: .book_id
         name: .title
         url: .web_url
@@ -60,7 +103,7 @@ adapters:
 
     shelves:
       shelf[]:
-        _source: .shelves
+        _source: '.shelves // []'
         id: .shelf_id
         name: .name
         url: .url
@@ -68,20 +111,20 @@ adapters:
 
   book:
     id: .book_id
-    name: .title
+    name: '.title // .book_title'
     text: .description
     url: '.web_url // ("https://goodreads.com/book/show/" + (.book_id | tostring))'
     image: .cover_url
     author: .primary_author
     isbn: .isbn
     isbn13: .isbn13
-    datePublished: .publication_date
-    data.average_rating: .average_rating
+    datePublished: '.publication_date // .date_published'
+    data.average_rating: '.average_rating // .avg_rating'
     data.ratings_count: .ratings_count
     data.review_count: .review_count
     data.genres: .genres
     data.series: .series_name
-    data.pages: .pages
+    data.pages: '.pages // .num_pages'
     data.publisher: .publisher
     data.format: .format
     data.language: .language
@@ -92,6 +135,11 @@ adapters:
     data.characters: .characters
     data.awards_won: .awards_won
     data.work_url: .work_url
+    data.user_rating: .rating
+    data.date_read: .date_read
+    data.date_started: .date_started
+    data.date_added: .date_added
+    data.shelf: .shelf
 
     written_by:
       author:
@@ -135,6 +183,15 @@ adapters:
         id: .book_id
         name: .book_title
         url: '.book_url // ("https://goodreads.com/book/show/" + (.book_id | tostring))'
+        image: .cover_url
+        author: .primary_author
+
+    written_by:
+      author:
+        _condition: .primary_author_id
+        id: .primary_author_id
+        name: .primary_author
+        url: .primary_author_url
 
   author:
     id: .author_id
@@ -171,6 +228,33 @@ adapters:
     data.book_count: .book_count
     data.is_exclusive: .is_exclusive
 
+  quote:
+    id: '.author_id + ":" + (.text | tostring | .[0:40])'
+    name: '.text | .[0:80]'
+    text: .text
+    author: .author_name
+    data.book_title: .book_title
+
+    attributed_to:
+      author:
+        id: .author_id
+        name: .author_name
+        url: '"https://goodreads.com/author/show/" + (.author_id | tostring)'
+
+    source:
+      book:
+        _condition: .book_id
+        id: .book_id
+        name: .book_title
+
+  group:
+    id: .group_id
+    name: .name
+    url: .url
+    image: .image_url
+    data.member_count: .member_count
+    data.last_active: .last_active
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS - API Endpoints
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -200,61 +284,69 @@ operations:
         user_id: "26631647"
         limit: 3
 
+  get_person:
+    description: Get a rich person profile from Goodreads — demographics, stats, favorite books, genres, currently reading
+    returns: person
+    connection: web
+    params:
+      user_id: { type: string, required: true, description: "User ID (e.g., '27117656')" }
+    python:
+      module: ./web_scraper.py
+      function: run_get_person
+      params: true
+      timeout: 15
+    test:
+      mode: write
+      fixtures:
+        user_id: "27117656"
+
   search_people:
     description: Search for Goodreads users by name
-    returns: account[]
-    connection: graphql
+    returns: person[]
+    connection: web
     params:
       query: { type: string, required: true, description: "Name to search" }
       limit: { type: integer, default: 10, description: "Max results (default 10)" }
-    rest:
-      method: GET
-      url: "https://www.goodreads.com/search/users"
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        q: .params.query
-      response:
-        transform: |
-          [.html | 
-           scan("<a href=\"/user/show/([0-9]+)[^>]*>([^<]+)</a>") |
-           {
-             user_id: .[0],
-             name: .[1]
-           }] |
-           .[0:.params.limit]
+    python:
+      module: ./web_scraper.py
+      function: run_search_people
+      params: true
+      timeout: 15
     test:
-      mode: read
+      mode: write
       fixtures:
         query: "Malcolm Gladwell"
         limit: 3
 
+  resolve_email:
+    description: Look up a person on Goodreads by email address
+    returns: person[]
+    provides: email_lookup
+    connection: web
+    params:
+      email: { type: string, required: true, description: "Email address to search for" }
+    python:
+      module: ./web_scraper.py
+      function: run_resolve_email
+      params: true
+      timeout: 15
+    test:
+      mode: write
+
   list_friends:
-    description: List a user's friends
-    returns: account[]
-    connection: graphql
+    description: List a user's friends as people with linked Goodreads accounts
+    returns: person[]
+    connection: web
     params:
       user_id: { type: string, required: true, description: "User ID" }
-      page: { type: integer, default: 1, description: "Page number" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/friend/user/" + .params.user_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        page: .params.page
-      response:
-        transform: |
-          [.html |
-           scan("<div class=\"friendContainer[^>]*>.*?href=\"/user/show/([0-9]+)[^>]*>([^<]+)</a>") |
-           {
-             user_id: .[0],
-             name: .[1]
-           }]
+      page: { type: integer, default: 0, description: "Page number (0 = all pages, 30 per page)" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_friends
+      params: true
+      timeout: 60
     test:
-      mode: read
+      mode: write
       fixtures:
         user_id: "26631647"
 
@@ -263,39 +355,21 @@ operations:
   # ───────────────────────────────────────────────────────────────────────────
 
   list_books:
-    description: List a user's books organized by shelf (reading, want_to_read, read, did_not_finish)
+    description: List a user's books organized by shelf (requires Goodreads session cookies)
     returns: book[]
-    connection: graphql
+    connection: web
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf: { type: string, description: "Shelf: all, read, currently-reading, to-read, did-not-finish (default: all)" }
       sort: { type: string, default: "date_added", description: "Sort by: date_added, rating, title, author" }
-      page: { type: integer, default: 1, description: "Page number" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/review/list/" + .params.user_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        shelf: '.params.shelf // "all"'
-        sort: .params.sort
-        page: .params.page
-        per_page: "25"
-      response:
-        transform: |
-          [.html | 
-           scan("<tr[^>]*>.*?</tr>") |
-           select(. != null) |
-           {
-             book_id: (match("book_id=([0-9]+)") | .captures[0].string | tonumber),
-             title: (match("title=\"([^\"]+)\"") | .captures[0].string // ""),
-             rating: (match("rating-\\d+") | .string | match("[0-9]") | .string | tonumber // 0)
-           } |
-           select(.book_id != null)] |
-           .[0:25]
+      page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_books
+      params: true
+      timeout: 60
     test:
-      mode: read
+      mode: write
       fixtures:
         user_id: "26631647"
         shelf: read
@@ -442,38 +516,20 @@ operations:
   # ───────────────────────────────────────────────────────────────────────────
 
   list_reviews:
-    description: List your book reviews with ratings and dates
+    description: List your book reviews with ratings and dates (requires Goodreads session cookies)
     returns: review[]
-    connection: graphql
+    connection: web
     params:
       user_id: { type: string, required: true, description: "User ID" }
       sort: { type: string, default: "date", description: "Sort by: date, rating, title" }
-      page: { type: integer, default: 1, description: "Page number" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/review/list/" + .params.user_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        sort: .params.sort
-        page: .params.page
-        per_page: "25"
-      response:
-        transform: |
-          [.html |
-           scan("<tr[^>]*>.*?</tr>") |
-           {
-             review_id: (match("review_id=([0-9]+)") | .captures[0].string | tonumber),
-             book_id: (match("book_id=([0-9]+)") | .captures[0].string | tonumber),
-             book_title: (match("title=\"([^\"]+)\"") | .captures[0].string // ""),
-             rating: (match("rating-([0-5])") | .captures[0].string | tonumber),
-             review_date: (match("([0-9]{2}/[0-9]{2}/[0-9]{4})") | .captures[0].string // "")
-           } |
-           select(.review_id != null)] |
-           .[0:25]
+      page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_reviews
+      params: true
+      timeout: 60
     test:
-      mode: read
+      mode: write
       fixtures:
         user_id: "26631647"
 
@@ -484,63 +540,101 @@ operations:
   list_shelves:
     description: List a user's bookshelves including default shelves (read, currently-reading, want-to-read)
     returns: shelf[]
-    connection: graphql
+    connection: web
     params:
       user_id: { type: string, required: true, description: "User ID" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/user/shelves/" + .params.user_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      response:
-        transform: |
-          [.html |
-           scan("<a href=\"/review/list/[0-9]+-([^\"]+)[^>]*>([^<]+).*?\\(([0-9]+)\\)") |
-           {
-             shelf_id: .[0],
-             name: .[1],
-             book_count: (.[2] | tonumber)
-           }]
+    python:
+      module: ./web_scraper.py
+      function: run_list_shelves
+      params: true
+      timeout: 15
     test:
-      mode: read
+      mode: write
       fixtures:
         user_id: "26631647"
 
   list_shelf_books:
-    description: List books on a specific user shelf
+    description: List books on a specific user shelf (requires Goodreads session cookies)
     returns: book[]
-    connection: graphql
+    connection: web
     params:
       user_id: { type: string, required: true, description: "User ID" }
       shelf_name: { type: string, required: true, description: "Shelf name (e.g., 'read', 'currently-reading', 'to-read')" }
-      page: { type: integer, default: 1, description: "Page number" }
-    rest:
-      method: GET
-      url: '"https://www.goodreads.com/review/list/" + .params.user_id'
-      headers:
-        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
-        Accept: text/html
-      query:
-        shelf: .params.shelf_name
-        page: .params.page
-        per_page: "25"
-      response:
-        transform: |
-          [.html |
-           scan("<tr[^>]*>.*?</tr>") |
-           {
-             book_id: (match("book_id=([0-9]+)") | .captures[0].string | tonumber),
-             title: (match("title=\"([^\"]+)\"") | .captures[0].string // ""),
-             author: (match("author_name\">([^<]+)") | .captures[0].string // "")
-           } |
-           select(.book_id != null)] |
-           .[0:25]
+      page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_shelf_books
+      params: true
+      timeout: 60
     test:
-      mode: read
+      mode: write
       fixtures:
         user_id: "26631647"
         shelf_name: read
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SOCIAL OPERATIONS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  list_groups:
+    description: List the authenticated user's Goodreads groups
+    returns: group[]
+    connection: web
+    python:
+      module: ./web_scraper.py
+      function: run_list_groups
+      params: true
+      timeout: 30
+    test:
+      mode: write
+
+  list_following:
+    description: List people (users and authors) a user is following
+    returns: person[]
+    connection: web
+    params:
+      user_id: { type: string, required: true, description: "User ID" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_following
+      params: true
+      timeout: 15
+    test:
+      mode: write
+      fixtures:
+        user_id: "26631647"
+
+  list_followers:
+    description: List people following a user
+    returns: person[]
+    connection: web
+    params:
+      user_id: { type: string, required: true, description: "User ID" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_followers
+      params: true
+      timeout: 15
+    test:
+      mode: write
+      fixtures:
+        user_id: "26631647"
+
+  list_quotes:
+    description: List a user's liked/saved quotes with author attribution
+    returns: quote[]
+    connection: web
+    params:
+      user_id: { type: string, required: true, description: "User ID" }
+    python:
+      module: ./web_scraper.py
+      function: run_list_quotes
+      params: true
+      timeout: 15
+    test:
+      mode: write
+      fixtures:
+        user_id: "26631647"
 
 ---
 

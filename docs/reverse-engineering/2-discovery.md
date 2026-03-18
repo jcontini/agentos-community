@@ -8,6 +8,8 @@ This is Layer 2 of three reverse-engineering docs:
 - **Layer 1: Transport** — [1-transport.md](1-transport.md)
 - **Layer 2: Discovery** (this file) — finding structured data in pages and bundles
 - **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md)
+- **Layer 4: Content** — [4-content.md](4-content.md) — HTML scraping when there is no API
+- **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
 
 **Tool:** The Playwright skill (`skills/playwright/readme.md`) is the primary browser-based discovery tool. Use it to probe pages, inspect DOM/hydration state, capture network traffic, and extract cookies. The patterns in this doc tell you what to do with what Playwright finds.
 

@@ -358,11 +358,21 @@ def discover_runtime(
     return runtime
 
 
-def graphql_request(query: str, variables: dict[str, Any], runtime: dict[str, Any]) -> dict[str, Any]:
+def graphql_request(
+    query: str,
+    variables: dict[str, Any],
+    runtime: dict[str, Any],
+    *,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Send a GraphQL request. Pass extra_headers (e.g. Cookie) for authenticated calls."""
+    headers = dict(runtime["headers"])
+    if extra_headers:
+        headers.update(extra_headers)
     payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
     body = fetch_url(
         runtime["graphql_endpoint"],
-        headers=runtime["headers"],
+        headers=headers,
         data=payload,
         method="POST",
     )
@@ -372,6 +382,30 @@ def graphql_request(query: str, variables: dict[str, Any], runtime: dict[str, An
         messages = "; ".join(error.get("message", "Unknown GraphQL error") for error in errors)
         raise RuntimeError(messages)
     return parsed.get("data") or {}
+
+
+# Minimal auth-required query to validate session (see docs/reverse-engineering/2-discovery.md).
+GET_VIEWER_QUERY = """
+query getViewer {
+  getViewer {
+    __typename
+    id
+    legacyId
+    name
+  }
+}
+""".strip()
+
+
+def get_viewer(runtime: dict[str, Any], cookie_header: str) -> dict[str, Any]:
+    """Fetch the current viewer (logged-in user) via GraphQL with session cookies."""
+    data = graphql_request(
+        GET_VIEWER_QUERY,
+        {},
+        runtime,
+        extra_headers={"Cookie": cookie_header},
+    )
+    return (data.get("getViewer") or {}) if isinstance(data, dict) else {}
 
 
 def load_book_page(book_id: str) -> dict[str, Any]:
