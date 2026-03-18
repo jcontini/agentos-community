@@ -12,7 +12,7 @@ terms_url: https://linear.app/terms
 connections:
   api:
     base_url: "https://api.linear.app/graphql"
-    header: { Authorization: '"Bearer " + .auth.key' }
+    header: { Authorization: .auth.key }
     label: API Key
     help_url: https://linear.app/settings/api
     # Account-level params for auto-injection
