@@ -19,7 +19,7 @@ Simple URL fetching using curl. No API key required.
 ## Examples
 
 ```js
-use({ skill: "curl", tool: "read_webpage", params: { url: "https://example.com" } })
+run({ skill: "curl", tool: "read_webpage", params: { url: "https://example.com" } })
 
-use({ skill: "curl", tool: "read_webpage", params: { url: "https://api.github.com/users/octocat" } })
+run({ skill: "curl", tool: "read_webpage", params: { url: "https://api.github.com/users/octocat" } })
 ```
