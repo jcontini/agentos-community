@@ -50,8 +50,12 @@ adapters:
     id: .id
     name: .title
     text: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
+    content: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
     url: .notes_url
+    # Last activity (same idea as imessage/claude conversation adapters)
     datePublished: .updated_at
+    data.created_at: .created_at
+    data.updated_at: .updated_at
     data.document_id: .document_id
     data.message_count: 'if .messages then (.messages | length) else null end'
 
@@ -192,6 +196,10 @@ Speaker labels: `You` (microphone) and `Other` (system audio).
 ## Q&A conversations
 
 Granola lets you chat with AI about meeting transcripts. Each meeting can have one or more Q&A threads.
+
+### What this is in the Memex
+
+Each thread is a **`conversation` entity** — the same ontological kind as chat threads from Claude, iMessage, Mimestream/Gmail, and WhatsApp. The graph cares *what* it is (a named thread with messages and a URL), not which app produced it. `list_conversations` returns thin rows (title, ids, `notes_url`); `get_conversation` fills `text` / `content` by joining message bodies. The `document_id` you pass is the **meeting** document id in Granola; treat it as “which meeting this Q&A is about” when reasoning, even though the remembered entity type for the thread itself is still `conversation`.
 
 ### Workflow: Find AI chats about a meeting
 
