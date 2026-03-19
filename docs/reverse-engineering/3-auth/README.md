@@ -5,12 +5,13 @@ reverse-engineered web skills.
 
 This is Layer 3 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport.md](1-transport.md)
-- **Layer 2: Discovery** — [2-discovery.md](2-discovery.md)
+- **Layer 1: Transport** — [1-transport](../1-transport/)
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/)
 - **Layer 3: Auth & Runtime** (this file) — credentials, sessions, rotating config
-- **Layer 4: Content** — [4-content.md](4-content.md) — HTML scraping when there is no API
-- **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
+  - [workos.md](./workos.md) — WorkOS/Supabase migration pattern, JWT decoding, token refresh
+- **Layer 4: Content** — [4-content](../4-content/) — HTML scraping when there is no API
+- **Layer 5: Social Networks** — [5-social](../5-social/) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/) — macOS, Electron, local state, unofficial APIs
 
 ---
 

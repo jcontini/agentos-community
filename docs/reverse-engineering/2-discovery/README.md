@@ -1,16 +1,16 @@
 # Reverse Engineering — Discovery & Data Extraction
 
-Once you can talk to the server (see [1-transport.md](1-transport.md)),
+Once you can talk to the server (see [1-transport](../1-transport/)),
 how do you find and extract structured data?
 
 This is Layer 2 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport.md](1-transport.md)
+- **Layer 1: Transport** — [1-transport](../1-transport/)
 - **Layer 2: Discovery** (this file) — finding structured data in pages and bundles
-- **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md)
-- **Layer 4: Content** — [4-content.md](4-content.md) — HTML scraping when there is no API
-- **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/)
+- **Layer 4: Content** — [4-content](../4-content/) — HTML scraping when there is no API
+- **Layer 5: Social Networks** — [5-social](../5-social/) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/) — macOS, Electron, local state, unofficial APIs
 
 **Tool:** The Playwright skill (`skills/playwright/readme.md`) is the primary browser-based discovery tool. Use it to probe pages, inspect DOM/hydration state, capture network traffic, and extract cookies. The patterns in this doc tell you what to do with what Playwright finds.
 

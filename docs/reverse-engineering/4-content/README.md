@@ -6,12 +6,12 @@ with `httpx` + BeautifulSoup.
 
 This is Layer 4 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport.md](1-transport.md) — getting a response at all
-- **Layer 2: Discovery** — [2-discovery.md](2-discovery.md) — finding structured data in bundles
-- **Layer 3: Auth & Runtime** — [3-auth.md](3-auth.md) — credentials, sessions, rotating config
+- **Layer 1: Transport** — [1-transport](../1-transport/) — getting a response at all
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/) — finding structured data in bundles
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/) — credentials, sessions, rotating config
 - **Layer 4: Content** (this file) — extracting data from HTML when there is no API
-- **Layer 5: Social Networks** — [5-social.md](5-social.md) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps.md](6-desktop-apps.md) — macOS, Electron, local state, unofficial APIs
+- **Layer 5: Social Networks** — [5-social](../5-social/) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/) — macOS, Electron, local state, unofficial APIs
 
 ---
 
@@ -377,4 +377,4 @@ test:
 | Future: `skills/twitter/` | Following, followers, tweets, likes | — |
 
 For social-network-specific modeling patterns (person vs account, relationship
-types, cross-platform identity), see [5-social.md](5-social.md).
+types, cross-platform identity), see [5-social](../5-social/).

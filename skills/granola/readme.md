@@ -10,6 +10,11 @@ privacy_url: https://granola.ai/privacy
 
 connections: {}
 
+# Auth is handled internally by granola.py — reads WorkOS token from
+# ~/Library/Application Support/Granola/supabase.json.
+# Cache reads ~/Library/Application Support/Granola/cache-v6.json.
+# No runtime credential injection needed; Python self-authenticates.
+
 adapters:
   meeting:
     id: .id
