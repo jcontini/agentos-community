@@ -394,6 +394,7 @@
       "properties": {
         "description": { "type": "string" },
         "base_url": { "type": "string", "description": "Base URL for this service. Operations with relative URLs resolve against this." },
+        "needs": { "type": "string", "description": "Capability this connection requires from a provider skill (e.g., 'cookies', 'google'). Replaces cookies:/oauth: blocks." },
         "header": { "type": "object", "additionalProperties": { "type": "string" } },
         "query": { "type": "object", "additionalProperties": { "type": "string" } },
         "body": { "type": "object", "additionalProperties": { "type": "string" } },
