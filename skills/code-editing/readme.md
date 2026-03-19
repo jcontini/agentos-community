@@ -1,16 +1,3 @@
----
-id: code-editing
-name: Code Editing
-description: Read, write, and surgically edit files on disk
-icon: icon.svg
-color: "#10B981"
-
-website: https://github.com/jcontini/agentos-community
-
-connections: {}
-
----
-
 # Code Editing
 
 Filesystem operations for agents. Covers the full file CRUD cycle needed to scaffold

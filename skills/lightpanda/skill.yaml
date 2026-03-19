@@ -1,0 +1,275 @@
+id: lightpanda
+name: Lightpanda
+description: Fast headless browser for high-throughput scraping and automation — 10x faster and 10x less memory than Chrome. Playwright-compatible via CDP.
+icon: icon.svg
+color: "#1B3C27"
+
+website: https://lightpanda.io
+connections: {}
+adapters:
+  webpage:
+    id: .url
+    name: '.title // .url'
+    url: .url
+
+operations:
+  get_webpage:
+    description: Navigate to a URL via the CDP session and return page info (title, URL). Executes JavaScript.
+    returns: webpage
+    params:
+      url:
+        type: string
+        required: true
+        description: URL to navigate to
+      wait_until:
+        type: string
+        description: "Wait condition: load, domcontentloaded, networkidle (default: domcontentloaded). Note: networkidle can cause errors with Lightpanda — stick with domcontentloaded unless you have a reason."
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts goto"]
+      working_dir: .
+      stdin: '.params | {url: .url, wait_until: (.wait_until // "domcontentloaded")}'
+      timeout: 45
+
+  read_webpage:
+    description: Extract text or HTML content from the current page or a CSS selector
+    returns: webpage
+    params:
+      selector:
+        type: string
+        description: "CSS selector to extract from (default: body)"
+      format:
+        type: string
+        description: "Output format: text or html (default: text)"
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts extract"]
+      working_dir: .
+      stdin: '.params | {selector: (.selector // "body"), format: (.format // "text")}'
+      timeout: 30
+
+  fetch:
+    description: |
+      Fast single-shot page fetch — no persistent process, no CDP overhead.
+      Lightpanda fetches the URL, executes JavaScript, and returns the page content.
+      Use this for high-throughput scraping or when you just need page content quickly.
+      Supports html, markdown, or semantic_tree output formats.
+      This is the fastest operation in this skill.
+    params:
+      url:
+        type: string
+        required: true
+        description: URL to fetch
+      format:
+        type: string
+        description: "Output format: html, markdown, semantic_tree, semantic_tree_text (default: markdown)"
+      strip_mode:
+        type: string
+        description: "Comma-separated tag groups to strip: js, css, ui, full (default: none)"
+    returns:
+      url: string
+      format: string
+      content: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fetch"]
+      working_dir: .
+      stdin: '.params | {url: .url, format: (.format // "markdown"), strip_mode: (.strip_mode // "")}'
+      timeout: 30
+
+  start:
+    description: "Launch the Lightpanda CDP server. Always headless. If already running, returns immediately."
+    params:
+      port:
+        type: integer
+        description: "CDP port (default: 9223)"
+      timeout:
+        type: integer
+        description: "Server inactivity timeout in seconds (default: 30). Use 0 for indefinite (not recommended)."
+    returns:
+      status: string
+      port: integer
+      url: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts start"]
+      working_dir: .
+      stdin: '.params | {port: (.port // 9223), timeout: (.timeout // 30)}'
+      timeout: 15
+
+  stop:
+    description: Kill the Lightpanda CDP server process
+    returns: void
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts stop"]
+      working_dir: .
+      stdin: '.params | {port: (.port // 9223)}'
+      timeout: 10
+
+  status:
+    description: Check if the Lightpanda server is running and get current URL
+    returns:
+      running: boolean
+      port: integer
+      url: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts status"]
+      working_dir: .
+      stdin: '.params | {port: (.port // 9223)}'
+      timeout: 10
+
+  screenshot:
+    description: Capture a screenshot of the full page or a specific element
+    params:
+      selector:
+        type: string
+        description: CSS selector for element screenshot (omit for full page)
+      path:
+        type: string
+        description: "Output file path (default: /tmp/lp-screenshot.png)"
+      full_page:
+        type: boolean
+        description: Capture full scrollable page (default for no selector)
+    returns:
+      path: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts screenshot"]
+      working_dir: .
+      stdin: '.params | {selector: .selector, path: (.path // "/tmp/lp-screenshot.png"), full_page: (.full_page // false)}'
+      timeout: 30
+
+  click:
+    description: Click an element by CSS selector
+    params:
+      selector:
+        type: string
+        required: true
+        description: CSS selector of element to click
+    returns:
+      selector: string
+      url: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts click"]
+      working_dir: .
+      stdin: '.params | {selector: .selector}'
+      timeout: 15
+
+  fill:
+    description: Fill an input field with a value (clears existing content first)
+    params:
+      selector:
+        type: string
+        required: true
+        description: CSS selector of the input field
+      value:
+        type: string
+        required: true
+        description: Value to fill
+    returns:
+      selector: string
+      value: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fill"]
+      working_dir: .
+      stdin: '.params | {selector: .selector, value: .value}'
+      timeout: 15
+
+  evaluate:
+    description: Execute arbitrary JavaScript in the page context and return the result
+    params:
+      script:
+        type: string
+        required: true
+        description: JavaScript code to execute
+    returns:
+      result: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts evaluate"]
+      working_dir: .
+      stdin: '.params | {script: .script}'
+      timeout: 30
+
+  url:
+    description: Get the current page URL and title
+    returns:
+      url: string
+      title: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts url"]
+      working_dir: .
+      timeout: 10
+
+  inspect:
+    description: "Fast DOM snapshot — returns structured tree of tags, attributes, and text. Use this instead of screenshot to understand page structure."
+    params:
+      selector:
+        type: string
+        description: "CSS selector to inspect (default: body)"
+    returns:
+      url: string
+      title: string
+      snapshot: object
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts inspect"]
+      working_dir: .
+      stdin: '.params | {selector: (.selector // "body")}'
+      timeout: 15
+
+  wait:
+    description: Wait for a CSS selector to appear or a timeout to elapse
+    params:
+      selector:
+        type: string
+        description: CSS selector to wait for
+      timeout:
+        type: integer
+        description: "Max wait in milliseconds (default: 10000)"
+    returns:
+      status: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts wait"]
+      working_dir: .
+      stdin: '.params | {selector: .selector, timeout: (.timeout // 10000)}'
+      timeout: 60
+
+  capture_network:
+    description: |
+      Navigate to a URL and capture all network requests/responses.
+      Returns every XHR/fetch response matching the pattern, including parsed JSON bodies.
+      Use this to discover undocumented API endpoints that a page calls.
+      Pattern uses glob syntax: "**" matches everything, "**/api/**" matches any URL with /api/ in the path.
+      Wait time (default 5000ms) controls how long after navigation to keep listening.
+    params:
+      url:
+        type: string
+        required: true
+        description: "URL to navigate to"
+      pattern:
+        type: string
+        description: "Glob URL pattern to match (default: ** = all non-asset requests)"
+      wait:
+        type: integer
+        description: "Milliseconds to wait after navigation for async requests (default: 5000)"
+      capture_body:
+        type: boolean
+        description: "Capture JSON response bodies (default: true)"
+    returns:
+      url: string
+      title: string
+      captured: array
+      count: integer
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/browser.ts network_capture"]
+      working_dir: .
+      stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), capture_body: (.capture_body // true)}'
+      timeout: 60

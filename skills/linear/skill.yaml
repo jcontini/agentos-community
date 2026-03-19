@@ -1,0 +1,462 @@
+id: linear
+name: Linear
+description: Project management for engineering teams
+icon: icon.png
+color: "#636FD3"
+
+website: https://linear.app
+privacy_url: https://linear.app/privacy
+terms_url: https://linear.app/terms
+
+connections:
+  api:
+    base_url: "https://api.linear.app/graphql"
+    header: { Authorization: .auth.key }
+    label: API Key
+    help_url: https://linear.app/settings/api
+    # Account-level params for auto-injection
+    # These are configured per-account and injected into operations automatically
+    # AI should call `setup` after credential is added to auto-configure these
+    account_params:
+      workspace_slug:
+      type: string
+      required: false
+      label: "Workspace URL"
+      description: "Organization URL slug for web links (e.g., 'thirdparty' in linear.app/thirdparty/...)"
+      discover: get_organization  # Returns urlKey field
+    team_id:
+      type: string
+      required: false
+      label: "Default Team"
+      description: "Filter operations to this team by default"
+      discover: get_teams  # Returns team id and key
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Entity adapters transform API data into universal entity format.
+# Mapping defined ONCE per entity — applied automatically to all operations.
+
+adapters:
+  task:
+    id: .id
+    name: .title
+    description: .description
+    content: .description
+    priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
+    started_at: 'if .state.type == "started" then .updatedAt else null end'
+    target.date: .dueDate
+    data.remote_id: .identifier
+    data.url: .url
+    created_at: .createdAt
+    updated_at: .updatedAt
+    data.assignee.id: '(.assignee // {}).id'
+    data.assignee.name: '(.assignee // {}).name'
+    assigned_to:
+      person:
+        id: '(.assignee // {}).id'
+        name: '(.assignee // {}).name'
+    project_id:
+      ref: project
+      value: '(.project // {}).id'
+    _project_name: '(.project // {}).name'
+    _team_id: '(.team // {}).id'
+    _team_name: '(.team // {}).name'
+    _cycle_id: '(.cycle // {}).id'
+    _cycle_number: '(.cycle // {}).number'
+    _state_id: '(.state // {}).id'
+    _state_name: '(.state // {}).name'
+    _state_type: '(.state // {}).type'
+    _parent_id: '(.parent // {}).id'
+    _labels: '[((.labels // {}).nodes // [])[] | .name]'
+    _children: '[((.children // {}).nodes // [])[] | .id]'
+    _blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
+    _blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
+  project:
+    id: .id
+    name: .name
+    data.state: .state
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Entity operations that return typed entities.
+# Mapping from `adapters` is applied automatically based on return type.
+# Naming convention: snake_case
+
+operations:
+  list_tasks:
+    description: List issues with optional filters
+    returns: task[]
+    web_url: '"https://linear.app/" + .params.workspace_slug'
+    params:
+      limit: { type: integer, description: "Max issues to return" }
+      team_id: { type: string, description: "Filter by team ID" }
+      state_id: { type: string, description: "Filter by workflow state ID" }
+    graphql:
+      query: |
+        query($limit: Int, $teamId: ID, $stateId: ID) {
+          issues(
+            first: $limit
+            filter: {
+              team: { id: { eq: $teamId } }
+              state: { id: { eq: $stateId } }
+            }
+          ) {
+            nodes {
+              id identifier title description
+              state { id name type }
+              priority
+              dueDate
+              assignee { id name }
+              project { id name }
+              team { id key name }
+              cycle { id number }
+              parent { id identifier }
+              labels { nodes { name } }
+              url
+              createdAt updatedAt
+            }
+          }
+        }
+      variables:
+        limit: .params.limit
+        teamId: .params.team_id
+        stateId: .params.state_id
+      response:
+        root: /data/issues/nodes
+
+  get_task:
+    description: Get a specific issue by ID
+    returns: task
+    params:
+      id: { type: string, required: true, description: "Issue ID" }
+    graphql:
+      query: |
+        query($id: String!) {
+          issue(id: $id) {
+            id identifier title description
+            state { id name type }
+            priority url dueDate
+            assignee { id name }
+            project { id name }
+            team { id key name }
+            cycle { id number }
+            parent { id identifier }
+            children { nodes { id identifier title state { name } } }
+            labels { nodes { name } }
+            relations { nodes { type relatedIssue { id identifier } } }
+            inverseRelations { nodes { type issue { id identifier } } }
+            createdAt updatedAt
+          }
+        }
+      variables:
+        id: .params.id
+      response:
+        root: /data/issue
+
+  create_task:
+    description: Create a new issue
+    returns: task
+    params:
+      team_id: { type: string, required: true, description: "Team ID (use get_teams to find)" }
+      name: { type: string, required: true, description: "Issue title" }
+      description: { type: string, description: "Issue description (markdown)" }
+      priority: { type: integer, description: "Priority 0-4 (0=none, 1=urgent, 4=low)" }
+      project_id: { type: string, description: "Project ID" }
+      parent_id: { type: string, description: "Parent task ID (for sub-tasks)" }
+      due: { type: string, description: "Due date (ISO format)" }
+    graphql:
+      query: |
+        mutation($input: IssueCreateInput!) {
+          issueCreate(input: $input) {
+            success
+            issue {
+              id identifier title url
+              state { id name type }
+              project { id name }
+              team { id key name }
+              assignee { id name }
+              priority dueDate
+              createdAt updatedAt
+            }
+          }
+        }
+      variables:
+        input:
+          teamId: .params.team_id
+          title: .params.name
+          description: .params.description
+          priority: .params.priority
+          projectId: .params.project_id
+          parentId: .params.parent_id
+          dueDate: .params.due
+      response:
+        root: /data/issueCreate/issue
+
+  update_task:
+    description: Update an existing issue
+    returns: task
+    params:
+      id: { type: string, required: true, description: "Issue ID" }
+      name: { type: string, description: "New title" }
+      description: { type: string, description: "New description" }
+      priority: { type: integer, description: "New priority 0-4" }
+      state_id: { type: string, description: "New workflow state ID" }
+      due: { type: string, description: "New due date" }
+    graphql:
+      query: |
+        mutation($id: String!, $input: IssueUpdateInput!) {
+          issueUpdate(id: $id, input: $input) {
+            success
+            issue {
+              id identifier title url
+              state { id name type }
+              project { id name }
+              team { id key name }
+              assignee { id name }
+              priority dueDate
+              createdAt updatedAt
+            }
+          }
+        }
+      variables:
+        id: .params.id
+        input:
+          title: .params.name
+          description: .params.description
+          priority: .params.priority
+          stateId: .params.state_id
+          dueDate: .params.due
+      response:
+        root: /data/issueUpdate/issue
+
+  delete_task:
+    description: Delete an issue
+    returns: void
+    params:
+      id: { type: string, required: true, description: "Issue ID" }
+    graphql:
+      query: |
+        mutation($id: String!) {
+          issueDelete(id: $id) { success }
+        }
+      variables:
+        id: .params.id
+
+  list_projects:
+    description: List all projects
+    returns: project[]
+    web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
+    graphql:
+      query: "{ projects { nodes { id name state } } }"
+      response:
+        root: /data/projects/nodes
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADDITIONAL OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Operations that return custom shapes or perform setup.
+  setup:
+    description: |
+      Auto-configure account params. Call this after adding a Linear credential.
+      Returns organization info (for workspace_slug) and teams (for team_id).
+      - If one team: set both workspace_slug and team_id automatically
+      - If multiple teams: set workspace_slug, ask user which team to use as default
+      After getting response, set params via PUT /api/settings/account_params
+    returns:
+      organization.urlKey: string
+      organization.name: string
+      teams: array
+      viewer.id: string
+      viewer.name: string
+      viewer.email: string
+    graphql:
+      query: |
+        {
+          organization { urlKey name }
+          teams { nodes { id key name } }
+          viewer { id name email }
+        }
+      response:
+        root: /data
+
+  whoami:
+    description: Get current authenticated user (for credential verification)
+    returns:
+      id: string
+      name: string
+      email: string
+    graphql:
+      query: "{ viewer { id name email } }"
+      response:
+        root: /data/viewer
+
+  get_organization:
+    description: Get organization info including workspace URL slug
+    returns:
+      id: string
+      name: string
+      urlKey: string
+    graphql:
+      query: "{ organization { id name urlKey } }"
+      response:
+        root: /data/organization
+
+  get_teams:
+    description: List all teams (needed to create issues)
+    returns:
+      id: string
+      key: string
+      name: string
+    graphql:
+      query: "{ teams { nodes { id key name } } }"
+      response:
+        root: /data/teams/nodes
+
+  get_workflow_states:
+    description: List workflow states for a team
+    params:
+      team_id: { type: string, required: true, description: "Team ID" }
+    returns:
+      id: string
+      name: string
+      type: string
+      position: number
+    graphql:
+      query: |
+        query($teamId: ID!) {
+          workflowStates(filter: { team: { id: { eq: $teamId } } }) {
+            nodes { id name type position }
+          }
+        }
+      variables:
+        teamId: .params.team_id
+      response:
+        root: /data/workflowStates/nodes
+
+  get_cycles:
+    description: List cycles (sprints) for a team
+    params:
+      team_id: { type: string, required: true, description: "Team ID" }
+    returns:
+      id: string
+      number: integer
+      startsAt: datetime
+      endsAt: datetime
+    graphql:
+      query: |
+        query($teamId: String!) {
+          team(id: $teamId) {
+            cycles { nodes { id number startsAt endsAt } }
+          }
+        }
+      variables:
+        teamId: .params.team_id
+      response:
+        root: /data/team/cycles/nodes
+
+  get_relations:
+    description: Get an issue's relationships (blocking, blocked by, related). Returns relation_id needed for remove_relation.
+    params:
+      id: { type: string, required: true, description: "Issue ID" }
+    returns:
+      blocks: array
+      blocked_by: array
+      related: array
+    graphql:
+      query: |
+        query($id: String!) {
+          issue(id: $id) {
+            relations {
+              nodes {
+                id
+                type
+                relatedIssue { id identifier title }
+              }
+            }
+            inverseRelations {
+              nodes {
+                id
+                type
+                issue { id identifier title }
+              }
+            }
+          }
+        }
+      variables:
+        id: .params.id
+      response:
+        root: /data/issue
+        mapping:
+          blocks: .relations.nodes
+          blocked_by: .inverseRelations.nodes
+
+  add_blocker:
+    description: Add a blocking relationship (blocker_id blocks id). Returns relation ID in `id` field.
+    params:
+      id: { type: string, required: true, description: "Issue being blocked" }
+      blocker_id: { type: string, required: true, description: "Issue that is blocking" }
+    returns: void
+    graphql:
+      query: |
+        mutation($input: IssueRelationCreateInput!) {
+          issueRelationCreate(input: $input) {
+            success
+            issueRelation { id type }
+          }
+        }
+      variables:
+        input:
+          issueId: .params.blocker_id
+          relatedIssueId: .params.id
+          type: '"blocks"'
+      response:
+        root: /data/issueRelationCreate
+        mapping:
+          success: .success
+          id: .issueRelation.id
+
+  remove_relation:
+    description: Remove a relationship by its ID (get ID from add_blocker/add_related response or issue query)
+    params:
+      relation_id: { type: string, required: true, description: "Relation ID to delete" }
+    returns: void
+    graphql:
+      query: |
+        mutation($id: String!) {
+          issueRelationDelete(id: $id) {
+            success
+          }
+        }
+      variables:
+        id: .params.relation_id
+      response:
+        root: /data/issueRelationDelete
+        mapping:
+          success: .success
+
+  add_related:
+    description: Link two issues as related. Returns relation ID in `id` field.
+    params:
+      id: { type: string, required: true, description: "First issue ID" }
+      related_id: { type: string, required: true, description: "Second issue ID" }
+    returns: void
+    graphql:
+      query: |
+        mutation($input: IssueRelationCreateInput!) {
+          issueRelationCreate(input: $input) {
+            success
+            issueRelation { id type }
+          }
+        }
+      variables:
+        input:
+          issueId: .params.id
+          relatedIssueId: .params.related_id
+          type: '"related"'
+      response:
+        root: /data/issueRelationCreate
+        mapping:
+          success: .success
+          id: .issueRelation.id

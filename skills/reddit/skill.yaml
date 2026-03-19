@@ -1,0 +1,240 @@
+id: reddit
+name: Reddit
+description: Read public Reddit communities, posts, and comments
+icon: icon.png
+color: "#FF4500"
+
+website: https://reddit.com
+privacy_url: https://www.reddit.com/policies/privacy-policy
+terms_url: https://www.redditinc.com/policies/user-agreement
+
+connections: {}
+
+sources:
+  images:
+    - styles.redditmedia.com
+    - preview.redd.it
+    - i.redd.it
+    - external-preview.redd.it
+    - a.thumbs.redditmedia.com
+    - b.thumbs.redditmedia.com
+  image_headers:
+    Referer: "https://www.reddit.com/"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+adapters:
+  post:
+    id: .id
+    name: .title
+    title: .title
+    text: .selftext // .body
+    url: '"https://reddit.com" + .permalink'
+    content: .selftext // .body
+    author: .author
+    datePublished: .created_utc | todate
+    engagement.score: .score
+    engagement.comment_count: .num_comments
+    published_at: .created_utc | todate
+    replies: .replies
+
+    publish:
+      community:
+        id: .subreddit
+        name: .subreddit
+        url: '"https://reddit.com/r/" + .subreddit'
+        platform: '"reddit"'
+
+    posted_by:
+      account:
+        id: .author
+        platform: '"reddit"'
+        handle: .author
+        display_name: .author
+        url: '"https://reddit.com/u/" + .author'
+
+    parent_id:
+      ref: post
+      value: .parent_id
+      rel: replies_to
+
+  community:
+    id: .name
+    name: .display_name
+    description: .public_description
+    url: '"https://reddit.com/r/" + .display_name'
+    image: .community_icon
+    icon: .community_icon
+    member_count: .subscribers
+    privacy: '"OPEN"'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+operations:
+  search_posts:
+    description: Search posts across Reddit
+    returns: post[]
+    web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
+    params:
+      query: { type: string, required: true, description: "Search query" }
+      limit: { type: integer, description: "Number of results (max 100)" }
+      sort: { type: string, default: "relevance", description: "Sort by: relevance, hot, top, new, comments" }
+    rest:
+      method: GET
+      url: https://www.reddit.com/search.json
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      query:
+        q: .params.query
+        limit: .params.limit
+        sort: .params.sort
+      response:
+        transform: '[.data.children[] | .data]'
+    test:
+      mode: read
+
+  list_posts:
+    description: List posts from a subreddit
+    returns: post[]
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
+    params:
+      subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
+      sort: { type: string, default: "hot", description: "Sort by: hot, new, top, rising" }
+      limit: { type: integer, description: "Number of posts (max 100)" }
+    rest:
+      method: GET
+      url: '"https://www.reddit.com/r/" + .params.subreddit + "/" + .params.sort + ".json"'
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      query:
+        limit: .params.limit
+      response:
+        transform: '[.data.children[] | .data]'
+    test:
+      mode: read
+      fixtures:
+        subreddit: programming
+        sort: hot
+        limit: 3
+
+  get_post:
+    description: Get a Reddit post with comments
+    returns: post
+    web_url: '"https://www.reddit.com/comments/" + .params.id'
+    params:
+      id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
+      comment_limit: { type: integer, description: "Max comments to fetch" }
+    rest:
+      method: GET
+      url: '"https://www.reddit.com/comments/" + .params.id + ".json"'
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      query:
+        limit: .params.comment_limit
+      response:
+        transform: |
+          def map_comment:
+            {
+              id: .id,
+              content: .body,
+              posted_by: {
+                account: {
+                  id: .author,
+                  platform: "reddit",
+                  handle: .author,
+                  display_name: .author,
+                  url: ("https://reddit.com/u/" + .author)
+                }
+              },
+              engagement: { score: .ups },
+              published_at: (.created_utc | todate),
+              replies: [if .replies == "" then empty else (.replies.data.children[] | select(.kind == "t1") | .data | map_comment) end]
+            };
+          .[0].data.children[0].data + {
+            replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
+          }
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          subreddit: programming
+          sort: hot
+          limit: 3
+        map:
+          id: id
+
+  comments_post:
+    description: |
+      Get comments on a Reddit post as graph-native entities.
+      Returns a flat list: the parent post first, then all comments in parent-first order.
+      Each comment becomes a post entity with replies_to relationship to its parent.
+    returns: post[]
+    web_url: '"https://www.reddit.com/comments/" + .params.id'
+    params:
+      id: { type: string, required: true, description: "Post ID (e.g., 'abc123')" }
+      comment_limit: { type: integer, description: "Max comments to fetch" }
+    command:
+      binary: bash
+      args:
+        - ./comments_post.sh
+        - ".params.id"
+        - ".params.comment_limit"
+      timeout: 30
+    test:
+      mode: read
+      discover_from:
+        op: list_posts
+        params:
+          subreddit: programming
+          sort: hot
+          limit: 3
+        map:
+          id: id
+
+  get_community:
+    description: Get subreddit metadata
+    returns: community
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
+    params:
+      subreddit: { type: string, required: true, description: "Subreddit name (without r/)" }
+    rest:
+      method: GET
+      url: '"https://www.reddit.com/r/" + .params.subreddit + "/about.json"'
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      response:
+        root: "/data"
+    test:
+      mode: read
+      fixtures:
+        subreddit: programming
+
+  search_communities:
+    description: Search for subreddits
+    returns: community[]
+    web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
+    params:
+      query: { type: string, required: true, description: "Search query" }
+      limit: { type: integer, description: "Number of results (max 100)" }
+    rest:
+      method: GET
+      url: https://www.reddit.com/subreddits/search.json
+      headers:
+        User-Agent: "Mozilla/5.0 (compatible; AgentOS/1.0)"
+        Accept: application/json
+      query:
+        q: .params.query
+        limit: .params.limit
+      response:
+        root: "/data/children"
+    test:
+      mode: read
