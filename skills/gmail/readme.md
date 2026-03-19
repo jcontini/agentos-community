@@ -102,12 +102,31 @@ operations:
   # --- Reading ---
 
   list_emails:
-    description: "List email IDs (stubs only — no subject/body). Use conversation.list to browse with snippets, or email.get for full content."
+    description: "List emails with full content — subject, snippet, headers, body. Fetches stubs then hydrates each via get_email."
     returns: email[]
     params:
       account: { type: string, description: "Gmail address — see Configured Accounts in readme" }
       label_ids: { type: array, description: "Filter by label IDs (e.g. ['INBOX', 'UNREAD'])" }
       query: { type: string, description: "Gmail search query (e.g. 'from:boss@company.com is:unread')" }
+      limit: { type: integer, description: "Max results (default: 20)" }
+      page_token: { type: string, description: "Token for next page of results" }
+    python:
+      module: ./gmail.py
+      function: list_emails
+      args:
+        query: '.params.query // ""'
+        limit: '.params.limit // 20'
+        label_ids: '.params.label_ids'
+        page_token: '.params.page_token'
+      timeout: 120
+
+  list_email_stubs:
+    description: "Internal: list email IDs only (no subject/body). Used by list_emails and search_emails."
+    returns: email[]
+    params:
+      account: { type: string, description: "Gmail address" }
+      label_ids: { type: array, description: "Filter by label IDs" }
+      query: { type: string, description: "Gmail search query" }
       limit: { type: integer, description: "Max results (default: 20)" }
       page_token: { type: string, description: "Token for next page of results" }
     rest:
@@ -125,7 +144,7 @@ operations:
     description: Get a specific email with full body content, headers, and attachment metadata
     returns: email
     params:
-      id: { type: string, required: true, description: "Message ID from email.list" }
+      id: { type: string, required: true, description: "Message ID" }
       account: { type: string, description: "Gmail address" }
     rest:
       url: '"/messages/" + .params.id'
@@ -134,20 +153,19 @@ operations:
         format: full
 
   search_emails:
-    description: "Search for email IDs using Gmail query syntax (stubs only — use email.get for full content)"
+    description: "Search emails with full content using Gmail query syntax — returns subject, snippet, headers, body per result."
     returns: email[]
     params:
       query: { type: string, required: true, description: "Gmail search syntax: 'from:x@y.com', 'subject:invoice', 'after:2026/01/01', 'is:unread'" }
       account: { type: string, description: "Gmail address" }
       limit: { type: integer, description: "Max results (default: 20)" }
-    rest:
-      url: "/messages"
-      method: GET
-      query:
-        q: ".params.query"
-        maxResults: ".params.limit // 20"
-      response:
-        transform: ".messages // []"
+    python:
+      module: ./gmail.py
+      function: search_emails
+      args:
+        query: '.params.query'
+        limit: '.params.limit // 20'
+      timeout: 120
 
   list_conversations:
     description: List email threads with snippets, optionally filtered by label or search query (best for browsing)
@@ -686,6 +704,8 @@ Full-featured email via the [Gmail REST API](https://developers.google.com/gmail
 
 ## Agent Guidance
 
+**Use `email.list` for everything.** `list_emails` returns full emails — subject, snippet, headers, body — in one call. No need to call `get_email` separately per message. Use `search_emails` for query-driven searches; it also returns full content.
+
 **Always default to inbox.** When the user asks to check email or see unread messages, ALWAYS scope to the inbox first using `query: "in:inbox is:unread"`. Do NOT use bare `is:unread` — that searches all mail including Promotions, Updates, and Spam and will return hundreds of irrelevant messages. After showing inbox results, briefly note counts for other categories if there are any (e.g. "Also 50+ unread in Promotions — want me to show those?").
 
 **Folder query syntax** — use the `query` param, not `label_ids`:
@@ -704,8 +724,8 @@ If a Google provider skill is installed, this skill can borrow Google OAuth toke
 How it works:
 1. Mimestream stores Google OAuth tokens in the Keychain under `"Mimestream: {email}"` / `"OAuth"`
 2. The `mimestream` skill reads those tokens via its `credential_get` operation
-3. This skill declares `auth: { oauth: { service: google } }`
-4. The resolver matches the provider → calls `credential_get` → injects the configured auth headers using `.auth.*` fields
+3. This skill declares `connections: { gmail: { oauth: { service: google } } }`
+4. The resolver matches the provider → calls `credential_get` → injects the configured auth headers
 5. If multiple installed skills provide Google auth, the agent should ask the user which provider to use
 
 **Without a provider skill:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
@@ -718,8 +738,8 @@ OPERATION             DESCRIPTION
 conversation.list     Browse threads with snippets (best for browsing)
 conversation.get      Full thread with all messages, headers, body
 email.get             Full email with body, headers, attachment metadata
-email.list            Email ID stubs (use conversation.list to browse)
-email.search          Search email IDs with Gmail query syntax
+email.list            List emails with full content (subject, snippet, body)
+email.search          Search emails with full content (Gmail query syntax)
 email.send            Compose and send a new email (text or HTML)
 email.reply           Reply to an email (keeps it in the thread)
 email.forward         Forward an email to another recipient

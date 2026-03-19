@@ -76,6 +76,12 @@ Important runtime note:
 - If you changed Rust core in `~/dev/agentos`, restart the engine before trusting `mcp:call`
 - If Cursor MCP looks stale, use `npm run mcp:call` and `npm run mcp:test` as the ground-truth path while you restart the engine or reconnect the editor
 
+## Python Over Rust
+
+Prefer Python scripts for skill logic. When an API has quirks (list returns stubs only, batch fetching, custom parsing), solve it in a `*.py` helper like Granola does — not by modifying agentOS core. Rust changes are costly to iterate; Python lives in the skill folder and ships with the skill. We’ll revisit what belongs in core later; for now, keep skill-specific behavior in skills.
+
+When Python needs to call authenticated APIs, use `_call` dispatch (see Python Executor Shape below) instead of handling credentials directly. The engine mediates all authenticated calls through sibling operations with full credential injection. Python scripts never see raw tokens.
+
 ## The Short Version
 
 The current skill style is:
@@ -90,6 +96,7 @@ The current skill style is:
 - Use `operations:` for both entity-returning tools and local-control/action tools
 - Use inline `returns:` schemas for non-entity or action-style tools
 - Validate live behavior through the direct MCP path, not just by reading YAML
+
 
 ## Folder Shape
 
@@ -223,6 +230,55 @@ Rules:
 - Functions should not use `print(json.dumps(...))` or `sys.argv` — the runtime handles I/O
 
 Migration note: existing `command:` + `binary: python3` skills can adopt `python:` for cleaner YAML. Examples: `austin-boulder-project`, `goodreads`, `granola`, `cursor`, `here-now`.
+
+### `_call` dispatch — calling sibling operations from Python
+
+When a Python operation needs to compose multiple API calls (e.g. list returns stubs, get returns full data), use `_call` to invoke sibling operations. The engine injects `_call` automatically when the function signature accepts it.
+
+```python
+def list_emails(query="", limit=20, _call=None):
+    stubs = _call("list_email_stubs", {"query": query, "limit": limit})
+    return [_call("get_email", {"id": s["id"]}) for s in stubs]
+```
+
+The YAML wires the Python function as usual:
+
+```yaml
+operations:
+  list_emails:
+    description: List emails with full content
+    returns: email[]
+    python:
+      module: ./gmail.py
+      function: list_emails
+      args:
+        query: '.params.query // ""'
+        limit: '.params.limit // 20'
+      timeout: 120
+
+  list_email_stubs:
+    description: "Internal: list email IDs only"
+    returns: email[]
+    rest:
+      url: "/messages"
+      method: GET
+      query:
+        maxResults: ".params.limit // 20"
+        q: ".params.query"
+      response:
+        transform: ".messages // []"
+```
+
+Rules:
+
+- `_call` can only call operations in the **same skill** — no cross-skill calls
+- The engine executes each dispatched call with full credential injection (OAuth, cookies, API keys)
+- Python never sees raw credentials — the engine is the only process that touches tokens
+- `_call` is synchronous and blocking — each call completes before the next starts
+- The same `account` context from the parent call is used for dispatched operations
+- If a function's signature does not include `_call` (or `**kwargs`), it is not injected — existing functions work unchanged
+
+Leading by example: `skills/gmail/gmail.py` (list + hydrate pattern with `_call`).
 
 ## Adapters
 
@@ -659,6 +715,7 @@ Preferred patterns:
 
 Leading by example:
 
+- `skills/gmail/gmail.py` — `_call` dispatch: list stubs then hydrate via sibling operations
 - `skills/goodreads/public_graph.py` — GraphQL discovery, Apollo cache extraction, multi-tier runtime config
 - `skills/claude/claude-api.py` — API replay with session cookies and stealth headers
 - `skills/austin-boulder-project/abp.py` — bundle config extraction and tenant-namespace auth
@@ -711,7 +768,7 @@ If you need something advanced, copy an existing skill:
 
 - `linear` for GraphQL with connections
 - `youtube` for command execution
-- `gmail` + `mimestream` for provider-sourced OAuth
+- `gmail` + `mimestream` for provider-sourced OAuth and `_call` dispatch
 - `claude` + `brave-browser` for consumer/provider cookie patterns
 - `goodreads` for multi-connection (graphql + web) and sandbox storage
 - an existing cookie-provider skill for keychain, crypto, and multi-step extraction
