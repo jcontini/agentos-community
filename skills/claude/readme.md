@@ -25,8 +25,8 @@ connections:
               - { action: click, selector: "button[type=submit]" }
             returns_to_agent: |
               Magic link requested. Check the user's email for a message from Anthropic
-              containing a claude.ai/magic-link URL. Use the Gmail skill to search for it,
-              or ask the user to paste it.
+              containing a claude.ai/magic-link URL. Search mail or the graph for that message,
+              or ask the user to paste the link.
           - name: complete_login
             description: "Navigate to the magic link URL to complete authentication"
             requires: [magic_link]
@@ -111,7 +111,7 @@ operations:
       Search claude.ai web conversations by title/name.
       Fetches up to 250 conversations and filters locally (no server-side search).
       For full content search across message text, use import_conversation first,
-      then search({ query: "...", types: ["message"] }) against the Memex FTS index.
+      then search({ query: "...", types: ["message"] }) against the graph FTS index.
     returns: conversation[]
     params:
       query: { type: string, required: true, description: "Text to search for in conversation titles" }
@@ -129,7 +129,7 @@ operations:
 
   import_conversation:
     description: >
-      Import claude.ai conversations and all their messages into the Memex.
+      Import claude.ai conversations and all their messages into the graph.
       Each message becomes a message entity with full content FTS-indexed.
       After import, use search({ query: "...", types: ["message"] }) for content search.
       Safe to run repeatedly — deduplicates by message UUID.
@@ -168,8 +168,8 @@ operations:
   extract_magic_link:
     description: |
       Extract the magic link URL from a raw base64url-encoded email body.
-      Pass the raw email content (from Gmail's `get_raw` operation) and this
-      will decode it and find the claude.ai magic link.
+      Pass the raw RFC 2822 email body (e.g. from whichever integration exposes raw message bytes)
+      and this will decode it and find the claude.ai magic link.
     params:
       raw_email:
         type: string
@@ -196,13 +196,12 @@ claude.ai web chat history lives server-side only — unlike Claude Code (CLI) w
 transcripts locally, web conversations are only accessible via the claude.ai API.
 
 Two phases:
-1. **Cookie provider matchmaking** — agentOS asks an installed cookie provider
-   skill for the `sessionKey` cookie (for example `brave-browser`)
+1. **Cookie provider matchmaking** — the runtime resolves who provides `.claude.ai` cookies and injects `sessionKey`.
 2. **API calls** — all subsequent calls use `httpx` directly with the injected
    `sessionKey` — no browser needed, no session file
 
-If multiple installed skills provide cookies, the agent should ask the user
-which browser/provider to use instead of guessing.
+If multiple integrations provide cookies for the same domain, the agent should ask the user
+which provider to use instead of guessing.
 
 ## Capabilities
 
@@ -212,7 +211,7 @@ OPERATION              DESCRIPTION
 list_conversations     Browse conversations, most recently updated first
 get_conversation       Full conversation with all messages
 search_conversations   Search conversations by title (client-side filter)
-import_conversation    Import messages into Memex for FTS content search
+import_conversation    Import messages into the graph for FTS content search
 list_orgs              Discover available orgs and capabilities
 extract_magic_link     Parse magic link URL from raw email content
 ```

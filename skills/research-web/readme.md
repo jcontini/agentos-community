@@ -43,8 +43,7 @@ entity for status, or read the conversation to see the full reasoning trace.
 
 ## Requirements
 
-Needs at least one skill with `webpage.search` and one with `webpage.read` configured.
-Exa works for both. Brave works for search.
+Requires the runtime to expose `webpage.search` and `webpage.read` (via whatever integrations are connected). The agent config above references those operations by name, not by a specific provider.
 
 ## Cost
 

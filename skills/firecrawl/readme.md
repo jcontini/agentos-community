@@ -61,7 +61,7 @@ operations:
 
 Read webpages with full browser rendering. Handles JS-heavy sites that other tools struggle with.
 
-Use Exa for discovery/search, then use Firecrawl to fetch URLs that need a real browser render.
+Use a `webpage.search` integration for discovery when needed; use this operation when URLs need a real browser render for `webpage.read`.
 
 ## Setup
 
@@ -79,7 +79,7 @@ Use Exa for discovery/search, then use Firecrawl to fetch URLs that need a real 
 
 - JS-heavy sites (React, Vue, Angular)
 - Notion pages
-- Sites that fail with Exa
+- Sites that fail with crawl-only `webpage.read` providers
 - When you need fresh/live content
 
 ## Operation

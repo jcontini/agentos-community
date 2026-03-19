@@ -40,16 +40,16 @@ operations:
 
 # Amazon
 
-Access your Amazon account using browser session cookies. No API keys, no OAuth — just log into Amazon in a browser backed by an installed cookie provider skill and this skill handles the rest.
+Access your Amazon account using browser session cookies. No API keys, no OAuth — log into Amazon in a browser whose cookies are visible to an installed cookie provider integration; this skill uses those cookies on requests.
 
 ## How It Works
 
-Amazon uses **pure cookie-based session auth**. When you log into Amazon in your browser, it stores session cookies that persist for weeks or months. This skill asks an installed cookie provider skill for those cookies and uses them to make authenticated requests on your behalf.
+Amazon uses **pure cookie-based session auth**. When you log into Amazon in your browser, it stores session cookies that persist for weeks or months. The runtime resolves a cookie provider for `.amazon.com` and injects those cookies on requests.
 
 ### Authentication Flow
 
-1. You log into Amazon in a browser with an installed cookie provider skill
-2. AgentOS asks that provider skill for `.amazon.com` cookies
+1. You log into Amazon in a browser covered by a cookie provider integration
+2. The engine obtains `.amazon.com` cookies from that provider
 3. Cookies are injected as a `Cookie` header on every request
 4. Sessions last weeks/months — no refresh needed
 5. If multiple cookie providers are installed, the agent should ask the user which browser/provider to use

@@ -413,7 +413,7 @@ function collectJaqExpressions(mapping, parentPath) {
 // ============================================================================
 
 const AUTH_FIELDS = new Set(['header', 'query', 'body', 'cookies', 'oauth']);
-const EXECUTOR_FIELDS = new Set(['rest', 'graphql', 'sql', 'command', 'swift', 'csv', 'keychain', 'crypto', 'steps', 'python', 'applescript', 'memex', 'plist', 'download']);
+const EXECUTOR_FIELDS = new Set(['rest', 'graphql', 'sql', 'command', 'swift', 'csv', 'keychain', 'crypto', 'steps', 'python', 'applescript', 'graph', 'memex', 'plist', 'download']);
 
 function checkSemantics(frontmatter) {
   const warnings = [];

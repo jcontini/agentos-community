@@ -128,4 +128,4 @@ use({ skill: "exa", tool: "read_webpage", params: { url: "https://example.com" }
 
 ## Known Limitations
 
-**`read_webpage`**: May fail for URLs that Exa can't crawl (e.g., pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`. Use `firecrawl` as fallback for problematic URLs.
+**`read_webpage`**: May fail for URLs the crawl API cannot fetch (e.g., pages behind auth, rate-limited sites). The API returns empty results with error info in `statuses`. Retry with another integration that implements `webpage.read` using a real browser if you need JS rendering.

@@ -290,15 +290,15 @@ Fast headless browser built from scratch for machines, not humans. 10x faster, 1
 - **Endpoint discovery** — `capture_network` to find what APIs a page calls
 - **AI agent web browsing** — fast browse-and-extract loops where Chrome's cost adds up
 
-**Use the Playwright skill instead when you need:**
+**Use full Chromium automation (persistent profile, optional visible window) when you need:**
 
 - A **visible browser window** (Lightpanda is headless-only)
-- **Authenticated sessions that persist** across stops (Playwright's Chromium keeps profile/cookies)
+- **Authenticated sessions that persist** across stops (a long-lived Chromium session keeps profile/cookies)
 - **Complex SPAs** that rely on Web APIs not yet implemented in Lightpanda
 - **Login flows with cookies** that need to survive across agent sessions
-- Full **Chrome DevTools Protocol** coverage — Lightpanda's CDP is still maturing (Beta)
+- Broader **Chrome DevTools Protocol** coverage — Lightpanda's CDP is still maturing (Beta)
 
-**Rule of thumb:** High-throughput headless = Lightpanda. Auth/session/visual = Playwright.
+**Rule of thumb:** High-throughput headless = Lightpanda. Auth/session/visual = persistent Chromium automation.
 
 ## How It Works
 
@@ -314,14 +314,14 @@ Lightpanda fetches the URL, executes JS, dumps content, and exits. No server, no
 ```
 start → lightpanda serve --host 127.0.0.1 --port 9223
         ↓
-get_webpage/click/fill/inspect → Playwright connects via CDP, acts, returns
+get_webpage/click/fill/inspect → a CDP client connects, acts, returns
         ↓
 server stays alive for subsequent operations
         ↓
 stop → kills the lightpanda process
 ```
 
-The CDP server uses port **9223** by default (not 9222, to avoid colliding with the Playwright skill's Chromium session).
+The CDP server uses port **9223** by default (not 9222, to avoid colliding with other local Chromium debug ports).
 
 ## Operations
 
@@ -401,7 +401,7 @@ capture_network { url: "https://news.ycombinator.com", pattern: "**/api/**", wai
 Lightpanda is in Beta. Some sites will fail. When you hit issues:
 
 - Try `fetch` instead of the CDP path — it's more reliable for simple content extraction
-- Fall back to the `playwright` skill for complex SPAs or sites that require full Chrome APIs
+- Fall back to full Chromium automation for complex SPAs or sites that require complete Chrome APIs
 - Custom Elements, file uploads, and some CDP commands are still incomplete
 - macOS arm64 is supported (nightly binary), Linux x86_64 also supported
 

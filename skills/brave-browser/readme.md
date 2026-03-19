@@ -11,9 +11,8 @@ connections: {}
 
 # Brave (Chromium-based) stores cookies encrypted in SQLite.
 # The encryption key lives in macOS Keychain under "Brave Safe Storage" / "Brave".
-# This skill exposes a cookie_get operation that extracts and decrypts
-# browser cookies for consumer skills via provides:.
-# If multiple installed skills provide cookies, the agent should ask the user
+# Exposes cookie_get — decrypted browser cookies for the cookie matchmaking pipeline.
+# If multiple cookie providers match, the agent should ask the user
 # which provider/browser to use instead of guessing.
 provides:
   - capability: cookies
@@ -190,8 +189,8 @@ operations:
       Extract and decrypt cookies for a domain from Brave Browser's cookie database.
       Full decryption pipeline: Keychain → PBKDF2 → AES-128-CBC.
       Returns plaintext cookie values including HttpOnly cookies.
-      This is the provider interface for cookie matchmaking — other skills
-      that need browser cookies discover Brave through this operation.
+      This is the provider interface for cookie matchmaking — REST connections
+      that declare cookie auth resolve a provider and call this operation.
     params:
       domain:
         type: string
@@ -255,7 +254,7 @@ The `get_cookie_key` operation handles steps 1-2. The `cookie_get` operation doe
 
 ## Cookie Extraction
 
-Extract decrypted cookies for any domain. Used by other skills through cookie provider matchmaking.
+Extract decrypted cookies for any domain. Consumed through cookie provider matchmaking at runtime.
 
 ```
 use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".claude.ai", names: "sessionKey" } })

@@ -238,7 +238,7 @@ operations:
 
 Personal task management integration using [Todoist API v1](https://developer.todoist.com/api/v1/).
 
-Todoist tasks map to **tasks** and projects map to **projects** in the AgentOS Memex.
+Todoist tasks map to **tasks** and projects map to **projects** on the AgentOS graph.
 
 ## Setup
 

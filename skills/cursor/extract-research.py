@@ -443,7 +443,7 @@ def main():
     )
     parser.add_argument(
         "--json", action="store_true",
-        help="Output research as JSON array (for skill ingestion into Memex)"
+        help="Output research as JSON array (for skill ingestion into the graph)"
     )
 
     args = parser.parse_args()
@@ -579,7 +579,7 @@ def main():
         reverse=True,
     )
 
-    # JSON output mode — emit structured data for Memex ingestion
+    # JSON output mode — emit structured data for graph ingestion
     if args.json:
         items = []
         for r in research_blobs:

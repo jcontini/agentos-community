@@ -197,9 +197,9 @@ Speaker labels: `You` (microphone) and `Other` (system audio).
 
 Granola lets you chat with AI about meeting transcripts. Each meeting can have one or more Q&A threads.
 
-### What this is in the Memex
+### What this is on the graph
 
-Each thread is a **`conversation` entity** — the same ontological kind as chat threads from Claude, iMessage, Mimestream/Gmail, and WhatsApp. The graph cares *what* it is (a named thread with messages and a URL), not which app produced it. `list_conversations` returns thin rows (title, ids, `notes_url`); `get_conversation` fills `text` / `content` by joining message bodies. The `document_id` you pass is the **meeting** document id in Granola; treat it as “which meeting this Q&A is about” when reasoning, even though the remembered entity type for the thread itself is still `conversation`.
+Each thread is a **`conversation` entity** — the same entity kind used elsewhere on the graph for chat threads and ordered message histories (email threads, assistant chats, SMS-style threads, etc.). AgentOS cares *what* it is (a named thread with messages and a URL), not which product produced it. `list_conversations` returns thin rows (title, ids, `notes_url`); `get_conversation` fills `text` / `content` by joining message bodies. The `document_id` you pass is the **meeting** document id in Granola; treat it as “which meeting this Q&A is about” when reasoning, even though the remembered entity type for the thread itself is still `conversation`.
 
 ### Workflow: Find AI chats about a meeting
 

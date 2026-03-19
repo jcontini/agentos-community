@@ -381,9 +381,14 @@
           "description": "Test configuration for this operation",
           "additionalProperties": true
         },
+        "graph": {
+          "type": "object",
+          "description": "In-process graph entity query (by tag / filters)",
+          "additionalProperties": true
+        },
         "memex": {
           "type": "object",
-          "description": "Memex-specific configuration",
+          "description": "Deprecated alias for `graph` — same shape",
           "additionalProperties": true
         }
       }

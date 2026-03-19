@@ -436,7 +436,7 @@ operations:
 # Git
 
 Local git repository data — commits, branches, tags, and repo info. Wraps the git CLI
-to bring version control history into the Memex as searchable entities.
+to bring version control history into the graph as searchable entities.
 
 ## No Auth Required
 

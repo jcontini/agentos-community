@@ -467,7 +467,7 @@ operations:
 
 Project management integration for engineering teams.
 
-Linear issues map to **tasks** and projects map to **projects** in the AgentOS Memex.
+Linear issues map to **tasks** and projects map to **projects** on the AgentOS graph.
 
 ## Setup
 

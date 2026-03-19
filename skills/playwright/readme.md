@@ -383,7 +383,7 @@ operations:
         description: "Milliseconds to wait after navigation for async requests (default: 5000)"
       cookies:
         type: array
-        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Use brave-browser cookie_get to get these."
+        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Obtain values from your workspace's cookie provider flow for that domain."
       capture_body:
         type: boolean
         description: "Capture JSON response bodies (default: true)"
@@ -408,11 +408,11 @@ Browser automation via a persistent Chromium session. Control a real browser —
 
 **Most web tasks do NOT need Playwright.** Before using this skill, check:
 
-- **"I need to read a web page"** → Use **Exa** (`read_webpage`) or **Firecrawl** (`read_webpage`). They're faster, cheaper, and purpose-built for content extraction. Don't launch a browser just to read a page.
-- **"I need to search the web"** → Use **Exa** (`search`) or **Brave** (`search`). Playwright is not a search engine.
-- **"I need to check what sites were visited"** → Use the **Chrome** or **Firefox** skill (`list_webpages`, `search_webpages`). They read local history databases directly.
-- **"I already know the endpoint and just need to replay HTTP"** → Use direct HTTP (`curl` skill, shell `curl`, or a small Python script). Don't keep a browser in the loop once the browser has already taught you the contract.
-- **"I need very fast headless HTML/JS fetches"** → Use **Lightpanda** first. It is often better for high-throughput reverse engineering or quick page fetches where you do not need a visible browser or sticky session state.
+- **"I need to read a web page"** → Prefer an integration that exposes `webpage.read` without a full interactive browser (usually cheaper and faster). Don't launch Playwright just to read static or API-backed pages.
+- **"I need to search the web"** → Use an integration that exposes `webpage.search`. Playwright is not a search engine.
+- **"I need to check what sites were visited"** → Use an integration that reads local browser history databases, if one is connected — not Playwright.
+- **"I already know the endpoint and just need to replay HTTP"** → Use direct HTTP (shell `curl`, a small script, or any thin HTTP tool). Don't keep a browser in the loop once it has already taught you the contract.
+- **"I need very fast headless HTML/JS fetches"** → Prefer a headless fetch / CDP integration that starts quickly and tears down between calls when you do not need a visible window or sticky profile.
 
 **Use Playwright when you need to DO things in a browser:**
 
@@ -424,27 +424,26 @@ Browser automation via a persistent Chromium session. Control a real browser —
 - Interact with SPAs that require JS execution to render
 - Anything where cookies/auth/session state must persist across steps
 
-**Rule of thumb:** Reading content = Exa/Firecrawl. Controlling a browser = Playwright.
+**Rule of thumb:** Reading content = `webpage.read` / `webpage.search` from appropriate integrations. Controlling a browser = Playwright.
 
-## Complementary Tools
+## Complementary tools
 
-Playwright is the main browser reverse-engineering tool, but it is not the only one you should consider.
+Playwright is the main in-browser discovery tool, but it is not the only path.
 
-Use these together:
+Typical combinations:
 
-- **Playwright** for login flows, persistent browser sessions, DOM inspection, JS evaluation, and network capture.
-- **Lightpanda** for fast headless fetches when you want HTML or rendered content quickly without Chrome overhead.
-- **Exa** for web research, finding unofficial docs, GitHub repos, forum threads, and prior art before you start probing blindly.
-- **Firecrawl** when a page needs browser rendering but you mostly want content extraction instead of browser control.
-- **Curl / direct HTTP** once you know the endpoint, headers, and payload. At that point the browser has done its job.
-- **Cookie provider skills** such as `brave-browser` or `firefox` when you need passive cookie access for runtime auth.
+- **Playwright** — login flows, persistent browser sessions, DOM inspection, JS evaluation, network capture.
+- **Headless fetch integrations** — high-volume or sub-second page pulls when you do not need a visible window or long-lived profile.
+- **`webpage.search` / `webpage.read`** — discovery and content extraction through whatever providers the workspace has connected.
+- **Direct HTTP** — once you know the endpoint, headers, and payload, leave the browser behind.
+- **Cookie providers** — passive `.domain` cookie injection for runtime auth (resolved by the engine from `provides: cookies` integrations).
 
 Good reverse engineering is usually a progression:
 
-1. Search the web for prior art with Exa or Brave.
-2. Probe the live site with Playwright when you need to inspect DOM, hydration state, or network calls.
-3. Switch to direct HTTP or small scripts as soon as you have enough information to replay requests reliably.
-4. Use Lightpanda or Firecrawl when you need a cheaper or faster page-fetching path than a full browser session.
+1. Search for prior art via `webpage.search` when available.
+2. Probe the live site with Playwright when you need DOM, hydration state, or network calls.
+3. Switch to direct HTTP or small scripts as soon as you can replay requests reliably.
+4. Use lighter `webpage.read` paths when a full persistent browser session is unnecessary.
 
 ## How It Works
 
@@ -506,13 +505,13 @@ After discovery, replay directly with Python/HTTP. Keep Playwright for discovery
 
 ### Pattern: Authenticated Discovery
 
-Use passive cookie provider skills (`brave-browser`, `firefox`) for runtime cookie auth in product skills. Use Playwright for:
+Use passive cookie providers (integrations that expose cookie lookup for a domain) for runtime auth injection on REST operations. Use Playwright for:
 
 - Login flows and session establishment
 - Network capture against already-authenticated pages
 - Interactive auth debugging
 
-Do not treat Playwright as the default passive cookie source for other skills.
+Do not treat Playwright as the default passive cookie source for other integrations.
 
 ### Pattern: Use The Browser To Learn, Then Leave The Browser
 
@@ -523,7 +522,7 @@ The right progression for modern sites:
 3. Reproduce the request outside the browser with direct HTTP.
 4. Build the real skill operation on the direct replay, not continued browser automation.
 
-Goodreads is a good example: pages were best *discovered* with Playwright, but once the AppSync endpoint and query documents were known, direct Python replay was the better implementation.
+Example pattern: a GraphQL consumer site is often best *discovered* in a real browser, but once the AppSync (or similar) endpoint and query documents are known, direct HTTP replay is usually the better production implementation.
 
 ### Pattern: Navigation Is Flaky But Network Capture Works
 
@@ -663,19 +662,19 @@ capture_network {
 }
 ```
 
-### Example: Goodreads Public Book Page
+### Example: Next.js + Apollo + AppSync page
 
-Goodreads book pages are a good example of why you should not jump straight to DOM scraping.
+Public catalog-style pages are a good example of why you should not jump straight to DOM scraping.
 
-Useful sequence:
+Useful sequence (replace URL with your target):
 
 ```text
-get_webpage { url: "https://www.goodreads.com/book/show/4934" }
+get_webpage { url: "https://example.com/item/123" }
 inspect { selector: "body" }
 read_webpage { selector: "script#__NEXT_DATA__", format: "text" }
 evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps?.apolloState ?? null)" }
 capture_network {
-  url: "https://www.goodreads.com/book/show/4934",
+  url: "https://example.com/item/123",
   pattern: "**appsync-api**",
   wait: 8000,
   capture_body: true

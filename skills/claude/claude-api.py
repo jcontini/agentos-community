@@ -123,7 +123,7 @@ def import_conversations(session_key, org_uuid, limit=50, offset=0):
     Fetch conversations (paginated) with all their messages.
     Returns a flat list of message rows, each containing conversation metadata.
     This is the data source for the conversation.import skill operation —
-    each row maps to a message entity in the Memex, making all content FTS-indexed.
+    each row maps to a message entity on the graph, making all content FTS-indexed.
 
     Output row shape:
       id               str   — "{conv_uuid}_{msg_uuid}" (stable, dedup-safe)

@@ -666,6 +666,6 @@ All operations return videos with these fields:
 }
 ```
 
-**Linked entities:** Each operation creates account (channel identity) and channel entities in the Memex, linked via `posts` and `posted_in` relationships. `get_video` and `transcript_video` additionally create a post entity (social wrapper) and document entity (transcript).
+**Linked entities:** Each operation creates account (channel identity) and channel entities on the graph, linked via `posts` and `posted_in` relationships. `get_video` and `transcript_video` additionally create a post entity (social wrapper) and document entity (transcript).
 
 **Note:** `view_count`, `published_at`, and `posted_in.member_count` may be null for search/list results (flat-playlist mode). Use `get_video` on individual videos for complete metadata.

@@ -13,7 +13,7 @@ connections: {}
 # Mimestream stores Google OAuth tokens in the macOS Keychain under
 # "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.
 # These tokens have full Google scopes (Gmail, Contacts, Calendar).
-# Mimestream can act as a Google auth provider skill for other consumers.
+# Tokens satisfy connections that declare oauth.service: google (Gmail, Calendar, Contacts, etc.).
 provides:
   - capability: google
     scopes:
@@ -380,7 +380,7 @@ operations:
     description: |
       Get a live Google OAuth access token sourced from Mimestream's keychain.
       Returns access_token, refresh_token, client_id, and token_url.
-      Used by consumer skills (gmail, google-calendar, etc.) as a Google provider operation.
+      Used by connections that declare `oauth.service: google` as the provider-side token source.
     params:
       account: { type: string, required: true, description: "Email address (e.g. 'user@example.com' or 'user@example.com')" }
     returns:
@@ -482,7 +482,7 @@ operations:
 
 Read and search email from [Mimestream](https://mimestream.com/), a native macOS email client for Gmail.
 
-This skill also acts as a Google auth provider for consumer skills that declare `auth: { oauth: { service: google } }`.
+This integration also satisfies `oauth.service: google` for connections that declare it — the runtime routes token requests through `provides: google` / `credential_get`.
 
 ## Requirements
 

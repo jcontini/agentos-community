@@ -1,15 +1,14 @@
 ---
 id: gmail
 name: Gmail
-description: Full-featured Gmail skill — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations. Auth can be sourced from an installed Google provider skill.
+description: Full-featured Gmail — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations. Auth can use the shared `google` OAuth capability when a provider integration is available.
 color: "#EA4335"
 
 website: https://mail.google.com
 privacy_url: https://policies.google.com/privacy
 
-# No client_id or client_secret needed when a Google provider skill is installed.
-# For example, the system can find Mimestream's `provides: [{ service: google }]`
-# declaration and call its `credential_get` operation to get a live access token.
+# No client_id or client_secret in this YAML when another integration already provides
+# google OAuth tokens and declares `provides: google` — the resolver calls `credential_get`.
 connections:
   gmail:
     base_url: "https://gmail.googleapis.com/gmail/v1/users/me"
@@ -717,18 +716,18 @@ Full-featured email via the [Gmail REST API](https://developers.google.com/gmail
 
 Do not pass `label_ids` as an array param — it causes a 400 error from the API.
 
-## Auth — Provider-Sourced Google OAuth
+## Auth — Google OAuth via `provides: google`
 
-If a Google provider skill is installed, this skill can borrow Google OAuth tokens without separate app registration or API-key setup. [Mimestream](https://mimestream.com/) is the current canonical example.
+When some integration already holds Google OAuth tokens (often via macOS Keychain) and declares `provides: google` with a `credential_get` path, this skill can reuse those tokens — no separate Gmail API project for the user.
 
 How it works:
-1. Mimestream stores Google OAuth tokens in the Keychain under `"Mimestream: {email}"` / `"OAuth"`
-2. The `mimestream` skill reads those tokens via its `credential_get` operation
-3. This skill declares `connections: { gmail: { oauth: { service: google } } }`
-4. The resolver matches the provider → calls `credential_get` → injects the configured auth headers
-5. If multiple installed skills provide Google auth, the agent should ask the user which provider to use
+1. A provider stores OAuth material in a system-specific way (Keychain entry shape depends on the app).
+2. The provider's `provides` / `credential_get` surface is matched by the runtime.
+3. This skill declares `connections.gmail.oauth.service: google`.
+4. The resolver injects the configured auth headers on REST calls.
+5. If multiple providers satisfy `google`, the agent should ask the user which one to use.
 
-**Without a provider skill:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
+**Without a matching provider:** complete the standard OAuth flow at `GET /sys/oauth/authorize/gmail`.
 
 ## Capabilities
 

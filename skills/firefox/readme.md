@@ -1,17 +1,17 @@
 ---
 id: firefox
 name: Mozilla Firefox
-description: Browsing history, bookmarks, and cookies from Firefox, including cookie provider access for auth consumers
+description: Browsing history, bookmarks, and cookies from Firefox, including cookie provider access for runtime cookie matchmaking
 icon: icon.svg
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox
 connections: {}
-# Firefox cookies are stored plaintext in SQLite, so this skill can act as a
-# lightweight cookie provider for consumer skills that declare auth.cookies.
+# Firefox cookies are stored plaintext in SQLite, so this integration can act as a
+# lightweight cookie provider for connections that use cookie-based auth.
 provides:
   - capability: cookies
-    description: "Extract plaintext Firefox cookies from local profiles for auth consumers."
+    description: "Extract plaintext Firefox cookies from local profiles for cookie-based connections."
     via: cookie_get
     account_param: domain
 
@@ -151,8 +151,8 @@ operations:
   cookie_get:
     description: |
       Extract cookies for a domain from Firefox's local cookie database.
-      This is the provider interface for cookie matchmaking with consumer skills.
-      If multiple installed browser skills provide cookies, the agent should ask
+      This is the provider interface for cookie matchmaking — the runtime invokes it when a connection needs browser cookies.
+      If multiple cookie providers match the same domain, the agent should ask
       the user which provider to use and retry with `cookie_provider`.
     params:
       domain:
@@ -224,4 +224,4 @@ List cookies for a domain. **Firefox cookies are plaintext** — no decryption n
 
 ### cookie_get
 
-Provider-facing cookie extraction for auth consumers. When multiple installed skills provide cookies, the runtime asks the agent to get a choice from the user and retry with `cookie_provider` set to the selected skill id.
+Provider-facing cookie extraction for connections that use cookie-based auth. When multiple providers match, the runtime asks the agent to get a choice from the user and retry with `cookie_provider` set to the selected provider id.

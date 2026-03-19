@@ -35,7 +35,7 @@ adapters:
 
 operations:
   pull_document:
-    description: Extract research reports from Cursor sub-agent conversations into the Memex
+    description: Extract research reports from Cursor sub-agent conversations into the graph
     returns: document[]
     params: {}
     python:
@@ -133,7 +133,7 @@ Restart Cursor after changing settings for them to take effect.
 
 ## Syncing Sessions to the Graph
 
-Cursor sessions become `session` entities on the Memex with `client: "cursor"`, a `workspace` slug, and the full conversation transcript as searchable body content.
+Cursor sessions become `session` entities on the graph with `client: "cursor"`, a `workspace` slug, and the full conversation transcript as searchable body content.
 
 **Two data sources:**
 
