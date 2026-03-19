@@ -99,7 +99,6 @@ Every skill is a folder like:
 skills/
   my-skill/
     readme.md            # required — skill definition (YAML front matter + markdown docs)
-    icon.svg             # required — skill icon
     requirements.md      # recommended — scope out the API, auth model, and entities before writing YAML
     my_helper.py         # optional — Python helper when inline command logic gets complex
 ```
@@ -116,7 +115,6 @@ Use this pattern for normal data-fetching or CRUD-ish skills.
 id: my-skill
 name: My Skill
 description: One-line description
-icon: icon.svg
 website: https://example.com
 
 connections:
@@ -163,7 +161,6 @@ Use this pattern for command-backed skills such as terminal, browser, OS, or app
 id: my-local-skill
 name: My Local Skill
 description: Control a local surface
-icon: icon.svg
 website: https://example.com
 
 operations:
@@ -303,6 +300,30 @@ Rules:
 - Operation names should still be `snake_case`
 - Prefer direct, concrete verbs like `send_text`, `focus_tab`, `list_status`
 - Test them through `mcp:call` early, because runtime mismatches are easier to miss than YAML mismatches
+
+## Capabilities
+
+An operation can declare `provides:` to make itself discoverable by capability name. This lets callers use `run({ capability: "email_lookup", params: { ... } })` without knowing which skill implements it.
+
+```yaml
+operations:
+  resolve_email:
+    provides: email_lookup
+    returns: person[]
+    params:
+      email: { type: string, required: true }
+    python:
+      module: ./public_graph.py
+      function: resolve_email
+      args:
+        email: .params.email
+```
+
+The runtime finds all operations with a matching `provides` value and routes to the first available provider. The caller never names a skill or tool.
+
+Use `provides:` when an operation offers a generic capability that other skills or the agent might want to consume by name — email lookup, web search, phone lookup, etc.
+
+Leading by example: `skills/goodreads/readme.md` (`provides: email_lookup` on `resolve_email`).
 
 ## Connections
 
@@ -659,7 +680,6 @@ What `validate` should catch:
 
 - Required front matter
 - Schema shape
-- Icon presence
 - Basic structural problems
 
 ## Checklist
