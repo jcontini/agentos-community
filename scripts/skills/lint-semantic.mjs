@@ -158,6 +158,58 @@ function isAbsoluteUrlOrExpression(value) {
   return typeof value === 'string' && (/^https?:\/\//.test(value) || looksLikeExpression(value));
 }
 
+/** Connections map from frontmatter, or null if missing/invalid. */
+function connectionsMap(frontmatter) {
+  const c = frontmatter.connections;
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  return c;
+}
+
+/**
+ * Matches `effective_connection_name` in `crates/core/src/skills/executor.rs`:
+ * explicit `operation.connection`, else the sole connection key when there is exactly one.
+ */
+function effectiveConnectionName(frontmatter, op) {
+  const map = connectionsMap(frontmatter);
+  if (!map) return null;
+  const keys = Object.keys(map);
+  if (typeof op.connection === 'string' && op.connection.trim()) {
+    return op.connection.trim();
+  }
+  if (keys.length === 1) return keys[0];
+  return null;
+}
+
+/** `base_url` string from the effective connection, if any. */
+function connectionBaseUrlString(frontmatter, op) {
+  const name = effectiveConnectionName(frontmatter, op);
+  if (!name) return null;
+  const conn = connectionsMap(frontmatter)?.[name];
+  if (!conn || typeof conn !== 'object') return null;
+  const bu = conn.base_url;
+  if (typeof bu !== 'string' || !bu.trim()) return null;
+  return bu.trim();
+}
+
+/** True if the runtime can join a relative REST URL (absolute or jaq-resolvable base). */
+function hasResolvableConnectionBaseUrl(frontmatter, op) {
+  const bu = connectionBaseUrlString(frontmatter, op);
+  if (!bu) return false;
+  return isAbsoluteUrlOrExpression(bu);
+}
+
+/**
+ * GraphQL POST URL: `graphql.endpoint` OR legacy `api.graphql_endpoint` OR connection `base_url`
+ * (see `execute_graphql_action` in executor.rs).
+ */
+function effectiveGraphqlEndpoint(frontmatter, op) {
+  const fromOp = op.graphql?.endpoint;
+  if (typeof fromOp === 'string' && fromOp.trim()) return fromOp.trim();
+  const legacy = frontmatter.api?.graphql_endpoint;
+  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
+  return connectionBaseUrlString(frontmatter, op);
+}
+
 function walkStrings(value, path, visit) {
   if (typeof value === 'string') {
     visit(value, path);
@@ -269,17 +321,35 @@ function lintSkill(frontmatter) {
     }
 
     if (op.rest) {
-      if (typeof op.rest.url === 'string' && !/^https?:\/\//.test(op.rest.url) && !looksLikeExpression(op.rest.url)) {
-        issues.push(issue('error', `operations.${opName}.rest.url`, 'REST url must be absolute or a jaq expression that resolves to one'));
+      if (typeof op.rest.url === 'string') {
+        const url = op.rest.url;
+        const absolute = /^https?:\/\//.test(url);
+        const expr = looksLikeExpression(url);
+        const relativeOk = !absolute && !expr && hasResolvableConnectionBaseUrl(frontmatter, op);
+        if (!absolute && !expr && !relativeOk) {
+          issues.push(
+            issue(
+              'error',
+              `operations.${opName}.rest.url`,
+              'REST url must be https URL, jaq expression, or a relative path with connections.*.base_url on the effective connection (single connection or operation.connection)'
+            )
+          );
+        }
       }
       issues.push(...requestRootWarnings(op.rest.headers, `operations.${opName}.rest.headers`));
       issues.push(...requestRootWarnings(op.rest.query, `operations.${opName}.rest.query`));
     }
 
     if (op.graphql) {
-      const endpoint = op.graphql.endpoint ?? frontmatter.api?.graphql_endpoint;
+      const endpoint = effectiveGraphqlEndpoint(frontmatter, op);
       if (!endpoint) {
-        issues.push(issue('error', `operations.${opName}.graphql`, 'GraphQL operation needs endpoint or api.graphql_endpoint'));
+        issues.push(
+          issue(
+            'error',
+            `operations.${opName}.graphql`,
+            'GraphQL needs graphql.endpoint, api.graphql_endpoint, or connections.*.base_url on the effective connection'
+          )
+        );
       } else if (!isAbsoluteUrlOrExpression(endpoint)) {
         issues.push(issue('error', `operations.${opName}.graphql.endpoint`, 'GraphQL endpoint must be absolute or a jaq expression that resolves to one'));
       }

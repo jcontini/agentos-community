@@ -46,6 +46,15 @@ adapters:
         segment_count: .segment_count
         duration_ms: .duration_ms
 
+  conversation:
+    id: .id
+    name: .title
+    text: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
+    url: .notes_url
+    datePublished: .updated_at
+    data.document_id: .document_id
+    data.message_count: 'if .messages then (.messages | length) else null end'
+
 operations:
   list_meetings:
     description: List recent meetings with metadata and attendees
