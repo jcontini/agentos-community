@@ -475,7 +475,7 @@ function findSkills(dir, relativePath = '') {
     if (entry.name.startsWith('.')) continue;
     const fullPath = join(dir, entry.name);
     const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-    if (existsSync(join(fullPath, 'readme.md'))) {
+    if (existsSync(join(fullPath, 'readme.md')) || existsSync(join(fullPath, 'skill.yaml'))) {
       skills.push({ name: entry.name, path: rel, dir: fullPath });
     } else {
       skills.push(...findSkills(fullPath, rel));
@@ -649,17 +649,30 @@ function parseFrontmatter(content) {
   return parseYaml(content.slice(4, endIndex));
 }
 
-function validateSkill(skill) {
-  const readmePath = join(skill.dir, 'readme.md');
+function loadSkillManifest(skillDir) {
+  const yamlPath = join(skillDir, 'skill.yaml');
+  if (existsSync(yamlPath)) {
+    try {
+      return parseYaml(readFileSync(yamlPath, 'utf-8'));
+    } catch {
+      return null;
+    }
+  }
+  const readmePath = join(skillDir, 'readme.md');
+  if (!existsSync(readmePath)) return null;
   const content = readFileSync(readmePath, 'utf-8');
-  const frontmatter = parseFrontmatter(content);
-  
+  return parseFrontmatter(content);
+}
+
+function validateSkill(skill) {
+  const frontmatter = loadSkillManifest(skill.dir);
+
   if (!frontmatter) {
     return {
       name: skill.name,
-      schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No YAML frontmatter'] },
-      entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
-      mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no frontmatter'] },
+      schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No skill.yaml or valid YAML frontmatter in readme.md'] },
+      entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
+      mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
       icon: checkIcon(skill.dir),
     };
   }
@@ -755,8 +768,7 @@ const knownEntities = [...validEntityIds].filter(id => !['_type'].includes(id)).
 const coveredEntities = new Set();
 for (const result of activeResults) {
   try {
-    const content = readFileSync(join(result._skill.dir, 'readme.md'), 'utf-8');
-    const fm = parseFrontmatter(content);
+    const fm = loadSkillManifest(result._skill.dir);
     if (fm?.operations) {
       for (const op of Object.values(fm.operations)) {
         if (op.returns && op.returns !== 'void') {

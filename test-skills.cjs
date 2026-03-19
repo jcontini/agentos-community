@@ -148,6 +148,14 @@ const skillFilter = parsed.positionals;
 // ── YAML parsing ─────────────────────────────────────────────────────────────
 
 function loadSkill(skillDir) {
+  const skillYaml = path.join(skillDir, 'skill.yaml');
+  if (fs.existsSync(skillYaml)) {
+    try {
+      return yaml.load(fs.readFileSync(skillYaml, 'utf8'));
+    } catch {
+      return null;
+    }
+  }
   const readme = path.join(skillDir, 'readme.md');
   if (!fs.existsSync(readme)) return null;
   const raw = fs.readFileSync(readme, 'utf8');
@@ -172,7 +180,7 @@ function getChangedSkills() {
 function getTargetSkills() {
   if (skillFilter.length > 0) return skillFilter;
   if (changedOnly) return getChangedSkills();
-  // All skills with operations or utilities
+  // All skills with operations
   return fs.readdirSync(SKILLS_DIR)
     .filter(d => {
       try { return fs.statSync(path.join(SKILLS_DIR, d)).isDirectory() && !d.startsWith('.'); }
@@ -180,7 +188,7 @@ function getTargetSkills() {
     })
     .filter(d => {
       const sk = loadSkill(path.join(SKILLS_DIR, d));
-      return sk && (sk.operations || sk.utilities);
+      return sk && sk.operations;
     })
     .filter(d => !SKIP_SKILLS.has(d));
 }

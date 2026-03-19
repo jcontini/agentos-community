@@ -48,11 +48,15 @@ const includeNeedsWork = !!flags.get('--include-needs-work');
 const strict = !!flags.get('--strict');
 
 function loadFrontmatter(skillDir) {
+  const yamlPath = join(skillDir, 'skill.yaml');
+  if (existsSync(yamlPath)) {
+    return parseYaml(readFileSync(yamlPath, 'utf8'));
+  }
   const readmePath = join(skillDir, 'readme.md');
   const raw = readFileSync(readmePath, 'utf8');
   const match = raw.match(/^---\r?\n([\s\S]*?)\n---\r?\n?/);
   if (!match) {
-    throw new Error(`Missing frontmatter in ${readmePath}`);
+    throw new Error(`Missing skill.yaml or readme frontmatter in ${skillDir}`);
   }
   return parseYaml(match[1]);
 }
@@ -61,7 +65,7 @@ function topLevelSkillDirs() {
   return readdirSync(SKILLS_DIR)
     .filter(name => !name.startsWith('.'))
     .map(name => join(SKILLS_DIR, name))
-    .filter(path => statSync(path).isDirectory() && existsSync(join(path, 'readme.md')));
+    .filter(path => statSync(path).isDirectory() && (existsSync(join(path, 'readme.md')) || existsSync(join(path, 'skill.yaml'))));
 }
 
 function needsWorkSkillDirs() {
@@ -80,7 +84,7 @@ function collectNestedSkillDirs(root) {
   const dirs = [];
   const entries = readdirSync(root);
 
-  if (entries.includes('readme.md')) {
+  if (entries.includes('readme.md') || entries.includes('skill.yaml')) {
     dirs.push(root);
   }
 
