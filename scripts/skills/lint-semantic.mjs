@@ -350,8 +350,19 @@ function lintSkill(frontmatter) {
             'GraphQL needs graphql.endpoint, api.graphql_endpoint, or connections.*.base_url on the effective connection'
           )
         );
-      } else if (!isAbsoluteUrlOrExpression(endpoint)) {
-        issues.push(issue('error', `operations.${opName}.graphql.endpoint`, 'GraphQL endpoint must be absolute or a jaq expression that resolves to one'));
+      } else {
+        const absolute = /^https?:\/\//.test(endpoint);
+        const expr = looksLikeExpression(endpoint);
+        const relativeOk = !absolute && !expr && hasResolvableConnectionBaseUrl(frontmatter, op);
+        if (!absolute && !expr && !relativeOk) {
+          issues.push(
+            issue(
+              'error',
+              `operations.${opName}.graphql.endpoint`,
+              'GraphQL endpoint must be https URL, jaq expression, or a relative path with connections.*.base_url on the effective connection (single connection or operation.connection)'
+            )
+          );
+        }
       }
       issues.push(...requestRootWarnings(op.graphql.endpoint, `operations.${opName}.graphql.endpoint`));
     }
