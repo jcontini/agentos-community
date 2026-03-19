@@ -1,0 +1,56 @@
+id: facebook
+name: Facebook
+description: Query public Facebook group information without login
+icon: icon.png
+color: "#106BFF"
+
+website: https://facebook.com
+privacy_url: https://www.facebook.com/privacy/policy
+terms_url: https://www.facebook.com/legal/terms
+
+connections: {}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+adapters:
+  community:
+    id: .id
+    name: .name
+    description: .description
+    url: .url
+    image: .icon
+    icon: .icon
+    member_count: .member_count_numeric
+    privacy: .privacy
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+operations:
+  get_community:
+    description: Get metadata for a public Facebook group
+    returns: community
+    params:
+      group:
+        type: string
+        required: true
+        description: "Group name or URL (e.g., 'becomingaportuguesecitizen' or full URL)"
+      include_members:
+        type: boolean
+        default: true
+        description: "Include member count (requires Chromium, slower ~2-3s)"
+    command:
+      binary: bash
+      args:
+        - ./get_community.sh
+        - ".params.group"
+        - ".params.include_members"
+      timeout: 35
+    test:
+      mode: read
+      fixtures:
+        group: becomingaportuguesecitizen
+        include_members: false
