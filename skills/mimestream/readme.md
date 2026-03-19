@@ -15,7 +15,7 @@ connections: {}
 # These tokens have full Google scopes (Gmail, Contacts, Calendar).
 # Mimestream can act as a Google auth provider skill for other consumers.
 provides:
-  - service: google
+  - capability: google
     scopes:
       - https://mail.google.com/
       - https://www.googleapis.com/auth/contacts

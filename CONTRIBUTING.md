@@ -410,7 +410,7 @@ Provider declaration:
 
 ```yaml
 provides:
-  - service: google
+  - capability: google
     via: credential_get
     accounts_via: list_accounts
     account_param: account

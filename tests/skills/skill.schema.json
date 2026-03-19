@@ -138,14 +138,21 @@
     },
     "provides": {
       "type": "array",
-      "description": "Provider declarations for auth capabilities sourced from local apps, keychains, or browser profiles. Today this is primarily OAuth and cookie auth matchmaking.",
+      "description": "Capability declarations — what this skill provides to other skills or capability-based run() invocations.",
       "items": {
         "type": "object",
-        "required": ["service"],
+        "anyOf": [
+          { "required": ["capability"] },
+          { "required": ["service"] }
+        ],
         "properties": {
+          "capability": {
+            "type": "string",
+            "description": "Capability name (e.g., 'cookies', 'google', 'email_lookup')"
+          },
           "service": {
             "type": "string",
-            "description": "Service identifier (e.g., 'google', 'github', 'slack')"
+            "description": "Alias for capability (backwards compat)"
           },
           "scopes": {
             "type": "array",

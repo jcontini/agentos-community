@@ -16,7 +16,7 @@ connections: {}
 # If multiple installed skills provide cookies, the agent should ask the user
 # which provider/browser to use instead of guessing.
 provides:
-  - service: cookies
+  - capability: cookies
     description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
     via: cookie_get
     account_param: domain

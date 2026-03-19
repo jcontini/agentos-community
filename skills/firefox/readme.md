@@ -10,7 +10,7 @@ connections: {}
 # Firefox cookies are stored plaintext in SQLite, so this skill can act as a
 # lightweight cookie provider for consumer skills that declare auth.cookies.
 provides:
-  - service: cookies
+  - capability: cookies
     description: "Extract plaintext Firefox cookies from local profiles for auth consumers."
     via: cookie_get
     account_param: domain
