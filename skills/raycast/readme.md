@@ -1,15 +1,3 @@
----
-id: raycast
-name: Raycast
-description: Mac productivity tool with AI chat and MCP support
-icon: icon.png
-color: "#FF6363"
-website: https://raycast.com
-
-connections: {}
-
----
-
 # Raycast
 
 Mac productivity tool with AI chat features and MCP support.

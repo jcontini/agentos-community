@@ -9,6 +9,7 @@
     "mcp:test": "node test-skills.cjs",
     "validate": "node scripts/skills/validate.mjs",
     "lint:semantic": "node scripts/skills/lint-semantic.mjs",
+    "skills:extract-yaml": "node scripts/skills/extract-skill-yaml.mjs",
     "new-skill": "npx tsx scripts/skills/new-skill.ts",
     "prepare": "husky"
   },
