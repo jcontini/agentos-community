@@ -1,7 +1,6 @@
 id: macos-control
 name: macOS Control
 description: Inspect macOS apps, processes, displays, windows, and screenshots with built-in system tools
-icon: icon.svg
 color: "#111827"
 website: https://www.apple.com/macos/
 connections: {}

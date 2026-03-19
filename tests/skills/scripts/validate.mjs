@@ -6,11 +6,12 @@
  *   1. Schema   — YAML frontmatter matches skill.schema.json
  *   2. Entity   — All operations return valid entity types
  *   3. Mapping  — Adapter mappings use valid entity properties + jaq syntax
- *   4. Icon     — icon.svg or icon.png exists
- *   5. Semantic — Warns on structurally valid but logically wrong YAML:
+ *   4. Semantic — Warns on structurally valid but logically wrong YAML:
  *        • connection with no auth fields (no runtime effect)
  *        • operation with no executor (rest/graphql/sql/command/python/etc.)
  *        • adapter defined but no operation returns that entity type
+ *
+ * (Skill image icons were removed; no icon file check.)
  * 
  * Skills in .needs-work/ are shown separately but never auto-moved.
  * Fix errors, then manually move to skills/ when ready.
@@ -456,13 +457,6 @@ function checkSemantics(frontmatter) {
   return warnings;
 }
 
-function checkIcon(adapterDir) {
-  const hasSvg = existsSync(join(adapterDir, 'icon.svg'));
-  const hasPng = existsSync(join(adapterDir, 'icon.png'));
-  const format = hasSvg ? 'svg' : hasPng ? 'png' : null;
-  return { pass: !!format, format, errors: format ? [] : ['Missing icon.svg or icon.png'] };
-}
-
 // ============================================================================
 // DISCOVER ADAPTERS
 // ============================================================================
@@ -523,13 +517,13 @@ function renderTable(sections) {
   
   const semW = 10;
   const SEP = `${DIM}│${RESET}`;
-  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Icon', colW)}${RESET}${SEP}${DIM}${centerText('Semantic', semW)}${RESET}${SEP}`;
+  const headerLine = `${SEP} ${BOLD}${pad('Skill', nameWidth)}${RESET}${SEP}${DIM}${centerText('Schema', colW)}${RESET}${SEP}${DIM}${centerText('Entity', colW)}${RESET}${SEP}${DIM}${centerText('Mapping', colW)}${RESET}${SEP}${DIM}${centerText('Semantic', semW)}${RESET}${SEP}`;
   
-  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(semW)}┐${RESET}`;
-  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(semW)}┘${RESET}`;
+  const topBorder  = `${DIM}┌${'─'.repeat(nameWidth + 1)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(colW)}┬${'─'.repeat(semW)}┐${RESET}`;
+  const botBorder  = `${DIM}└${'─'.repeat(nameWidth + 1)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(colW)}┴${'─'.repeat(semW)}┘${RESET}`;
   
   function sectionDivider(label) {
-    const inner = nameWidth + 1 + colW * 4 + semW + 5;
+    const inner = nameWidth + 1 + colW * 3 + semW + 4;
     const labelPadded = ` ${label} `;
     const leftLen = 2;
     const rightLen = inner - leftLen - labelPadded.length;
@@ -546,20 +540,6 @@ function renderTable(sections) {
     return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
   }
   
-  function iconCell(check, width) {
-    if (!check.pass) {
-      const label = '0/1';
-      const lp = Math.floor((width - label.length) / 2);
-      const rp = width - label.length - lp;
-      return ' '.repeat(lp) + `${RED}${label}${RESET}` + ' '.repeat(rp);
-    }
-    const label = check.format;
-    const color = check.format === 'png' ? GREEN : YELLOW;
-    const lp = Math.floor((width - label.length) / 2);
-    const rp = width - label.length - lp;
-    return ' '.repeat(lp) + `${color}${label}${RESET}` + ' '.repeat(rp);
-  }
-  
   console.log();
   console.log(topBorder);
   console.log(headerLine);
@@ -570,7 +550,7 @@ function renderTable(sections) {
     
     for (const r of section.results) {
       const warnCount = (r.semanticWarnings || []).length;
-      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass;
+      const allPass = r.schema.pass && r.entity.pass && r.mapping.pass;
       const critical = !r.schema.structureValid || !r.entity.pass;
       const nameColor = allPass && warnCount === 0 ? GREEN : allPass && warnCount > 0 ? YELLOW : critical ? RED : YELLOW;
       
@@ -588,7 +568,6 @@ function renderTable(sections) {
         `${checkCell(r.schema, colW)}${SEP}` +
         `${checkCell(r.entity, colW)}${SEP}` +
         `${checkCell(r.mapping, colW)}${SEP}` +
-        `${iconCell(r.icon, colW)}${SEP}` +
         `${semCell}${SEP}`;
       console.log(line);
     }
@@ -599,7 +578,7 @@ function renderTable(sections) {
   for (const section of sections) {
     if (section.results.length === 0) continue;
     const total = section.results.length;
-    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass).length;
+    const passing = section.results.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass).length;
     const passColor = passing === total ? GREEN : passing > 0 ? YELLOW : RED;
     console.log(`  ${section.icon} ${passColor}${passing}/${total}${RESET} ${section.label}`);
   }
@@ -607,14 +586,13 @@ function renderTable(sections) {
 }
 
 function renderErrors(results) {
-  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass || !r.icon.pass);
+  const failing = results.filter(r => !r.schema.pass || !r.entity.pass || !r.mapping.pass);
   if (failing.length > 0) {
     for (const r of failing) {
       const allErrors = [];
       if (!r.schema.pass)  allErrors.push(...r.schema.errors.map(e => `schema: ${e}`));
       if (!r.entity.pass)  allErrors.push(...r.entity.errors.map(e => `entity: ${e}`));
       if (!r.mapping.pass) allErrors.push(...r.mapping.errors.map(e => `mapping: ${e}`));
-      if (!r.icon.pass)    allErrors.push(...r.icon.errors.map(e => `icon: ${e}`));
       
       if (allErrors.length > 0) {
         console.log(`  ❌ ${r.name}`);
@@ -673,7 +651,6 @@ function validateSkill(skill) {
       schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No skill.yaml or valid YAML frontmatter in readme.md'] },
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
-      icon: checkIcon(skill.dir),
     };
   }
   
@@ -681,7 +658,6 @@ function validateSkill(skill) {
   const canCheck = schemaResult.structureValid;
   const entityResult = canCheck ? checkEntities(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
   const mappingResult = canCheck ? checkMappings(frontmatter) : { pass: false, passed: 0, total: 0, errors: ['Skipped — schema invalid'] };
-  const iconResult = checkIcon(skill.dir);
   const semanticWarnings = canCheck ? checkSemantics(frontmatter) : [];
   
   return {
@@ -689,7 +665,6 @@ function validateSkill(skill) {
     schema: schemaResult,
     entity: entityResult,
     mapping: mappingResult,
-    icon: iconResult,
     semanticWarnings,
   };
 }
@@ -755,8 +730,8 @@ const needsWorkResults = needsWorkSkills.map(a => ({ ...validateSkill(a), _skill
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
-  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass && a.icon.pass;
-  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass && b.icon.pass;
+  const aPass = a.schema.pass && a.entity.pass && a.mapping.pass;
+  const bPass = b.schema.pass && b.entity.pass && b.mapping.pass;
   if (aPass !== bPass) return bPass - aPass;
   return a.name.localeCompare(b.name);
 });
@@ -794,7 +769,7 @@ if (verbose) renderErrors(needsWorkResults);
 
 // 6. Check for promotable .needs-work adapters
 const promotable = needsWorkResults.filter(r =>
-  r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass
+  r.schema.pass && r.entity.pass && r.mapping.pass
 );
 if (promotable.length > 0) {
   console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
@@ -810,16 +785,16 @@ if (verbose) {
 }
 console.log();
 
-const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass);
+const allPassing = activeResults.length > 0 && activeResults.every(r => r.schema.pass && r.entity.pass && r.mapping.pass);
 if (allPassing) {
   console.log('✅ All skills fully valid');
 } else if (activeResults.length === 0) {
   console.log('📭 No skills in skills/');
 } else {
-  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass && r.icon.pass).length;
+  const passing = activeResults.filter(r => r.schema.pass && r.entity.pass && r.mapping.pass).length;
   console.log(`⚠️  ${passing}/${activeResults.length} skills fully valid — fix errors and run again`);
 }
-console.log('ℹ️  `validate` checks structure, entity refs, mapping sanity, and icons. Use `npm run mcp:call` for live runtime proof and `npm run mcp:test` for broader smoke testing.');
+console.log('ℹ️  `validate` checks structure, entity refs, and mapping sanity. Use `npm run mcp:call` for live runtime proof and `npm run mcp:test` for broader smoke testing.');
 
 // Exit with error if any active adapters have critical failures
 const criticalFailures = activeResults.filter(r => !r.schema.structureValid || !r.entity.pass);

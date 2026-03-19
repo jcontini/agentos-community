@@ -1,7 +1,6 @@
 id: lightpanda
 name: Lightpanda
 description: Fast headless browser for high-throughput scraping and automation — 10x faster and 10x less memory than Chrome. Playwright-compatible via CDP.
-icon: icon.svg
 color: "#1B3C27"
 
 website: https://lightpanda.io

@@ -1,7 +1,6 @@
 id: here-now
 name: here.now
 description: Publish static websites instantly — HTML, images, PDFs — no account needed
-icon: icon.svg
 color: "#000000"
 
 website: https://here.now

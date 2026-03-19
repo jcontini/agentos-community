@@ -1,7 +1,6 @@
 id: hackernews
 name: Hacker News
 description: Read Hacker News stories, comments, and discussions
-icon: icon.png
 color: "#FF6600"
 
 website: https://news.ycombinator.com

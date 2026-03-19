@@ -2,7 +2,6 @@
 id: sqlite
 name: SQLite
 description: Connect to SQLite database files
-icon: icon.png
 
 website: https://www.sqlite.org
 docs_url: https://www.sqlite.org/docs.html

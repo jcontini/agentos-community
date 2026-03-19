@@ -1,7 +1,6 @@
 id: serpapi
 name: SerpAPI
 description: Google search results API — flights, hotels, web search, and more
-icon: icon.svg
 color: "#0FA47F"
 
 website: https://serpapi.com

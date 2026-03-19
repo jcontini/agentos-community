@@ -1,7 +1,6 @@
 id: mimestream
 name: Mimestream
 description: Read and search email from Mimestream, a native macOS email client for Gmail
-icon: icon.svg
 color: "#3B82F6"
 
 website: https://mimestream.com

@@ -1,7 +1,6 @@
 id: openrouter
 name: OpenRouter
 description: Unified AI gateway for models across providers via one API
-icon: icon.svg
 color: "#111827"
 
 website: https://openrouter.ai

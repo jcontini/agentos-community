@@ -1,7 +1,6 @@
 id: amazon
 name: Amazon
 description: Access your Amazon account using browser session cookies
-icon: icon.svg
 color: "#FF9900"
 
 website: https://www.amazon.com

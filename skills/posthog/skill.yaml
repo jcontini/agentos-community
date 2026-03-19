@@ -1,7 +1,6 @@
 id: posthog
 name: PostHog
 description: Product analytics — events, persons, and session recordings
-icon: icon.svg
 color: "#1D4AFF"
 
 website: https://posthog.com

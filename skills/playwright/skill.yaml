@@ -1,7 +1,6 @@
 id: playwright
 name: Playwright
 description: Browser automation — navigate, click, fill, screenshot, and inspect web pages via a persistent Chromium session
-icon: icon.svg
 color: "#2EAD33"
 
 website: https://playwright.dev

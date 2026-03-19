@@ -1,7 +1,6 @@
 id: linear
 name: Linear
 description: Project management for engineering teams
-icon: icon.png
 color: "#636FD3"
 
 website: https://linear.app

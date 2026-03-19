@@ -1,7 +1,6 @@
 id: claude
 name: Claude.ai
 description: Claude.ai web chat history — browse and search conversations from your personal claude.ai account
-icon: icon.png
 color: "#D97757"
 website: https://claude.ai
 privacy_url: https://www.anthropic.com/privacy

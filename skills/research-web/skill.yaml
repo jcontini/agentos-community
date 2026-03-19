@@ -1,7 +1,6 @@
 id: research-web
 name: Research Web
 description: AI agent that researches questions by searching and reading the web
-icon: icon.svg
 color: "#2563EB"
 
 agent:

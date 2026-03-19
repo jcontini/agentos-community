@@ -1,7 +1,6 @@
 id: facebook
 name: Facebook
 description: Query public Facebook group information without login
-icon: icon.png
 color: "#106BFF"
 
 website: https://facebook.com

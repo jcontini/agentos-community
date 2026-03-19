@@ -1,7 +1,6 @@
 id: logo-dev
 name: Logo.dev
 description: Company logos via CDN - lookup by domain, ticker, or name
-icon: icon.svg
 color: "#635BFF"
 
 website: https://www.logo.dev

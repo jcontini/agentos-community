@@ -1,7 +1,6 @@
 id: brave-browser
 name: Brave Browser
 description: Browsing history, bookmarks, and cookies from Brave Browser on macOS — including session key extraction for claude.ai
-icon: icon.svg
 color: "#F83B1D"
 
 website: https://brave.com

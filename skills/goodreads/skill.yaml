@@ -1,7 +1,6 @@
 id: goodreads
 name: Goodreads
 description: Read your Goodreads profile, books, reviews, friends, and activity
-icon: icon.svg
 color: "#372213"
 website: https://goodreads.com
 

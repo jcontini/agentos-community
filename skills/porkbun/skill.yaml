@@ -1,7 +1,6 @@
 id: porkbun
 name: Porkbun
 description: Domain and DNS management via the Porkbun API
-icon: icon.svg
 color: "#D62F53"
 
 website: https://porkbun.com

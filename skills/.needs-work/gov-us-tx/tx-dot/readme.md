@@ -31,7 +31,6 @@ This represents the "dream" architecture for government form automation.
 id: tx-dot
 name: Texas DMV
 description: Submit Texas vehicle registration forms, address changes, and more
-icon: icon.png
 
 website: https://www.txdmv.gov
 

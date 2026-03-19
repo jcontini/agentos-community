@@ -1,7 +1,6 @@
 id: cursor
 name: Cursor
 description: AI-first code editor with built-in MCP support
-icon: icon.png
 color: "#3B82F6"
 website: https://cursor.com
 

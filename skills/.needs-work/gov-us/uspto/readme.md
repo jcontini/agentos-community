@@ -104,7 +104,6 @@ All USPTO APIs require an API key:
 id: ip
 name: IP
 description: Search patents and trademarks
-icon: icon.svg
 
 schema:
   trademark:
@@ -353,7 +352,6 @@ Future adapters could include: EPO (European), WIPO (International), Google Pate
 ```yaml
 ---
 name: USPTO
-icon: icon.png
 
 auth:
   header: { X-API-KEY: "{token}" }

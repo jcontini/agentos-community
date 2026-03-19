@@ -1,7 +1,6 @@
 id: firefox
 name: Mozilla Firefox
 description: Browsing history, bookmarks, and cookies from Firefox, including cookie provider access for runtime cookie matchmaking
-icon: icon.svg
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox

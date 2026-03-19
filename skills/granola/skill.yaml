@@ -1,7 +1,6 @@
 id: granola
 name: Granola
 description: Meeting transcripts, AI summaries, and Q&A conversations from Granola
-icon: icon.svg
 color: "#2D6A4F"
 
 website: https://granola.ai

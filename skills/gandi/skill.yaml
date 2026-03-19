@@ -1,7 +1,6 @@
 id: gandi
 name: Gandi
 description: Domain and DNS management via the Gandi API
-icon: icon.svg
 color: "#E74B3C"
 
 website: https://www.gandi.net

@@ -19,11 +19,6 @@
       "type": "string",
       "description": "One-line description of what this skill does"
     },
-    "icon": {
-      "type": "string",
-      "description": "Icon filename (icon.svg or icon.png)",
-      "default": "icon.png"
-    },
     "website": {
       "type": "string",
       "format": "uri",

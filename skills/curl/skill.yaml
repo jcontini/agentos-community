@@ -1,7 +1,6 @@
 id: curl
 name: Curl
 description: Simple URL fetching using curl (no API key needed)
-icon: icon.svg
 color: "#333333"
 
 website: https://curl.se

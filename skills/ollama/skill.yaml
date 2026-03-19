@@ -1,7 +1,6 @@
 id: ollama
 name: Ollama
 description: Local AI models running on your machine via Ollama
-icon: icon.svg
 color: "#0F172A"
 website: https://ollama.com
 privacy_url: https://ollama.com/privacy

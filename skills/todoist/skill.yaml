@@ -1,7 +1,6 @@
 id: todoist
 name: Todoist
 description: Personal task management
-icon: icon.png
 color: "#DE483A"
 
 website: https://todoist.com

@@ -1,7 +1,6 @@
 id: chase
 name: Chase Bank
 description: Chase Bank accounts, balances, and transactions — checking, savings, and credit cards
-icon: icon.svg
 color: "#117ACA"
 website: https://www.chase.com
 

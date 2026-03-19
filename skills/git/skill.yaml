@@ -1,7 +1,6 @@
 id: git
 name: Git
 description: Local git repository data — commits, branches, tags, and repo info
-icon: icon.svg
 color: "#F05032"
 
 website: https://git-scm.com

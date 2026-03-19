@@ -1,7 +1,6 @@
 id: anthropic-api
 name: Anthropic API
 description: Claude AI models via Anthropic Messages API
-icon: icon.svg
 color: "#000000"
 
 website: https://www.anthropic.com
