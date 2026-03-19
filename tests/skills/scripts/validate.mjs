@@ -3,7 +3,7 @@
  * Skill validation — validate, report, enforce.
  * 
  * Checks per skill:
- *   1. Schema   — YAML frontmatter matches skill.schema.json
+ *   1. Schema   — skill.yaml matches skill.schema.json
  *   2. Entity   — All operations return valid entity types
  *   3. Mapping  — Adapter mappings use valid entity properties + jaq syntax
  *   4. Semantic — Warns on structurally valid but logically wrong YAML:
@@ -465,7 +465,7 @@ function findSkills(dir, relativePath = '') {
     if (entry.name.startsWith('.')) continue;
     const fullPath = join(dir, entry.name);
     const rel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-    if (existsSync(join(fullPath, 'readme.md')) || existsSync(join(fullPath, 'skill.yaml'))) {
+    if (existsSync(join(fullPath, 'skill.yaml'))) {
       skills.push({ name: entry.name, path: rel, dir: fullPath });
     } else {
       skills.push(...findSkills(fullPath, rel));
@@ -616,26 +616,14 @@ function renderErrors(results) {
 // MAIN
 // ============================================================================
 
-function parseFrontmatter(content) {
-  if (!content.startsWith('---')) return null;
-  const endIndex = content.indexOf('\n---', 3);
-  if (endIndex === -1) return null;
-  return parseYaml(content.slice(4, endIndex));
-}
-
 function loadSkillManifest(skillDir) {
   const yamlPath = join(skillDir, 'skill.yaml');
-  if (existsSync(yamlPath)) {
-    try {
-      return parseYaml(readFileSync(yamlPath, 'utf-8'));
-    } catch {
-      return null;
-    }
+  if (!existsSync(yamlPath)) return null;
+  try {
+    return parseYaml(readFileSync(yamlPath, 'utf-8'));
+  } catch {
+    return null;
   }
-  const readmePath = join(skillDir, 'readme.md');
-  if (!existsSync(readmePath)) return null;
-  const content = readFileSync(readmePath, 'utf-8');
-  return parseFrontmatter(content);
 }
 
 function validateSkill(skill) {
@@ -644,7 +632,7 @@ function validateSkill(skill) {
   if (!frontmatter) {
     return {
       name: skill.name,
-      schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['No skill.yaml or valid YAML frontmatter in readme.md'] },
+      schema: { pass: false, structureValid: false, passed: 0, total: 1, errors: ['Missing or invalid skill.yaml'] },
       entity: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
       mapping: { pass: false, passed: 0, total: 0, errors: ['Cannot check — no manifest'] },
     };

@@ -46,25 +46,19 @@ const { flags, positionals } = parseArgs(process.argv.slice(2));
 const filterValue = typeof flags.get('--filter') === 'string' ? flags.get('--filter') : null;
 const strict = !!flags.get('--strict');
 
-function loadFrontmatter(skillDir) {
+function loadSkillYaml(skillDir) {
   const yamlPath = join(skillDir, 'skill.yaml');
-  if (existsSync(yamlPath)) {
-    return parseYaml(readFileSync(yamlPath, 'utf8'));
+  if (!existsSync(yamlPath)) {
+    throw new Error(`Missing skill.yaml in ${skillDir}`);
   }
-  const readmePath = join(skillDir, 'readme.md');
-  const raw = readFileSync(readmePath, 'utf8');
-  const match = raw.match(/^---\r?\n([\s\S]*?)\n---\r?\n?/);
-  if (!match) {
-    throw new Error(`Missing skill.yaml or readme frontmatter in ${skillDir}`);
-  }
-  return parseYaml(match[1]);
+  return parseYaml(readFileSync(yamlPath, 'utf8'));
 }
 
 function topLevelSkillDirs() {
   return readdirSync(SKILLS_DIR)
     .filter(name => !name.startsWith('.'))
     .map(name => join(SKILLS_DIR, name))
-    .filter(path => statSync(path).isDirectory() && (existsSync(join(path, 'readme.md')) || existsSync(join(path, 'skill.yaml'))));
+    .filter(path => statSync(path).isDirectory() && existsSync(join(path, 'skill.yaml')));
 }
 
 function collectSkillDirs() {
@@ -369,7 +363,7 @@ function main() {
   let affectedSkills = 0;
 
   for (const skillDir of skillDirs) {
-    const frontmatter = loadFrontmatter(skillDir);
+    const frontmatter = loadSkillYaml(skillDir);
     const issues = lintSkill(frontmatter);
     if (issues.length === 0) continue;
 

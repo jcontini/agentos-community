@@ -9,7 +9,6 @@ connections:
     cookies:
       domain: ".chase.com"
       names: ["AMSESSION", "sessioncacheid", "auth-guid", "dps-pod-id", "x-auth-activity-info", "akaalb_secure_chase_com", "auth-site-info"]
-      session_duration: "8h"
       login:
         account_prompt: "What is your Chase username?"
         phases:

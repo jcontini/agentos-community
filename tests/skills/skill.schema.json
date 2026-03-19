@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agentos.dev/schemas/skill.schema.json",
   "title": "AgentOS Skill",
-  "description": "Schema for AgentOS skill readme.md frontmatter",
+  "description": "Schema for AgentOS skill.yaml manifest",
   "type": "object",
   "required": ["id", "name", "description"],
   "properties": {

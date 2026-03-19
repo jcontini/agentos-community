@@ -107,12 +107,13 @@ Every skill is a folder like:
 ```text
 skills/
   my-skill/
-    readme.md            # required — skill definition (YAML front matter + markdown docs)
+    skill.yaml           # required — executable manifest (connections, adapters, operations, …)
+    readme.md            # recommended before ship — markdown instructions for agents (no YAML front matter)
     requirements.md      # recommended — scope out the API, auth model, and entities before writing YAML
     my_helper.py         # optional — Python helper when inline command logic gets complex
 ```
 
-After the front matter, write normal markdown. That markdown body is the skill's instructions/docs for the agent.
+The runtime loads **only** `skill.yaml` for structure; `readme.md` is merged in as the instruction body. Do not put skill YAML in `readme.md` front matter.
 
 Start with `requirements.md` before writing skill YAML. Use it to scope out what endpoints or data surfaces exist, what auth model the service uses, which entities map to what, and any decisions or trade-offs. This is useful for any skill — not just reverse-engineered ones. For web skills without public APIs, it also becomes the place to log endpoint discoveries, header mysteries, and auth boundary mappings. See `docs/reverse-engineering/` for that playbook.
 
@@ -696,11 +697,14 @@ Do not add a `tests/` folder by default. For normal validation, use `mcp:call` f
 
 Keep skill YAML readable. When executor logic starts looking like real code, extract it into a helper file in the skill folder and have the operation call that file.
 
-Keep in `readme.md`:
+Keep in `readme.md` (markdown only — narrative, setup, examples):
 
-- skill metadata, connections, adapters, params, returns, and short executor wiring
-- short SQL queries and short jq transforms
-- simple one-step commands where the logic is still obvious inline
+- when to use the skill, limitations, and agent-facing notes
+- short examples and troubleshooting
+
+Keep in `skill.yaml`:
+
+- `id`, `name`, `connections`, `adapters`, `operations`, executors, and all machine-readable wiring
 
 Move into helper files:
 

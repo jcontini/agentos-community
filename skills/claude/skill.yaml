@@ -11,7 +11,6 @@ connections:
     cookies:
       domain: ".claude.ai"
       names: ["sessionKey"]
-      session_duration: "30d"
       login:
         account_prompt: "What email do you use for claude.ai?"
         phases:
