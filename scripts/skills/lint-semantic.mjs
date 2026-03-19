@@ -44,7 +44,6 @@ function parseArgs(argv) {
 
 const { flags, positionals } = parseArgs(process.argv.slice(2));
 const filterValue = typeof flags.get('--filter') === 'string' ? flags.get('--filter') : null;
-const includeNeedsWork = !!flags.get('--include-needs-work');
 const strict = !!flags.get('--strict');
 
 function loadFrontmatter(skillDir) {
@@ -68,45 +67,8 @@ function topLevelSkillDirs() {
     .filter(path => statSync(path).isDirectory() && (existsSync(join(path, 'readme.md')) || existsSync(join(path, 'skill.yaml'))));
 }
 
-function needsWorkSkillDirs() {
-  const needsWorkRoot = join(SKILLS_DIR, '.needs-work');
-  try {
-    return readdirSync(needsWorkRoot)
-      .map(name => join(needsWorkRoot, name))
-      .filter(path => statSync(path).isDirectory())
-      .flatMap(path => collectNestedSkillDirs(path));
-  } catch {
-    return [];
-  }
-}
-
-function collectNestedSkillDirs(root) {
-  const dirs = [];
-  const entries = readdirSync(root);
-
-  if (entries.includes('readme.md') || entries.includes('skill.yaml')) {
-    dirs.push(root);
-  }
-
-  for (const entry of entries) {
-    const fullPath = join(root, entry);
-    try {
-      if (statSync(fullPath).isDirectory()) {
-        dirs.push(...collectNestedSkillDirs(fullPath));
-      }
-    } catch {
-      // Ignore unreadable paths.
-    }
-  }
-
-  return dirs;
-}
-
 function collectSkillDirs() {
   let dirs = topLevelSkillDirs();
-  if (includeNeedsWork) {
-    dirs = dirs.concat(needsWorkSkillDirs());
-  }
 
   if (positionals.length > 0) {
     const requested = new Set(positionals);

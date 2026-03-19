@@ -12,10 +12,7 @@
  *        • adapter defined but no operation returns that entity type
  *
  * (Skill image icons were removed; no icon file check.)
- * 
- * Skills in .needs-work/ are shown separately but never auto-moved.
- * Fix errors, then manually move to skills/ when ready.
- * 
+ *
  * Usage:
  *   node validate.mjs                     # Full validation of all skills
  *   node validate.mjs whatsapp linear     # Validate specific skills only
@@ -34,7 +31,6 @@ import addFormats from 'ajv-formats';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../../..');
 const SKILLS_DIR = join(ROOT, 'skills');
-const NEEDS_WORK_DIR = join(SKILLS_DIR, '.needs-work');
 const SCHEMA_PATH = join(__dirname, '..', 'skill.schema.json');
 
 // ============================================================================
@@ -713,20 +709,15 @@ if (preCommit) {
 
 // 1. Discover
 let activeSkills = findSkills(SKILLS_DIR);
-let needsWorkSkills = findSkills(NEEDS_WORK_DIR);
 
 if (skillNames.length > 0) {
   activeSkills = activeSkills.filter(a => skillNames.includes(a.name));
-  const matchedActive = new Set(activeSkills.map(a => a.name));
-  needsWorkSkills = needsWorkSkills.filter(a => skillNames.includes(a.name) && !matchedActive.has(a.name));
 } else if (filterValue) {
   activeSkills = activeSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
-  needsWorkSkills = needsWorkSkills.filter(a => a.name.includes(filterValue) || a.path.includes(filterValue));
 }
 
 // 2. Validate
 const activeResults = activeSkills.map(a => ({ ...validateSkill(a), _skill: a }));
-const needsWorkResults = needsWorkSkills.map(a => ({ ...validateSkill(a), _skill: a }));
 
 // Sort: passing first, then by name
 const sortResults = (arr) => arr.sort((a, b) => {
@@ -736,7 +727,6 @@ const sortResults = (arr) => arr.sort((a, b) => {
   return a.name.localeCompare(b.name);
 });
 sortResults(activeResults);
-sortResults(needsWorkResults);
 
 // 3. Collect entity coverage (before moves)
 const knownEntities = [...validEntityIds].filter(id => !['_type'].includes(id)).sort();
@@ -758,24 +748,12 @@ for (const result of activeResults) {
 const sections = [
   { label: `Skills (${activeResults.length})`, icon: '📦', results: activeResults },
 ];
-if (needsWorkResults.length > 0) {
-  sections.push({ label: `Needs Work (${needsWorkResults.length})`, icon: '🔧', results: needsWorkResults });
-}
 renderTable(sections);
 
-// 5. Error details (always show for active adapters)
+// 5. Error details
 renderErrors(activeResults);
-if (verbose) renderErrors(needsWorkResults);
 
-// 6. Check for promotable .needs-work adapters
-const promotable = needsWorkResults.filter(r =>
-  r.schema.pass && r.entity.pass && r.mapping.pass
-);
-if (promotable.length > 0) {
-  console.log(`  🎉 Ready to promote: ${promotable.map(r => r.name).join(', ')}\n`);
-}
-
-// 7. Summary
+// 6. Summary
 console.log(`📊 Entity coverage: ${coveredEntities.size}/${knownEntities.length} entity types have skills`);
 if (verbose) {
   const uncovered = knownEntities.filter(e => !coveredEntities.has(e));
