@@ -15,7 +15,8 @@ Current source of truth:
 - `skills/kitty/skill.yaml` + `skills/kitty/readme.md` — canonical local-control/action example
 - `~/dev/agentos/bin/audit-skills.py` — unknown-key and structural checks against Rust `types.rs` (run via `npm run validate`); duplicate adapter-mapping expressions emit non-blocking `⚠` advisories
 - `~/dev/agentos/spec/skill-manifest.target.yaml` — narrative target shape (`provides`, connections, operations); `ProvidesEntry` / auth in `~/dev/agentos/crates/core/src/skills/types.rs`
-- `test-skills.cjs` — direct MCP smoke testing
+- `test-skills.cjs` — direct MCP smoke testing (`mcp:call`, `mcp:test`)
+- `~/dev/agentos/scripts/mcp-test.mjs` — engine-level MCP test harness (raw JSON-RPC, verifies dynamic tools from `provides:`)
 - `docs/reverse-engineering/` — transport, discovery, and auth patterns for building skills against sites without public APIs
 
 Only treat two skills as primary copy-from examples:
@@ -426,30 +427,45 @@ Rules:
 - Prefer direct, concrete verbs like `send_text`, `focus_tab`, `list_status`
 - Test them through `mcp:call` early, because runtime mismatches are easier to miss than YAML mismatches
 
-## Capabilities
+## Capabilities (Dynamic MCP Tools)
 
-Callers can use `run({ capability: "email_lookup", params: { ... } })` without naming a skill or tool. **Registration is skill-level, not on the operation:** add a typed `provides:` list entry with **`tool:`** (capability name) and **`via:`** (operation name). The Rust `Operation` struct has no `provides` field — do not put `provides:` under `operations.*` (audit will flag it as an unknown key).
+Skills can surface first-class MCP tools via `provides:`. Each `provides: tool` entry generates a top-level MCP tool (like `web_search`, `web_read`, `flight_search`) that agents see alongside the built-in tools. No hardcoded Rust is needed — the engine reads `provides:` from installed skills at startup.
+
+**Registration is skill-level, not on the operation.** Add a `provides:` list entry with `tool:` (MCP tool name) and `via:` (operation name). Optional `urls:` declares URL patterns for routing (URL-specific providers are preferred over generic ones). Do not put `provides:` under `operations.*`.
 
 ```yaml
+# Generic provider — always eligible
 provides:
-  - tool: email_lookup
-    via: resolve_email
+  - tool: web_search
+    via: search
 
-operations:
-  resolve_email:
-    description: Look up a person by email
-    returns: person[]
-    params:
-      email: { type: string, required: true }
-    python:
-      module: ./my_skill.py
-      function: run_resolve_email
-      params: true
+# URL-specific provider — preferred when URL matches
+provides:
+  - tool: web_read
+    via: transcript_video
+    urls:
+      - "youtube.com/*"
+      - "youtu.be/*"
 ```
 
-The runtime scans installed skills for a matching `tool` name and runs the `via` operation. Credential and cookie **providers** use the same `provides:` list with `credentials:` or `cookies:` entries (see Provider auth below).
+When multiple skills provide the same tool name, the engine:
+1. Intersects params across all providers (only common params appear on the MCP tool)
+2. Routes calls by: explicit `skill` param > URL pattern match > credentialed provider > no-auth fallback
+3. Adds a note in the tool description pointing to `load()` for provider-specific advanced options
 
-Leading by example: `skills/goodreads/skill.yaml` (`provides: [{ tool: email_lookup, via: resolve_email }]` plus `operations.resolve_email`).
+Current dynamic tools (from installed skills):
+- `web_search` — brave, exa
+- `web_read` — firecrawl, exa, curl (generic); youtube, reddit (URL-specific)
+- `flight_search` — serpapi
+
+To verify dynamic tools appear:
+
+```bash
+cd ~/dev/agentos
+node scripts/mcp-test.mjs stdio "./target/release/agentos mcp"
+```
+
+Credential and cookie **providers** use the same `provides:` list with `credentials:` or `cookies:` entries (see Provider auth below).
 
 ## Connections
 
@@ -757,6 +773,8 @@ This is why canonical mapping fields matter.
 
 Use direct MCP testing whenever you change a skill. This is the fastest way to verify the real output contract.
 
+### Skill-level testing (community repo)
+
 `mcp:call` and `mcp:test` automatically use the newest built `agentos` binary. Set `AGENTOS_BINARY=/path/to/agentos` if you need to force a specific one.
 
 JSON preview:
@@ -797,6 +815,25 @@ YAML-driven smoke test:
 ```bash
 npm run mcp:test -- exa --verbose
 ```
+
+### Engine-level testing (core repo)
+
+The core repo has a generic MCP test harness at `~/dev/agentos/scripts/mcp-test.mjs` that speaks raw JSON-RPC to the engine binary. Use it to verify the full tool surface — including dynamically generated capability tools from `provides:` — without going through the editor.
+
+```bash
+cd ~/dev/agentos
+
+# List all MCP tools (built-in + dynamic)
+node scripts/mcp-test.mjs stdio "./target/release/agentos mcp"
+
+# Call a dynamic capability tool
+node scripts/mcp-test.mjs stdio "./target/release/agentos mcp" call web_search '{"query":"rust"}'
+
+# Call with URL routing
+node scripts/mcp-test.mjs stdio "./target/release/agentos mcp" call web_read '{"url":"https://youtube.com/watch?v=abc"}'
+```
+
+This is the fastest path when you're changing `provides:` entries, engine routing, or tool schemas. It spawns a fresh MCP process, bypasses the editor, and prints the result directly. Use it before restarting the editor connection.
 
 ## Smoke Metadata
 

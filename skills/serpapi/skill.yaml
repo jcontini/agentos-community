@@ -7,6 +7,10 @@ website: https://serpapi.com
 privacy_url: https://serpapi.com/privacy
 terms_url: https://serpapi.com/terms-and-conditions
 
+provides:
+  - tool: flight_search
+    via: search_offers
+
 connections:
   api:
     base_url: "https://serpapi.com"

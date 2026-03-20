@@ -4,6 +4,14 @@ description: Get video metadata and transcripts using yt-dlp
 color: "#FF0808"
 website: https://youtube.com
 
+provides:
+  - tool: web_read
+    via: transcript_video
+    urls:
+      - "youtube.com/*"
+      - "youtu.be/*"
+      - "music.youtube.com/*"
+
 connections: {}
 
 # External sources this adapter needs (for CSP)

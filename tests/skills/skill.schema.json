@@ -183,7 +183,9 @@
             "required": ["tool", "via"],
             "properties": {
               "tool": { "type": "string", "description": "Tool name for capability matchmaking" },
-              "via": { "type": "string", "description": "Operation implementing the tool" }
+              "via": { "type": "string", "description": "Operation implementing the tool" },
+              "urls": { "type": "array", "items": { "type": "string" }, "description": "URL patterns for routing (e.g. youtube.com/*)" },
+              "description": { "type": "string", "description": "Description of what this provider does for the tool" }
             },
             "additionalProperties": false
           }

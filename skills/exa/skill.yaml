@@ -7,6 +7,12 @@ website: https://exa.ai
 privacy_url: https://exa.ai/privacy
 terms_url: https://exa.ai/terms
 
+provides:
+  - tool: web_search
+    via: search
+  - tool: web_read
+    via: read_webpage
+
 connections:
   api:
     base_url: "https://api.exa.ai"

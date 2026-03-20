@@ -7,6 +7,10 @@ website: https://brave.com/search
 privacy_url: https://search.brave.com/help/privacy-policy
 terms_url: https://brave.com/terms-of-use
 
+provides:
+  - tool: web_search
+    via: search
+
 connections:
   api:
     base_url: "https://api.search.brave.com/res/v1"

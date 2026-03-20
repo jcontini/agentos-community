@@ -5,6 +5,10 @@ color: "#333333"
 
 website: https://curl.se
 
+provides:
+  - tool: web_read
+    via: read_webpage
+
 connections: {}
 
 # ═══════════════════════════════════════════════════════════════════════════════
