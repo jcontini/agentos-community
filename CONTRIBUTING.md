@@ -14,7 +14,7 @@ Current source of truth:
 - `skills/exa/skill.yaml` + `skills/exa/readme.md` — canonical entity-returning example
 - `skills/kitty/skill.yaml` + `skills/kitty/readme.md` — canonical local-control/action example
 - `~/dev/agentos/bin/audit-skills.py` — unknown-key and structural checks against Rust `types.rs` (run via `npm run validate`); duplicate adapter-mapping expressions emit non-blocking `⚠` advisories
-- `~/dev/agentos/spec/universal-provides.md` — typed skill `provides`, connections, and how `run({ capability })` resolves (no `Connection.needs`)
+- `~/dev/agentos/spec/skill-manifest.target.yaml` — narrative target shape (`provides`, connections, operations); `ProvidesEntry` / auth in `~/dev/agentos/crates/core/src/skills/types.rs`
 - `test-skills.cjs` — direct MCP smoke testing
 - `docs/reverse-engineering/` — transport, discovery, and auth patterns for building skills against sites without public APIs
 
