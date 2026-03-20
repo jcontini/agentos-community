@@ -226,14 +226,24 @@ function checkConnections(frontmatter) {
     for (const [opName, op] of Object.entries(ops)) {
       if (!op || typeof op !== 'object') continue;
       const conn = op.connection;
-      if (conn === undefined || conn === null || conn === '') {
+      const connList =
+        conn === undefined || conn === null || conn === ''
+          ? []
+          : Array.isArray(conn)
+            ? conn.map((c) => String(c))
+            : [String(conn)];
+      if (connList.length === 0) {
         // Auto-inference: when exactly one connection is declared, operations
         // can omit connection: and the runtime infers the sole connection.
         if (!singleConnection && operationNeedsExplicitConnection(op)) {
           errors.push(`'${opName}' must specify connection: when skill has multiple connections (available: ${[...connNames].join(', ')})`);
         }
-      } else if (!connNames.has(conn)) {
-        errors.push(`'${opName}' references connection '${conn}' which is not in connections: (available: ${[...connNames].join(', ')})`);
+      } else {
+        for (const c of connList) {
+          if (!connNames.has(c)) {
+            errors.push(`'${opName}' references connection '${c}' which is not in connections: (available: ${[...connNames].join(', ')})`);
+          }
+        }
       }
     }
   }
@@ -241,7 +251,14 @@ function checkConnections(frontmatter) {
   if (hasAuth && !hasConnections) {
     const ops = frontmatter.operations || {};
     for (const [opName, op] of Object.entries(ops)) {
-      if (op && typeof op === 'object' && op.connection !== undefined && op.connection !== null && op.connection !== '') {
+      const hasConn =
+        op &&
+        typeof op === 'object' &&
+        op.connection !== undefined &&
+        op.connection !== null &&
+        op.connection !== '' &&
+        !(Array.isArray(op.connection) && op.connection.length === 0);
+      if (hasConn) {
         errors.push(`'${opName}' has connection: but skill uses auth: — use connections: for multi-connection skills`);
       }
     }

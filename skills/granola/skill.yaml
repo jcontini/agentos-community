@@ -6,12 +6,16 @@ color: "#2D6A4F"
 website: https://granola.ai
 privacy_url: https://granola.ai/privacy
 
-connections: {}
-
-# Auth is handled internally by granola.py — reads WorkOS token from
-# ~/Library/Application Support/Granola/supabase.json.
-# Cache reads ~/Library/Application Support/Granola/cache-v6.json.
-# No runtime credential injection needed; Python self-authenticates.
+connections:
+  api:
+    description: "Granola REST API — live data, requires network"
+    base_url: "https://api.granola.ai"
+    vars:
+      token_file: "~/Library/Application Support/Granola/supabase.json"
+  cache:
+    description: "Local app cache — instant, offline, read-only"
+    vars:
+      cache_file: "~/Library/Application Support/Granola/cache-v6.json"
 
 adapters:
   meeting:
@@ -61,22 +65,23 @@ operations:
   list_meetings:
     description: List recent meetings with metadata and attendees
     returns: meeting[]
+    connection: [api, cache]
     params:
       limit: { type: integer, description: "Number of meetings to return" }
       page: { type: integer, default: 0, description: "Page number (0-indexed)" }
-      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
     python:
       module: ./granola.py
       function: op_list_meetings
       args:
         limit: '.params.limit // 20'
         page: '.params.page // 0'
-        source: '.params.source // "api"'
+        connection: '.connection'
       timeout: 30
 
   get_meeting:
     description: Get a meeting with full transcript, attendees, and AI summary
     returns: meeting
+    connection: api
     params:
       id: { type: string, required: true, description: "Granola document ID (UUID)" }
     python:
@@ -84,32 +89,33 @@ operations:
       function: op_get_meeting
       args:
         id: .params.id
+        connection: '.connection'
       timeout: 60
 
   list_conversations:
     description: List Q&A/AI chat threads linked to a meeting transcript
     returns: conversation[]
+    connection: [api, cache]
     params:
       document_id: { type: string, required: true, description: "Meeting document ID (UUID)" }
-      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
     python:
       module: ./granola.py
       function: op_list_conversations
       args:
         document_id: .params.document_id
-        source: '.params.source // "api"'
+        connection: '.connection'
       timeout: 30
 
   get_conversation:
     description: Get a Q&A conversation with full message history
     returns: conversation
+    connection: [api, cache]
     params:
       thread_id: { type: string, required: true, description: "Chat thread ID (UUID)" }
-      source: { type: string, default: "api", description: "api | cache | auto — cache works offline" }
     python:
       module: ./granola.py
       function: op_get_conversation
       args:
         thread_id: .params.thread_id
-        source: '.params.source // "api"'
+        connection: '.connection'
       timeout: 30

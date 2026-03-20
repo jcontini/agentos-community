@@ -392,8 +392,18 @@
           }
         },
         "connection": {
-          "type": "string",
-          "description": "Named connection reference (connections model). Must match a key in skill.connections."
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Single named connection (must match a key in skill.connections). Use \"none\" to skip auth."
+            },
+            {
+              "type": "array",
+              "description": "Agent-choosable connections; first is default. Caller sets params.connection to pick.",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          ]
         },
         "python": {
           "oneOf": [

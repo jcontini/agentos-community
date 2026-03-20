@@ -136,6 +136,9 @@ function effectiveConnectionName(frontmatter, op) {
   if (typeof op.connection === 'string' && op.connection.trim()) {
     return op.connection.trim();
   }
+  if (Array.isArray(op.connection) && op.connection.length > 0) {
+    return String(op.connection[0]).trim();
+  }
   if (keys.length === 1) return keys[0];
   return null;
 }
