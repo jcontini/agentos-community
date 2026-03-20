@@ -12,20 +12,24 @@ connections: {}
 # "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.
 # These tokens have full Google scopes (Gmail, Contacts, Calendar).
 # Tokens satisfy connections that declare oauth.service: google (Gmail, Calendar, Contacts, etc.).
+accounts:
+  list_via: list_accounts
+  id_field: email
+
 provides:
-  - capability: google
-    scopes:
-      - https://mail.google.com/
-      - https://www.googleapis.com/auth/contacts
-      - https://www.googleapis.com/auth/contacts.other.readonly
-      - https://www.googleapis.com/auth/calendar.events
-      - https://www.googleapis.com/auth/directory.readonly
-      - https://www.googleapis.com/auth/gmail.settings.basic
-      - https://www.googleapis.com/auth/userinfo.profile
-    via: credential_get
-    account_param: account
-    accounts_via: list_accounts
-    account_field: email
+  - credentials:
+      oauth:
+        service: google
+        via: credential_get
+        account_param: account
+        scopes:
+          - https://mail.google.com/
+          - https://www.googleapis.com/auth/contacts
+          - https://www.googleapis.com/auth/contacts.other.readonly
+          - https://www.googleapis.com/auth/calendar.events
+          - https://www.googleapis.com/auth/directory.readonly
+          - https://www.googleapis.com/auth/gmail.settings.basic
+          - https://www.googleapis.com/auth/userinfo.profile
 database: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
 
 # ==============================================================================

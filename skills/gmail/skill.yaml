@@ -7,7 +7,7 @@ website: https://mail.google.com
 privacy_url: https://policies.google.com/privacy
 
 # No client_id or client_secret in this YAML when another integration already provides
-# google OAuth tokens and declares `provides: google` — the resolver calls `credential_get`.
+# google OAuth tokens and declares `provides: [{ credentials: { oauth: { service: google }}}]` — the resolver calls `credential_get`.
 connections:
   gmail:
     base_url: "https://gmail.googleapis.com/gmail/v1/users/me"

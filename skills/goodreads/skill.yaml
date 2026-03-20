@@ -16,6 +16,10 @@ connections:
     label: Goodreads Session
     help_url: https://www.goodreads.com/user/sign_in
 
+provides:
+  - tool: email_lookup
+    via: resolve_email
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS - Entity Mappings
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -320,7 +324,6 @@ operations:
   resolve_email:
     description: Look up a person on Goodreads by email address
     returns: person[]
-    provides: email_lookup
     connection: web
     params:
       email: { type: string, required: true, description: "Email address to search for" }

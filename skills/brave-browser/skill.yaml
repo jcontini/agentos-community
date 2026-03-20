@@ -12,13 +12,15 @@ connections: {}
 # Exposes cookie_get — decrypted browser cookies for the cookie matchmaking pipeline.
 # If multiple cookie providers match, the agent should ask the user
 # which provider/browser to use instead of guessing.
+accounts:
+  list_via: list_accounts
+  id_field: name
+
 provides:
-  - capability: cookies
-    description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
-    via: cookie_get
-    account_param: domain
-    accounts_via: list_accounts
-    account_field: name
+  - cookies:
+      via: cookie_get
+      account_param: domain
+      description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
 
 # ==============================================================================
 # ADAPTERS

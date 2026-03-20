@@ -131,51 +131,77 @@
       },
       "additionalProperties": false
     },
+    "accounts": {
+      "type": "object",
+      "description": "Multi-account discovery for provider skills (OAuth, browser profiles, …).",
+      "required": ["list_via", "id_field"],
+      "properties": {
+        "list_via": {
+          "type": "string",
+          "description": "Operation that returns the account list (e.g. list_accounts)"
+        },
+        "id_field": {
+          "type": "string",
+          "description": "Field in each row that is the unique account identifier (e.g. email, name)"
+        },
+        "service_field": {
+          "type": "string",
+          "description": "Optional field naming which service an account belongs to"
+        }
+      },
+      "additionalProperties": false
+    },
     "provides": {
       "type": "array",
-      "description": "Capability declarations — what this skill provides to other skills or capability-based run() invocations.",
+      "description": "Typed provides: OAuth/API credentials, cookies, or discoverable tools.",
       "items": {
-        "type": "object",
-        "anyOf": [
-          { "required": ["capability"] },
-          { "required": ["service"] }
-        ],
-        "properties": {
-          "capability": {
-            "type": "string",
-            "description": "Capability name (e.g., 'cookies', 'google', 'email_lookup')"
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["credentials"],
+            "properties": {
+              "credentials": {
+                "type": "object",
+                "properties": {
+                  "oauth": { "$ref": "#/definitions/oauthProvides" },
+                  "api_key": { "$ref": "#/definitions/apiKeyProvides" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           },
-          "service": {
-            "type": "string",
-            "description": "Alias for capability (backwards compat)"
+          {
+            "type": "object",
+            "required": ["cookies"],
+            "properties": {
+              "cookies": {
+                "type": "object",
+                "required": ["via"],
+                "properties": {
+                  "via": { "type": "string" },
+                  "domains": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "description": { "type": "string" },
+                  "account_param": { "type": "string", "description": "Default: domain" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           },
-          "scopes": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "OAuth scopes this provider can supply"
-          },
-          "via": {
-            "type": "string",
-            "description": "Operation to call to get credentials (default: 'credential_get')"
-          },
-          "account_param": {
-            "type": "string",
-            "description": "Parameter name for passing the account (default: 'account')"
-          },
-          "accounts_via": {
-            "type": "string",
-            "description": "Operation to call to discover available accounts (e.g., 'list_accounts')"
-          },
-          "account_field": {
-            "type": "string",
-            "description": "Field name in the accounts_via response containing the account identifier (default: 'email')"
-          },
-          "description": {
-            "type": "string",
-            "description": "Human-readable description of what this provider supplies"
+          {
+            "type": "object",
+            "required": ["tool", "via"],
+            "properties": {
+              "tool": { "type": "string", "description": "Tool name for capability matchmaking" },
+              "via": { "type": "string", "description": "Operation implementing the tool" }
+            },
+            "additionalProperties": false
           }
-        },
-        "additionalProperties": false
+        ]
       }
     }
   },
@@ -200,6 +226,27 @@
           }
         }
       }
+    },
+    "oauthProvides": {
+      "type": "object",
+      "description": "OAuth tokens this skill can supply for oauth.service matchmaking",
+      "required": ["service"],
+      "properties": {
+        "service": { "type": "string" },
+        "via": { "type": "string" },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "account_param": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "apiKeyProvides": {
+      "type": "object",
+      "required": ["service", "via"],
+      "properties": {
+        "service": { "type": "string" },
+        "via": { "type": "string" }
+      },
+      "additionalProperties": false
     },
     "skillSources": {
       "type": "object",
@@ -374,10 +421,6 @@
         "applescript": {
           "type": "string",
           "description": "AppleScript code to execute"
-        },
-        "provides": {
-          "type": "string",
-          "description": "Capability this operation provides (e.g., 'email_lookup', 'web_search')"
         },
         "test": {
           "type": "object",
