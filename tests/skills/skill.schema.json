@@ -427,11 +427,6 @@
           "type": "object",
           "description": "In-process graph entity query (by tag / filters)",
           "additionalProperties": true
-        },
-        "memex": {
-          "type": "object",
-          "description": "Deprecated alias for `graph` — same shape",
-          "additionalProperties": true
         }
       }
     },
@@ -498,7 +493,7 @@
         },
         "cookies": {
           "type": "object",
-          "description": "Cookie-based auth for a domain. Prefer installed cookie provider skills that declare provides: [{ service: \"cookies\" }]. No user credential entry needed.",
+          "description": "Cookie-based auth for a domain. Prefer installed cookie provider skills that declare skill-level provides: cookies: { via: <operation> }. No user credential entry needed.",
           "required": ["domain"],
           "properties": {
             "domain": {
@@ -566,9 +561,9 @@
                 }
               }
             },
-            "verify": {
+            "check": {
               "type": "object",
-              "description": "Endpoint to probe for session validity",
+              "description": "Session liveness check — hit the URL with extracted cookies, pass if status matches",
               "properties": {
                 "url": { "type": "string", "description": "URL to check" },
                 "method": { "type": "string", "description": "HTTP method (default: GET)" },
@@ -584,7 +579,7 @@
           "properties": {
             "service": {
               "type": "string",
-              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds installed skills with matching provides: entries and calls their credential_get operation. If several providers match, the agent should ask the user which provider to use."
+              "description": "Service name for provider matchmaking (e.g., 'google'). If set, the resolver finds installed skills whose provides include credentials.oauth with the same service and calls the declared via operation (often credential_get). If several providers match, the agent should ask the user which provider to use."
             },
             "client_id": {
               "type": "string",
@@ -755,7 +750,7 @@
         },
         "database": {
           "type": "string",
-          "description": "Database path (overrides skill-level)"
+          "description": "SQLite path override (jaq expression). Use when the path is dynamic (e.g. apple-contacts) or for step-level SQL where operations do not carry connection:. Otherwise prefer the operation's connection sqlite:."
         },
         "response": {
           "$ref": "#/definitions/responseMapping"
