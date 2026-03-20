@@ -169,25 +169,24 @@ operations:
       count: integer
       source: string
     steps:
-      steps:
-        - id: get_cookies
-          sql:
-            database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
-            query: >
-              SELECT name, value, host, path, expiry,
-                     isSecure AS is_secure, isHttpOnly AS is_httponly
-              FROM moz_cookies
-              WHERE host LIKE :domain
-                AND (:names = '' OR instr(',' || :names || ',', ',' || name || ',') > 0)
-              ORDER BY name
-              LIMIT :limit
-            params:
-              domain: '"%" + .params.domain + "%"'
-              names: '.params.names // ""'
-              limit: '.params.limit // 1000'
-      response:
-        mapping:
-          domain: '.params.domain'
-          cookies: '.get_cookies'
-          count: '.get_cookies | length'
-          source: '"firefox"'
+      - id: get_cookies
+        sql:
+          database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
+          query: >
+            SELECT name, value, host, path, expiry,
+                   isSecure AS is_secure, isHttpOnly AS is_httponly
+            FROM moz_cookies
+            WHERE host LIKE :domain
+              AND (:names = '' OR instr(',' || :names || ',', ',' || name || ',') > 0)
+            ORDER BY name
+            LIMIT :limit
+          params:
+            domain: '"%" + .params.domain + "%"'
+            names: '.params.names // ""'
+            limit: '.params.limit // 1000'
+    response:
+      mapping:
+        domain: '.params.domain'
+        cookies: '.get_cookies'
+        count: '.get_cookies | length'
+        source: '"firefox"'

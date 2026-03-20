@@ -323,6 +323,10 @@
             "$ref": "#/definitions/paramDef"
           }
         },
+        "response": {
+          "$ref": "#/definitions/responseMapping",
+          "description": "Operation-level response mapping (e.g. after a `steps` pipeline). Used when the executor omits `response`."
+        },
         "rest": {
           "$ref": "#/definitions/restExecutor"
         },
@@ -348,7 +352,11 @@
           "$ref": "#/definitions/cryptoExecutor"
         },
         "steps": {
-          "$ref": "#/definitions/stepsExecutor"
+          "type": "array",
+          "description": "Sequential pipeline steps (bare list). Pair with top-level `response` on the operation for transform/mapping.",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
         },
         "connection": {
           "type": "string",
@@ -845,23 +853,6 @@
         }
       }
     },
-    "stepsExecutor": {
-      "type": "object",
-      "description": "Chain multiple executors sequentially. Each step's output is available to later steps via {{step_id.field}} template interpolation.",
-      "required": ["steps"],
-      "properties": {
-        "steps": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/step"
-          },
-          "description": "Ordered list of steps to execute"
-        },
-        "response": {
-          "$ref": "#/definitions/responseMapping"
-        }
-      }
-    },
     "step": {
       "type": "object",
       "description": "A single step in a steps pipeline",
@@ -895,6 +886,29 @@
         },
         "command": {
           "$ref": "#/definitions/commandExecutor"
+        },
+        "python": {
+          "oneOf": [
+            { "type": "string", "description": "Python module path (relative to skill dir)" },
+            {
+              "type": "object",
+              "description": "Python executor config",
+              "properties": {
+                "module": { "type": "string" },
+                "function": { "type": "string" }
+              }
+            }
+          ]
+        },
+        "csv": {
+          "$ref": "#/definitions/csvExecutor"
+        },
+        "applescript": {
+          "type": "string",
+          "description": "AppleScript code to execute"
+        },
+        "swift": {
+          "$ref": "#/definitions/swiftExecutor"
         }
       }
     },

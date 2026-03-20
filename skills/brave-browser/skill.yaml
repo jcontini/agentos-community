@@ -127,23 +127,22 @@ operations:
     returns:
       key: string
     steps:
-      steps:
-        - id: get_password
-          keychain:
-            service: "Brave Safe Storage"
-            account: "Brave"
+      - id: get_password
+        keychain:
+          service: "Brave Safe Storage"
+          account: "Brave"
 
-        - id: derive_key
-          crypto:
-            algorithm: pbkdf2
-            password: ".get_password.value"
-            salt: "saltysalt"
-            iterations: 1003
-            key_length: 16
+      - id: derive_key
+        crypto:
+          algorithm: pbkdf2
+          password: ".get_password.value"
+          salt: "saltysalt"
+          iterations: 1003
+          key_length: 16
 
-      response:
-        mapping:
-          key: ".derive_key.value"
+    response:
+      mapping:
+        key: ".derive_key.value"
 
   list_cookies:
     description: >
