@@ -8,17 +8,16 @@ Granola must be installed and have run at least once. No API key needed — auth
 
 If you see auth errors, open the Granola app to refresh the token.
 
-## API + Cache
+## Connections (API + cache)
 
-This skill supports two data sources:
+The skill declares two **connections** — `api` (live REST) and `cache` (local `cache-v6.json`). For operations that support both, pick one with `params.connection`: `"api"` or `"cache"`. The default is `api` (first in the list).
 
-| Source | When | Use case |
-|--------|------|----------|
+| Connection | When | Use case |
+|------------|------|----------|
 | **api** | Live calls with token | Freshest data, full transcripts |
-| **cache** | Reads local cache-v6.json | Instant, works offline, token expired |
-| **auto** | Try API, fall back to cache | Resilient — best of both |
+| **cache** | Reads local cache file | Fast, works offline |
 
-Pass `source: "cache"` or `source: "auto"` on `list_meetings`, `list_conversations`, and `get_conversation` to use the cache. `get_meeting` is API-only (cache has no transcript text).
+`get_meeting` uses the **api** connection only (the cache does not store full transcript text).
 
 ## What gets created in the graph
 

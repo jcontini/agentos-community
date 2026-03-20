@@ -31,14 +31,43 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-BASE_URL = "https://api.granola.ai"
-AUTH_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "supabase.json"
-CACHE_PATH = Path.home() / "Library" / "Application Support" / "Granola" / "cache-v6.json"
+DEFAULT_API_BASE = "https://api.granola.ai"
+DEFAULT_AUTH_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "supabase.json"
+DEFAULT_CACHE_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "cache-v6.json"
 
 
-def get_token() -> str:
+def _expand_path(p: str) -> Path:
+    if p.startswith("~/"):
+        return Path.home() / p[2:]
+    return Path(p)
+
+
+def _auth_file(con: dict | None) -> Path:
+    if con and isinstance(con.get("vars"), dict):
+        tf = con["vars"].get("token_file")
+        if isinstance(tf, str) and tf.strip():
+            return _expand_path(tf)
+    return DEFAULT_AUTH_FILE
+
+
+def _cache_file(con: dict | None) -> Path:
+    if con and isinstance(con.get("vars"), dict):
+        cf = con["vars"].get("cache_file")
+        if isinstance(cf, str) and cf.strip():
+            return _expand_path(cf)
+    return DEFAULT_CACHE_FILE
+
+
+def _api_base(con: dict | None) -> str:
+    if con and con.get("base_url"):
+        return str(con["base_url"]).rstrip("/")
+    return DEFAULT_API_BASE
+
+
+def get_token(con: dict | None = None) -> str:
+    auth_path = _auth_file(con)
     try:
-        with open(AUTH_FILE) as f:
+        with open(auth_path) as f:
             data = json.load(f)
         tokens = json.loads(data["workos_tokens"])
         return tokens["access_token"]
@@ -48,8 +77,8 @@ def get_token() -> str:
         die(f"Could not parse Granola auth file: {e}")
 
 
-def api_post(token: str, endpoint: str, body: dict) -> object:
-    url = f"{BASE_URL}{endpoint}"
+def api_post(token: str, endpoint: str, body: dict, con: dict | None = None) -> object:
+    url = f"{_api_base(con)}{endpoint}"
     req = Request(
         url,
         data=json.dumps(body).encode(),
@@ -177,15 +206,15 @@ def normalize_meeting(doc: dict) -> dict:
     }
 
 
-def cmd_list(token: str, limit: int, page: int) -> list:
-    result = api_post(token, "/v2/get-documents", {"limit": limit, "offset": page * limit})
+def cmd_list(token: str, limit: int, page: int, con: dict | None = None) -> list:
+    result = api_post(token, "/v2/get-documents", {"limit": limit, "offset": page * limit}, con)
     docs = result.get("docs", []) if isinstance(result, dict) else result
     return [normalize_meeting(d) for d in docs]
 
 
-def cmd_get(token: str, doc_id: str) -> dict:
+def cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
     # Fetch document metadata
-    batch = api_post(token, "/v1/get-documents-batch", {"document_ids": [doc_id]})
+    batch = api_post(token, "/v1/get-documents-batch", {"document_ids": [doc_id]}, con)
     docs = batch.get("docs", batch) if isinstance(batch, dict) else batch
     if not docs:
         die(f"Document {doc_id} not found")
@@ -193,7 +222,7 @@ def cmd_get(token: str, doc_id: str) -> dict:
     meeting = normalize_meeting(doc)
 
     # Fetch transcript
-    utterances = api_post(token, "/v1/get-document-transcript", {"document_id": doc_id})
+    utterances = api_post(token, "/v1/get-document-transcript", {"document_id": doc_id}, con)
     if utterances and isinstance(utterances, list):
         start_str = meeting.get("start") or doc.get("created_at")
         meeting_start = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
@@ -209,7 +238,7 @@ def cmd_get(token: str, doc_id: str) -> dict:
         meeting["duration_ms"] = 0
 
     # Fetch AI summary panels
-    panels = api_post(token, "/v1/get-document-panels", {"document_id": doc_id})
+    panels = api_post(token, "/v1/get-document-panels", {"document_id": doc_id}, con)
     if panels and isinstance(panels, list):
         parts = [html_to_markdown(p.get("original_content", "")) for p in panels]
         meeting["summary_text"] = "\n\n".join(p for p in parts if p)
@@ -219,10 +248,10 @@ def cmd_get(token: str, doc_id: str) -> dict:
     return meeting
 
 
-def cmd_list_conversations(token: str, document_id: str) -> list:
+def cmd_list_conversations(token: str, document_id: str, con: dict | None = None) -> list:
     """List Q&A chat threads linked to a meeting document."""
     # get-entity-set returns IDs only; we need batch to get grouping_key
-    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_thread"})
+    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_thread"}, con)
     thread_ids = [e["id"] for e in (set_resp.get("data") or [])]
     if not thread_ids:
         return []
@@ -230,7 +259,7 @@ def cmd_list_conversations(token: str, document_id: str) -> list:
     batch_resp = api_post(token, "/v1/get-entity-batch", {
         "entity_type": "chat_thread",
         "entity_ids": thread_ids,
-    })
+    }, con)
     target_key = f"meeting:{document_id}"
     threads = []
     for t in (batch_resp.get("data") or []):
@@ -248,20 +277,20 @@ def cmd_list_conversations(token: str, document_id: str) -> list:
     return sorted(threads, key=lambda x: (x["updated_at"] or ""), reverse=True)
 
 
-def cmd_get_conversation(token: str, thread_id: str) -> dict:
+def cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) -> dict:
     """Get a Q&A conversation thread with all messages."""
     # Fetch thread
     batch_resp = api_post(token, "/v1/get-entity-batch", {
         "entity_type": "chat_thread",
         "entity_ids": [thread_id],
-    })
+    }, con)
     threads = batch_resp.get("data") or []
     if not threads:
         die(f"Thread {thread_id} not found")
     thread = threads[0]
 
     # Fetch all messages and filter by thread_id
-    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_message"})
+    set_resp = api_post(token, "/v1/get-entity-set", {"entity_type": "chat_message"}, con)
     msg_ids = [e["id"] for e in (set_resp.get("data") or [])]
     if not msg_ids:
         messages = []
@@ -269,7 +298,7 @@ def cmd_get_conversation(token: str, thread_id: str) -> dict:
         msg_batch = api_post(token, "/v1/get-entity-batch", {
             "entity_type": "chat_message",
             "entity_ids": msg_ids,
-        })
+        }, con)
         raw_msgs = [m for m in (msg_batch.get("data") or []) if (m.get("data") or {}).get("thread_id") == thread_id]
         raw_msgs.sort(key=lambda m: ((m.get("data") or {}).get("turn_index", 0), m.get("created_at", "")))
         messages = []
@@ -305,17 +334,17 @@ def cmd_get_conversation(token: str, thread_id: str) -> dict:
 # -----------------------------------------------------------------------------
 
 
-def load_cache() -> dict:
+def load_cache(cache_path: Path) -> dict:
     """Load the Granola app's local entity cache."""
-    if not CACHE_PATH.exists():
+    if not cache_path.exists():
         die("Granola cache not found. Install and run Granola at least once.")
-    with open(CACHE_PATH) as f:
+    with open(cache_path) as f:
         return json.load(f)
 
 
-def cmd_list_from_cache(limit: int = 20, page: int = 0) -> list:
+def cmd_list_from_cache(limit: int = 20, page: int = 0, con: dict | None = None) -> list:
     """List meetings from local cache."""
-    data = load_cache()
+    data = load_cache(_cache_file(con))
     docs = (data.get("cache", {}).get("state", {}) or {}).get("documents", {})
     if not docs:
         return []
@@ -325,9 +354,9 @@ def cmd_list_from_cache(limit: int = 20, page: int = 0) -> list:
     return items[start : start + limit]
 
 
-def cmd_list_conversations_from_cache(document_id: str) -> list:
+def cmd_list_conversations_from_cache(document_id: str, con: dict | None = None) -> list:
     """List Q&A threads for a meeting from local cache."""
-    data = load_cache()
+    data = load_cache(_cache_file(con))
     threads = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_thread", {})
     target_key = f"meeting:{document_id}"
     out = []
@@ -348,9 +377,9 @@ def cmd_list_conversations_from_cache(document_id: str) -> list:
     return sorted(out, key=lambda x: (x["updated_at"] or ""), reverse=True)
 
 
-def cmd_get_conversation_from_cache(thread_id: str) -> dict:
+def cmd_get_conversation_from_cache(thread_id: str, con: dict | None = None) -> dict:
     """Get a Q&A conversation from local cache."""
-    data = load_cache()
+    data = load_cache(_cache_file(con))
     threads = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_thread", {})
     msgs = (data.get("cache", {}).get("state", {}).get("entities", {}) or {}).get("chat_message", {})
     thread = threads.get(thread_id)
@@ -386,57 +415,53 @@ def cmd_get_conversation_from_cache(thread_id: str) -> dict:
     }
 
 
-def op_list_meetings(limit: int = 20, page: int = 0, source: str = "api") -> list:
-    """Entry point for python: executor. List recent meetings. source: api|cache|auto."""
-    if source == "cache":
-        return cmd_list_from_cache(limit, page)
-    if source == "api":
-        token = get_token()
-        return cmd_list(token, limit, page)
-    # auto: try API, fall back to cache
-    try:
-        token = get_token()
-        return cmd_list(token, limit, page)
-    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
-        return cmd_list_from_cache(limit, page)
+def _connection_mode(con: object | None) -> str:
+    """Effective data source from runtime-injected `connection` object."""
+    if not isinstance(con, dict):
+        return "api"
+    name = con.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip().lower()
+    return "api"
 
 
-def op_get_meeting(id: str) -> dict:
-    """Entry point for python: executor. Get a meeting with full transcript. API only (cache has no transcript)."""
-    token = get_token()
-    return cmd_get(token, id)
+def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None) -> list:
+    """Entry point for python: executor. `connection` is injected by AgentOS (api vs cache)."""
+    mode = _connection_mode(connection)
+    if mode == "cache":
+        return cmd_list_from_cache(limit, page, connection)
+    if mode == "api":
+        token = get_token(connection)
+        return cmd_list(token, limit, page, connection)
+    die(f"Unknown connection {mode!r}")
 
 
-def op_list_conversations(document_id: str, source: str = "api") -> list:
-    """Entry point for python: executor. List Q&A conversations for a meeting. source: api|cache|auto."""
-    if source == "cache":
-        return cmd_list_conversations_from_cache(document_id)
-    if source == "api":
-        token = get_token()
-        return cmd_list_conversations(token, document_id)
-    # auto: try API, fall back to cache
-    try:
-        token = get_token()
-        return cmd_list_conversations(token, document_id)
-    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
-        return cmd_list_conversations_from_cache(document_id)
+def op_get_meeting(id: str, connection: dict | None = None) -> dict:
+    """API only — local cache does not include full transcripts."""
+    token = get_token(connection)
+    return cmd_get(token, id, connection)
 
 
-def op_get_conversation(thread_id: str, source: str = "api") -> dict:
-    """Entry point for python: executor. Get a Q&A conversation with messages. source: api|cache|auto."""
-    if source == "cache":
-        return cmd_get_conversation_from_cache(thread_id)
-    if source == "api":
-        token = get_token()
-        return cmd_get_conversation(token, thread_id)
-    # auto: try API, fall back to cache
-    try:
-        token = get_token()
-        out = cmd_get_conversation(token, thread_id)
+def op_list_conversations(document_id: str, connection: dict | None = None) -> list:
+    mode = _connection_mode(connection)
+    if mode == "cache":
+        return cmd_list_conversations_from_cache(document_id, connection)
+    if mode == "api":
+        token = get_token(connection)
+        return cmd_list_conversations(token, document_id, connection)
+    die(f"Unknown connection {mode!r}")
+
+
+def op_get_conversation(thread_id: str, connection: dict | None = None) -> dict:
+    mode = _connection_mode(connection)
+    if mode == "cache":
+        return cmd_get_conversation_from_cache(thread_id, connection)
+    if mode == "api":
+        token = get_token(connection)
+        out = cmd_get_conversation(token, thread_id, connection)
         out["source"] = "api"
         return out
-    except (SystemExit, FileNotFoundError, OSError, KeyError, json.JSONDecodeError, URLError, HTTPError):
-        return cmd_get_conversation_from_cache(thread_id)
+    die(f"Unknown connection {mode!r}")
 
 
 if __name__ == "__main__":
@@ -450,35 +475,35 @@ if __name__ == "__main__":
             page = int(sys.argv[3]) if len(sys.argv) > 3 else 0
             source = sys.argv[4] if len(sys.argv) > 4 else "api"
             if source == "cache":
-                result = cmd_list_from_cache(limit, page)
+                result = cmd_list_from_cache(limit, page, None)
             else:
-                token = get_token()
-                result = cmd_list(token, limit, page)
+                token = get_token(None)
+                result = cmd_list(token, limit, page, None)
         elif cmd == "get":
             if len(sys.argv) < 3:
                 die("Usage: granola.py get <doc_id>")
-            token = get_token()
-            result = cmd_get(token, sys.argv[2])
+            token = get_token(None)
+            result = cmd_get(token, sys.argv[2], None)
         elif cmd == "list_conversations":
             if len(sys.argv) < 3:
                 die("Usage: granola.py list_conversations <document_id> [api|cache]")
             doc_id = sys.argv[2]
             source = sys.argv[3] if len(sys.argv) > 3 else "api"
             if source == "cache":
-                result = cmd_list_conversations_from_cache(doc_id)
+                result = cmd_list_conversations_from_cache(doc_id, None)
             else:
-                token = get_token()
-                result = cmd_list_conversations(token, doc_id)
+                token = get_token(None)
+                result = cmd_list_conversations(token, doc_id, None)
         elif cmd == "get_conversation":
             if len(sys.argv) < 3:
                 die("Usage: granola.py get_conversation <thread_id> [api|cache]")
             thread_id = sys.argv[2]
             source = sys.argv[3] if len(sys.argv) > 3 else "api"
             if source == "cache":
-                result = cmd_get_conversation_from_cache(thread_id)
+                result = cmd_get_conversation_from_cache(thread_id, None)
             else:
-                token = get_token()
-                result = cmd_get_conversation(token, thread_id)
+                token = get_token(None)
+                result = cmd_get_conversation(token, thread_id, None)
         else:
             die(f"Unknown command: {cmd}")
 
