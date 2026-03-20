@@ -242,6 +242,35 @@ Rules:
 
 Migration note: existing `command:` + `binary: python3` skills can adopt `python:` for cleaner YAML. Examples: `austin-boulder-project`, `goodreads`, `granola`, `cursor`, `here-now`.
 
+### Connection dispatch — multi-backend Python helpers
+
+When a skill has multiple connections that serve the same operations via different transports (SDK vs CLI, live API vs cache), the Python helper receives the active connection and dispatches accordingly:
+
+```yaml
+operations:
+  list_items:
+    description: List items from the service
+    returns: item[]
+    connection: [sdk, cli]
+    python:
+      module: ./my_skill.py
+      function: list_items
+      args:
+        vault: .params.vault
+        connection: '.connection'
+      timeout: 60
+```
+
+```python
+def list_items(vault, connection=None):
+    if connection and connection.get("id") == "sdk":
+        return _list_via_sdk(vault, connection["vars"])
+    else:
+        return _list_via_cli(vault, connection.get("vars", {}))
+```
+
+Both code paths normalize output into the same shape so the adapter works regardless of which backend ran. This pattern is useful when a primary path (SDK with batch ops) needs a stable fallback (CLI with subprocess calls). See `skills/granola/` for the `api` + `cache` variant of this pattern.
+
 ### `_call` dispatch — calling sibling operations from Python
 
 When a Python operation needs to compose multiple API calls (e.g. list returns stubs, get returns full data), use `_call` to invoke sibling operations. The engine injects `_call` automatically when the function signature accepts it.
@@ -311,6 +340,27 @@ Canonical fields for rendering (previews and markdown views lean on these first)
 Avoid mapping the **same jaq expression** to multiple sibling keys unless you have a deliberate reason (for example, a legacy alias you are phasing out). Duplicates like `name: .title` and `title: .title`, or `text` and `description` both bound to `.summary`, **do not change markdown** (the renderer picks one via the order above) but still **duplicate stored vals** on the graph node — prefer a single source field; put a second exposure under `data.*` only when callers truly need a differently named slot.
 
 `audit-skills.py` emits an **advisory** (non-blocking) warning when two fields in the same adapter object share an identical mapping expression after trimming — use it to catch accidental redundancy.
+
+### Adapter relationships
+
+Adapters can declare relationships between entities. A nested block under a canonical field creates a graph edge from the adapted entity to the related entity:
+
+```yaml
+adapters:
+  account:
+    id: .id
+    name: .title
+    data.category: .category
+
+    in_vault:
+      vault:
+        id: .vault.id
+        name: .vault.name
+```
+
+This creates an `in_vault` edge from each `account` entity to its parent `vault` entity. The nested adapter (`vault:`) follows the same mapping rules — `id`, `name`, and `data.*` fields. The engine creates or finds the related entity and adds the edge.
+
+Use relationships when entities have a natural containment or ownership structure (items in vaults, messages in conversations, tasks in projects). The relationship name (`in_vault`) becomes the edge label on the graph.
 
 Rules:
 
@@ -434,6 +484,22 @@ connections:
     cookies:
       domain: ".example.com"
 ```
+
+Multi-backend pattern — same service, different transports (e.g. SDK + CLI):
+
+```yaml
+connections:
+  sdk:
+    description: "Python SDK — typed models, batch ops, biometric auth"
+    vars:
+      account_name: "my-account"
+  cli:
+    description: "CLI tool — stable JSON contract, fallback path"
+    vars:
+      binary_path: "/opt/homebrew/bin/mytool"
+```
+
+When connections differ by transport rather than service, each operation declares which it supports (`connection: [sdk, cli]`). The Python helper receives `connection` as a param and dispatches to the appropriate backend. Both paths normalize output into the same adapter-compatible shape. Use this when: (a) a v0 SDK needs a stable CLI fallback, (b) read ops work with both but writes need the SDK for batch/typed APIs, or (c) offline/online modes with the same data model.
 
 Rules:
 
@@ -581,6 +647,55 @@ def discover_endpoint(cache=None, **kwargs):
 ```
 
 If neither `__cache__` nor `__data__` is present, the result passes through unchanged. Fully backward compatible.
+
+### `__secrets__` — secret store writes (planned)
+
+A third reserved key, `__secrets__`, will handle importing secrets from external sources (password managers, payment info, identity documents, etc.) into the credential store. The `__secrets__` handler is pure credential store CRUD — it writes credential rows and strips the key. It does **not** create graph entities or edges; entity creation happens through the normal adapter pipeline processing `__result__`. The two systems are joined by `(issuer, identifier)`.
+
+```python
+def import_items(vault, dry_run=False):
+    items = fetch_from_source(vault)
+    if dry_run:
+        return [{"issuer": i["issuer"], "label": i["label"]} for i in items]
+
+    return {
+        # Secrets → credential store (engine writes rows, strips key)
+        "__secrets__": [
+            {
+                "item_type": "password",
+                "issuer": "github.com",
+                "identifier": "joe",
+                "label": "GitHub",
+                "source": "mymanager",
+                "value": {"password": "..."},
+                "metadata": {"masked": {"password": "••••••••"}}
+            },
+            {
+                "item_type": "credit_card",
+                "issuer": "chase",
+                "identifier": "visa-4242",
+                "label": "Personal Visa",
+                "source": "mymanager",
+                "value": {"card_number": "4111111111114242", "cvv": "123"},
+                "metadata": {"masked": {"card_number": "••••4242", "cvv": "•••"}}
+            }
+        ],
+        # Entities → shaped by adapters into graph nodes
+        "__result__": [
+            {"issuer": "github.com", "identifier": "joe", "title": "GitHub",
+             "category": "LOGIN", "url": "https://github.com", "username": "joe"},
+            {"issuer": "chase", "identifier": "visa-4242", "title": "Personal Visa",
+             "category": "CREDIT_CARD", "cardholder": "Joe", "card_type": "Visa",
+             "expiry": "12/2027", "masked": {"card_number": "••••4242", "cvv": "•••"}}
+        ]
+    }
+```
+
+The trust model: Python sees secrets (it reads them from the source), the engine intercepts and encrypts them, the agent never sees them — only `metadata` (including `masked` representations). Graph entities carry masked previews ("Visa ending in 4242") so the agent can reason about which card to use without seeing the full number.
+
+See `spec/credential-system.md` and `spec/1password-integration.md` for full design.
+
+**Status:** Not yet implemented. The `__secrets__` handler is part of the credential system's Phase A scope.
 
 Leading by example: `skills/goodreads/public_graph.py` (GraphQL endpoint discovery cached via `__cache__`).
 
@@ -819,6 +934,8 @@ If you need something advanced, copy an existing skill:
 - `gmail` + `mimestream` for provider-sourced OAuth and `_call` dispatch
 - `claude` + `brave-browser` for consumer/provider cookie patterns
 - `goodreads` for multi-connection (graphql + web) and sandbox storage
+- `granola` for multi-connection (API + cache) with Python connection dispatch
+- `onepassword` (planned) for `__secrets__` secret import, adapter relationships, parallel subprocess batch import, and non-account entity mapping
 - an existing cookie-provider skill for keychain, crypto, and multi-step extraction
 
 For skills that reverse-engineer web services without public APIs (headless browser stealth, JS bundle extraction, GraphQL discovery, cookie-based auth), see `docs/reverse-engineering/`:
