@@ -669,7 +669,8 @@ async function runDirectCall() {
   console.log(`Binary: ${BINARY}`);
   console.log('Call path: run({ skill, tool, params, account? }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
-  await mcp.connect();
+  // Always use a fresh engine so --call matches bulk smoke (no stale daemon).
+  await mcp.connect({ ephemeral: true });
   console.log('MCP ready.\n');
 
   const runArgs = buildDirectRunArgs();
