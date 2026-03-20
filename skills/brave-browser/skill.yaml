@@ -5,7 +5,11 @@ color: "#F83B1D"
 
 website: https://brave.com
 
-connections: {}
+connections:
+  history:
+    sqlite: "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"
+  cookies_db:
+    sqlite: "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies"
 
 # Brave (Chromium-based) stores cookies encrypted in SQLite.
 # The encryption key lives in macOS Keychain under "Brave Safe Storage" / "Brave".
@@ -42,12 +46,12 @@ operations:
   list_webpages:
     description: List recently visited pages from Brave browsing history
     returns: webpage[]
+    connection: history
     params:
       limit:
         type: integer
         description: Maximum number of results
     sql:
-      database: '"~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"'
       query: >
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
@@ -63,6 +67,7 @@ operations:
   search_webpages:
     description: Search Brave browsing history by URL or title
     returns: webpage[]
+    connection: history
     params:
       query:
         type: string
@@ -72,7 +77,6 @@ operations:
         type: integer
         description: Maximum number of results
     sql:
-      database: '"~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"'
       query: >
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
@@ -162,6 +166,7 @@ operations:
       is_secure: integer
       is_httponly: integer
       expires_utc: integer
+    connection: cookies_db
     params:
       domain:
         type: string
@@ -171,7 +176,6 @@ operations:
         type: integer
         description: Maximum number of cookies
     sql:
-      database: '"~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies"'
       query: >
         SELECT name, host_key, path, hex(encrypted_value) as encrypted_value,
                is_secure, is_httponly, expires_utc

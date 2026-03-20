@@ -55,20 +55,6 @@
     "api": {
       "$ref": "#/definitions/api"
     },
-    "database": {
-      "oneOf": [
-        { "type": "string", "description": "Path to SQLite database (supports ~ and globs)" },
-        {
-          "type": "object",
-          "description": "Platform-specific database paths",
-          "properties": {
-            "macos": { "type": "string" },
-            "windows": { "type": "string" },
-            "linux": { "type": "string" }
-          }
-        }
-      ]
-    },
     "adapters": {
       "type": "object",
       "description": "Entity adapters that transform API data into universal entity format. Each key is an entity type.",
@@ -441,10 +427,30 @@
     },
     "connection": {
       "type": "object",
-      "description": "Named service dependency. Declares a service the skill connects to, with optional base_url for URL resolution and optional auth fields.",
+      "description": "Named data source. HTTP connections use base_url; local database connections use sqlite; generic config uses vars. Auth fields declare how the runtime authenticates.",
       "properties": {
         "description": { "type": "string" },
-        "base_url": { "type": "string", "description": "Base URL for this service. Operations with relative URLs resolve against this." },
+        "base_url": { "type": "string", "description": "Base URL for HTTP services. Operations with relative URLs resolve against this." },
+        "sqlite": {
+          "oneOf": [
+            { "type": "string", "description": "Path to SQLite database (supports ~ and globs)" },
+            {
+              "type": "object",
+              "description": "Platform-specific database paths",
+              "properties": {
+                "macos": { "type": "string" },
+                "windows": { "type": "string" },
+                "linux": { "type": "string" }
+              }
+            }
+          ],
+          "description": "Local SQLite database path. The sql: executor resolves from this like rest: resolves from base_url."
+        },
+        "vars": {
+          "type": "object",
+          "description": "Non-secret config passed to script executors (file paths, versions, etc.). Supports ~ expansion.",
+          "additionalProperties": { "type": "string" }
+        },
         "needs": { "type": "string", "description": "Capability this connection requires from a provider skill (e.g., 'cookies', 'google'). Replaces cookies:/oauth: blocks." },
         "header": { "type": "object", "additionalProperties": { "type": "string" } },
         "query": { "type": "object", "additionalProperties": { "type": "string" } },

@@ -6,9 +6,9 @@ color: "#6366F1"
 website: https://copilot.money
 privacy_url: https://copilot.money/privacy
 
-connections: {}
-
-database: "~/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
+connections:
+  db:
+    sqlite: "~/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
 
 # ==============================================================================
 # TRANSFORMERS

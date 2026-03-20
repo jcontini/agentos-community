@@ -178,6 +178,38 @@ function checkSchema(frontmatter) {
   return { pass: passed === total && connectionErrors.length === 0, structureValid: errors.length === 0, passed, total, errors };
 }
 
+/** True when this executor block needs an effective connection (base_url or sqlite path). */
+function sqlBlockNeedsConnection(sql) {
+  if (!sql || typeof sql !== 'object') return false;
+  const d = sql.database;
+  return d === undefined || d === null || d === '';
+}
+
+/** True if a pipeline step uses rest/graphql/sql in a way that resolves via skill.connections. */
+function stepNeedsConnection(step) {
+  if (!step || typeof step !== 'object') return false;
+  if (step.rest || step.graphql) return true;
+  if (step.sql) return sqlBlockNeedsConnection(step.sql);
+  return false;
+}
+
+/**
+ * Operations that only use command/python/keychain/etc. do not need connection: even when
+ * the skill declares multiple connections (e.g. history vs cookies_db). Require connection
+ * when rest/graphql/sql at top level or in steps would use connection.base_url / connection.sqlite.
+ */
+function operationNeedsExplicitConnection(op) {
+  if (!op || typeof op !== 'object') return false;
+  if (op.rest || op.graphql) return true;
+  if (op.sql) return sqlBlockNeedsConnection(op.sql);
+  if (Array.isArray(op.steps)) {
+    for (const step of op.steps) {
+      if (stepNeedsConnection(step)) return true;
+    }
+  }
+  return false;
+}
+
 function checkConnections(frontmatter) {
   const errors = [];
   const hasAuth = frontmatter.auth !== undefined && frontmatter.auth !== null && frontmatter.auth !== 'none';
@@ -197,7 +229,7 @@ function checkConnections(frontmatter) {
       if (conn === undefined || conn === null || conn === '') {
         // Auto-inference: when exactly one connection is declared, operations
         // can omit connection: and the runtime infers the sole connection.
-        if (!singleConnection) {
+        if (!singleConnection && operationNeedsExplicitConnection(op)) {
           errors.push(`'${opName}' must specify connection: when skill has multiple connections (available: ${[...connNames].join(', ')})`);
         }
       } else if (!connNames.has(conn)) {

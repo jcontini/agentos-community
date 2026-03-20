@@ -4,7 +4,14 @@ description: Browsing history, bookmarks, and cookies from Firefox, including co
 color: "#FF7139"
 
 website: https://www.mozilla.org/firefox
-connections: {}
+connections:
+  places:
+    sqlite:
+      macos: "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
+  cookies_db:
+    sqlite:
+      macos: "~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"
+
 # Firefox cookies are stored plaintext in SQLite, so this integration can act as a
 # lightweight cookie provider for connections that use cookie-based auth.
 provides:
@@ -12,9 +19,6 @@ provides:
       via: cookie_get
       account_param: domain
       description: "Extract plaintext Firefox cookies from local profiles for cookie-based connections."
-
-database:
-  macos: "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -35,6 +39,7 @@ operations:
   list_webpages:
     description: List recently visited pages from Firefox browsing history
     returns: webpage[]
+    connection: places
     params:
       limit:
         type: integer
@@ -57,6 +62,7 @@ operations:
   search_webpages:
     description: Search Firefox browsing history by URL or title
     returns: webpage[]
+    connection: places
     params:
       query:
         type: string
@@ -92,6 +98,7 @@ operations:
       title: string
       url: string
       date_added: integer
+    connection: places
     params:
       folder:
         type: string
@@ -100,7 +107,6 @@ operations:
         type: integer
         description: Maximum number of results
     sql:
-      database: '"~/Library/Application Support/Firefox/Profiles/*/places.sqlite"'
       query: >
         SELECT b.title AS bookmark_title, p.url, p.title,
                CAST(b.dateAdded / 1000000 AS INTEGER) AS date_added_unix
@@ -125,6 +131,7 @@ operations:
       expiry: integer
       is_secure: integer
       is_httponly: integer
+    connection: cookies_db
     params:
       domain:
         type: string
@@ -134,7 +141,6 @@ operations:
         type: integer
         description: Maximum number of cookies
     sql:
-      database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
       query: >
         SELECT name, value, host, path, expiry,
                isSecure AS is_secure, isHttpOnly AS is_httponly

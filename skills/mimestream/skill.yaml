@@ -6,7 +6,9 @@ color: "#3B82F6"
 website: https://mimestream.com
 privacy_url: https://mimestream.com/privacy
 
-connections: {}
+connections:
+  db:
+    sqlite: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
 
 # Mimestream stores Google OAuth tokens in the macOS Keychain under
 # "Mimestream: {email}" / "OAuth" as NSKeyedArchiver binary plists.
@@ -30,7 +32,6 @@ provides:
           - https://www.googleapis.com/auth/directory.readonly
           - https://www.googleapis.com/auth/gmail.settings.basic
           - https://www.googleapis.com/auth/userinfo.profile
-database: "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
 
 # ==============================================================================
 # TRANSFORMERS

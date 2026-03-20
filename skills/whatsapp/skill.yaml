@@ -5,9 +5,9 @@ color: "#2CD46B"
 
 website: https://www.whatsapp.com/
 
-connections: {}
-
-database: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
+connections:
+  db:
+    sqlite: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
