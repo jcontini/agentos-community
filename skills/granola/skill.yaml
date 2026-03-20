@@ -21,16 +21,12 @@ adapters:
   meeting:
     id: .id
     name: .title
-    description: .summary_text
     text: .summary_text
     url: .granola_url
     datePublished: .start
-    title: .title
-    start: .start
     end: .end
     location: .location
     data.calendar_link: .calendar_link
-    data.granola_url: .granola_url
     data.creation_source: .creation_source
     data.valid_meeting: .valid_meeting
     data.organizer_email: .organizer_email
@@ -52,12 +48,10 @@ adapters:
     id: .id
     name: .title
     text: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
-    content: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
     url: .notes_url
     # Last activity (same idea as imessage/claude conversation adapters)
     datePublished: .updated_at
     data.created_at: .created_at
-    data.updated_at: .updated_at
     data.document_id: .document_id
     data.message_count: 'if .messages then (.messages | length) else null end'
 

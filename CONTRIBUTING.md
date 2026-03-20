@@ -2,7 +2,7 @@
 
 This file is for **skill authoring**. It is intentionally narrow.
 
-If you're editing `skills/*/readme.md`, start here. If you're working on apps, CSS, UI components, or unrelated repo infrastructure, this is the wrong doc.
+If you're editing `skills/*/skill.yaml` or `skills/*/readme.md`, start here. If you're working on apps, CSS, UI components, or unrelated repo infrastructure, this is the wrong doc.
 
 In development, AgentOS reads skills directly from this repo. Skill YAML changes are picked up on the next skill call. If you changed Rust core in `~/dev/agentos`, restart the engine there before trusting live MCP results.
 
@@ -10,16 +10,18 @@ In development, AgentOS reads skills directly from this repo. Skill YAML changes
 
 Current source of truth:
 
-- `CONTRIBUTING.md` — the skill contract and workflow
-- `skills/exa/readme.md` — canonical entity-returning example
-- `skills/kitty/readme.md` — canonical local-control/action example
+- `CONTRIBUTING.md` — the skill contract and workflow (keep it in sync when the contract changes — see below)
+- `skills/exa/skill.yaml` + `skills/exa/readme.md` — canonical entity-returning example
+- `skills/kitty/skill.yaml` + `skills/kitty/readme.md` — canonical local-control/action example
+- `~/dev/agentos/bin/audit-skills.py` — unknown-key and structural checks against Rust `types.rs` (run via `npm run validate`); duplicate adapter-mapping expressions emit non-blocking `⚠` advisories
+- `~/dev/agentos/spec/universal-provides.md` — typed skill `provides`, connections, and how `run({ capability })` resolves (no `Connection.needs`)
 - `test-skills.cjs` — direct MCP smoke testing
 - `docs/reverse-engineering/` — transport, discovery, and auth patterns for building skills against sites without public APIs
 
 Only treat two skills as primary copy-from examples:
 
-- `skills/exa/readme.md` for entity-returning skills
-- `skills/kitty/readme.md` for local-control/action skills
+- `skills/exa/` for entity-returning skills
+- `skills/kitty/` for local-control/action skills
 
 You may inspect other skills for specialized auth or protocol details, but do not treat older mixed-pattern skills as the default scaffold.
 
@@ -28,8 +30,8 @@ You may inspect other skills for specialized auth or protocol details, but do no
 Each tool in the workflow proves something different:
 
 ```bash
-# 1. Edit the live skill definition
-$EDITOR skills/my-skill/readme.md
+# 1. Edit the live skill definition (manifest is skill.yaml; readme is markdown only)
+$EDITOR skills/my-skill/skill.yaml
 
 # 2. Fast structural gate for hooks / local iteration
 npm run validate --pre-commit -- my-skill
@@ -69,6 +71,12 @@ What each step means:
 - Only operations with a `test:` block are included in default smoke
 - The only intended skip class is `skip_write` for mutating or human-gated operations
 - If a read-safe operation cannot be exercised because required params are unresolved, that is a failure, not a skip
+
+## Keeping CONTRIBUTING in sync
+
+Whenever you change something that affects **how authors write skills** — new or removed YAML fields, connection/auth models, adapter conventions, operation keys, or rules enforced by `audit-skills.py` / `lint:semantic` — **update this document in the same change** (same PR / paired commit across `agentos` and `agentos-community` if both repos move). CONTRIBUTING is the human-readable contract next to the machine checks; letting it drift wastes the next author's time.
+
+Before you push skill-contract work, sanity-check that examples here still parse and that stale patterns (legacy `provides:` shapes, readme-only manifests, etc.) are not left in place.
 
 Important runtime note:
 
@@ -287,21 +295,29 @@ Leading by example: `skills/gmail/gmail.py` (list + hydrate pattern with `_call`
 
 Adapters map raw API responses into AgentOS entities. Define the shape once in `adapters:` and let operations reference it via `returns:`.
 
-Canonical fields for rendering:
+Canonical fields for rendering (previews and markdown views lean on these first):
 
-- `name`
-- `text`
+- `name` — primary label (often maps from API `title` / `subject` / `summary` fields)
+- `text` — short summary or snippet for preview rows (see merge rules below)
 - `url`
 - `image`
 - `author`
 - `datePublished`
+
+**Source of truth in core:** `crates/core/src/view/render.rs` — `project_item` (preview) and `canonicalize_full_item` (full/detail JSON) define how raw entity keys map into the stable shape. For example, the first non-empty string among **`text` → `description` → `content` → `snippet`** is what becomes the displayed **`text`** field (preview truncates that string; full view also sets `text` via `or_insert` while keeping the rest of the object). **`name`** merges from **`name` → `title` → `conversation_name`**; **`datePublished`** accepts several date aliases (see the same file).
+
+**Import / remember / FTS:** `crates/core/src/execution/extraction.rs` — `prepare_node_data` treats **`content`** (and optional **`content_role`**) specially: that string is stored in the **`content` table** (indexed into the FTS **`body`** column). Other scalar fields (including `text`, `description`, `url`, …) become **node vals** and are folded into the FTS **`vals`** column on rebuild. Long or searchable bodies should use **`content`**, not a second copy in `text`/`description`.
+
+Avoid mapping the **same jaq expression** to multiple sibling keys unless you have a deliberate reason (for example, a legacy alias you are phasing out). Duplicates like `name: .title` and `title: .title`, or `text` and `description` both bound to `.summary`, **do not change markdown** (the renderer picks one via the order above) but still **duplicate stored vals** on the graph node — prefer a single source field; put a second exposure under `data.*` only when callers truly need a differently named slot.
+
+`audit-skills.py` emits an **advisory** (non-blocking) warning when two fields in the same adapter object share an identical mapping expression after trimming — use it to catch accidental redundancy.
 
 Rules:
 
 - Put canonical fields directly in the adapter body
 - Keep default mapping in `adapters.<entity>`
 - Use `data.*` for adapter-specific extra fields
-- Use `content` only for long body text that should be stored separately
+- Use `content` only for long body text that should be stored separately (do not also mirror the same long text into `text` unless you mean to)
 - Map to an existing entity type whenever possible
 
 Good:
@@ -362,31 +378,39 @@ Rules:
 
 ## Capabilities
 
-An operation can declare `provides:` to make itself discoverable by capability name. This lets callers use `run({ capability: "email_lookup", params: { ... } })` without knowing which skill implements it.
+Callers can use `run({ capability: "email_lookup", params: { ... } })` without naming a skill or tool. **Registration is skill-level, not on the operation:** add a typed `provides:` list entry with **`tool:`** (capability name) and **`via:`** (operation name). The Rust `Operation` struct has no `provides` field — do not put `provides:` under `operations.*` (audit will flag it as an unknown key).
 
 ```yaml
+provides:
+  - tool: email_lookup
+    via: resolve_email
+
 operations:
   resolve_email:
-    provides: email_lookup
+    description: Look up a person by email
     returns: person[]
     params:
       email: { type: string, required: true }
     python:
-      module: ./public_graph.py
-      function: resolve_email
-      args:
-        email: .params.email
+      module: ./my_skill.py
+      function: run_resolve_email
+      params: true
 ```
 
-The runtime finds all operations with a matching `provides` value and routes to the first available provider. The caller never names a skill or tool.
+The runtime scans installed skills for a matching `tool` name and runs the `via` operation. Credential and cookie **providers** use the same `provides:` list with `credentials:` or `cookies:` entries (see Provider auth below).
 
-Use `provides:` when an operation offers a generic capability that other skills or the agent might want to consume by name — email lookup, web search, phone lookup, etc.
-
-Leading by example: `skills/goodreads/readme.md` (`provides: email_lookup` on `resolve_email`).
+Leading by example: `skills/goodreads/skill.yaml` (`provides: [{ tool: email_lookup, via: resolve_email }]` plus `operations.resolve_email`).
 
 ## Connections
 
-Every skill declares its external service dependencies as named connections. Connections carry `base_url`, auth configuration, and metadata. Local skills (no external services) simply omit the `connections:` block.
+Every skill declares its external service dependencies as **named** `connections:`. Each connection can carry `base_url`, auth (`header` / `query` / `body`, `cookies`, `oauth`), optional `description`, `label`, `help_url`, `optional`, and **local data sources**:
+
+- **`sqlite:`** — path to a SQLite file (tilde-expanded). SQL operations bind to the connection that declares the database; there is **no** top-level `database:` on the skill.
+- **`vars:`** — non-secret config (paths, filenames) merged into the executor context (e.g. `params.connection.vars` for Python) so scripts can read local files without hardcoding home-directory paths.
+
+Local skills (no external services) simply omit the `connections:` block.
+
+There is **no** `needs:` key on connections — it was removed from the type (it was never wired into auth resolution). Declare **`cookies:`**, **`oauth:`**, and/or template **`header` / `query` / `body`** on the connection instead; provider matchmaking uses `oauth.service` and cookie domain plus installed skills’ typed `provides`.
 
 Most common pattern — single API key connection:
 
@@ -415,10 +439,11 @@ Rules:
 
 - `base_url` on a connection is used to resolve relative `rest.url` and `graphql.endpoint` values
 - Single-connection skills auto-infer the connection — no `connection:` needed on each operation
-- Multi-connection skills must declare `connection: <name>` on each operation
+- Multi-connection skills must declare `connection:` on each operation: either one name (`connection: api`) or a **list** (`connection: [api, cache]`) when the caller may choose the backing source (live API vs local cache, etc.)
+- With `connection: [a, b, …]`, the first entry is the default; expose `connection` in `params` and pass it through from Python/`rest`/`graphql` so the runtime resolves the effective connection (see `skills/granola/skill.yaml` for `params.connection` wired into `args`)
 - Set `connection: none` on operations that should skip auth entirely
 - Use `optional: true` if the skill works anonymously but improves with credentials
-- Connections without any auth fields (just `base_url` and/or `description`) are valid — they serve as service declarations
+- Connections without any auth fields (just `base_url`, `sqlite`, `vars`, and/or `description`) are valid — they serve as service declarations
 
 Connection names are arbitrary. Common conventions:
 
@@ -465,25 +490,40 @@ connections:
 
 Credentials can come from other installed apps (e.g. Mimestream provides Google OAuth tokens, Brave provides browser cookies).
 
-Provider declaration:
+Skill-level `provides:` is a **typed** list: each entry is either `credentials:` (OAuth or API key), `cookies:`, or `tool:` + `via` for discoverable tools. Do not use legacy `capability:` / `accounts_via` shapes.
+
+OAuth provider (excerpt):
 
 ```yaml
 provides:
-  - capability: google
-    via: credential_get
-    accounts_via: list_accounts
-    account_param: account
+  - credentials:
+      oauth:
+        service: google
+        via: credential_get
+        account_param: account
+        scopes:
+          - https://mail.google.com/
+```
+
+Cookie provider (excerpt):
+
+```yaml
+provides:
+  - cookies:
+      via: cookie_get
+      account_param: domain
+      description: "Short human description for discovery"
 ```
 
 Consumer skills don't name a specific provider — the runtime discovers installed providers automatically.
 
 Example references:
 
-- OAuth consumer: `skills/gmail/readme.md`
-- OAuth provider: `skills/mimestream/readme.md`
-- Cookie consumer: `skills/claude/readme.md`
-- Cookie provider: `skills/brave-browser/readme.md`
-- Multi-connection: `skills/goodreads/readme.md` (graphql + web)
+- OAuth consumer: `skills/gmail/skill.yaml`
+- OAuth provider: `skills/mimestream/skill.yaml`
+- Cookie consumer: `skills/claude/skill.yaml`
+- Cookie provider: `skills/brave-browser/skill.yaml`
+- Multi-connection: `skills/goodreads/skill.yaml` (graphql + web)
 
 ## Sandbox Storage
 
@@ -738,21 +778,23 @@ Before committing:
 - Run `npm run validate`
 - Run direct MCP checks for the changed skill
 - Run `npm run mcp:test -- <skill> --verbose`
+- If you changed the authoring contract, update **this** `CONTRIBUTING.md` in the same change
 
 What `validate` should catch:
 
-- Required front matter
-- Schema shape
+- Schema shape and unknown keys (via `audit-skills.py` vs Rust `types.rs`)
 - Basic structural problems
+- Advisory duplicate adapter mappings (same jaq expression on multiple fields — shown as `⚠`, does not fail the audit)
 
 ## Checklist
 
 Before you commit a skill:
 
+- [ ] If the contract or validation rules changed, `CONTRIBUTING.md` is updated in the same PR
 - [ ] Uses `adapters:`, not `transformers:`
 - [ ] No `terminology:`
 - [ ] No adapter `display:` blocks
-- [ ] Uses canonical mapping fields where available
+- [ ] Uses canonical mapping fields where available; no duplicate jaq expressions on sibling adapter keys without a reason (see audit advisory)
 - [ ] Uses simple `snake_case` operation names
 - [ ] No unnecessary `response.mapping` overrides
 - [ ] Uses inline `returns:` schemas for non-entity or action-style tools

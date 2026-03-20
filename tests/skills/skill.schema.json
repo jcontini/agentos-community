@@ -461,7 +461,6 @@
           "description": "Non-secret config passed to script executors (file paths, versions, etc.). Supports ~ expansion.",
           "additionalProperties": { "type": "string" }
         },
-        "needs": { "type": "string", "description": "Capability this connection requires from a provider skill (e.g., 'cookies', 'google'). Replaces cookies:/oauth: blocks." },
         "header": { "type": "object", "additionalProperties": { "type": "string" } },
         "query": { "type": "object", "additionalProperties": { "type": "string" } },
         "body": { "type": "object", "additionalProperties": { "type": "string" } },
