@@ -648,9 +648,9 @@ def discover_endpoint(cache=None, **kwargs):
 
 If neither `__cache__` nor `__data__` is present, the result passes through unchanged. Fully backward compatible.
 
-### `__secrets__` — secret store writes (planned)
+### `__secrets__` — secret store writes
 
-A third reserved key, `__secrets__`, will handle importing secrets from external sources (password managers, payment info, identity documents, etc.) into the credential store. The `__secrets__` handler is pure credential store CRUD — it writes credential rows and strips the key. It does **not** create graph entities or edges; entity creation happens through the normal adapter pipeline processing `__result__`. The two systems are joined by `(issuer, identifier)`.
+A third reserved key, `__secrets__`, handles importing secrets from external sources (password managers, payment info, identity documents, etc.) into the credential store. The `__secrets__` handler is pure credential store CRUD — it writes credential rows and strips the key. It does **not** create graph entities or edges; entity creation happens through the normal adapter pipeline processing `__result__`. The two systems are joined by `(issuer, identifier)`.
 
 ```python
 def import_items(vault, dry_run=False):
@@ -695,7 +695,7 @@ The trust model: Python sees secrets (it reads them from the source), the engine
 
 See `spec/credential-system.md` and `spec/1password-integration.md` for full design.
 
-**Status:** Not yet implemented. The `__secrets__` handler is part of the credential system's Phase A scope.
+**Status:** Implemented (Phase A). The engine intercepts `__secrets__` in `process_storage_writeback()`, writes credential rows to `credentials.sqlite`, creates account entities and `claims` edges on the graph, then strips the key before the MCP response.
 
 Leading by example: `skills/goodreads/public_graph.py` (GraphQL endpoint discovery cached via `__cache__`).
 
