@@ -507,10 +507,6 @@
               "items": { "type": "string" },
               "description": "Specific cookie names to extract. If omitted, all cookies for the domain are used."
             },
-            "session_duration": {
-              "type": "string",
-              "description": "Estimated session lifetime (e.g., '30d', '8h'). Used for credential expiry."
-            },
             "login": {
               "type": "object",
               "description": "Multi-phase login recipe executed by the agent via Playwright. Each phase is a sequence of browser actions. Control returns to the agent between phases.",
@@ -565,12 +561,16 @@
             },
             "check": {
               "type": "object",
-              "description": "Session liveness check — hit the URL with extracted cookies, pass if status matches",
+              "description": "Session check — liveness probe and optional identity resolution. Always checks status. If identifier is present, parses the JSON response to resolve account identity. For HTML services, identity belongs in a skill-level operation.",
+              "required": ["url"],
               "properties": {
-                "url": { "type": "string", "description": "URL to check" },
+                "url": { "type": "string", "description": "URL to hit with extracted cookies" },
                 "method": { "type": "string", "description": "HTTP method (default: GET)" },
-                "expect_status": { "type": "integer", "description": "Expected HTTP status (default: 200)" }
-              }
+                "expect_status": { "type": "integer", "description": "Expected HTTP status (default: 200)" },
+                "identifier": { "type": "string", "description": "jaq expression extracting account identifier from a JSON response" },
+                "display": { "type": "string", "description": "jaq expression for a human-friendly display name from a JSON response" }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

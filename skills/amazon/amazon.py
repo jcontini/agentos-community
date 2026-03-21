@@ -701,6 +701,57 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# IDENTITY — session check + account identity from HTML
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Check session liveness and extract account identity from the Your Account page.
+
+    Extracts: display name from nav bar, customerId from embedded JS data,
+    session ID, and marketplace ID. Email is not exposed on this page.
+    """
+    params = params or {}
+    cookie_header = _require_cookies(params, "whoami")
+    client = _auth_client(cookie_header)
+    resp = client.get("https://www.amazon.com/gp/css/homepage.html")
+
+    if resp.status_code != 200:
+        return {"authenticated": False, "status_code": resp.status_code}
+
+    body = resp.text
+
+    if "ap/signin" in resp.url.path:
+        return {"authenticated": False, "redirect": str(resp.url)}
+
+    name_match = re.search(
+        r'nav-link-accountList-nav-line-1[^>]*>Hello,\s*([^<]+)<', body
+    )
+    customer_name_match = re.search(
+        r"""\$Nav\.declare\(['"]config\.customerName['"],\s*'([^']+)'\)""", body
+    )
+    customer_id_match = re.search(r'"customerId"\s*:\s*"([A-Z0-9]+)"', body)
+    marketplace_match = re.search(r"ue_mid\s*=\s*'([^']+)'", body)
+
+    display = (
+        name_match.group(1).strip() if name_match
+        else customer_name_match.group(1).strip() if customer_name_match
+        else None
+    )
+    customer_id = customer_id_match.group(1) if customer_id_match else None
+    marketplace_id = marketplace_match.group(1) if marketplace_match else None
+
+    return {
+        "authenticated": True,
+        "issuer": "amazon.com",
+        "customer_id": customer_id or display,
+        "display": display,
+        "marketplace_id": marketplace_id,
+        "status_code": resp.status_code,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CLI — for local testing
 # ═══════════════════════════════════════════════════════════════════════════════
 

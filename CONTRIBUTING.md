@@ -602,6 +602,52 @@ connections:
         - https://mail.google.com/
 ```
 
+### Cookie identity resolution
+
+Cookie-auth skills should resolve account identity so the graph knows who the session belongs to. Two deterministic paths exist:
+
+**JSON APIs — use `check.identifier` and `check.display` on the connection.** The `check` block handles liveness and identity in one HTTP call using jaq expressions on the JSON response:
+
+```yaml
+connections:
+  web:
+    cookies:
+      domain: ".claude.ai"
+      names: ["sessionKey"]
+      check:
+        url: "https://claude.ai/api/organizations"
+        expect_status: 200
+        identifier: '.[] | select(.capabilities | contains(["chat"])) | .email'
+        display: '.[] | select(.capabilities | contains(["chat"])) | .name'
+```
+
+**HTML services — use a Python operation with an `account` adapter.** When the introspection endpoint returns HTML (not JSON), identity extraction belongs in Python. The skill declares an `account` adapter and a `check_session` operation that `returns: account`:
+
+```yaml
+adapters:
+  account:
+    id: .customer_id
+    name: .display
+    issuer: .issuer
+    data.marketplace_id: .marketplace_id
+
+operations:
+  check_session:
+    returns: account
+    connection: web
+    python:
+      module: ./my_skill.py
+      function: whoami
+      params: true
+      timeout: 30
+```
+
+The Python function parses the HTML and returns structured identity data including `issuer` (the service domain, e.g. `"amazon.com"`), `customer_id` (a stable account ID used as the adapter `id`), and `display` (a human-friendly name). The extraction pipeline automatically links `account`-tagged nodes to the primary user via `Person --claims--> Account`.
+
+Include `issuer` in the `account` adapter — it's the join key that links the graph entity to credential store rows. The adapter `id` field doubles as the account identifier for dedup.
+
+Leading by example: `skills/amazon/` (HTML identity via Python), `skills/claude/` (JSON identity via `check` block).
+
 ### Provider auth
 
 Credentials can come from other installed apps (e.g. Mimestream provides Google OAuth tokens, Brave provides browser cookies).

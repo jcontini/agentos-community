@@ -12,6 +12,11 @@ connections:
     base_url: "https://www.goodreads.com"
     cookies:
       domain: ".goodreads.com"
+      check:
+        url: "https://www.goodreads.com/api/current_user"
+        expect_status: 200
+        identifier: '.user.id'
+        display: '.user.name'
     optional: true
     label: Goodreads Session
     help_url: https://www.goodreads.com/user/sign_in

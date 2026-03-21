@@ -11,6 +11,11 @@ connections:
     cookies:
       domain: ".claude.ai"
       names: ["sessionKey"]
+      check:
+        url: "https://claude.ai/api/organizations"
+        expect_status: 200
+        identifier: '.[] | select(.capabilities | contains(["chat"])) | .email'
+        display: '.[] | select(.capabilities | contains(["chat"])) | .name'
       login:
         account_prompt: "What email do you use for claude.ai?"
         phases:
@@ -33,10 +38,6 @@ connections:
             returns_to_agent: |
               Login complete. The sessionKey cookie is now in the browser.
               Cookie provider matchmaking will extract it automatically on the next API call.
-      check:
-        url: "https://claude.ai/api/organizations"
-        method: GET
-        expect_status: 200
 
 provides:
   - tool: web_read

@@ -12,6 +12,9 @@ connections:
     cookies:
       domain: ".amazon.com"
       names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
+      check:
+        url: "https://www.amazon.com/gp/css/homepage.html"
+        expect_status: 200
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -61,6 +64,12 @@ adapters:
     data.categories: .categories
     data.sponsored: .sponsored
     data.images: .images
+
+  account:
+    id: .customer_id
+    name: .display
+    issuer: .issuer
+    data.marketplace_id: .marketplace_id
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
@@ -233,19 +242,14 @@ operations:
 
   check_session:
     description: >
-      Verify that Amazon browser cookies are valid by fetching the account page.
-      Returns authenticated status based on page title.
+      Verify Amazon session cookies and identify the logged-in account.
+      Returns display name, customer ID, session ID, and marketplace from the account page.
     connection: web
-    returns:
-      authenticated: boolean
-      title: string
-      status_code: integer
-    rest:
-      method: GET
-      url: /gp/css/homepage.html
-      headers:
-        User-Agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        Accept: "text/html,application/xhtml+xml"
-        Accept-Language: "en-US,en;q=0.9"
-      response:
-        root: "/"
+    returns: account
+    python:
+      module: ./amazon.py
+      function: whoami
+      params: true
+      timeout: 30
+    test:
+      mode: write
