@@ -29,10 +29,9 @@
  *     --raw
  */
 
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const { createInterface } = require('readline');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
 
@@ -202,19 +201,10 @@ class MCP {
     this.rl = null;
     this.reqId = 0;
     this.pending = new Map();
-    this.testSocket = null;
   }
 
-  async connect({ ephemeral = false } = {}) {
+  async connect() {
     const env = { ...process.env, RUST_BACKTRACE: '1' };
-
-    if (ephemeral) {
-      // Ephemeral engine socket: spawn a fresh engine from the same binary
-      // so smoke tests never hit a stale daemon with "Skill not found" errors.
-      this.testSocket = path.join(os.tmpdir(), `agentos-test-${process.pid}.sock`);
-      try { fs.unlinkSync(this.testSocket); } catch {}
-      env.AGENTOS_ENGINE_SOCK = this.testSocket;
-    }
 
     return new Promise((resolve, reject) => {
       this.proc = spawn(BINARY, ['mcp'], {
@@ -310,19 +300,6 @@ class MCP {
       new Promise(r => { if (this.proc) this.proc.once('close', r); else r(); }),
       new Promise(r => setTimeout(r, 3000)),
     ]);
-
-    // Clean up the ephemeral test engine
-    if (this.testSocket) {
-      try {
-        const pids = execSync(`lsof -t "${this.testSocket}" 2>/dev/null`, {
-          encoding: 'utf8', timeout: 3000,
-        });
-        for (const pid of pids.trim().split('\n').filter(Boolean)) {
-          try { process.kill(parseInt(pid), 'SIGTERM'); } catch {}
-        }
-      } catch {}
-      try { fs.unlinkSync(this.testSocket); } catch {}
-    }
   }
 }
 
@@ -669,8 +646,7 @@ async function runDirectCall() {
   console.log(`Binary: ${BINARY}`);
   console.log('Call path: run({ skill, tool, params, account? }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
-  // Always use a fresh engine so --call matches bulk smoke (no stale daemon).
-  await mcp.connect({ ephemeral: true });
+  await mcp.connect();
   console.log('MCP ready.\n');
 
   const runArgs = buildDirectRunArgs();
@@ -707,7 +683,7 @@ async function main() {
   console.log(`Binary: ${BINARY}`);
   console.log('Call path: run({ skill, tool, params, account? }) via MCP proxy -> engine socket.');
   const mcp = new MCP();
-  await mcp.connect({ ephemeral: true });
+  await mcp.connect();
   console.log(`MCP ready. Testing ${targets.length} skills.\n`);
 
   if (lenient) {
