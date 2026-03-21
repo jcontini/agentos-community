@@ -112,10 +112,10 @@ When you scrape a friends list or followers page, you get limited data per perso
 
 ```python
 {
-    "user_id": "27117656",
-    "name": "Kirill So",
+    "user_id": "10000001",
+    "name": "Alex Reader",
     "photo_url": "https://...",
-    "location": "Singapore",
+    "location": "Berlin",
     "books_count": 414,
     "friends_count": 138,
 }
@@ -130,18 +130,18 @@ When you scrape an individual profile page, you get the full picture:
 
 ```python
 {
-    "user_id": "27117656",
-    "name": "Kirill So",
-    "handle": "kirso",
+    "user_id": "10000001",
+    "name": "Alex Reader",
+    "handle": "alexreader",
     "photo_url": "https://...",
-    "gender": "Male",
-    "age": 37,
-    "birthday": "April 15, 1988",
-    "location": "Singapore, Singapore",
-    "website": "https://www.kirillso.com",
+    "gender": "...",
+    "age": 32,
+    "birthday": "...",
+    "location": "Berlin, Germany",
+    "website": "https://example.com",
     "about": "...",
     "interests": "...",
-    "joined_date": "December 2013",
+    "joined_date": "January 2015",
     "ratings_count": 159,
     "avg_rating": "3.82",
     "friends_count": 138,
