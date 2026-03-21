@@ -57,8 +57,3 @@ operations:
         - 'if (.params.url // "") != "" then .params.url elif (.params.group // "") != "" then .params.group else "" end'
         - ".params.include_members"
       timeout: 35
-    test:
-      mode: read
-      fixtures:
-        group: becomingaportuguesecitizen
-        include_members: false

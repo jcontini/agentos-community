@@ -177,14 +177,9 @@ operations:
           }
     test:
       mode: read
-      discover_from:
-        op: list_posts
-        params:
-          subreddit: programming
-          sort: hot
-          limit: 3
-        map:
-          id: id
+      fixtures:
+        id: "1qoxwdt"
+        url: ~
 
   comments_post:
     description: |

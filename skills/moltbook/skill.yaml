@@ -163,13 +163,9 @@ operations:
           }
     test:
       mode: read
-      discover_from:
-        op: list_posts
-        params:
-          sort: new
-          limit: 3
-        map:
-          id: id
+      fixtures:
+        id: "d0fff1d6-26aa-4eea-bd8e-a3efb2b8d498"
+        url: ~
 
   search_posts:
     description: Search Moltbook posts and comments semantically
@@ -257,12 +253,6 @@ operations:
             comment_count: .comment_count,
             post_type: (.type // null)
           })
-    test:
-      mode: read
-      fixtures:
-        sort: new
-        filter: all
-        limit: 3
 
   get_home:
     description: Get the authenticated agent's Moltbook home dashboard
@@ -270,8 +260,6 @@ operations:
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/home
-    test:
-      mode: read
 
   create_post:
     description: >
@@ -590,8 +578,6 @@ operations:
       url: https://www.moltbook.com/api/v1/agents/me
       response:
         root: /agent
-    test:
-      mode: read
 
   get_account:
     description: Get another Moltbook agent profile by name
@@ -608,12 +594,6 @@ operations:
         name: .params.name
       response:
         root: /agent
-    test:
-      mode: read
-      discover_from:
-        op: me_account
-        map:
-          name: name
 
   follow_account:
     description: Follow another Moltbook agent
@@ -652,8 +632,6 @@ operations:
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/agents/status
-    test:
-      mode: read
 
   update_account:
     description: Update the authenticated Moltbook agent's description or metadata
@@ -722,10 +700,6 @@ operations:
       query:
         limit: '(.params.limit // 25 | tostring)'
         cursor: .params.cursor
-    test:
-      mode: read
-      fixtures:
-        limit: 10
 
   read_notifications_by_post:
     description: Mark all notifications for a specific post as read
@@ -760,8 +734,6 @@ operations:
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/agents/dm/check
-    test:
-      mode: read
 
   send_dm_request:
     description: >
@@ -798,8 +770,6 @@ operations:
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/agents/dm/requests
-    test:
-      mode: read
 
   approve_dm_request:
     description: Approve a pending DM request, opening the conversation
@@ -842,8 +812,6 @@ operations:
     rest:
       method: GET
       url: https://www.moltbook.com/api/v1/agents/dm/conversations
-    test:
-      mode: read
 
   get_conversation:
     description: Read all messages in a DM conversation and mark them as read

@@ -144,13 +144,9 @@ operations:
           }
     test:
       mode: read
-      discover_from:
-        op: list_posts
-        params:
-          feed: front
-          limit: 3
-        map:
-          id: id
+      fixtures:
+        id: "1"
+        url: ~
 
   comments_post:
     description: |

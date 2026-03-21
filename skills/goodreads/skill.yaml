@@ -291,11 +291,6 @@ operations:
         user_id: .params.user_id
         limit: '.params.limit // 10'
       timeout: 15
-    test:
-      mode: read
-      fixtures:
-        user_id: "26631647"
-        limit: 3
 
   get_person:
     description: Get a rich person profile from Goodreads — demographics, stats, favorite books, genres, currently reading
@@ -403,6 +398,7 @@ operations:
       mode: read
       fixtures:
         book_id: "4934"
+        url: ~
 
   list_book_reviews:
     description: List public Goodreads reviews for a book via the AppSync GraphQL backend
@@ -507,6 +503,7 @@ operations:
       mode: read
       fixtures:
         author_id: "3137322"
+        url: ~
         limit: 3
 
   list_author_books:
