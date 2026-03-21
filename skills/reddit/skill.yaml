@@ -37,21 +37,17 @@ adapters:
   post:
     id: .id
     name: .title
-    title: .title
     text: .selftext // .body
     url: '"https://reddit.com" + .permalink'
-    content: .selftext // .body
     author: .author
     datePublished: .created_utc | todate
     engagement.score: .score
     engagement.comment_count: .num_comments
-    published_at: .created_utc | todate
     replies: .replies
 
     publish:
       community:
         id: .subreddit
-        name: .subreddit
         url: '"https://reddit.com/r/" + .subreddit'
         platform: '"reddit"'
 
@@ -59,8 +55,6 @@ adapters:
       account:
         id: .author
         platform: '"reddit"'
-        handle: .author
-        display_name: .author
         url: '"https://reddit.com/u/" + .author'
 
     parent_id:
@@ -71,10 +65,9 @@ adapters:
   community:
     id: .name
     name: .display_name
-    description: .public_description
+    text: .public_description
     url: '"https://reddit.com/r/" + .display_name'
     image: .community_icon
-    icon: .community_icon
     member_count: .subscribers
     privacy: '"OPEN"'
 

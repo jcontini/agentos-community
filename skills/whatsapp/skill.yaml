@@ -19,7 +19,6 @@ adapters:
     text: .about
     phone: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end) else null end)'
     nickname: .username
-    notes: .about
     avatar:
       image:
         path: .profile_photo
@@ -29,7 +28,6 @@ adapters:
         platform: '"whatsapp"'
         handle: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | "+" + .) else .jid end)'
         display_name: '.real_name // .contact_name // .display_name'
-        platform_id: .jid
         bio: .about
 
   conversation:
@@ -40,30 +38,24 @@ adapters:
     is_archived: '.is_archived == 1 or .is_archived == true'
     unread_count: .unread_count
     participant_count: .participant_count
-    last_message_at: .updated_at
-    updated_at: .updated_at
     data.message_count: .message_count
     _contact_jid: .contact_jid
-    _contact_name: .name
     participant:
       account:
         id: ._contact_jid
         platform: '"whatsapp"'
         handle: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else ._contact_jid end'
-        display_name: ._contact_name
+        display_name: .name
 
   message:
     id: .id
     name: .conversation_name
-    text: .content
+    content: .content
     author: 'if .is_outgoing == 1 or .is_outgoing == true then "Me" else .sender_name end'
     datePublished: .timestamp
     conversation_id: .conversation_id
-    content: .content
     is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
-    timestamp: .timestamp
     data.is_starred: .is_starred
-    data.conversation_name: .conversation_name
     _reply_to_id: .reply_to_id
     _sender_jid: .sender_jid
     _sender_name: .sender_name

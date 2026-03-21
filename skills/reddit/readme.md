@@ -23,7 +23,7 @@ No authentication required, just a custom User-Agent header to avoid rate limiti
 - ~10 requests per minute without OAuth
 - Sufficient for browsing and casual use
 
-## Operations
+## Usage
 
 | Operation | Description |
 |-----------|-------------|

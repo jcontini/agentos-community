@@ -18,7 +18,6 @@ connections:
 adapters:
   domain:
     id: .domain
-    name: .domain
     url: '"https://" + .domain'
     data.status: .status
     data.registrar: '"porkbun"'

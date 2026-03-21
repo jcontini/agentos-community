@@ -12,7 +12,7 @@ Product analytics — events, persons, and session recordings.
 
 Call the `get_projects` utility — it returns all projects you have access to. The `id` field (numeric) is the project ID needed for all other operations.
 
-## Operations
+## Usage
 
 ### person.list / person.search / person.get
 

@@ -132,7 +132,7 @@ If `get_webpage`, `read_webpage`, or `evaluate` are inconsistent, `capture_netwo
 
 This can surface the backend contract even when DOM extraction is unreliable.
 
-## Operations
+## Usage
 
 ### get_webpage
 

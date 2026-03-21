@@ -28,13 +28,12 @@ sources:
 adapters:
   video:
     id: .id
-    remote_id: .id
     url: .webpage_url
-    title: .title
-    description: .description
+    name: .title
+    text: .description
     duration_ms: (.duration // null) | if . != null then . * 1000 else null end
-    thumbnail: .thumbnail
-    published_at: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
+    image: .thumbnail
+    datePublished: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
     resolution: .resolution
     view_count: .view_count
     like_count: .like_count
@@ -44,9 +43,6 @@ adapters:
       account:
         id: .channel_id
         platform: '"youtube"'
-        handle: .channel
-        display_name: .channel
-        platform_id: .channel_id
         url: .channel_url
 
     upload:
@@ -60,15 +56,15 @@ adapters:
     embed:
       post:
         id: '(.id) + "_post"'
-        title: .title
+        name: .title
         content: .description
         url: .webpage_url
-        published_at: .upload_date
+        datePublished: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
 
     transcribe:
       transcript:
         id: '(.id) + "_transcript"'
-        title: '"Transcript: " + .title'
+        name: '"Transcript: " + .title'
         content: .transcript
         content_role: '"transcript"'
         url: .webpage_url
@@ -89,27 +85,24 @@ adapters:
     id: .id
     name: .name
     url: .url
-    description: .description
+    text: .description
     subscriber_count: .subscriber_count
-    icon: .avatar
+    image: .avatar
     platform: .platform
 
   post:
     id: .id
-    content: .text
+    text: .text
     url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
-    published_at: .timestamp | todate
+    datePublished: .timestamp | todate
     engagement.likes: .like_count
 
     posted_by:
       account:
         id: .author_id
         platform: '"youtube"'
-        handle: .author
-        display_name: .author
-        platform_id: .author_id
         url: .author_url
-        avatar: .author_thumbnail
+        image: .author_thumbnail
 
     replies_to:
       post:

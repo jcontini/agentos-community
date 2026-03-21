@@ -16,10 +16,10 @@ connections:
 
 adapters:
   model:
-    api_id: .id
-    title: .name
-    description: .description
-    released: '.created | todate'
+    id: .id
+    name: .name
+    text: .description
+    datePublished: '.created | todate'
     provider: '.id | split("/") | .[0]'
     model_type: '"llm"'
     context_window: '.context_length | if . then (. | floor) else null end'

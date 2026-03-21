@@ -23,24 +23,21 @@ adapters:
     id: .uuid
     name: '(.properties.name // .properties.email // .distinct_ids[0] // "Unknown")'
     email: .properties.email
-    created_at: .created_at
+    datePublished: .created_at
     data.distinct_ids: .distinct_ids
     data.last_seen_at: .last_seen_at
     data.browser: .properties."$browser"
     data.os: .properties."$os"
     data.initial_referrer: .properties."$initial_referrer"
     data.initial_utm_source: .properties."$initial_utm_source"
-    data.posthog_uuid: .uuid
 
   event:
     id: .id
-    title: .event
-    start: .timestamp
-    description: '(.properties | keys | join(", "))'
-    data.event_name: .event
+    name: .event
+    datePublished: .timestamp
+    text: '(.properties | keys | join(", "))'
     data.distinct_id: .distinct_id
     data.properties: .properties
-    data.timestamp: .timestamp
     data.current_url: .properties."$current_url"
     data.person: .person
 

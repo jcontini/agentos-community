@@ -34,12 +34,10 @@ adapters:
   task:
     id: .id
     name: .content
-    description: .description
-    content: .description
+    text: .description
     priority: 5 - .priority  # Invert: Todoist 4=urgent → AgentOS 1=highest
-    started_at: .added_at
     target.date: .due.date?
-    created_at: .added_at
+    datePublished: .added_at
     project_id:
       ref: project
       value: .project_id

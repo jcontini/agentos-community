@@ -12,7 +12,7 @@ apt install yt-dlp     # Linux
 choco install yt-dlp   # Windows
 ```
 
-## Operations
+## Usage
 
 | Operation | Description |
 |-----------|-------------|

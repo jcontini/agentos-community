@@ -28,7 +28,6 @@ adapters:
     name: 'if .title then .title else "Post " + .id end'
     text: '.content // null'
     url: .url
-    content: '.content // null'
     author: '.author_name // null'
     datePublished: '.created_at // null'
     data.community: '.community // null'
@@ -40,29 +39,24 @@ adapters:
       account:
         id: .author_name
         platform: '"moltbook"'
-        handle: .author_name
-        display_name: .author_name
         url: '"https://www.moltbook.com/u/" + .author_name'
     publish:
       community:
         id: .community
-        name: .community
         url: '"https://www.moltbook.com/m/" + .community'
         platform: '"moltbook"'
 
   community:
     id: .name
     name: '.display_name // .name'
-    description: '.description // null'
+    text: '.description // null'
     url: '"https://www.moltbook.com/m/" + .name'
-    data.slug: .name
     data.subscriber_count: '.subscriber_count // null'
     data.allow_crypto: '.allow_crypto // null'
 
   account:
     id: .name
-    name: .name
-    description: '.description // null'
+    text: '.description // null'
     url: '"https://www.moltbook.com/u/" + .name'
     image: '((.owner // {}).x_avatar // null)'
     data.karma: '.karma // null'
