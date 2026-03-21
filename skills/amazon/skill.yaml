@@ -1,111 +1,254 @@
 id: amazon
 name: Amazon
-description: Search Amazon product results anonymously or with your browser session cookies
+description: Search products, get details, and access your Amazon account
 color: "#FF9900"
 
 website: https://www.amazon.com
-privacy_url: https://www.amazon.com/gp/help/customer/display.html?nodeId=468496
-
-provides:
-  - tool: web_search
-    via: search
-    urls:
-      - "amazon.com/*"
-      - "amazon.co.uk/*"
-      - "amazon.de/*"
-      - "amazon.fr/*"
-      - "amazon.ca/*"
-      - "amazon.com.au/*"
-      - "amazon.in/*"
-      - "amazon.co.jp/*"
-      - "amazon.es/*"
-      - "amazon.it/*"
-      - "amazon.nl/*"
-      - "amazon.se/*"
-      - "amazon.com.mx/*"
-      - "amazon.com.br/*"
-
 connections:
   public:
-    description: "Anonymous product search — no cookies or API keys"
-    base_url: "https://www.amazon.com"
+    description: "Public Amazon pages and autocomplete API — no auth needed"
   web:
-    description: "Same retail site with Amazon session cookies from a browser cookie provider"
     base_url: "https://www.amazon.com"
-    optional: true
     cookies:
       domain: ".amazon.com"
-      names:
-        - x-main
-        - session-id
-        - session-token
-        - ubid-main
-        - at-main
-        - sess-at-main
-        - i18n-prefs
+      names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTERS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 adapters:
+  order:
+    # --- Canonical fields (rendered in previews / markdown) ---
+    id: .order_id
+    name: '("Order " + .order_date + " — " + .total)'
+    text: .status
+    url: .url
+    datePublished: .order_date
+    # --- Skill-specific data ---
+    data.order_id: .order_id
+    data.total: .total
+    data.total_amount: .total_amount
+    data.status: .status
+    data.item_count: .item_count
+    data.delivery_date: .delivery_date
+
+    contains:
+      product[]:
+        _source: '.items // []'
+        # --- Canonical fields ---
+        id: .asin
+        name: .title
+        url: .url
+        image: .image_url
+        # --- Skill-specific data ---
+        data.price: .price
+        data.asin: .asin
+
   product:
+    # --- Canonical fields (rendered in previews / markdown) ---
     id: .asin
     name: .title
-    text: '.text // .title'
+    text: .description
     url: .url
-    image: .image
+    image: .image_url
+    author: .brand
+    # --- Skill-specific data ---
+    data.asin: .asin
     data.price: .price
+    data.price_amount: .price_amount
     data.rating: .rating
+    data.ratings_count: .ratings_count
+    data.review_count: .review_count
+    data.prime: .prime
+    data.availability: .availability
+    data.categories: .categories
+    data.sponsored: .sponsored
+    data.images: .images
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
-  search:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SEARCH SUGGESTIONS — completion.amazon.com public JSON API
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  search_suggestions:
     description: >
-      Search Amazon organic product results. Default connection is anonymous public search;
-      pass connection "web" to reuse your signed-in Amazon cookies (pricing, layout).
-    returns: product[]
-    wraps_as: search
-    web_url: '"https://www.amazon.com/s?k=" + (.params.query | @uri)'
-    connection: [public, web]
+      Get autocomplete keyword suggestions from Amazon's public completion API.
+      Returns up to 10 keyword suggestions with ranking strategy metadata.
+      Supports 21 marketplaces and 25+ department filters.
+      Set personalized=true to use Amazon's p13n ranker instead of organic ranking.
+    returns:
+      suggestions: array
+      count: integer
+    connection: public
     params:
       query:
         type: string
         required: true
-        description: "Search keywords (e.g. usb c hub dock)"
-      limit: { type: integer, description: "Max products to return (cap 24)" }
-      url:
+        description: "Search prefix (e.g. 'wireless head')"
+      department:
         type: string
-        description: "Full Amazon search or results URL — used when web_search is URL-routed"
-      connection:
+        description: "Department filter: all (default), electronics, books, sports, toys, fashion, grocery, beauty, automotive, garden, videogames, tools, baby, office, pets, music, appliances, kitchen, movies, software, health, jewelry, watches, shoes, industrial, arts, smart-home, kindle"
+      personalized:
+        type: boolean
+        description: "Use personalized ranking (p13n-expert-pd-ops-ranker) instead of organic"
+      marketplace:
         type: string
-        description: 'Backend: "public" (default) or "web" (browser cookies)'
+        description: "Country code: US (default), UK, DE, FR, JP, CA, AU, IN, ES, IT, MX, BR, NL, SE, SG, AE, SA, TR, BE, EG"
     python:
       module: ./amazon.py
-      function: op_search
+      function: search_suggestions
       args:
-        query: '.params.query // ""'
-        limit: '.params.limit // 10'
-        url: .params.url
-        cookie_header: '((.auth // {}) | .cookies // "")'
-        connection: '.connection'
-      timeout: 45
+        query: .params.query
+        department: .params.department
+        personalized: '.params.personalized // false'
+        marketplace: .params.marketplace
+      timeout: 15
     test:
       mode: read
       fixtures:
-        query: "notebook"
-        # Override shared smoke default url (example.com) — search uses query, not url
-        url: null
+        query: "wireless headphones"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SEARCH PRODUCTS — HTML scraping of search result pages
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  search_products:
+    description: >
+      Search Amazon products by keyword. Parses search result pages for product
+      cards with ASIN, title, price, rating, review count, image, and Prime badge.
+      May occasionally be blocked by Amazon's bot detection — use search_suggestions
+      as a reliable fallback for keyword discovery.
+    returns: product[]
+    connection: public
+    params:
+      query:
+        type: string
+        required: true
+        description: "Search query"
+      department:
+        type: string
+        description: "Department filter (same values as search_suggestions)"
+      page:
+        type: integer
+        default: 1
+        description: "Results page number"
+      marketplace:
+        type: string
+        description: "Country code (default: US)"
+    python:
+      module: ./amazon.py
+      function: search_products
+      args:
+        query: .params.query
+        department: .params.department
+        page: '.params.page // 1'
+        marketplace: .params.marketplace
+      timeout: 30
+    test:
+      mode: read
+      fixtures:
+        query: "usb c cable"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # GET PRODUCT — HTML + a-state parsing of product detail pages
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  get_product:
+    description: >
+      Get detailed product information from an Amazon product page by ASIN.
+      Extracts title, price, brand, rating, description, images, categories,
+      and availability.
+    returns: product
+    connection: public
+    params:
+      asin:
+        type: string
+        required: true
+        description: "Amazon ASIN (10-char alphanumeric, e.g. B0BQPNMXQV)"
+      marketplace:
+        type: string
+        description: "Country code (default: US)"
+    python:
+      module: ./amazon.py
+      function: get_product
+      args:
+        asin: .params.asin
+        marketplace: .params.marketplace
+      timeout: 30
+    test:
+      mode: read
+      fixtures:
+        asin: "B0BQPNMXQV"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ORDER HISTORY — authenticated, requires session cookies
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  list_orders:
+    description: >
+      List recent Amazon orders. Requires active session cookies.
+      Parses the order history page for order IDs, dates, totals, status, and items.
+    returns: order[]
+    connection: web
+    params:
+      filter:
+        type: string
+        description: "Time filter: last30, months-6, year-2024, year-2023, etc. (default: last30)"
+      page:
+        type: integer
+        default: 1
+        description: "Results page number"
+    python:
+      module: ./amazon.py
+      function: list_orders
+      params: true
+      timeout: 30
+    test:
+      mode: write
+
+  get_order:
+    description: >
+      Get details for a specific Amazon order by order ID.
+      Returns order metadata and line items with product details.
+    returns: order
+    connection: web
+    params:
+      order_id:
+        type: string
+        required: true
+        description: "Amazon order ID (e.g. 123-4567890-1234567)"
+    python:
+      module: ./amazon.py
+      function: get_order
+      params: true
+      timeout: 30
+    test:
+      mode: write
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SESSION — cookie-based auth check
+  # ─────────────────────────────────────────────────────────────────────────────
 
   check_session:
     description: >
-      Verify Amazon browser cookies by fetching the account landing page.
-      When authenticated, the HTML title indicates your account; otherwise Amazon serves sign-in.
+      Verify that Amazon browser cookies are valid by fetching the account page.
+      Returns authenticated status based on page title.
+    connection: web
     returns:
       authenticated: boolean
       title: string
       status_code: integer
-    connection: web
     rest:
       method: GET
       url: /gp/css/homepage.html
       headers:
-        User-Agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        User-Agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         Accept: "text/html,application/xhtml+xml"
         Accept-Language: "en-US,en;q=0.9"
       response:

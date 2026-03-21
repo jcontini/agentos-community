@@ -325,16 +325,45 @@ Leading by example: `skills/gmail/gmail.py` (list + hydrate pattern with `_call`
 
 Adapters map raw API responses into AgentOS entities. Define the shape once in `adapters:` and let operations reference it via `returns:`.
 
-Canonical fields for rendering (previews and markdown views lean on these first):
+### Canonical fields
 
-- `name` — primary label (often maps from API `title` / `subject` / `summary` fields)
-- `text` — short summary or snippet for preview rows (see merge rules below)
-- `url`
-- `image`
-- `author`
-- `datePublished`
+The renderer (`render.rs`) and markdown previews resolve entity display from a fixed set of **canonical fields**. Every adapter should map as many of these as the source data supports — they are the reason entities look consistent across skills in previews, detail views, and search results.
 
-**Source of truth in core:** `crates/core/src/view/render.rs` — `project_item` (preview) and `canonicalize_full_item` (full/detail JSON) define how raw entity keys map into the stable shape. For example, the first non-empty string among **`text` → `description` → `content` → `snippet`** is what becomes the displayed **`text`** field (preview truncates that string; full view also sets `text` via `or_insert` while keeping the rest of the object). **`name`** merges from **`name` → `title` → `conversation_name`**; **`datePublished`** accepts several date aliases (see the same file).
+| Field           | Purpose                                          | Renderer fallback chain                                    |
+|-----------------|--------------------------------------------------|------------------------------------------------------------|
+| `name`          | Primary label / title                            | `name` → `title` → `conversation_name`                    |
+| `text`          | Short summary or snippet for preview rows        | `text` → `description` → `content` → `snippet`            |
+| `url`           | Clickable link                                   | —                                                          |
+| `image`         | Thumbnail / hero image                           | —                                                          |
+| `author`        | Creator / brand / owner                          | —                                                          |
+| `datePublished` | Temporal anchor (accepts several date aliases)   | `datePublished` → `date` → `created_at` (see `render.rs`) |
+
+Not every entity has all six — a product may have no `datePublished`, an order may have no `image`. Map what the source provides; skip what doesn't apply.
+
+#### Comment convention
+
+Mark the boundary between canonical and skill-specific fields with comments so the two sections are visually obvious:
+
+```yaml
+adapters:
+  result:
+    # --- Canonical fields (rendered in previews / markdown) ---
+    id: .url
+    name: .title
+    text: '.text // .summary'
+    url: .url
+    image: .image
+    author: .author
+    datePublished: .publishedDate
+    # --- Skill-specific data ---
+    data.score: .score
+```
+
+For lightweight relationship entities you can use the shorter `# --- Canonical fields ---` header. The `data.*` section comment is optional when there are only one or two extra fields, but always include the canonical header.
+
+#### Merge rules and deduplication
+
+**Source of truth in core:** `crates/core/src/view/render.rs` — `project_item` (preview) and `canonicalize_full_item` (full/detail JSON) define how raw entity keys map into the stable shape. The fallback chains in the table above are applied at render time, so mapping to the *first* key in the chain is preferred (e.g. `name` over `title`).
 
 **Import / remember / FTS:** `crates/core/src/execution/extraction.rs` — `prepare_node_data` treats **`content`** (and optional **`content_role`**) specially: that string is stored in the **`content` table** (indexed into the FTS **`body`** column). Other scalar fields (including `text`, `description`, `url`, …) become **node vals** and are folded into the FTS **`vals`** column on rebuild. Long or searchable bodies should use **`content`**, not a second copy in `text`/`description`.
 
@@ -349,12 +378,15 @@ Adapters can declare relationships between entities. A nested block under a cano
 ```yaml
 adapters:
   account:
+    # --- Canonical fields (rendered in previews / markdown) ---
     id: .id
     name: .title
+    # --- Skill-specific data ---
     data.category: .category
 
     in_vault:
       vault:
+        # --- Canonical fields ---
         id: .vault.id
         name: .vault.name
 ```
@@ -376,6 +408,7 @@ Good:
 ```yaml
 adapters:
   result:
+    # --- Canonical fields (rendered in previews / markdown) ---
     id: .url
     name: .title
     text: '.text // .summary'
@@ -383,6 +416,7 @@ adapters:
     image: .image
     author: .author
     datePublished: .publishedDate
+    # --- Skill-specific data ---
     data.score: .score
 ```
 
@@ -454,8 +488,8 @@ When multiple skills provide the same tool name, the engine:
 3. Adds a note in the tool description pointing to `load()` for provider-specific advanced options
 
 Current dynamic tools (from installed skills):
-- `web_search` — brave, exa; **amazon** (URL-routed to product search when `url` is an Amazon domain); **reddit** (`search_posts`); **hackernews** (`search_posts`). Use `skill: "reddit"` or `skill: "hackernews"` to fan out community search alongside the default web index.
-- `web_read` — firecrawl, exa, curl (generic); **URL-routed** — youtube, reddit, facebook (groups), hackernews (items), moltbook, goodreads (book vs author paths), claude (chat), github (issues/PRs and blob/raw files), gmail (message id from `#fragment`), todoist (task), granola (meeting docs), linear (issues)
+- `web_search` — brave, exa
+- `web_read` — firecrawl, exa, curl (generic); youtube, reddit (URL-specific)
 - `flight_search` — serpapi
 
 To verify dynamic tools appear:
@@ -946,7 +980,7 @@ Before you commit a skill:
 - [ ] Uses `adapters:`, not `transformers:`
 - [ ] No `terminology:`
 - [ ] No adapter `display:` blocks
-- [ ] Uses canonical mapping fields where available; no duplicate jaq expressions on sibling adapter keys without a reason (see audit advisory)
+- [ ] Uses canonical mapping fields where available; adapters have `# --- Canonical fields ---` / `# --- Skill-specific data ---` comment markers; no duplicate jaq expressions on sibling adapter keys without a reason (see audit advisory)
 - [ ] Uses simple `snake_case` operation names
 - [ ] No unnecessary `response.mapping` overrides
 - [ ] Uses inline `returns:` schemas for non-entity or action-style tools

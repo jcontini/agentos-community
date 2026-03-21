@@ -26,7 +26,7 @@ connections:
 adapters:
   # Search results — index records, not full webpages
   result:
-    # --- Standard Display Fields ---
+    # --- Canonical fields (rendered in previews / markdown) ---
     id: .url
     name: .title
     text: '.text // .summary // (if .highlights then .highlights[0] else null end)'
@@ -37,7 +37,7 @@ adapters:
 
   # Full webpage content (for read operations)
   webpage:
-    # --- Standard Display Fields ---
+    # --- Canonical fields (rendered in previews / markdown) ---
     id: .url
     name: .title
     text: .text
