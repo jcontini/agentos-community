@@ -33,10 +33,18 @@ connections:
             returns_to_agent: |
               Login complete. The sessionKey cookie is now in the browser.
               Cookie provider matchmaking will extract it automatically on the next API call.
-      verify:
+      check:
         url: "https://claude.ai/api/organizations"
         method: GET
         expect_status: 200
+
+provides:
+  - tool: web_read
+    via: get_conversation
+    urls:
+      - "claude.ai/chat/*"
+      - "www.claude.ai/chat/*"
+
 adapters:
   conversation:
     id: .uuid
@@ -92,14 +100,15 @@ operations:
       Returns the complete message history including both human and assistant turns.
     returns: conversation
     params:
-      id: { type: string, required: true, description: "Conversation UUID" }
+      id: { type: string, description: "Conversation UUID — optional if url is a claude.ai/chat/… link" }
+      url: { type: string, description: "Claude chat URL copied from the browser (web_read)" }
       account: { type: string, description: "Org UUID (omit to use session default)" }
     python:
       module: ./claude-api.py
       function: op_get_conversation
       args:
         session_key: .auth.sessionKey
-        id: .params.id
+        id: 'if (.params.url // "") != "" then (.params.url | capture("chat/(?<cid>[0-9a-fA-F-]{36})") | .cid) else .params.id end'
         account: .params.account
       timeout: 30
 

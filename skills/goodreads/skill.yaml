@@ -19,6 +19,16 @@ connections:
 provides:
   - tool: email_lookup
     via: resolve_email
+  - tool: web_read
+    via: get_book
+    urls:
+      - "goodreads.com/book/show/*"
+      - "www.goodreads.com/book/show/*"
+  - tool: web_read
+    via: get_author
+    urls:
+      - "goodreads.com/author/show/*"
+      - "www.goodreads.com/author/show/*"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS - Entity Mappings
@@ -381,12 +391,13 @@ operations:
     returns: book
     connection: graphql
     params:
-      book_id: { type: string, required: true, description: "Book ID" }
+      book_id: { type: string, description: "Book ID — optional if url is a goodreads.com/book/show/… link" }
+      url: { type: string, description: "Goodreads book page URL (web_read)" }
     python:
       module: ./public_graph.py
       function: get_public_book
       args:
-        book_id: .params.book_id
+        book_id: 'if (.params.url // "") != "" then (.params.url | capture("/book/show/(?<bid>[0-9]+)") | .bid) else .params.book_id end'
       timeout: 30
     test:
       mode: read
@@ -482,13 +493,14 @@ operations:
     returns: author
     connection: graphql
     params:
-      author_id: { type: string, required: true, description: "Author ID" }
+      author_id: { type: string, description: "Author ID — optional if url is a goodreads.com/author/show/… link" }
+      url: { type: string, description: "Goodreads author page URL (web_read)" }
       limit: { type: integer, default: 10, description: "Max authored books to import" }
     python:
       module: ./public_graph.py
       function: get_public_author
       args:
-        author_id: .params.author_id
+        author_id: 'if (.params.url // "") != "" then (.params.url | capture("/author/show/(?<aid>[0-9]+)") | .aid) else .params.author_id end'
         limit: '.params.limit // 10'
       timeout: 30
     test:

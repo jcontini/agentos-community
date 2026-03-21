@@ -10,6 +10,13 @@ terms_url: https://doist.com/terms-of-service
 # API: Todoist Unified API v1 (https://developer.todoist.com/api/v1/)
 # Note: REST API v2 and Sync API v9 are deprecated as of 2025
 
+provides:
+  - tool: web_read
+    via: get_task
+    urls:
+      - "app.todoist.com/*/task/*"
+      - "todoist.com/*/task/*"
+
 connections:
   api:
     base_url: "https://api.todoist.com/api/v1"
@@ -113,12 +120,13 @@ operations:
   get_task:
     description: Get a specific task by ID
     returns: task
-    web_url: '"https://app.todoist.com/app/task/" + .params.id'
+    web_url: 'if (.params.url // "") != "" then .params.url else "https://app.todoist.com/app/task/" + .params.id end'
     params:
-      id: { type: string, required: true, description: "Task ID" }
+      id: { type: string, description: "Task ID — optional if url is an app.todoist.com task link" }
+      url: { type: string, description: "Todoist task URL from the app (web_read)" }
     rest:
       method: GET
-      url: '"/tasks/" + .params.id'
+      url: '"/tasks/" + (if (.params.url // "") != "" then (.params.url | capture("/task/(?<tid>[^/?#]+)") | .tid) else .params.id end)'
 
   create_task:
     description: Create a new task

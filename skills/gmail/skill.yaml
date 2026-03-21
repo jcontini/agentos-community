@@ -16,6 +16,12 @@ connections:
       scopes:
         - https://mail.google.com/
 
+provides:
+  - tool: web_read
+    via: get_email
+    urls:
+      - "mail.google.com/*"
+
 # ==============================================================================
 # ADAPTERS
 # ==============================================================================
@@ -142,10 +148,11 @@ operations:
     description: Get a specific email with full body content, headers, and attachment metadata
     returns: email
     params:
-      id: { type: string, required: true, description: "Message ID" }
+      id: { type: string, description: "Message ID — optional if url is a mail.google.com link with the id in the fragment" }
+      url: { type: string, description: "Gmail web URL copied from the browser (web_read); uses the last path segment after #" }
       account: { type: string, description: "Gmail address" }
     rest:
-      url: '"/messages/" + .params.id'
+      url: '"/messages/" + (if (.params.url // "") != "" then (.params.url | split("#") | .[-1] | split("/") | map(select(. != "")) | .[-1]) else .params.id end)'
       method: GET
       query:
         format: full

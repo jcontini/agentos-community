@@ -9,6 +9,13 @@ terms_url: https://www.facebook.com/legal/terms
 
 connections: {}
 
+provides:
+  - tool: web_read
+    via: get_community
+    urls:
+      - "facebook.com/groups/*"
+      - "www.facebook.com/groups/*"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -35,8 +42,10 @@ operations:
     params:
       group:
         type: string
-        required: true
-        description: "Group name or URL (e.g., 'becomingaportuguesecitizen' or full URL)"
+        description: "Group slug or name (e.g. becomingaportuguesecitizen) — optional if url is set"
+      url:
+        type: string
+        description: "Full Facebook group URL (web_read) — optional if group is set"
       include_members:
         type: boolean
         default: true
@@ -45,7 +54,7 @@ operations:
       binary: bash
       args:
         - ./get_community.sh
-        - ".params.group"
+        - 'if (.params.url // "") != "" then .params.url elif (.params.group // "") != "" then .params.group else "" end'
         - ".params.include_members"
       timeout: 35
     test:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import json
+import re
 import subprocess
 import sys
 
@@ -56,13 +57,19 @@ def list_tasks(params):
     return result
 
 
-def get_task(params):
-    repo = params["repo"]
-    number = str(params["number"])
-    output = run_gh(["api", f"repos/{repo}/issues/{number}"])
-    item = json.loads(output)
-    if item.get("pull_request"):
-        fail(f"{repo}#{number} is a pull request, not an issue")
+def _parse_issue_or_pr_url(url: str) -> tuple[str, str] | None:
+    """Return (owner/repo, number) for github.com/{owner}/{repo}/issues|pull/{n}."""
+    m = re.search(
+        r"github\.com/([^/]+)/([^/]+)/(?:issues|pull)/(\d+)(?:/|$|[?#])",
+        url,
+        re.I,
+    )
+    if not m:
+        return None
+    return f"{m.group(1)}/{m.group(2)}", str(m.group(3))
+
+
+def _task_shape(item: dict, repo: str) -> dict:
     return {
         "number": item["number"],
         "title": item.get("title"),
@@ -73,9 +80,47 @@ def get_task(params):
         "updated_at": item.get("updated_at"),
         "closed_at": item.get("closed_at"),
         "repository": repo,
-        "labels": [label.get("name") for label in item.get("labels") or [] if label.get("name")],
+        "labels": [
+            label.get("name")
+            for label in item.get("labels") or []
+            if label.get("name")
+        ],
         "author": ((item.get("user") or {}).get("login")),
     }
+
+
+def get_task(params):
+    repo = params.get("repo")
+    number = params.get("number")
+    if params.get("url"):
+        parsed = _parse_issue_or_pr_url(params["url"])
+        if not parsed:
+            fail("Could not parse owner/repo and number from GitHub issue or PR URL")
+        repo, number = parsed
+    if not repo or number is None:
+        fail("repo and number are required (or pass url)")
+    number = str(number)
+    output = run_gh(["api", f"repos/{repo}/issues/{number}"])
+    item = json.loads(output)
+    if item.get("pull_request"):
+        pr_out = run_gh(["api", f"repos/{repo}/pulls/{number}"])
+        pr = json.loads(pr_out)
+        return _task_shape(
+            {
+                "number": pr["number"],
+                "title": pr.get("title"),
+                "body": pr.get("body"),
+                "html_url": pr.get("html_url"),
+                "state": pr.get("state"),
+                "created_at": pr.get("created_at"),
+                "updated_at": pr.get("updated_at"),
+                "closed_at": pr.get("closed_at"),
+                "labels": pr.get("labels") or [],
+                "user": pr.get("user"),
+            },
+            repo,
+        )
+    return _task_shape(item, repo)
 
 
 def create_task(params):
@@ -172,7 +217,39 @@ def list_documents(params):
     return result
 
 
+def _parse_blob_or_raw_url(url: str) -> tuple[str, str, str] | None:
+    """
+    Return (owner/repo, path, ref) for blob or raw.githubusercontent.com URLs.
+    """
+    m = re.search(
+        r"github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+?)(?:[?#]|$)",
+        url,
+        re.I,
+    )
+    if m:
+        return f"{m.group(1)}/{m.group(2)}", m.group(4), m.group(3)
+    m = re.search(
+        r"raw\.githubusercontent\.com/([^/]+)/([^/]+)/([^/]+)/(.+?)(?:[?#]|$)",
+        url,
+        re.I,
+    )
+    if m:
+        return f"{m.group(1)}/{m.group(2)}", m.group(4), m.group(3)
+    return None
+
+
 def read_document(params):
+    repo = params.get("repo")
+    path = params.get("path")
+    ref = params.get("ref")
+    if params.get("url"):
+        parsed = _parse_blob_or_raw_url(params["url"])
+        if not parsed:
+            fail("Could not parse GitHub blob or raw.githubusercontent.com URL")
+        repo, path, ref = parsed
+    if not repo or not path:
+        fail("repo and path are required (or pass url)")
+    params = {**params, "repo": repo, "path": path, "ref": ref}
     endpoint = contents_endpoint(params)
     output = run_gh(["api", endpoint])
     data = json.loads(output)

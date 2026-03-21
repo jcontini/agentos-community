@@ -7,6 +7,12 @@ website: https://linear.app
 privacy_url: https://linear.app/privacy
 terms_url: https://linear.app/terms
 
+provides:
+  - tool: web_read
+    via: get_task
+    urls:
+      - "linear.app/*/issue/*"
+
 connections:
   api:
     base_url: "https://api.linear.app/graphql"
@@ -129,7 +135,8 @@ operations:
     description: Get a specific issue by ID
     returns: task
     params:
-      id: { type: string, required: true, description: "Issue ID" }
+      id: { type: string, description: "Issue ID (UUID) or identifier like PROJ-123 — optional if url is a linear.app …/issue/… link" }
+      url: { type: string, description: "Linear issue URL from the browser (web_read)" }
     graphql:
       query: |
         query($id: String!) {
@@ -150,7 +157,7 @@ operations:
           }
         }
       variables:
-        id: .params.id
+        id: '(if (.params.url // "") != "" then (.params.url | split("/") | map(select(. != "")) | . as $p | (($p | index("issue")) as $ix | if $ix != null and ($p | length) > $ix + 1 then ($p[$ix + 1] | capture("^(?<t>[A-Za-z0-9]+)-(?<n>[0-9]+)") | "\(.t)-\(.n)") else empty end)) else .params.id end)'
       response:
         root: /data/issue
 

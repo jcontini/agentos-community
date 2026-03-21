@@ -8,6 +8,14 @@ privacy_url: https://www.ycombinator.com/legal#privacy
 terms_url: https://www.ycombinator.com/legal
 connections: {}
 
+provides:
+  - tool: web_read
+    via: get_post
+    urls:
+      - "news.ycombinator.com/item*"
+  - tool: web_search
+    via: search_posts
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -94,15 +102,17 @@ operations:
   get_post:
     description: Get a Hacker News story with comments
     returns: post
-    web_url: '"https://news.ycombinator.com/item?id=" + .params.id'
+    web_url: '"https://news.ycombinator.com/item?id=" + (if (.params.url // "") != "" then (.params.url | capture("[?&]id=(?<pid>[0-9]+)") | .pid) else .params.id end)'
     params:
       id:
         type: string
-        required: true
-        description: "Story ID"
+        description: "Story ID (optional if url is a news.ycombinator.com item link)"
+      url:
+        type: string
+        description: "HN item URL with id= in the query (web_read)"
     rest:
       method: GET
-      url: '"https://hn.algolia.com/api/v1/items/" + .params.id'
+      url: '"https://hn.algolia.com/api/v1/items/" + (if (.params.url // "") != "" then (.params.url | capture("[?&]id=(?<pid>[0-9]+)") | .pid) else .params.id end)'
       response:
         transform: |
           def map_comment:

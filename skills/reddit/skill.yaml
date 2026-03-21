@@ -13,6 +13,8 @@ provides:
     urls:
       - "reddit.com/*/comments/*"
       - "reddit.com/r/*/comments/*"
+  - tool: web_search
+    via: search_posts
 
 connections: {}
 
@@ -132,10 +134,10 @@ operations:
   get_post:
     description: Get a Reddit post with comments. Pass either an id or a full Reddit URL.
     returns: post
-    web_url: 'if .params.url then .params.url else "https://www.reddit.com/comments/" + .params.id end'
+    web_url: 'if (.params.url // "") != "" then .params.url else "https://www.reddit.com/comments/" + .params.id end'
     params:
-      id: { type: string, description: "Post ID (e.g., 'abc123')" }
-      url: { type: string, required: true, description: "Reddit post URL — or use id instead" }
+      id: { type: string, description: "Post ID (e.g. abc123) — optional if url is set" }
+      url: { type: string, description: "Full Reddit post URL (web_read) — optional if id is set" }
       comment_limit: { type: integer, description: "Max comments to fetch" }
     rest:
       method: GET

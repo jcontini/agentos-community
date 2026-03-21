@@ -6,6 +6,13 @@ website: https://www.moltbook.com
 privacy_url: https://www.moltbook.com/privacy
 terms_url: https://www.moltbook.com/terms
 
+provides:
+  - tool: web_read
+    via: get_post
+    urls:
+      - "moltbook.com/post/*"
+      - "www.moltbook.com/post/*"
+
 connections:
   api:
     base_url: "https://www.moltbook.com/api/v1"
@@ -132,11 +139,13 @@ operations:
     params:
       id:
         type: string
-        required: true
-        description: Moltbook post id
+        description: Moltbook post id — optional if url is set
+      url:
+        type: string
+        description: Link to the post (web_read), e.g. https://www.moltbook.com/post/abc
     rest:
       method: GET
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.id'
+      url: '"https://www.moltbook.com/api/v1/posts/" + (if (.params.url // "") != "" then (.params.url | capture("/post/(?<pid>[^/?#]+)") | .pid) else .params.id end)'
       response:
         transform: |
           (.post // {}) | {

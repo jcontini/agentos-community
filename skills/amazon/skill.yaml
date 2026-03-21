@@ -1,30 +1,106 @@
 id: amazon
 name: Amazon
-description: Access your Amazon account using browser session cookies
+description: Search Amazon product results anonymously or with your browser session cookies
 color: "#FF9900"
 
 website: https://www.amazon.com
+privacy_url: https://www.amazon.com/gp/help/customer/display.html?nodeId=468496
+
+provides:
+  - tool: web_search
+    via: search
+    urls:
+      - "amazon.com/*"
+      - "amazon.co.uk/*"
+      - "amazon.de/*"
+      - "amazon.fr/*"
+      - "amazon.ca/*"
+      - "amazon.com.au/*"
+      - "amazon.in/*"
+      - "amazon.co.jp/*"
+      - "amazon.es/*"
+      - "amazon.it/*"
+      - "amazon.nl/*"
+      - "amazon.se/*"
+      - "amazon.com.mx/*"
+      - "amazon.com.br/*"
+
 connections:
-  web:
+  public:
+    description: "Anonymous product search — no cookies or API keys"
     base_url: "https://www.amazon.com"
+  web:
+    description: "Same retail site with Amazon session cookies from a browser cookie provider"
+    base_url: "https://www.amazon.com"
+    optional: true
     cookies:
       domain: ".amazon.com"
-      names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
+      names:
+        - x-main
+        - session-id
+        - session-token
+        - ubid-main
+        - at-main
+        - sess-at-main
+        - i18n-prefs
 
-# ==============================================================================
-# OPERATIONS
-# ==============================================================================
+adapters:
+  product:
+    id: .asin
+    name: .title
+    text: '.text // .title'
+    url: .url
+    image: .image
+    data.price: .price
+    data.rating: .rating
 
 operations:
+  search:
+    description: >
+      Search Amazon organic product results. Default connection is anonymous public search;
+      pass connection "web" to reuse your signed-in Amazon cookies (pricing, layout).
+    returns: product[]
+    wraps_as: search
+    web_url: '"https://www.amazon.com/s?k=" + (.params.query | @uri)'
+    connection: [public, web]
+    params:
+      query:
+        type: string
+        required: true
+        description: "Search keywords (e.g. usb c hub dock)"
+      limit: { type: integer, description: "Max products to return (cap 24)" }
+      url:
+        type: string
+        description: "Full Amazon search or results URL — used when web_search is URL-routed"
+      connection:
+        type: string
+        description: 'Backend: "public" (default) or "web" (browser cookies)'
+    python:
+      module: ./amazon.py
+      function: op_search
+      args:
+        query: '.params.query // ""'
+        limit: '.params.limit // 10'
+        url: .params.url
+        cookie_header: '((.auth // {}) | .cookies // "")'
+        connection: '.connection'
+      timeout: 45
+    test:
+      mode: read
+      fixtures:
+        query: "notebook"
+        # Override shared smoke default url (example.com) — search uses query, not url
+        url: null
+
   check_session:
     description: >
-      Verify that Amazon browser cookies are valid by fetching the account page.
-      Returns the page title — if authenticated, it contains "Your Account".
-      If cookies are expired, Amazon redirects to the login page.
+      Verify Amazon browser cookies by fetching the account landing page.
+      When authenticated, the HTML title indicates your account; otherwise Amazon serves sign-in.
     returns:
       authenticated: boolean
       title: string
       status_code: integer
+    connection: web
     rest:
       method: GET
       url: /gp/css/homepage.html

@@ -6,6 +6,18 @@ website: https://github.com
 
 connections: {}
 
+provides:
+  - tool: web_read
+    via: get_task
+    urls:
+      - "github.com/*/issues/*"
+      - "github.com/*/pull/*"
+  - tool: web_read
+    via: read_document
+    urls:
+      - "github.com/*/blob/*"
+      - "raw.githubusercontent.com/*"
+
 adapters:
   task:
     id: '.number | tostring'
@@ -60,12 +72,13 @@ operations:
     params:
       repo:
         type: string
-        required: true
-        description: Repository in owner/name format
+        description: Repository in owner/name format — optional if url is a GitHub issue or PR link
       number:
         type: integer
-        required: true
-        description: Issue number
+        description: Issue or PR number — optional if url is set
+      url:
+        type: string
+        description: GitHub issue or pull request URL (web_read)
     python:
       module: ./github-cli.py
       function: get_task
@@ -209,15 +222,16 @@ operations:
     params:
       repo:
         type: string
-        required: true
-        description: Repository in owner/name format
+        description: Repository in owner/name format — optional if url is a blob or raw.githubusercontent.com link
       path:
         type: string
-        required: true
-        description: File path within the repository
+        description: File path within the repository — optional if url is set
       ref:
         type: string
-        description: Branch, tag, or commit
+        description: Branch, tag, or commit — optional if url is set
+      url:
+        type: string
+        description: GitHub blob URL or raw.githubusercontent.com file URL (web_read)
     python:
       module: ./github-cli.py
       function: read_document

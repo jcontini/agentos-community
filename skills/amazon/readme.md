@@ -1,37 +1,37 @@
 # Amazon
 
-Access your Amazon account using browser session cookies. No API keys, no OAuth — log into Amazon in a browser whose cookies are visible to an installed cookie provider integration; this skill uses those cookies on requests.
+Search **Amazon product results** without an API key. The default path is a normal anonymous retail search (`/s?k=…`). If you install a **cookie provider** and choose connection `web`, the same search runs with your Amazon session cookies (optional personalization).
 
-## How It Works
+## Connections
 
-Amazon uses **pure cookie-based session auth**. When you log into Amazon in your browser, it stores session cookies that persist for weeks or months. The runtime resolves a cookie provider for `.amazon.com` and injects those cookies on requests.
+| Connection | When to use |
+|------------|-------------|
+| **public** | Default — no auth, works everywhere. |
+| **web** | You are logged into Amazon in a browser the provider can read; pass `connection: "web"` on `search` for a signed-in view. |
 
-### Authentication Flow
+`check_session` always uses **web** and is a quick sanity check that cookies still work.
 
-1. You log into Amazon in a browser covered by a cookie provider integration
-2. The engine obtains `.amazon.com` cookies from that provider
-3. Cookies are injected as a `Cookie` header on every request
-4. Sessions last weeks/months — no refresh needed
-5. If multiple cookie providers are installed, the agent should ask the user which browser/provider to use
+## Tools
 
-### Key Cookies
+### `search`
 
-| Cookie | Purpose |
-|--------|---------|
-| `x-main` | Primary session identifier (survives password changes) |
-| `session-id` | Session identifier |
-| `session-token` | CSRF-like token for requests |
-| `at-main` | Access token |
-| `ubid-main` | Browser identifier |
+- **params**: `query` (required), `limit` (optional, max 24), `connection` (`"public"` \| `"web"`).
+- **params.url**: Optional full Amazon search/results URL. You rarely need this directly; the **`web_search`** capability passes it when URL routing selects this skill (e.g. `url` contains `amazon.com/...`).
 
-## Utilities
+### `check_session`
 
-### check_session
+Fetches the account landing page and returns whether the title looks like a signed-in account page.
 
-Verifies that your Amazon session is active by fetching your account page. If authenticated, the response contains "Your Account" in the title.
+## `web_search` routing
 
-## Limitations
+This skill registers **`web_search`** with `urls:` patterns for major `amazon.*` hosts. If a client calls `web_search` with an `url` field matching those patterns, the runtime prefers **amazon** over generic providers. You can still force another skill with `skill: "exa"` (or similar).
 
-- Amazon does not provide a consumer JSON API — all responses are HTML
-- Sessions eventually expire (rare, usually weeks/months)
-- When expired, log into Amazon again in the browser/provider you want to use
+## Limits
+
+- Results are parsed from **HTML**; Amazon may change markup. Organic rows are preferred; sponsored blocks are skipped when marked `AdHolder`.
+- **International sites**: `public` connection defaults to `https://www.amazon.com`. For other storefronts, pass a full `url` to the search operation (or extend `base_url` / add connections later).
+- Requires **`httpx`** with HTTP/2 support (`pip install "httpx[http2]"`) for reliable responses.
+
+## Official API note
+
+**Product Advertising API** is the supported way to get structured product data at scale, but it needs AWS signing and an Associates account. This skill intentionally uses retail HTML for a zero-setup path.

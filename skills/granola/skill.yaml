@@ -6,6 +6,12 @@ color: "#2D6A4F"
 website: https://granola.ai
 privacy_url: https://granola.ai/privacy
 
+provides:
+  - tool: web_read
+    via: get_meeting
+    urls:
+      - "app.granola.ai/docs/*"
+
 connections:
   api:
     description: "Granola REST API — live data, requires network"
@@ -77,12 +83,13 @@ operations:
     returns: meeting
     connection: api
     params:
-      id: { type: string, required: true, description: "Granola document ID (UUID)" }
+      id: { type: string, description: "Granola document ID (UUID) — optional if url is an app.granola.ai/docs/… link" }
+      url: { type: string, description: "Granola meeting doc URL from the app (web_read)" }
     python:
       module: ./granola.py
       function: op_get_meeting
       args:
-        id: .params.id
+        id: 'if (.params.url // "") != "" then (.params.url | capture("/docs/(?<gid>[0-9a-fA-F-]{36})") | .gid) else .params.id end'
         connection: '.connection'
       timeout: 60
 

@@ -454,8 +454,8 @@ When multiple skills provide the same tool name, the engine:
 3. Adds a note in the tool description pointing to `load()` for provider-specific advanced options
 
 Current dynamic tools (from installed skills):
-- `web_search` — brave, exa
-- `web_read` — firecrawl, exa, curl (generic); youtube, reddit (URL-specific)
+- `web_search` — brave, exa; **amazon** (URL-routed to product search when `url` is an Amazon domain); **reddit** (`search_posts`); **hackernews** (`search_posts`). Use `skill: "reddit"` or `skill: "hackernews"` to fan out community search alongside the default web index.
+- `web_read` — firecrawl, exa, curl (generic); **URL-routed** — youtube, reddit, facebook (groups), hackernews (items), moltbook, goodreads (book vs author paths), claude (chat), github (issues/PRs and blob/raw files), gmail (message id from `#fragment`), todoist (task), granola (meeting docs), linear (issues)
 - `flight_search` — serpapi
 
 To verify dynamic tools appear:
