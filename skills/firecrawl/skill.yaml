@@ -26,7 +26,6 @@ adapters:
     id: '.metadata.sourceURL // .metadata.url // .url'
     name: '.metadata.title // .metadata.ogTitle // .title'
     text: '.markdown // .metadata.description'
-    url: '.metadata.sourceURL // .metadata.url // .url'
     image: '.metadata.ogImage // .metadata.image // .metadata["og:image"]'
     author: '.metadata.author // .metadata["article:author"]'
     datePublished: '.metadata.publishedTime // .metadata.publishedDate // .metadata["article:published_time"]'

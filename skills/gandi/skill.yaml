@@ -17,7 +17,6 @@ connections:
 adapters:
   domain:
     id: .fqdn
-    name: .fqdn
     url: '"https://" + .fqdn'
     data.status: .status
     data.registrar: '"gandi"'

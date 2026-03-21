@@ -11,7 +11,7 @@ All data is read directly from Firefox's SQLite databases on disk. No network ac
 
 Firefox profile directories have random prefixes (e.g., `abc123.default-release`). The SQL executor resolves glob patterns automatically and queries all matching profiles.
 
-## Operations
+## Usage
 
 ### list_webpages / search_webpages
 

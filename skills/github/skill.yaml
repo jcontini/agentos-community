@@ -22,10 +22,9 @@ adapters:
   task:
     id: '.number | tostring'
     name: .title
-    description: '.body // null'
-    content: '.body // null'
+    text: '.body // null'
     url: .url
-    created_at: .created_at
+    datePublished: .created_at
     updated_at: .updated_at
     completed_at: '.closed_at // null'
     data.state: .state
@@ -36,7 +35,6 @@ adapters:
   document:
     id: '.sha // .path'
     name: .name
-    text: '.content // null'
     url: '.url // null'
     content: '.content // null'
     data.path: .path

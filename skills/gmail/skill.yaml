@@ -34,9 +34,6 @@ adapters:
     author: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[0] | rtrimstr(" ") | ltrimstr("\"") | rtrimstr("\"") else null end) else null end'
     datePublished: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
     # Helper pattern for headers: map+select can return [], so check length before .[0].value
-    subject: 'if .payload then (.payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else "(no subject)" end'
-    snippet: '.snippet // ""'
-    timestamp: 'if .internalDate then .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S") else null end'
     is_starred: 'if .labelIds then .labelIds | contains(["STARRED"]) else false end'
     is_unread: 'if .labelIds then .labelIds | contains(["UNREAD"]) else false end'
     is_draft: 'if .labelIds then .labelIds | contains(["DRAFT"]) else false end'
@@ -92,8 +89,6 @@ adapters:
     name: 'if .messages then (.messages | .[0].payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else (.snippet // "" | if length > 120 then .[:120] + "…" else . end) end'
     text: '.snippet // ""'
     datePublished: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
-    last_message: '.snippet // ""'
-    last_message_at: 'if .messages then (.messages | last | .internalDate | tonumber / 1000 | strftime("%Y-%m-%d %H:%M:%S")) else null end'
     data.message_count: 'if .messages then (.messages | length) else null end'
     data.history_id: .historyId
 

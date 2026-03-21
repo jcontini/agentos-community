@@ -10,11 +10,9 @@ connections: {}
 adapters:
   git_commit:
     id: .hash
-    name: .message
     content: .message
-    hash: .hash
     short_hash: .short_hash
-    timestamp: .timestamp
+    datePublished: .timestamp
     author_name: .author_name
     author_email: .author_email
     committer_name: .committer_name
@@ -29,21 +27,18 @@ adapters:
 
   branch:
     id: .name
-    name: .name
     is_remote: .is_remote
     upstream: .upstream
 
   repository:
     id: .full_name
     name: .name
-    full_name: .full_name
     url: .url
     platform: .platform
     default_branch: .default_branch
 
   tag:
     id: .name
-    name: .name
     data.hash: .hash
     data.date: .date
     data.message: .message

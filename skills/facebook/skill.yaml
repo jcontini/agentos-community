@@ -24,10 +24,9 @@ adapters:
   community:
     id: .id
     name: .name
-    description: .description
+    text: .description
     url: .url
     image: .icon
-    icon: .icon
     member_count: .member_count_numeric
     privacy: .privacy
 
