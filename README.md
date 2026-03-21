@@ -1,6 +1,6 @@
 # AgentOS Community
 
-Community skills and skill docs for [AgentOS](https://github.com/jcontini/agentos).
+Community skills and skill docs for [AgentOS](https://github.com/jcontini/agentOS-core).
 
 ---
 
