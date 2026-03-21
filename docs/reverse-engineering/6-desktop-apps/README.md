@@ -6,11 +6,11 @@ the app itself is your best source.
 
 This is Layer 6 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/) — TLS, headers, WAF bypass
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/) — web bundles, Apollo cache
-- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/) — credentials, sessions
-- **Layer 4: Content** — [4-content](../4-content/) — HTML scraping
-- **Layer 5: Social Networks** — [5-social](../5-social/) — people, relationships
+- **Layer 1: Transport** — [1-transport](../1-transport/index.html) — TLS, headers, WAF bypass
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.html) — web bundles, Apollo cache
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/index.html) — credentials, sessions
+- **Layer 4: Content** — [4-content](../4-content/index.html) — HTML scraping
+- **Layer 5: Social Networks** — [5-social](../5-social/index.html) — people, relationships
 - **Layer 6: Desktop Apps** (this file) — macOS, Electron, local state, unofficial APIs
   - [electron.md](./electron.md) — Electron deep dive: asar extraction, token files, CrossAppAuth, feature flags
 
@@ -229,7 +229,7 @@ def api_post(token: str, endpoint: str, body: dict):
         return json.loads(raw)
 ```
 
-If you get `403`, try `httpx` with HTTP/2 (see [1-transport](../1-transport/)).
+If you get `403`, try `httpx` with HTTP/2 (see [1-transport](../1-transport/index.html)).
 
 ### 2. Probe each endpoint
 

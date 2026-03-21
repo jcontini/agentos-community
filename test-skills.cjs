@@ -85,10 +85,9 @@ const SMOKE_VIEW = { format: 'json', detail: 'full' };
 // Skills to skip entirely in automated runs
 // gmail: needs keychain for OAuth
 // brave-browser: massive SQLite scans, hangs
-// lightpanda: needs running browser engine
 // hardcover: depends on a live personal API token and account data
 // icloud: depends on a local pyicloud session plus account-specific params
-const SKIP_SKILLS = new Set(['gmail', 'brave-browser', 'lightpanda', 'hardcover', 'icloud']);
+const SKIP_SKILLS = new Set(['gmail', 'brave-browser', 'hardcover', 'icloud']);
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 

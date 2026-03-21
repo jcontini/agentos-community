@@ -1,0 +1,12 @@
+[book]
+title = "AgentOS Skills"
+authors = ["Joe"]
+description = "How to build, test, and contribute skills for AgentOS."
+src = "docs"
+
+[build]
+build-dir = "target/book"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "coal"

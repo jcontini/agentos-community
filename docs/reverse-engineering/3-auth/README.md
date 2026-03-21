@@ -5,13 +5,70 @@ reverse-engineered web skills.
 
 This is Layer 3 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/)
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/)
+- **Layer 1: Transport** — [1-transport](../1-transport/index.html)
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.html)
 - **Layer 3: Auth & Runtime** (this file) — credentials, sessions, rotating config
   - [workos.md](./workos.md) — WorkOS/Supabase migration pattern, JWT decoding, token refresh
-- **Layer 4: Content** — [4-content](../4-content/) — HTML scraping when there is no API
-- **Layer 5: Social Networks** — [5-social](../5-social/) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/) — macOS, Electron, local state, unofficial APIs
+- **Layer 4: Content** — [4-content](../4-content/index.html) — HTML scraping when there is no API
+- **Layer 5: Social Networks** — [5-social](../5-social/index.html) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.html) — macOS, Electron, local state, unofficial APIs
+
+---
+
+## Core principle: Playwright discovers, HTTPX runs
+
+**Every auth flow follows the same pattern:**
+
+1. **Discover with Playwright** — use `capture_network`, `inspect`, `cookies` to understand the flow (redirect chains, cookies set, endpoints hit, POST bodies).
+2. **Replay with HTTPX** — reproduce the flow as Python `httpx` calls with `http2=True`, injected cookies, and correct headers.
+3. **Store credentials via `__secrets__`** — extracted API keys or session cookies go through the `__secrets__` reserved key so the engine stores them securely and the LLM never sees the raw values.
+
+**Playwright is never the production runtime.** Skills that ship with Playwright imports are doing it wrong. If a flow can't be replicated with HTTPX (e.g. CAPTCHA, JS challenge), that's a signal to use browser cookie extraction (`brave-browser.cookie_get`) rather than embedding Playwright in the skill.
+
+### Discovery workflow
+
+```
+# 1. Navigate and inspect the auth page
+playwright.get_webpage({ url: "https://auth.example.com" })
+playwright.inspect()
+
+# 2. Watch what happens during login
+playwright.capture_network({
+  url: "https://auth.example.com/login",
+  pattern: "**",
+  wait: 10000
+})
+
+# 3. Extract the cookies after login
+playwright.cookies({ domain: ".example.com" })
+```
+
+From the capture, you learn: the auth page POSTs to `/api/auth/login`, sets a `session` cookie, and redirects to `/dashboard`. Now implement that with HTTPX:
+
+```python
+import httpx
+
+def login(email: str, password: str) -> dict:
+    with httpx.Client(http2=True, follow_redirects=True, timeout=30) as client:
+        resp = client.post("https://auth.example.com/api/auth/login", json={
+            "email": email, "password": password
+        })
+        resp.raise_for_status()
+        return dict(client.cookies)
+```
+
+### When HTTPX isn't enough
+
+Some situations genuinely block non-browser requests:
+
+| Situation | Solution |
+|-----------|----------|
+| Google OAuth consent (first time) | User clicks "Allow" in their browser once; after that, cookie-based redirect works |
+| Cloudflare JS challenge | Use cookies from `brave-browser.cookie_get` (the real browser already solved the challenge) |
+| CAPTCHA | Same — use cookies from the user's real browser session, not Playwright |
+| Complex SPA-only auth | Use `playwright.run_flow` for the initial login, extract cookies, then HTTPX for everything after |
+
+The fallback chain: HTTPX → browser cookies from `brave-browser` → `playwright.run_flow` → manual user action.
 
 ---
 
@@ -282,7 +339,7 @@ Classify each operation during reverse engineering.
 
 ### Mapping technique
 
-1. Discover all operations from JS bundles (see [discovery doc](2-discovery.md#graphql-schema-discovery-via-js-bundles))
+1. Discover all operations from JS bundles (see [discovery doc](../2-discovery/index.html#graphql-schema-discovery-via-js-bundles))
 2. For each operation, send a request with only the public API key
 3. Classify the response using this table:
 

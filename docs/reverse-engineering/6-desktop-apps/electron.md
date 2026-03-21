@@ -5,7 +5,7 @@ bundle is readable, the storage is standard Chromium formats, and the auth
 tokens are often sitting in a JSON file. Once you know where to look, Electron
 is one of the easiest desktop targets.
 
-Part of [Layer 6: Desktop Apps](./). See also [3-auth](../3-auth/) for
+Part of [Layer 6: Desktop Apps](./index.html). See also [3-auth](../3-auth/index.html) for
 general auth patterns.
 
 ---
@@ -254,7 +254,7 @@ sqlite3 ~/Library/Application\ Support/AppName/Cookies \
   "SELECT name, host_key FROM cookies LIMIT 20;"
 ```
 
-See [brave-browser skill](../../skills/brave-browser/readme.md) for the full
+See the `skills/brave-browser/` skill for the full
 Chromium cookie decryption pipeline (PBKDF2 + AES-128-CBC).
 
 ---

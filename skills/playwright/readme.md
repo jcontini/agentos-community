@@ -1,47 +1,35 @@
 # Playwright
 
-Browser automation via a persistent Chromium session. Control a real browser — navigate, click, fill forms, take screenshots, run JavaScript, inspect pages. The browser stays running between calls.
+**Playwright is a discovery and investigation tool.** Use it to reverse-engineer web flows — figure out redirect chains, find API endpoints, capture cookies, understand page structure. Then implement what you learned with HTTPX in Python for production skill code.
+
+Playwright controls a persistent Chromium session via CDP (Chrome DevTools Protocol). The browser stays running between calls — cookies, sessions, and tabs persist. Each operation connects (~100ms), does one thing, and returns.
 
 ## Do You Need This Skill?
 
 **Most web tasks do NOT need Playwright.** Before using this skill, check:
 
-- **"I need to read a web page"** → Prefer an integration that exposes `webpage.read` without a full interactive browser (usually cheaper and faster). Don't launch Playwright just to read static or API-backed pages.
-- **"I need to search the web"** → Use an integration that exposes `webpage.search`. Playwright is not a search engine.
-- **"I need to check what sites were visited"** → Use an integration that reads local browser history databases, if one is connected — not Playwright.
-- **"I already know the endpoint and just need to replay HTTP"** → Use direct HTTP (shell `curl`, a small script, or any thin HTTP tool). Don't keep a browser in the loop once it has already taught you the contract.
-- **"I need very fast headless HTML/JS fetches"** → Prefer a headless fetch / CDP integration that starts quickly and tears down between calls when you do not need a visible window or sticky profile.
+- **"I need to read a web page"** → Use `webpage.read` (backed by Exa or another provider). Faster, cheaper.
+- **"I need to search the web"** → Use `webpage.search`. Playwright is not a search engine.
+- **"I already know the endpoint"** → Use HTTPX in Python or shell `curl`. Once the browser has taught you the contract, leave it behind.
+- **"I need to check what sites were visited"** → Use an integration that reads local browser history (e.g. Brave), not Playwright.
 
-**Use Playwright when you need to DO things in a browser:**
+**Use Playwright when you need to INVESTIGATE in a browser:**
 
-- Navigate a site interactively (click links, fill forms, submit)
-- Automate a login flow or anything requiring a real browser session
-- Take screenshots for visual inspection or verification
-- Test a web app — check for console errors, verify page state
-- Run JavaScript in a live page context
-- Interact with SPAs that require JS execution to render
-- Anything where cookies/auth/session state must persist across steps
+- Reverse-engineer a login flow — watch the redirect chain, find the cookies
+- Discover API endpoints — `capture_network` reveals the real backend calls
+- Inspect SPAs — `evaluate` to dump `__NEXT_DATA__`, Apollo caches, framework state
+- Test auth flows — `run_flow` for scripted step sequences
+- Take screenshots for visual verification
 
-**Rule of thumb:** Reading content = `webpage.read` / `webpage.search` from appropriate integrations. Controlling a browser = Playwright.
+**The rule:** Playwright is for learning. HTTPX is for doing. Every skill operation that runs in production should use `httpx` with HTTP/2, not Playwright. See `docs/reverse-engineering/` for the full methodology.
 
-## Complementary tools
+## The progression
 
-Playwright is the main in-browser discovery tool, but it is not the only path.
-
-Typical combinations:
-
-- **Playwright** — login flows, persistent browser sessions, DOM inspection, JS evaluation, network capture.
-- **Headless fetch integrations** — high-volume or sub-second page pulls when you do not need a visible window or long-lived profile.
-- **`webpage.search` / `webpage.read`** — discovery and content extraction through whatever providers the workspace has connected.
-- **Direct HTTP** — once you know the endpoint, headers, and payload, leave the browser behind.
-- **Cookie providers** — passive `.domain` cookie injection for runtime auth (resolved by the engine from `provides: cookies` integrations).
-
-Good reverse engineering is usually a progression:
-
-1. Search for prior art via `webpage.search` when available.
-2. Probe the live site with Playwright when you need DOM, hydration state, or network calls.
-3. Switch to direct HTTP or small scripts as soon as you can replay requests reliably.
-4. Use lighter `webpage.read` paths when a full persistent browser session is unnecessary.
+1. **Search** — check `webpage.search` for prior art, existing docs, API references.
+2. **Discover** — use Playwright to probe the live site: `inspect`, `capture_network`, `evaluate`.
+3. **Replay** — reproduce what you found with HTTPX + cookies. Verify it works.
+4. **Implement** — write the skill operation in Python with HTTPX. No browser dependency.
+5. **Test** — `test-skills.cjs` runs without a browser. If your skill needs Playwright at runtime, reconsider.
 
 ## How It Works
 
@@ -298,17 +286,43 @@ All selector parameters accept CSS selectors:
 "[data-testid=submit]"       → by data attribute
 ```
 
-## Example: Login Flow
+## Example: Interactive Login Discovery
+
+Use individual operations to walk through a login flow and understand it:
 
 ```
 start { }
 get_webpage { url: "https://app.example.com/login" }
+inspect { }
 fill { selector: "input[type=email]", value: "user@example.com" }
-fill { selector: "input[type=password]", value: "..." }
 click { selector: "button[type=submit]" }
-wait { selector: ".dashboard" }
-screenshot { path: "/tmp/logged-in.png" }
+capture_network { url: "https://app.example.com/login", pattern: "**/api/**" }
+cookies { domain: ".example.com" }
 ```
+
+Once you understand the flow, implement it with HTTPX.
+
+## Example: Scripted Flow (run_flow)
+
+For repeatable flows, use `run_flow` — launches an ephemeral browser, runs steps, returns results, closes:
+
+```
+run_flow {
+  steps: [
+    { goto: "https://app.example.com/login" },
+    { fill: { selector: "input[type=email]", value: "user@example.com" } },
+    { fill: { selector: "input[type=password]", value: "..." } },
+    { click: "button[type=submit]" },
+    { wait_for: { url_matches: "dashboard" } },
+    { extract_cookies: ["session", "csrf_token"] }
+  ],
+  headless: false,
+  size: "compact"
+}
+→ { success: true, cookies: { session: "abc...", csrf_token: "xyz..." } }
+```
+
+`run_flow` detects 2FA prompts automatically and returns `needs_2fa: true`. Available step types: `goto`, `click`, `dblclick`, `right_click`, `fill`, `type`, `wait` (ms), `wait_for` (condition), `extract_cookies`, `extract` (selector → named value), `screenshot`, `close`.
 
 ## Requirements
 

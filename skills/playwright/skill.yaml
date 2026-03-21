@@ -395,3 +395,41 @@ operations:
       working_dir: .
       stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), cookies: (.cookies // []), capture_body: (.capture_body // true)}'
       timeout: 60
+
+  run_flow:
+    description: |
+      Execute a scripted browser automation flow in an ephemeral browser.
+      Launches a fresh Chromium, runs steps in order, returns results, closes.
+      Use this for repeatable auth flows and login sequences — NOT for interactive exploration
+      (use get_webpage/click/fill for that).
+
+      Steps: goto, click, dblclick, right_click, fill, type, wait_for, wait (ms),
+      extract_cookies, extract (selector → named value), screenshot, close.
+
+      wait_for conditions: cookie (name), selector (CSS), url_matches (regex), any (array of conditions).
+      Detects 2FA prompts automatically and returns needs_2fa: true.
+
+      After discovery, implement the same flow with HTTPX in Python for production use.
+    params:
+      steps:
+        type: array
+        required: true
+        description: "Automation steps — e.g. [{goto: 'https://...'}, {click: 'button'}, {wait_for: {url_matches: 'dashboard'}}, {extract_cookies: ['session']}]"
+      headless:
+        type: boolean
+        description: "Run without visible window (default: false — visible for debugging)"
+      size:
+        type: string
+        description: "Window size preset: mobile (iPhone), compact (480x720), full (1280x800). Default: compact"
+    returns:
+      success: boolean
+      cookies: object
+      extracted: object
+      needs_2fa: boolean
+      error: string
+    command:
+      binary: bash
+      args: ["-l", "-c", "npx tsx ./scripts/runner.ts"]
+      working_dir: .
+      stdin: '.params | {steps: .steps, launch: {headless: (.headless // false), size: (.size // "compact")}}'
+      timeout: 300

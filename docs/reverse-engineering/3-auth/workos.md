@@ -5,7 +5,7 @@ as an enterprise SSO product (SAML, SCIM) but added **WorkOS User Management**
 in 2023 — a full-stack auth system covering consumer sign-up, social login,
 *and* enterprise SSO in one package.
 
-Part of [Layer 3: Auth & Runtime](./). See also
+Part of [Layer 3: Auth & Runtime](./index.html). See also
 [Electron deep dive](../6-desktop-apps/electron.md) for how WorkOS tokens
 are stored in Electron apps.
 

@@ -54,98 +54,72 @@ This means:
          └───────────┘   └─────────────┘
 ```
 
-### What You Can Do
-
-- **Let AI manage your tasks** — "Create a task to review the PR" → Done
-- **Cross-service queries** — "What did I discuss with Sarah last week?" → Searches messages, emails, calendar
-- **Full-text search across everything** — Search finds content inside YouTube transcripts, web scrapes, research reports, task descriptions — with highlighted excerpts and relevance ranking
-- **Smart workflows** — "Every morning, summarize unread emails and add tasks for action items"
-- **Easy migration** — Switch from Todoist to Linear without losing data or relationships
-
-### For Everyone
-
-**You don't need to be technical to use AgentOS.** Enable skills, connect your services, and your AI assistants can use them. The community builds the skills—you just use them.
-
-**You don't need to code to contribute.** Found a bug? Want a new skill? Have an idea? Open an issue. The community is here to help.
-
 ---
 
 ## What's Here
 
 ```
-skills/            Skills — service connections + agent context
-  todoist/         Maps Todoist API → task, project, tag entities
-  reddit/          Maps Reddit JSON → post, forum entities
-  youtube/         Maps yt-dlp → video, channel, post entities
-  curl/            Fetches URLs → webpage entities
-  CONTRIBUTING.md  Skill-building guide (auth, adapters, operations, testing)
-  ...
+book.toml          Skill Book config (mdBook)
+docs/              Skill Book chapters + reverse engineering guides
+skills/            Skills — YAML configs + Python/bash/Swift helpers
 ```
 
-### Skills
-
-Skills connect to services — Todoist, Linear, YouTube, Reddit, iMessage. They're YAML configurations: API endpoints, auth, and field mappings expressed as jaq expressions. The Rust backend is a generic engine that evaluates expressions and creates entities.
-
-| Skill | Entity | What it provides |
-|-------|--------|------------------|
-| todoist | task, project, tag | Task management with priorities and projects |
-| linear | task, project | Engineering project management |
-| reddit | post, forum | Posts and comments from Reddit |
-| youtube | video, channel, post | Video metadata, transcripts, and comments |
-| exa | webpage | Semantic web search and content extraction |
-| firecrawl | webpage | Browser-rendered page scraping |
-| curl | webpage | Simple URL fetching (no API key) |
-| hackernews | post | Stories, comments, and discussions |
-| apple-calendar | meeting, calendar | macOS Calendar events |
-| apple-contacts | person | macOS Contacts |
-| imessage | message, conversation, person | iMessage history |
-| whatsapp | message, conversation, person | WhatsApp history |
-| brave | webpage | Web search |
-| cursor | document | Research reports from Cursor sub-agents |
-
-### Body Content + Full-Text Search
-
-Skills that produce rich content — transcripts, articles, self-posts, task descriptions — route it to a dedicated body table with one YAML line:
-
-```yaml
-adapters:
-  video:
-    name: .title
-    text: .description
-    content: .transcript           # → stored in entity_bodies
-    content_role: '"transcript"'   # → keyed by role (default: "body")
-```
-
-FTS5 indexes bodies alongside entity names and data. Search returns BM25-ranked results with highlighted excerpts showing exactly where terms matched. Any skill that produces content becomes searchable automatically.
-
-## Contributing
-
-**Anyone can contribute.** Found a bug? Want a new skill? Have an idea? [Open an issue](https://github.com/jcontini/agentos-community/issues) or see [CONTRIBUTING.md](CONTRIBUTING.md) for how to build skills.
-
-**The community builds the skill layer.** Skills and documentation are open source, MIT licensed, and designed to stay simple enough for both humans and small models to follow.
+Skills are YAML configurations with optional helper scripts. The Rust engine is a generic runtime — you don't need to understand Rust to write skills. Browse `skills/` for all available skills, or see the [Skill Catalog](docs/catalog.md) for a categorized directory.
 
 ---
 
-## License
+## Skill Book
 
-**MIT** — see [LICENSE](LICENSE)
+The **Skill Book** is the complete guide for building, testing, and contributing skills.
 
-By contributing, you grant AgentOS the right to use your contributions in official releases, including commercial offerings. Your code stays open forever. See [CONTRIBUTING.md](CONTRIBUTING.md) for full terms.
+```bash
+mdbook build && open target/book/index.html
+```
 
-## For Developers
+Or read the source files directly in `docs/`:
+
+| Topic | Chapter |
+|-------|---------|
+| Setup, workflow, validation | [Getting Started](docs/getting-started.md) |
+| skill.yaml structure | [Skill Anatomy](docs/skills/anatomy.md) |
+| Operations, actions, capabilities | [Operations](docs/skills/operations.md) |
+| Connections, auth, cookies, OAuth | [Connections & Auth](docs/skills/connections.md) |
+| Entity field mappings | [Adapters](docs/skills/adapters.md) |
+| Python executor, `_call` dispatch | [Python Skills](docs/skills/python.md) |
+| Login flows, `__secrets__` | [Auth Flows](docs/skills/auth-flows.md) |
+| Sandbox storage, expressions | [Data & Storage](docs/skills/data.md) |
+| MCP testing, smoke metadata | [Testing](docs/skills/testing.md) |
+| Reverse engineering web services | [Reverse Engineering](docs/reverse-engineering/overview.md) |
+
+**Canonical examples:** `skills/exa/` (entity-returning) and `skills/kitty/` (local-control/action).
+
+When you change the skill contract, **update the book in the same change**.
+
+---
+
+## Contributing
+
+**Anyone can contribute.** Found a bug? Want a new skill? Have an idea? [Open an issue](https://github.com/jcontini/agentos-community/issues).
 
 ```bash
 git clone https://github.com/jcontini/agentos-community
 cd agentos-community
-npm install    # Sets up pre-commit hooks
+npm install    # sets up pre-commit hooks
 ```
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for skill development, testing, and contribution guidelines.
-
-Useful local commands:
+Useful commands:
 
 ```bash
 npm run validate -- exa
 npm run lint:semantic -- exa
 npm run mcp:call -- --skill exa --tool search --params '{"query":"rust","limit":1}'
+npm run mcp:test -- exa --verbose
 ```
+
+---
+
+## License
+
+**MIT** — see [LICENSE](LICENSE).
+
+By contributing, you grant AgentOS the right to use your contributions in official releases, including commercial offerings. Your code stays open forever.
