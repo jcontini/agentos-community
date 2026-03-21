@@ -16,9 +16,9 @@ connections:
 
 adapters:
   model:
-    api_id: .id
-    title: .display_name
-    released: .created_at
+    id: .id
+    name: .display_name
+    datePublished: .created_at
     provider: '"anthropic"'
     model_type: '"llm"'
 

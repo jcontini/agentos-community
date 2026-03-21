@@ -26,10 +26,8 @@ adapters:
     url: .url
     datePublished: .order_date
     # --- Skill-specific data ---
-    data.order_id: .order_id
     data.total: .total
     data.total_amount: .total_amount
-    data.status: .status
     data.item_count: .item_count
     data.delivery_date: .delivery_date
 
@@ -43,7 +41,6 @@ adapters:
         image: .image_url
         # --- Skill-specific data ---
         data.price: .price
-        data.asin: .asin
 
   product:
     # --- Canonical fields (rendered in previews / markdown) ---
@@ -54,7 +51,6 @@ adapters:
     image: .image_url
     author: .brand
     # --- Skill-specific data ---
-    data.asin: .asin
     data.price: .price
     data.price_amount: .price_amount
     data.rating: .rating

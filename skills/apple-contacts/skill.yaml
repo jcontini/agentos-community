@@ -21,7 +21,7 @@ adapters:
     nickname: .nickname
     phone: '.phones_json | fromjson | .[0].value? // null'
     email: '.emails_json | fromjson | .[0].value? // null'
-    avatar: 'if .has_photo == 1 then "contacts://photo/" + .id else null end'
+    image: 'if .has_photo == 1 then "contacts://photo/" + .id else null end'
     organization: .organization
     job_title: .job_title
     department: .department

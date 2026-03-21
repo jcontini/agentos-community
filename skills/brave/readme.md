@@ -15,14 +15,14 @@ Privacy-focused web search powered by Brave's independent index.
 - **Free tier** - 2,000 queries/month
 - **Search operators** - Quotes, exclusions, site: filters
 
-## Operations
+## Usage
 
 ### search
 
 Create a web search. Returns search results (index records).
 
 ```
-use({ skill: "brave", tool: "search", params: { query: "rust programming" } })
+run({ skill: "brave", tool: "search", params: { query: "rust programming" } })
 ```
 
 ### Search Operators

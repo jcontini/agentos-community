@@ -21,7 +21,7 @@ macOS can have multiple contact accounts (iCloud, local, Exchange, etc.). Use th
    → Returns: 10 most recently modified contacts as person entities
 ```
 
-## Operations
+## Usage
 
 | Operation | Description |
 |-----------|-------------|

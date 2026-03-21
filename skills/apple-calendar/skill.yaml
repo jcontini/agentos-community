@@ -17,12 +17,8 @@ adapters:
   meeting:
     id: .id
     name: .title
-    description: .description
     text: .description
     datePublished: .start
-    title: .title
-    content: .description
-    start: .start
     end: .end
     all_day: .all_day
     location: .location

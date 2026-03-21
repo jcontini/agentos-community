@@ -25,10 +25,9 @@ connections:
 adapters:
   result:
     id: .url
-    url: .url
-    title: .title
-    snippet: .description
-    favicon: .meta_url.favicon
+    name: .title
+    text: .description
+    image: .meta_url.favicon
     indexed_at: .page_age
 
 # ═══════════════════════════════════════════════════════════════════════════════
