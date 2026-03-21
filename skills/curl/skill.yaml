@@ -20,7 +20,6 @@ adapters:
     id: .url
     name: '.title // .url'
     text: .content
-    url: .url
     data.content_type: .content_type
 
 # ═══════════════════════════════════════════════════════════════════════════════

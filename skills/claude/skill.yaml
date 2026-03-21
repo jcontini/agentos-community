@@ -49,7 +49,6 @@ adapters:
   conversation:
     id: .uuid
     name: .name
-    text: .content
     content: .content
     datePublished: .updated_at
     data.created_at: .created_at
@@ -60,15 +59,11 @@ adapters:
     id: .id
     name: .conversation_name
     text: .text
-    content: .text
     url: '"https://claude.ai/chat/" + .conversation_id'
     author: .role
     datePublished: .created_at
     is_outgoing: '.role == "human"'
-    timestamp: .created_at
     data.conversation_id: .conversation_id
-    data.role: .role
-    data.conversation_name: .conversation_name
 
 # ==============================================================================
 # OPERATIONS

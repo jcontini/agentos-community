@@ -30,7 +30,6 @@ adapters:
     id: .url
     name: .title
     text: '.text // .summary // (if .highlights then .highlights[0] else null end)'
-    url: .url
     image: '.image // .favicon'
     author: .author
     datePublished: .publishedDate
@@ -41,7 +40,6 @@ adapters:
     id: .url
     name: .title
     text: .text
-    url: .url
     image: '.image // .favicon'
     author: .author
     datePublished: .publishedDate

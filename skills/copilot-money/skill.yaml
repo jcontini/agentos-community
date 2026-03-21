@@ -20,7 +20,7 @@ adapters:
     name: .name
     handle: .mask
     platform: '"copilot-money"'
-    description: '.name + if .mask then " (••••" + .mask + ")" else "" end'
+    text: '.name + if .mask then " (••••" + .mask + ")" else "" end'
     data.balance: .balance
     data.limit: .limit
     data.institution_id: .institution_id
@@ -36,7 +36,7 @@ adapters:
   transaction:
     id: '.id | tostring'
     name: '.merchant_name // "Unknown"'
-    description: '(.merchant_name // "Unknown") + " — $" + ((.amount // 0) | tostring)'
+    text: '(.merchant_name // "Unknown") + " — $" + ((.amount // 0) | tostring)'
     data.amount: .amount
     data.date: .date
     data.account_id: .account_id

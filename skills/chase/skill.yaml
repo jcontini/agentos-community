@@ -30,7 +30,7 @@ adapters:
   account:
     id: .accountId
     name: .name
-    description: '(.type + " •••• " + .last4)'
+    text: '(.type + " •••• " + .last4)'
     data.account_type: .type
     data.last4: .last4
     data.balance: .balance
@@ -40,7 +40,6 @@ adapters:
   transaction:
     id: '(.accountId + ":" + (.postingDate // .date) + ":" + (.description // .details.description // "transaction") + ":" + (.amount | tostring))'
     name: .description
-    description: .description
     account: .accountId
     data.posting_date: '.postingDate // .date'
     data.amount: .amount

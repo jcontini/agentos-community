@@ -34,14 +34,14 @@ The `get_cookie_key` operation handles steps 1-2. The `cookie_get` operation doe
 Extract decrypted cookies for any domain. Consumed through cookie provider matchmaking at runtime.
 
 ```
-use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".claude.ai", names: "sessionKey" } })
+run({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".claude.ai", names: "sessionKey" } })
 → { domain: ".claude.ai", cookies: [{name: "sessionKey", value: "sk-ant-...", httpOnly: true, ...}], count: 1 }
 
-use({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".chase.com" } })
+run({ skill: "brave-browser", tool: "cookie_get", params: { domain: ".chase.com" } })
 → { domain: ".chase.com", cookies: [...], count: 5 }
 ```
 
-## Operations
+## Usage
 
 ```
 OPERATION          DESCRIPTION

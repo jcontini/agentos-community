@@ -52,10 +52,10 @@ Cursor sessions become `session` entities on the graph with `client: "cursor"`, 
 
 ```
 # One-time: import full history (all workspaces, ~7 seconds)
-use({ skill: "cursor", tool: "backfill_session" })
+run({ skill: "cursor", tool: "backfill_session" })
 
 # Or import just one workspace
-use({ skill: "cursor", tool: "backfill_session", params: { workspace: "/Users/joe/dev/agentos" } })
+run({ skill: "cursor", tool: "backfill_session", params: { workspace: "/Users/joe/dev/agentos" } })
 
 # Ongoing: session.list runs automatically via entity fan-out when anyone calls
 list({ type: "session" })

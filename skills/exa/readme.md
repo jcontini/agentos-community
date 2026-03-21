@@ -14,14 +14,14 @@ Semantic web search and content extraction. Neural search finds content by meani
 - Find similar pages
 - Relevance scoring
 
-## Operations
+## Usage
 
 ### search
 
 Create a web search. Returns search results (index records, not full page content).
 
 ```
-use({ skill: "exa", tool: "search", params: { query: "rust programming" } })
+run({ skill: "exa", tool: "search", params: { query: "rust programming" } })
 ```
 
 Results are `result` entities — snapshots of what the search engine knew about each URL.
@@ -32,7 +32,7 @@ To get full page content, follow up with `read_webpage` on a result's URL.
 Extract full content from a URL.
 
 ```
-use({ skill: "exa", tool: "read_webpage", params: { url: "https://example.com" } })
+run({ skill: "exa", tool: "read_webpage", params: { url: "https://example.com" } })
 ```
 
 ## Known Limitations
