@@ -3,7 +3,8 @@ name: Deploy Book
 on:
   push:
     branches: [main]
-    paths: [docs/**, book.toml]
+    paths: [docs/**, book.toml, .github/workflows/book.yml]
+  workflow_dispatch:
 
 permissions:
   pages: write
