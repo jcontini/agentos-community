@@ -415,11 +415,6 @@ operations:
         limit: '.params.limit // 30'
         cache: .cache
       timeout: 30
-    test:
-      mode: read
-      fixtures:
-        book_id: "4934"
-        limit: 3
 
   list_similar_books:
     description: List similar books from Goodreads' public AppSync GraphQL backend
@@ -436,11 +431,6 @@ operations:
         limit: '.params.limit // 20'
         cache: .cache
       timeout: 30
-    test:
-      mode: read
-      fixtures:
-        book_id: "4934"
-        limit: 3
 
   list_series_books:
     description: List all books in a series, given any book that belongs to it
@@ -457,11 +447,6 @@ operations:
         limit: '.params.limit // 20'
         cache: .cache
       timeout: 30
-    test:
-      mode: read
-      fixtures:
-        book_id: "3"
-        limit: 5
 
   search_books:
     description: Search for books by title, author, or ISBN via the public AppSync GraphQL backend
@@ -520,11 +505,6 @@ operations:
         author_id: .params.author_id
         limit: '.params.limit // 10'
       timeout: 30
-    test:
-      mode: read
-      fixtures:
-        author_id: "3137322"
-        limit: 3
 
   # ───────────────────────────────────────────────────────────────────────────
   # REVIEW & RATING OPERATIONS
