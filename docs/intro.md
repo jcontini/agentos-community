@@ -1,10 +1,8 @@
 # AgentOS Skills
 
 > **You are reading the Skill Book** — the guide for building, testing, and contributing skills for AgentOS.
-> For engine architecture and Rust internals → see the [core repo](https://github.com/jcontini/agentos).
+> For engine architecture and Rust internals → see the [core repo](https://github.com/jcontini/agentOS-core).
 > For the project vision and philosophy → see the core repo's Project Book.
->
-> **Open in browser:** `open target/book/index.html` (after `mdbook build`)
 
 ---
 
@@ -28,7 +26,7 @@
 
 ## Two repos
 
-- **[agentos](https://github.com/jcontini/agentos)** (private) — the Rust engine, core graph, MCP bridge, credential store, process architecture. You only need this if you're hacking on the engine itself.
+- **[agentOS-core](https://github.com/jcontini/agentOS-core)** (private) — the Rust engine, core graph, MCP bridge, credential store, process architecture. You only need this if you're hacking on the engine itself.
 - **[agentos-community](https://github.com/jcontini/agentos-community)** (this repo, public) — skills, skill documentation, reverse engineering guides, and this book. Anyone can contribute skills without touching Rust.
 
 ## For AI agents
