@@ -70,13 +70,7 @@ Skills are YAML configurations with optional helper scripts. The Rust engine is 
 
 ## Skill Book
 
-The **Skill Book** is the complete guide for building, testing, and contributing skills.
-
-```bash
-mdbook build && open target/book/index.html
-```
-
-Or read the source files directly in `docs/`:
+The **Skill Book** is the complete guide for building, testing, and contributing skills. Read it online at **[jcontini.github.io/agentos-community](https://jcontini.github.io/agentos-community/)**, or browse the source files directly in `docs/`:
 
 | Topic | Chapter |
 |-------|---------|
