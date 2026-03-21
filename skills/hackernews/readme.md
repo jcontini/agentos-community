@@ -10,7 +10,7 @@ This adapter uses the public Algolia HN Search API — no authentication needed.
 
 The official HN Firebase API requires multiple requests to fetch a story with comments (one per comment). Algolia returns the entire comment tree in a single request, making it much faster.
 
-## Operations
+## Usage
 
 | Operation | Description |
 |-----------|-------------|

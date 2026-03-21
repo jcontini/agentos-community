@@ -36,8 +36,6 @@ adapters:
       account:
         id: .author
         platform: '"hackernews"'
-        handle: .author
-        display_name: .author
         url: '"https://news.ycombinator.com/user?id=" + .author'
     parent_id:
       ref: post

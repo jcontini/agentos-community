@@ -21,11 +21,10 @@ connections:
 adapters:
   website:
     id: .slug
-    name: .slug
-    title: '(.viewer.title? // .slug)'
+    name: '(.viewer.title? // .slug)'
     url: .siteUrl
     status: 'if .status == "active" then "active" else "pending" end'
-    published_at: .updatedAt
+    datePublished: .updatedAt
     version_id: .currentVersionId
     expires_at: '.expiresAt?'
     data.anonymous: '.anonymous? // false'

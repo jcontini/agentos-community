@@ -44,10 +44,6 @@ adapters:
     text: .snippet
     author: .from_email
     datePublished: .date_received
-    subject: .subject
-    snippet: .snippet
-    from_address: .from_email
-    timestamp: .date_received
     is_starred: '.is_flagged == 1'
     is_draft: '.is_draft == 1'
     message_id: .message_id
@@ -76,8 +72,6 @@ adapters:
     name: .subject
     text: .snippet
     datePublished: .date_updated
-    last_message: .snippet
-    last_message_at: .date_updated
     data.account_email: .account_email
     data.message_count: .message_count
     data.has_unread: '.has_unread == 1'

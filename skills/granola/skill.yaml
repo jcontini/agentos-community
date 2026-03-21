@@ -42,7 +42,7 @@ adapters:
     transcribe:
       transcript:
         id: '(.id) + "_transcript"'
-        title: '"Transcript: " + .title'
+        name: '"Transcript: " + .title'
         content: .transcript_text
         content_role: '"transcript"'
         language: '"en"'

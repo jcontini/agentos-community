@@ -201,7 +201,6 @@ adapters:
 
     written_by:
       author:
-        _condition: .primary_author_id
         id: .primary_author_id
         name: .primary_author
         url: .primary_author_url
@@ -235,7 +234,6 @@ adapters:
   shelf:
     id: .shelf_id
     name: .name
-    description: .description
     text: .description
     url: '"https://goodreads.com/shelf/show/" + (.shelf_id | tostring)'
     data.book_count: .book_count
@@ -256,7 +254,6 @@ adapters:
 
     source:
       book:
-        _condition: .book_id
         id: .book_id
         name: .book_title
 

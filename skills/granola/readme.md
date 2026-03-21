@@ -33,7 +33,7 @@ Relationships:
 
 Attendees are stored in `data.attendees` on the meeting entity. Full person entity creation from attendees is a future enhancement.
 
-## Operations
+## Usage
 
 ### `list_meetings` — Browse recent meetings
 

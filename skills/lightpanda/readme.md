@@ -45,7 +45,7 @@ stop → kills the lightpanda process
 
 The CDP server uses port **9223** by default (not 9222, to avoid colliding with other local Chromium debug ports).
 
-## Operations
+## Usage
 
 ### get_webpage
 

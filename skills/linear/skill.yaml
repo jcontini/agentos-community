@@ -46,14 +46,13 @@ adapters:
   task:
     id: .id
     name: .title
-    description: .description
-    content: .description
+    text: .description
     priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
     started_at: 'if .state.type == "started" then .updatedAt else null end'
     target.date: .dueDate
     data.remote_id: .identifier
     data.url: .url
-    created_at: .createdAt
+    datePublished: .createdAt
     updated_at: .updatedAt
     data.assignee.id: '(.assignee // {}).id'
     data.assignee.name: '(.assignee // {}).name'

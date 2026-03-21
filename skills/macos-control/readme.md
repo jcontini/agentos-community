@@ -26,7 +26,7 @@ Without those permissions, `list_windows` and screenshot tools may return incomp
 Returns installed applications from `system_profiler SPApplicationsDataType -json`.
 
 ```javascript
-use({ skill: "macos-control", tool: "list_apps", params: { limit: 10 } })
+run({ skill: "macos-control", tool: "list_apps", params: { limit: 10 } })
 ```
 
 ### `list_processes`
@@ -34,7 +34,7 @@ use({ skill: "macos-control", tool: "list_apps", params: { limit: 10 } })
 Returns stable process fields from `ps`, including `pid`, `ppid`, `cpu_percent`, `memory_percent`, and `command`.
 
 ```javascript
-use({ skill: "macos-control", tool: "list_processes", params: { limit: 25 } })
+run({ skill: "macos-control", tool: "list_processes", params: { limit: 25 } })
 ```
 
 ### `list_displays`
@@ -42,7 +42,7 @@ use({ skill: "macos-control", tool: "list_processes", params: { limit: 25 } })
 Returns display IDs, 1-based display indices for screenshot capture, geometry, scale, and relative position to the primary display.
 
 ```javascript
-use({ skill: "macos-control", tool: "list_displays" })
+run({ skill: "macos-control", tool: "list_displays" })
 ```
 
 ### `list_windows`
@@ -50,7 +50,7 @@ use({ skill: "macos-control", tool: "list_displays" })
 Returns useful user-facing windows only. Each result includes `window_id` when it could be matched to a CoreGraphics window and a `capture_eligible` flag for screenshot safety.
 
 ```javascript
-use({ skill: "macos-control", tool: "list_windows", params: { limit: 20 } })
+run({ skill: "macos-control", tool: "list_windows", params: { limit: 20 } })
 ```
 
 ### `screenshot_window`
@@ -58,7 +58,7 @@ use({ skill: "macos-control", tool: "list_windows", params: { limit: 20 } })
 Captures a PNG for a `window_id` returned by `list_windows`.
 
 ```javascript
-use({ skill: "macos-control", tool: "screenshot_window", params: { window_id: 12345 } })
+run({ skill: "macos-control", tool: "screenshot_window", params: { window_id: 12345 } })
 ```
 
 ### `screenshot_display`
@@ -66,7 +66,7 @@ use({ skill: "macos-control", tool: "screenshot_window", params: { window_id: 12
 Captures a PNG for a display. You can pass `display_id`, `display_index`, or neither to default to the primary display.
 
 ```javascript
-use({ skill: "macos-control", tool: "screenshot_display", params: { display_index: 1 } })
+run({ skill: "macos-control", tool: "screenshot_display", params: { display_index: 1 } })
 ```
 
 ## Scope

@@ -9,7 +9,6 @@ adapters:
   webpage:
     id: .url
     name: '.title // .url'
-    url: .url
 
 operations:
   get_webpage:
