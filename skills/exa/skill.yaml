@@ -16,6 +16,7 @@ provides:
 connections:
   api:
     base_url: "https://api.exa.ai"
+    issuer: exa.ai
     auth:
       type: api_key
       header: { x-api-key: .auth.key }
@@ -24,10 +25,15 @@ connections:
 
   dashboard:
     base_url: "https://dashboard.exa.ai"
+    issuer: exa.ai
     auth:
       type: cookies
       domain: ".exa.ai"
       names: ["next-auth.session-token"]
+      check:
+        url: "https://dashboard.exa.ai/api/auth/session"
+        identifier: ".user.email"
+        display: ".user.name"
       login:
         - email_code: true
         - sso: google

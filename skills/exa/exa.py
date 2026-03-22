@@ -223,7 +223,7 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
 
     return {
         "__secrets__": [{
-            "issuer": "dashboard.exa.ai",
+            "issuer": "exa.ai",
             "identifier": email,
             "item_type": "cookie",
             "label": "Exa Dashboard Session",
@@ -265,7 +265,7 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
 
     return {
         "__secrets__": [{
-            "issuer": "dashboard.exa.ai",
+            "issuer": "exa.ai",
             "identifier": email,
             "item_type": "cookie",
             "label": "Exa Dashboard Session",
@@ -281,7 +281,7 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
         "__result__": {
             "status": "authenticated",
             "identifier": email,
-            "issuer": "dashboard.exa.ai",
+            "issuer": "exa.ai",
             "user_id": session["user"].get("id"),
             "team": session["user"].get("teams", [{}])[0].get("name"),
         },
