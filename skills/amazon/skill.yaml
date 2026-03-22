@@ -9,7 +9,8 @@ connections:
     description: "Public Amazon pages and autocomplete API — no auth needed"
   web:
     base_url: "https://www.amazon.com"
-    cookies:
+    auth:
+      type: cookies
       domain: ".amazon.com"
       names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
       check:

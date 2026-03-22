@@ -9,7 +9,9 @@ terms_url: https://www.logo.dev/terms
 
 connections:
   api:
-    header: { Authorization: '"Bearer " + .auth.key' }
+    auth:
+      type: api_key
+      header: { Authorization: '"Bearer " + .auth.key' }
     label: Publishable Key
     help_url: https://www.logo.dev/dashboard
 

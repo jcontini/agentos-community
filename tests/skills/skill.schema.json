@@ -214,6 +214,30 @@
       },
       "additionalProperties": false
     },
+    "connectionAuth": {
+      "type": "object",
+      "description": "Unified connection auth with a type discriminator.",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["api_key", "cookies", "oauth"], "description": "Auth type discriminator" },
+        "header": { "type": "object", "additionalProperties": { "type": "string" } },
+        "query": { "type": "object", "additionalProperties": { "type": "string" } },
+        "body": { "type": "object", "additionalProperties": { "type": "string" } },
+        "domain": { "type": "string", "description": "Cookie domain" },
+        "names": { "type": "array", "items": { "type": "string" }, "description": "Cookie names" },
+        "check": { "$ref": "#/definitions/auth/properties/cookies/properties/check" },
+        "browser": { "type": "string", "description": "Preferred browser provider" },
+        "login": { "description": "Login flow configuration" },
+        "service": { "type": "string", "description": "OAuth service for matchmaking" },
+        "client_id": { "type": "string" },
+        "client_secret": { "type": "string" },
+        "auth_url": { "type": "string", "format": "uri" },
+        "token_url": { "type": "string", "format": "uri" },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "auth_params": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
     "skillSources": {
       "type": "object",
       "description": "External sources for Content Security Policy",
@@ -436,11 +460,7 @@
           "description": "Non-secret config passed to script executors (file paths, versions, etc.). Supports ~ expansion.",
           "additionalProperties": { "type": "string" }
         },
-        "header": { "type": "object", "additionalProperties": { "type": "string" } },
-        "query": { "type": "object", "additionalProperties": { "type": "string" } },
-        "body": { "type": "object", "additionalProperties": { "type": "string" } },
-        "cookies": { "$ref": "#/definitions/auth/properties/cookies" },
-        "oauth": { "$ref": "#/definitions/auth/properties/oauth" },
+        "auth": { "$ref": "#/definitions/connectionAuth" },
         "label": { "type": "string" },
         "help_url": { "type": "string", "format": "uri" },
         "optional": { "type": "boolean" },

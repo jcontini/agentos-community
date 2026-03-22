@@ -16,18 +16,21 @@ provides:
 connections:
   api:
     base_url: "https://api.exa.ai"
-    header: { x-api-key: .auth.key }
+    auth:
+      type: api_key
+      header: { x-api-key: .auth.key }
     label: API Key
     help_url: https://dashboard.exa.ai/api-keys
 
   dashboard:
     base_url: "https://dashboard.exa.ai"
-    cookies:
+    auth:
+      type: cookies
       domain: ".exa.ai"
       names: ["next-auth.session-token"]
-    login:
-      - email_code: true
-      - sso: google
+      login:
+        - email_code: true
+        - sso: google
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════

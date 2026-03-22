@@ -10,7 +10,9 @@ terms_url: https://openrouter.ai/terms
 connections:
   api:
     base_url: "https://openrouter.ai/api/v1"
-    header: { Authorization: '"Bearer " + .auth.key' }
+    auth:
+      type: api_key
+      header: { Authorization: '"Bearer " + .auth.key' }
     label: API Key
     help_url: https://openrouter.ai/keys
 

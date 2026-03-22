@@ -10,7 +10,9 @@ terms_url: https://here.now/terms
 connections:
   api:
     base_url: "https://here.now/api/v1"
-    header: { Authorization: '"Bearer " + .auth.key' }
+    auth:
+      type: api_key
+      header: { Authorization: '"Bearer " + .auth.key' }
     label: API Key
     optional: true
     help_url: https://here.now

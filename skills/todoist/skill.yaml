@@ -20,8 +20,10 @@ provides:
 connections:
   api:
     base_url: "https://api.todoist.com/api/v1"
-    header:
-      Authorization: '"Bearer " + .auth.key'
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
     label: API Token
     help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 # ═══════════════════════════════════════════════════════════════════════════════

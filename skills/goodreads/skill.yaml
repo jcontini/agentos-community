@@ -10,7 +10,8 @@ connections:
   web:
     description: "Goodreads user cookies for viewer-scoped data (friends, shelves, books, reviews)"
     base_url: "https://www.goodreads.com"
-    cookies:
+    auth:
+      type: cookies
       domain: ".goodreads.com"
       check:
         url: "https://www.goodreads.com/api/current_user"

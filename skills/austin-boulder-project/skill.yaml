@@ -6,8 +6,10 @@ website: https://boulderingproject.portal.approach.app
 
 connections:
   api:
-    header:
-      Authorization: .auth.key
+    auth:
+      type: api_key
+      header:
+        Authorization: .auth.key
     label: "ABP credentials — enter as email:password"
     help_url: https://boulderingproject.portal.approach.app/login
     optional: true

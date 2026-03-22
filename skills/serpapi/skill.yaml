@@ -14,8 +14,10 @@ provides:
 connections:
   api:
     base_url: "https://serpapi.com"
-    query:
-      api_key: .auth.key
+    auth:
+      type: api_key
+      query:
+        api_key: .auth.key
     label: API Key
     help_url: https://serpapi.com/manage-api-key
 

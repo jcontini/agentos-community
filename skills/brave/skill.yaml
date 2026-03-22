@@ -14,7 +14,9 @@ provides:
 connections:
   api:
     base_url: "https://api.search.brave.com/res/v1"
-    header: { X-Subscription-Token: .auth.key }
+    auth:
+      type: api_key
+      header: { X-Subscription-Token: .auth.key }
     label: API Key
     help_url: https://api-dashboard.search.brave.com/app/keys
 

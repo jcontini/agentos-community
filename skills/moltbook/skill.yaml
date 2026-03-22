@@ -16,8 +16,10 @@ provides:
 connections:
   api:
     base_url: "https://www.moltbook.com/api/v1"
-    header:
-      Authorization: '"Bearer " + .auth.key'
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
     label: API Key
     help_url: https://www.moltbook.com/skill.md
     optional: true
