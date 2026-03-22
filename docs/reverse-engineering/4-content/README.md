@@ -50,7 +50,8 @@ connections:
     description: "Public API — key auto-discovered"
   web:
     description: "User cookies for authenticated data"
-    cookies:
+    auth:
+      type: cookies
       domain: ".mysite.com"
     optional: true
     label: MySite Session

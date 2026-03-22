@@ -1,6 +1,6 @@
 # Connections & Auth
 
-Every skill declares its external service dependencies as **named** `connections:`. Each connection can carry `base_url`, auth (`header` / `query` / `body`, `cookies`, `oauth`), optional `description`, `label`, `help_url`, `optional`, and **local data sources**:
+Every skill declares its external service dependencies as **named** `connections:`. Each connection can carry `base_url`, `auth` (with a `type` discriminator), optional `description`, `label`, `help_url`, `optional`, and **local data sources**:
 
 - **`sqlite:`** — path to a SQLite file (tilde-expanded). SQL operations bind to the connection that declares the database; there is **no** top-level `database:` on the skill.
 - **`vars:`** — non-secret config (paths, filenames) merged into the executor context (e.g. `params.connection.vars` for Python) so scripts can read local files without hardcoding home-directory paths.
@@ -15,8 +15,10 @@ Most common — single API key connection:
 connections:
   api:
     base_url: "https://api.example.com/v1"
-    header:
-      x-api-key: .auth.key
+    auth:
+      type: api_key
+      header:
+        x-api-key: .auth.key
     label: API Key
     help_url: https://example.com/api-keys
 ```
@@ -28,7 +30,8 @@ connections:
   graphql:
     base_url: "https://api.example.com/graphql"
   web:
-    cookies:
+    auth:
+      type: cookies
       domain: ".example.com"
 ```
 
@@ -66,49 +69,66 @@ Connection names are arbitrary. Common conventions:
 
 ## Auth types
 
-Three auth resolution mechanisms exist:
+All auth is declared under a single `auth:` key with a `type` discriminator. Three types are supported.
 
-**Template auth** (API keys, tokens) — `header`, `query`, or `body` fields with jaq expressions:
+**`api_key`** — API keys/tokens injected via `header`, `query`, or `body` templates with jaq expressions:
 
 ```yaml
 connections:
   api:
-    header:
-      Authorization: '"Bearer " + .auth.key'
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
     label: API Key
 ```
 
-**Cookie auth** — extracted from installed browsers via provider skills:
+**`cookies`** — session cookies resolved from the credential store (for stored sessions) or provider skills (Brave, Firefox):
 
 ```yaml
 connections:
   web:
-    cookies:
+    auth:
+      type: cookies
       domain: ".claude.ai"
       names: ["sessionKey"]
 ```
 
-**OAuth** — token refresh and provider-based acquisition:
+**`oauth`** — OAuth 2.0 token refresh and provider-based acquisition:
 
 ```yaml
 connections:
   gmail:
-    oauth:
+    auth:
+      type: oauth
       service: google
       scopes:
         - https://mail.google.com/
 ```
 
+### Resolution algorithm
+
+All auth types follow the same resolution order:
+
+```
+1. Check credential store (credentials.sqlite)
+2. Check provider skills (find_auth_providers)
+3. If optional → skip auth; else → error with help_url
+```
+
+This means stored session cookies from `__secrets__` are found before falling back to browser providers.
+
 ## Cookie identity resolution
 
 Cookie-auth skills should resolve account identity so the graph knows who the session belongs to. Two deterministic paths exist:
 
-**JSON APIs — use `check.identifier` and `check.display` on the connection.** The `check` block handles liveness and identity in one HTTP call using jaq expressions on the JSON response:
+**JSON APIs — use `check.identifier` and `check.display` on the auth block.** The `check` block handles liveness and identity in one HTTP call using jaq expressions on the JSON response:
 
 ```yaml
 connections:
   web:
-    cookies:
+    auth:
+      type: cookies
       domain: ".claude.ai"
       names: ["sessionKey"]
       check:
@@ -149,32 +169,29 @@ Leading by example: `skills/amazon/` (HTML identity via Python), `skills/claude/
 
 Credentials can come from other installed apps (e.g. Mimestream provides Google OAuth tokens, Brave provides browser cookies).
 
-Skill-level `provides:` is a **typed** list: each entry is either `credentials:` (OAuth or API key), `cookies:`, or `tool:` + `via` for discoverable tools.
+Skill-level `provides:` is a **typed** list: each entry is either `tool` (capability routing) or `auth` (auth supply).
 
 OAuth provider (excerpt):
 
 ```yaml
 provides:
-  - credentials:
-      oauth:
-        service: google
-        via: credential_get
-        account_param: account
-        scopes:
-          - https://mail.google.com/
+  - auth: oauth
+    service: google
+    via: credential_get
+    scopes:
+      - https://mail.google.com/
 ```
 
 Cookie provider (excerpt):
 
 ```yaml
 provides:
-  - cookies:
-      via: cookie_get
-      account_param: domain
-      description: "Short human description for discovery"
+  - auth: cookies
+    via: cookie_get
+    description: "Cookies from Brave Browser profiles"
 ```
 
-Consumer skills don't name a specific provider — the runtime discovers installed providers automatically.
+Consumer skills don't name a specific provider — the runtime discovers installed providers automatically via `find_auth_providers(type, scope)`.
 
 Example references:
 

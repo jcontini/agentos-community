@@ -43,8 +43,10 @@ website: https://example.com
 connections:
   api:
     base_url: "https://api.example.com"
-    header:
-      Authorization: '"Bearer " + .auth.key'
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
     label: API Key
     help_url: https://example.com/api-keys
 

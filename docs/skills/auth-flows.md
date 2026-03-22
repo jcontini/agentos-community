@@ -19,16 +19,16 @@ connections:
     base_url: "https://api.example.com"
     auth:
       type: api_key
-      header: { x-api-key: .key }
+      header: { x-api-key: .auth.key }
 
   dashboard:
     base_url: "https://dashboard.example.com"
     auth:
       type: cookies
       domain: ".example.com"
-    login:
-      - sso: google
-      - email_link: true
+      login:
+        - sso: google
+        - email_link: true
 ```
 
 All auth goes under a single `auth:` key with a `type` discriminator (`api_key`, `cookies`, `oauth`). The `login` block declares available login methods. Login operations are Python functions that execute the flow with HTTPX. See `specs/auth-model.md` in the engine repo for the unified auth model, and `specs/sso-credential-bootstrap.md` for the end-to-end bootstrap flow.

@@ -62,4 +62,4 @@ cd ~/dev/agentos
 node scripts/mcp-test.mjs stdio "./target/release/agentos mcp"
 ```
 
-Credential and cookie **providers** use the same `provides:` list with `credentials:` or `cookies:` entries (see [Connections & Auth](connections.md)).
+Credential and cookie **providers** use the same `provides:` list with `auth:` entries (see [Connections & Auth](connections.md)).
