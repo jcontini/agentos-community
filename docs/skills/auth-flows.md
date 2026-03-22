@@ -56,6 +56,18 @@ def get_api_key(*, _call=None, **params):
 
 The engine writes `__secrets__` to the credential store, creates an account entity on the graph, and strips the secrets before the MCP response reaches the agent.
 
+## Cookie resolution chain
+
+When the engine resolves cookie auth for a connection, it follows this order:
+
+1. **Credential store** — check `credentials.sqlite` for a stored cookie matching the issuer (derived from the connection's `base_url`) and the requested `names` filter.
+2. **Providers** — if the store has nothing (or on retry after 401/403), query all installed skills that `provides: - auth: cookies`. Three providers exist today: **Brave** (SQLite cookie DB), **Firefox** (SQLite cookie DB), **Playwright** (persistent Chromium session via CDP).
+3. **Fail** — if no provider can supply the cookies, raise a credential error.
+
+Playwright is the primary provider for cookies acquired through login automation. After a successful login flow, cookies live in Playwright's persistent browser context. The engine can query them via `playwright.cookies` the same way it queries `brave-browser.cookie_get`. The `store_session_cookies` step persists them to the credential store so future runs don't need Playwright.
+
+On 401/403 (or Python exceptions containing `401`, `403`, `unauthorized`, `forbidden`), the engine invalidates the store entry and retries with a fresh provider query. See `connections.md` for the Python exception convention.
+
 ## Key rules
 
 - **Never import Playwright in skill Python code.** Playwright is a separate skill for investigation. Skill operations use `httpx`.

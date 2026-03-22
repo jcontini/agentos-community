@@ -118,6 +118,32 @@ All auth types follow the same resolution order:
 
 This means stored session cookies from `__secrets__` are found before falling back to browser providers.
 
+### Cookie format contract for Python
+
+When a Python function receives `.auth.cookies` (via `args: { cookies: .auth.cookies }` in skill.yaml), the value is a **cookie header string** — e.g. `"name1=val1; name2=val2"`. This is the same format as the HTTP `Cookie` header.
+
+- **`urllib`** — set it directly: `req.add_header("cookie", cookies)` (Chase pattern)
+- **`httpx`** — parse to a dict first: `httpx.Client(cookies=parse_cookie_string(cookies))`
+- **`requests`** — same as httpx: `requests.get(url, cookies=parse_cookie_string(cookies))`
+
+Helper for parsing:
+
+```python
+def _parse_cookie_string(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        return {
+            k.strip(): v.strip()
+            for part in raw.split(";")
+            if "=" in part
+            for k, _, v in [part.partition("=")]
+        }
+    return {}
+```
+
+Individual cookie values are also available as `.auth.{cookie_name}` — e.g. `.auth.sessionKey` — for operations that need specific cookies by name rather than the full header string.
+
 ## Cookie identity resolution
 
 Cookie-auth skills should resolve account identity so the graph knows who the session belongs to. Two deterministic paths exist:
@@ -193,10 +219,36 @@ provides:
 
 Consumer skills don't name a specific provider — the runtime discovers installed providers automatically via `find_auth_providers(type, scope)`.
 
+Three cookie providers are available: **Brave** (reads SQLite cookie DB), **Firefox** (reads SQLite cookie DB), and **Playwright** (reads from persistent Chromium session via CDP). Playwright is the primary provider for cookies acquired through login automation flows.
+
 Example references:
 
 - OAuth consumer: `skills/gmail/skill.yaml`
 - OAuth provider: `skills/mimestream/skill.yaml`
 - Cookie consumer: `skills/claude/skill.yaml`
-- Cookie provider: `skills/brave-browser/skill.yaml`
+- Cookie provider (browser DB): `skills/brave-browser/skill.yaml`
+- Cookie provider (automation): `skills/playwright/skill.yaml`
 - Multi-connection: `skills/goodreads/skill.yaml` (graphql + web)
+
+## Auth failure convention for Python skills
+
+When a Python skill detects an authentication failure from the upstream API (expired session, invalid token, etc.), it should **raise an exception** rather than returning an error dict. The exception message must contain one of: `401`, `403`, `unauthorized`, or `forbidden`. This allows the engine's cookie retry mechanism to detect the failure and retry with fresh cookies from a provider.
+
+```python
+# Bad — engine can't detect auth failure, no retry happens
+def get_api_keys(cookies: str) -> dict:
+    resp = client.get("/api/keys")
+    if resp.status_code == 403:
+        return {"error": "Session expired"}
+
+# Good — engine detects "403" in the exception, triggers retry
+def get_api_keys(cookies: str) -> dict:
+    resp = client.get("/api/keys")
+    if resp.status_code in (401, 403):
+        raise Exception(f"Unauthorized (HTTP {resp.status_code}): session expired")
+    data = resp.json()
+    if "error" in data and "expired" in data["error"].lower():
+        raise Exception("Unauthorized: dashboard session expired")
+```
+
+This convention applies to any Python skill that consumes cookie auth (`.auth.cookies`). The engine's retry path invalidates the cookie cache and the credential store skip flag, then re-runs the operation with fresh cookies from a provider.
