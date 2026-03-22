@@ -8,14 +8,16 @@ connections:
   public:
     description: "Public Amazon pages and autocomplete API — no auth needed"
   web:
+    description: "Amazon account — orders, recommendations, account details"
     base_url: "https://www.amazon.com"
     auth:
       type: cookies
       domain: ".amazon.com"
-      names: ["x-main", "session-id", "session-token", "ubid-main", "at-main", "sess-at-main", "i18n-prefs"]
       check:
         url: "https://www.amazon.com/gp/css/homepage.html"
         expect_status: 200
+    label: Amazon Session
+    help_url: https://www.amazon.com/ap/signin
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
@@ -23,38 +25,35 @@ connections:
 
 adapters:
   order:
-    # --- Canonical fields (rendered in previews / markdown) ---
     id: .order_id
-    name: '("Order " + .order_date + " — " + .total)'
+    name: '("Order " + (.order_date // "Unknown") + " — " + (.total // ""))'
     text: .status
     url: .url
     datePublished: .order_date
-    # --- Skill-specific data ---
     data.total: .total
     data.total_amount: .total_amount
     data.item_count: .item_count
+    data.status: .status
     data.delivery_date: .delivery_date
+    data.shipping_address: .shipping_address
 
     contains:
       product[]:
         _source: '.items // []'
-        # --- Canonical fields ---
         id: .asin
         name: .title
         url: .url
         image: .image_url
-        # --- Skill-specific data ---
         data.price: .price
+        data.quantity: .quantity
 
   product:
-    # --- Canonical fields (rendered in previews / markdown) ---
     id: .asin
     name: .title
     text: .description
     url: .url
     image: .image_url
     author: .brand
-    # --- Skill-specific data ---
     data.price: .price
     data.price_amount: .price_amount
     data.rating: .rating
@@ -71,6 +70,7 @@ adapters:
     name: .display
     issuer: .issuer
     data.marketplace_id: .marketplace_id
+    data.is_prime: .is_prime
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

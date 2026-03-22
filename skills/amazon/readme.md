@@ -9,8 +9,12 @@ Search products, get details, and access your Amazon account. No API keys — us
 - **`search_products`** — Full product search results with ASIN, title, price, rating, review count, images, and Prime badge. Parsed from search result HTML.
 - **`get_product`** — Detailed product page data: title, price, brand, description, rating, images, categories, availability. Parsed from product detail HTML including Amazon's `a-state` embedded data.
 
+### Order History (requires session cookies)
+- **`list_orders`** — List recent orders with date, total, status, and product items. Supports time filters: `last30`, `months-6`, `year-2024`, `year-2023`, etc.
+- **`get_order`** — Detailed order info: items with quantities, shipping address, delivery status.
+
 ### Account (requires session cookies)
-- **`check_session`** — Verify your Amazon session is active
+- **`check_session`** — Verify your Amazon session is active and identify the logged-in account. Returns display name, customer ID, marketplace, and Prime status.
 
 ## Setup
 
@@ -22,9 +26,25 @@ Search products, get details, and access your Amazon account. No API keys — us
 
 ### Authenticated Operations
 
-1. Sign in to [amazon.com](https://www.amazon.com) in a browser whose cookies are visible to an installed cookie provider
-2. The engine obtains `.amazon.com` cookies automatically
+1. Sign in to [amazon.com](https://www.amazon.com) in a browser whose cookies are visible to an installed cookie provider (Brave, Firefox, or Playwright)
+2. The engine obtains `.amazon.com` cookies automatically — the full cookie jar is passed, including the auth-tier tokens (`at-main`, `sess-at-main`, `sst-main`) needed for account pages
 3. Sessions last weeks to months
+
+## Graph Model
+
+| Entity | Represents | Key Fields |
+|--------|------------|------------|
+| **account** | Amazon account | customer_id, display, issuer, marketplace_id, is_prime |
+| **order** | Purchase order | order_id, order_date, total, status, delivery_date, items |
+| **product** | Amazon product | asin, title, price, brand, rating, image, prime, availability |
+
+### Relationships
+
+```
+Account --placed--> Order --contains--> Product
+```
+
+Orders contain nested product entities. Each product is identified by ASIN and linked to the order. When imported to the graph, orders are connected to the account and products are connected to the orders.
 
 ## Examples
 
@@ -32,18 +52,6 @@ Search products, get details, and access your Amazon account. No API keys — us
 # Autocomplete suggestions (public JSON API — most reliable)
 run({ skill: "amazon", tool: "search_suggestions",
   params: { query: "wireless head" } })
-
-# Suggestions in a specific department
-run({ skill: "amazon", tool: "search_suggestions",
-  params: { query: "protein", department: "grocery" } })
-
-# Personalized ranking
-run({ skill: "amazon", tool: "search_suggestions",
-  params: { query: "laptop", personalized: true } })
-
-# Different marketplace
-run({ skill: "amazon", tool: "search_suggestions",
-  params: { query: "headphones", marketplace: "UK" } })
 
 # Full product search
 run({ skill: "amazon", tool: "search_products",
@@ -53,59 +61,36 @@ run({ skill: "amazon", tool: "search_products",
 run({ skill: "amazon", tool: "get_product",
   params: { asin: "B0BQPNMXQV" } })
 
-# Check session
+# Check session / identify account
 run({ skill: "amazon", tool: "check_session" })
+
+# List recent orders (last 6 months)
+run({ skill: "amazon", tool: "list_orders",
+  params: { filter: "months-6" } })
+
+# List orders from a specific year
+run({ skill: "amazon", tool: "list_orders",
+  params: { filter: "year-2024" } })
+
+# Get order details
+run({ skill: "amazon", tool: "get_order",
+  params: { order_id: "114-4501818-4961814" } })
 ```
 
-## Data Model
+## Cookie Architecture
 
-| Entity | Represents | Key Fields |
-|--------|------------|------------|
-| **result** | Search keyword suggestion | value, search_url, strategy, department, marketplace |
-| **product** | Amazon product | asin, title, price, brand, rating, ratings_count, image, prime, availability, categories |
+Amazon uses tiered cookie-based authentication:
 
-## Autocomplete API Reference
+| Cookie | Purpose | Required For |
+|--------|---------|-------------|
+| `session-id`, `session-token`, `ubid-main` | Basic session | Browsing, search |
+| `x-main` | "Remember me" persistence | Session continuity |
+| `at-main` (`Atza\|...`) | Authentication token | Account pages, orders |
+| `sess-at-main` | Session auth complement | Account pages, orders |
+| `sst-main` (`Sst1\|...`) | SSO state token | Cross-service auth |
+| `sso-state-main` (`Xdsso\|...`) | SSO state persistence | Cross-service auth |
 
-The search suggestions endpoint is Amazon's public autocomplete API — clean JSON, no auth, no scraping.
-
-**Endpoint:** `GET https://completion.amazon.{tld}/api/2017/suggestions`
-
-### Marketplaces
-
-| Code | Domain | Status |
-|------|--------|--------|
-| US | amazon.com | Working |
-| UK | amazon.co.uk | Working |
-| DE | amazon.de | Working |
-| JP | amazon.co.jp | Working |
-| CA | amazon.ca | Working |
-| AU | amazon.com.au | Working |
-| ES | amazon.es | Working |
-| IT | amazon.it | Working |
-| MX | amazon.com.mx | Working |
-| BR | amazon.com.br | Working |
-| NL | amazon.nl | Working |
-| SE | amazon.se | Working |
-| SG | amazon.sg | Working |
-| AE | amazon.ae | Working |
-| SA | amazon.sa | Working |
-| TR | amazon.com.tr | Working |
-| BE | amazon.com.be | Working |
-| EG | amazon.eg | Working |
-| FR | amazon.fr | Empty results |
-| PL | amazon.pl | Empty results |
-| IN | amazon.in | 502 |
-
-### Departments
-
-`all` (default), `electronics`, `books`, `sports`, `toys`, `fashion`, `grocery`, `beauty`, `automotive`, `garden`, `videogames`, `tools`, `baby`, `office`, `pets`, `music`, `appliances`, `kitchen`, `movies`, `software`, `health`, `jewelry`, `watches`, `shoes`, `industrial`, `arts`, `smart-home`, `kindle`
-
-Invalid aliases silently return empty results (no errors).
-
-### Ranking Strategies
-
-- **Organic** (default) — `strategyId: "organic"`. Standard keyword suggestions.
-- **Personalized** (`personalized: true`) — `strategyId: "p13n-expert-pd-ops-ranker"`. Uses population-level signals for ranking. Different suggestion order and sometimes different keywords.
+The skill passes the **full cookie jar** for `.amazon.com` (no name filtering) to ensure all auth-tier tokens are included. The homepage (`/gp/css/homepage.html`) works with basic session cookies, but order history and account pages require the full auth set.
 
 ## Technical Details
 
@@ -116,6 +101,13 @@ Invalid aliases silently return empty results (no errors).
 - Amazon's Lightsaber bot detection monitors client hints, session behavior, and fingerprinting
 - Recommended: 2-3 second delays between HTML scraping requests
 - If blocked, `search_suggestions` remains available as a reliable fallback
+
+### Order History Page
+
+The order history page is **pure server-rendered HTML** — no hidden JSON or GraphQL API exists for orders. The page uses `.order-card` containers with a consistent structure:
+- Header: order date, total, ship-to, order ID
+- Body: delivery status and product items with ASIN links and images
+- Amazon's SiegeClientSideDecryption may encrypt some content in the HTML response, but core order data is in cleartext
 
 ### ASIN Format
 
@@ -138,4 +130,4 @@ No JSON-LD or GraphQL endpoints are exposed publicly.
 - Always returns exactly 10 autocomplete suggestions (server-side cap, `limit` param is ignored)
 - HTML scraping operations may be blocked by Amazon's bot detection under heavy use
 - Amazon does not provide a public JSON API for product search or details
-- Order history requires authenticated session cookies (coming soon)
+- Order history parsing relies on HTML structure which Amazon may change

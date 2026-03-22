@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Amazon skill — search suggestions, product search, and product details.
+Amazon skill — search, products, order history, and account identity.
 
 Uses Amazon's public completion.amazon.com API for keyword suggestions and
-httpx with HTTP/2 for product page parsing. No API keys required.
+httpx with HTTP/2 for HTML page parsing. Order history and account operations
+use session cookies from a browser cookie provider. No API keys required.
 """
 
 import html as html_lib
@@ -15,6 +16,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import httpx
+from bs4 import BeautifulSoup, Tag
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MARKETPLACE & DEPARTMENT REGISTRIES
@@ -76,7 +78,7 @@ DEPARTMENTS: dict[str, str] = {
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
 )
 
 
@@ -451,12 +453,39 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ORDER HISTORY — authenticated HTML scraping
+# ORDER HISTORY — authenticated HTML scraping with BeautifulSoup
 # ═══════════════════════════════════════════════════════════════════════════════
+
+BASE = "https://www.amazon.com"
+
+AUTH_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Cache-Control": "max-age=0",
+    "Device-Memory": "8",
+    "Downlink": "10",
+    "Dpr": "2",
+    "Ect": "4g",
+    "Rtt": "50",
+    "Sec-Ch-Device-Memory": "8",
+    "Sec-Ch-Dpr": "2",
+    "Sec-Ch-Ua": '"Chromium";v="145", "Not:A-Brand";v="99"',
+    "Sec-Ch-Ua-Full-Version-List": '"Chromium";v="145.0.7632.6", "Not:A-Brand";v="99.0.0.0"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Ch-Viewport-Width": "1512",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Viewport-Width": "1512",
+}
 
 
 def _cookie(ctx: dict[str, Any]) -> str | None:
-    """Extract cookie header from the runtime params context."""
     c = (ctx.get("auth") or {}).get("cookies") or ""
     return c if c else None
 
@@ -471,18 +500,120 @@ def _require_cookies(params: dict[str, Any] | None, op: str) -> str:
     return cookie_header
 
 
+def _parse_cookie_header(cookie_header: str) -> dict[str, str]:
+    """Parse a raw Cookie header string into a dict for httpx's cookie jar."""
+    cookies: dict[str, str] = {}
+    for pair in cookie_header.split(";"):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            cookies[k.strip()] = v.strip()
+    return cookies
+
+
+SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
+
+
 def _auth_client(cookie_header: str) -> httpx.Client:
+    headers = dict(AUTH_HEADERS)
+    headers["Host"] = "www.amazon.com"
+    cookies = {
+        k: v for k, v in _parse_cookie_header(cookie_header).items()
+        if k not in SKIP_COOKIES
+    }
     return httpx.Client(
         http2=True,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cookie": cookie_header,
-        },
+        headers=headers,
+        cookies=cookies,
         follow_redirects=True,
         timeout=30.0,
     )
+
+
+def _warm_session(client: httpx.Client) -> None:
+    """Visit homepage first to provision session cookies and avoid bot detection on sensitive pages."""
+    client.get(BASE, headers={"Sec-Fetch-Site": "none"})
+    time.sleep(1.0)
+
+
+def _is_login_redirect(resp: httpx.Response, body: str) -> bool:
+    if "ap/signin" in str(resp.url):
+        return True
+    if "form[name='signIn']" in body[:5000]:
+        return True
+    return "ap_email" in body[:3000] or "signIn" in body[:3000]
+
+
+def _soup(body: str) -> BeautifulSoup:
+    return BeautifulSoup(body, "html.parser")
+
+
+def _select(tag: Tag | BeautifulSoup, selectors: list[str]) -> list[Tag]:
+    for sel in selectors:
+        result = tag.select(sel)
+        if result:
+            return result
+    return []
+
+
+def _select_one(tag: Tag | BeautifulSoup, selectors: list[str]) -> Tag | None:
+    for sel in selectors:
+        result = tag.select_one(sel)
+        if result:
+            return result
+    return None
+
+
+def _text(tag: Tag | None) -> str | None:
+    if tag is None:
+        return None
+    t = tag.get_text(strip=True)
+    return t if t else None
+
+
+# ─── CSS selectors (derived from amazon-orders library) ──────────────────────
+
+ORDER_CARD_SEL = ["div.order-card", "div.order"]
+ORDER_ID_SEL = [
+    "[data-component='orderId']",
+    ".order-date-invoice-item :is(bdi, span)[dir='ltr']",
+    ".yohtmlc-order-id :is(bdi, span)[dir='ltr']",
+    ":is(bdi, span)[dir='ltr']",
+]
+ORDER_DATE_SEL = [
+    "[data-component='orderDate']",
+    "span.order-date-invoice-item",
+    "[data-component='briefOrderInfo'] div.a-column",
+]
+ORDER_TOTAL_SEL = [
+    "div.yohtmlc-order-total span.value",
+    "div.order-header div.a-column.a-span2",
+    "div.order-header div.a-col-left .a-span9",
+]
+ITEM_SEL = [
+    "[data-component='purchasedItems'] .a-fixed-left-grid",
+    "div:has(> div.yohtmlc-item)",
+    ".item-box",
+]
+ITEM_TITLE_SEL = [
+    "[data-component='itemTitle']",
+    ".yohtmlc-item a",
+    ".yohtmlc-product-title",
+]
+ITEM_LINK_SEL = [
+    "[data-component='itemTitle'] a",
+    ".yohtmlc-item a",
+    ".yohtmlc-product-title a",
+]
+ITEM_IMG_SEL = ["a img"]
+ITEM_PRICE_SEL = [
+    "[data-component='unitPrice'] .a-text-price :not(.a-offscreen)",
+    ".yohtmlc-item .a-color-price",
+]
+SHIPMENT_STATUS_SEL = [
+    "span.delivery-box__primary-text",
+    ".yohtmlc-shipment-status-primaryText",
+]
 
 
 def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -492,17 +623,22 @@ def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     order_filter = (params.get("params") or {}).get("filter") or "last30"
     page = int((params.get("params") or {}).get("page") or 1)
 
-    base = "https://www.amazon.com"
-    url_params: dict[str, str] = {"orderFilter": order_filter}
+    url_params: dict[str, str] = {"timeFilter": order_filter}
     if page > 1:
         url_params["startIndex"] = str((page - 1) * 10)
 
     with _auth_client(cookie_header) as client:
-        resp = client.get(f"{base}/gp/your-account/order-history", params=url_params)
+        _warm_session(client)
+
+        resp = client.get(
+            f"{BASE}/your-orders/orders",
+            params=url_params,
+            headers={"Referer": f"{BASE}/gp/homepage.html"},
+        )
         resp.raise_for_status()
         body = resp.text
 
-    if "ap_email" in body or "signIn" in body[:3000]:
+    if _is_login_redirect(resp, body):
         raise RuntimeError(
             "Amazon redirected to login — session cookies are expired or invalid. "
             "Sign in at amazon.com again."
@@ -512,77 +648,57 @@ def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
 
 
 def _parse_order_history(body: str) -> list[dict[str, Any]]:
+    soup = _soup(body)
     orders: list[dict[str, Any]] = []
 
-    # Each order card is in a .order-card or similar container with an order ID
-    order_blocks = re.split(
-        r'(?=data-component="orderCard"|id="orderCard_)',
-        body,
-    )
+    order_cards = _select(soup, ORDER_CARD_SEL)
 
-    for block in order_blocks:
-        order_id_m = re.search(r"(\d{3}-\d{7}-\d{7})", block)
-        if not order_id_m:
+    for card in order_cards:
+        order_id_tag = _select_one(card, ORDER_ID_SEL)
+        order_id = _text(order_id_tag)
+        if order_id:
+            order_id = order_id.strip().lstrip("#").strip()
+        if not order_id or not re.match(r"\d{3}-\d{7}-\d{7}", order_id):
             continue
-        order_id = order_id_m.group(1)
 
-        date_m = re.search(
-            r"(?:Order placed|Ordered on)\s*(?:</[^>]+>\s*)*([A-Z][a-z]+ \d{1,2}, \d{4})",
-            block, re.I,
-        )
-        order_date = date_m.group(1) if date_m else None
+        order_date = None
+        total = None
+        for li in card.select("li.order-header__header-list-item"):
+            li_text = _text(li) or ""
+            if "Order placed" in li_text:
+                order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", li_text).strip()
+            elif li_text.lstrip().startswith("Total"):
+                m = re.search(r"\$[\d,.]+", li_text)
+                total = m.group() if m else None
 
-        total_m = re.search(r"(?:Order Total|Grand Total|Total)[^$]*(\$[\d,.]+)", block, re.I)
-        total = total_m.group(1) if total_m else None
+        if not order_date:
+            date_tag = _select_one(card, ORDER_DATE_SEL)
+            order_date = _text(date_tag)
+            if order_date:
+                order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", order_date).strip()
+                order_date = re.sub(r"\s*Order #.*$", "", order_date).strip()
 
-        status_m = re.search(
-            r"(?:Delivered|Arriving|Shipped|Refunded|Cancelled|Returned|Out for delivery)[^<]*",
-            block, re.I,
-        )
-        status = _clean(status_m.group()) if status_m else None
+        if not total:
+            total_tag = _select_one(card, ORDER_TOTAL_SEL)
+            total_text = _text(total_tag)
+            if total_text:
+                m = re.search(r"\$[\d,.]+", total_text)
+                total = m.group() if m else total_text.strip()
 
-        delivery_m = re.search(
-            r"(?:Delivered|Arriving)\s+([A-Z][a-z]+ \d{1,2}(?:,\s*\d{4})?)",
-            block, re.I,
-        )
-        delivery_date = delivery_m.group(1) if delivery_m else None
+        status = None
+        status_tag = _select_one(card, SHIPMENT_STATUS_SEL)
+        if status_tag:
+            status = _clean(_text(status_tag))
 
-        # Extract items from the order
-        items: list[dict[str, Any]] = []
-        for item_m in re.finditer(r'/(?:dp|gp/product)/([A-Z0-9]{10})', block):
-            item_asin = item_m.group(1)
-            # Look for title near the ASIN link
-            link_pos = item_m.start()
-            nearby = block[max(0, link_pos - 200):link_pos + 500]
-            title_m = re.search(r'aria-label="([^"]+)"', nearby)
-            if not title_m:
-                title_m = re.search(r'title="([^"]+)"', nearby)
-            if not title_m:
-                title_m = re.search(r'>([^<]{10,120})</a>', nearby)
-            item_title = _clean(title_m.group(1)) if title_m else None
+        delivery_date = None
+        if status:
+            dm = re.search(
+                r"(?:Delivered|Arriving)\s+([A-Z][a-z]+ \d{1,2}(?:,\s*\d{4})?)",
+                status, re.I,
+            )
+            delivery_date = dm.group(1) if dm else None
 
-            img_m = re.search(r'<img[^>]+src="(https://m\.media-amazon\.com/images/I/[^"]+)"', nearby)
-            item_image = img_m.group(1) if img_m else None
-
-            price_m = re.search(r'\$[\d,.]+', nearby)
-            item_price = price_m.group() if price_m else None
-
-            if item_title or item_asin:
-                items.append({
-                    "asin": item_asin,
-                    "title": item_title,
-                    "url": f"https://www.amazon.com/dp/{item_asin}",
-                    "image_url": item_image,
-                    "price": item_price,
-                })
-
-        # Deduplicate items by ASIN
-        seen_asins: set[str] = set()
-        unique_items: list[dict[str, Any]] = []
-        for item in items:
-            if item["asin"] not in seen_asins:
-                seen_asins.add(item["asin"])
-                unique_items.append(item)
+        items = _parse_order_items(card)
 
         orders.append({
             "order_id": order_id,
@@ -591,12 +707,61 @@ def _parse_order_history(body: str) -> list[dict[str, Any]]:
             "total_amount": _parse_price(total),
             "status": status,
             "delivery_date": delivery_date,
-            "item_count": len(unique_items),
-            "items": unique_items,
-            "url": f"https://www.amazon.com/gp/your-account/order-details?orderID={order_id}",
+            "item_count": len(items),
+            "items": items,
+            "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
         })
 
     return orders
+
+
+def _parse_order_items(card: Tag) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    seen_asins: set[str] = set()
+
+    item_tags = _select(card, ITEM_SEL)
+    for item_tag in item_tags:
+        link_tag = _select_one(item_tag, ITEM_LINK_SEL)
+        href = link_tag.get("href", "") if link_tag else ""
+        asin_m = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", str(href))
+        asin = asin_m.group(1) if asin_m else None
+
+        if not asin or asin in seen_asins:
+            continue
+        seen_asins.add(asin)
+
+        title_tag = _select_one(item_tag, ITEM_TITLE_SEL)
+        title = _clean(_text(title_tag))
+
+        img_tag = _select_one(item_tag, ITEM_IMG_SEL)
+        image_url = img_tag.get("src") if img_tag else None
+
+        price_tag = _select_one(item_tag, ITEM_PRICE_SEL)
+        price = _text(price_tag)
+
+        items.append({
+            "asin": asin,
+            "title": title,
+            "url": f"{BASE}/dp/{asin}",
+            "image_url": str(image_url) if image_url else None,
+            "price": price,
+        })
+
+    if not items:
+        for asin_m in re.finditer(r'/(?:dp|gp/product)/([A-Z0-9]{10})', str(card)):
+            asin = asin_m.group(1)
+            if asin in seen_asins:
+                continue
+            seen_asins.add(asin)
+            items.append({
+                "asin": asin,
+                "title": None,
+                "url": f"{BASE}/dp/{asin}",
+                "image_url": None,
+                "price": None,
+            })
+
+    return items
 
 
 def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -607,84 +772,58 @@ def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
     if not order_id:
         raise ValueError("order_id is required")
 
-    base = "https://www.amazon.com"
     with _auth_client(cookie_header) as client:
+        _warm_session(client)
+
         resp = client.get(
-            f"{base}/gp/your-account/order-details",
+            f"{BASE}/gp/your-account/order-details",
             params={"orderID": order_id},
+            headers={"Referer": f"{BASE}/your-orders/orders"},
         )
         resp.raise_for_status()
         body = resp.text
 
-    if "ap_email" in body or "signIn" in body[:3000]:
+    if _is_login_redirect(resp, body):
         raise RuntimeError("Amazon redirected to login — session cookies expired.")
 
     return _parse_order_detail(body, order_id)
 
 
 def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
-    date_m = re.search(
-        r"(?:Order placed|Ordered on)\s*(?:</[^>]+>\s*)*([A-Z][a-z]+ \d{1,2}, \d{4})",
-        body, re.I,
-    )
-    order_date = date_m.group(1) if date_m else None
+    soup = _soup(body)
 
-    total_m = re.search(r"(?:Order Total|Grand Total)[^$]*(\$[\d,.]+)", body, re.I)
-    total = total_m.group(1) if total_m else None
+    container = _select_one(soup, ["div#orderDetails", "div#ordersContainer"]) or soup
 
-    status_m = re.search(
-        r"(?:Delivered|Arriving|Shipped|Refunded|Cancelled|Returned|Out for delivery)[^<]*",
-        body, re.I,
-    )
-    status = _clean(status_m.group()) if status_m else None
+    date_tag = _select_one(container, ORDER_DATE_SEL)
+    order_date = _text(date_tag)
+    if order_date:
+        order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", order_date).strip()
 
-    delivery_m = re.search(
-        r"(?:Delivered|Arriving)\s+([A-Z][a-z]+ \d{1,2}(?:,\s*\d{4})?)",
-        body, re.I,
-    )
-    delivery_date = delivery_m.group(1) if delivery_m else None
+    total = None
+    total_tag = _select_one(container, ORDER_TOTAL_SEL)
+    total_text = _text(total_tag)
+    if total_text:
+        m = re.search(r"\$[\d,.]+", total_text)
+        total = m.group() if m else None
 
-    # Shipping address
-    address_m = re.search(
-        r"(?:Shipping Address|Ship to)\s*(?:</[^>]+>\s*)*(.*?)(?=</div|Payment)",
-        body, re.I | re.S,
-    )
-    shipping_address = _clean(address_m.group(1)) if address_m else None
+    status_tag = _select_one(container, SHIPMENT_STATUS_SEL)
+    status = _clean(_text(status_tag))
 
-    # Items
-    items: list[dict[str, Any]] = []
-    seen_asins: set[str] = set()
-    for asin_m in re.finditer(r'/(?:dp|gp/product)/([A-Z0-9]{10})', body):
-        asin = asin_m.group(1)
-        if asin in seen_asins:
-            continue
-        seen_asins.add(asin)
+    delivery_date = None
+    if status:
+        dm = re.search(
+            r"(?:Delivered|Arriving)\s+([A-Z][a-z]+ \d{1,2}(?:,\s*\d{4})?)",
+            status, re.I,
+        )
+        delivery_date = dm.group(1) if dm else None
 
-        pos = asin_m.start()
-        nearby = body[max(0, pos - 300):pos + 600]
+    addr_tag = _select_one(container, [
+        "div.displayAddressDiv",
+        "[data-component='shippingAddress']",
+    ])
+    shipping_address = _clean(_text(addr_tag))
 
-        title_m = re.search(r'aria-label="([^"]+)"', nearby)
-        if not title_m:
-            title_m = re.search(r'>([^<]{10,150})</a>', nearby)
-        item_title = _clean(title_m.group(1)) if title_m else None
-
-        img_m = re.search(r'<img[^>]+src="(https://m\.media-amazon\.com/images/I/[^"]+)"', nearby)
-        item_image = img_m.group(1) if img_m else None
-
-        price_m = re.search(r'\$[\d,.]+', nearby)
-        item_price = price_m.group() if price_m else None
-
-        qty_m = re.search(r'[Qq]ty:\s*(\d+)', nearby)
-        quantity = int(qty_m.group(1)) if qty_m else 1
-
-        items.append({
-            "asin": asin,
-            "title": item_title,
-            "url": f"https://www.amazon.com/dp/{asin}",
-            "image_url": item_image,
-            "price": item_price,
-            "quantity": quantity,
-        })
+    items = _parse_order_items(container)
 
     return {
         "order_id": order_id,
@@ -696,7 +835,7 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
         "shipping_address": shipping_address,
         "item_count": len(items),
         "items": items,
-        "url": f"https://www.amazon.com/gp/your-account/order-details?orderID={order_id}",
+        "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
     }
 
 
@@ -706,15 +845,13 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
 
 
 def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Check session liveness and extract account identity from the Your Account page.
-
-    Extracts: display name from nav bar, customerId from embedded JS data,
-    session ID, and marketplace ID. Email is not exposed on this page.
-    """
+    """Check session liveness and extract account identity from the Your Account page."""
     params = params or {}
     cookie_header = _require_cookies(params, "whoami")
-    client = _auth_client(cookie_header)
-    resp = client.get("https://www.amazon.com/gp/css/homepage.html")
+
+    with _auth_client(cookie_header) as client:
+        _warm_session(client)
+        resp = client.get(f"{BASE}/gp/css/homepage.html")
 
     if resp.status_code != 200:
         return {"authenticated": False, "status_code": resp.status_code}
@@ -732,6 +869,7 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
     )
     customer_id_match = re.search(r'"customerId"\s*:\s*"([A-Z0-9]+)"', body)
     marketplace_match = re.search(r"ue_mid\s*=\s*'([^']+)'", body)
+    prime_match = re.search(r"isPrimeMember[=:]\s*['\"]?true", body, re.I)
 
     display = (
         name_match.group(1).strip() if name_match
@@ -747,7 +885,7 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
         "customer_id": customer_id or display,
         "display": display,
         "marketplace_id": marketplace_id,
-        "status_code": resp.status_code,
+        "is_prime": prime_match is not None,
     }
 
 
