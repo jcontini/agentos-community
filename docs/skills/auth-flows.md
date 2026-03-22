@@ -1,6 +1,6 @@
 # Auth Flows
 
-When a skill needs credentials from a web dashboard (API keys, session tokens), the flow is: **discover with Playwright, implement with HTTPX**.
+When a skill needs credentials from a web dashboard (API keys, session tokens), the flow is: **discover with Playwright, implement with HTTPX**. For steps that HTTPX can't replay (native form POSTs, complex redirect chains), the agent uses Playwright for that step and HTTPX for everything after.
 
 ## The pattern
 
@@ -55,6 +55,62 @@ The engine writes `__secrets__` to the credential store, creates an account enti
 
 - **Never import Playwright in skill Python code.** Playwright is a separate skill for investigation. Skill operations use `httpx`.
 - **Never expose secrets in `__result__`.** Secrets go in `__secrets__` only. The agent sees masked versions via `metadata.masked`.
-- **Use `_call` for cross-skill dispatch.** Need Gmail to check for a magic link? `_call("gmail.search_emails", {"query": "from:example.com subject:verify"})`. Need Google cookies? `_call("brave-browser.cookie_get", {"domain": ".google.com"})`.
+- **`_call` is same-skill only.** It dispatches to sibling operations within the same skill (e.g. Gmail's `list_emails` calling `get_email`). It cannot call operations in other skills.
+- **Cross-skill coordination goes through the agent.** If a login flow needs email access, the operation yields back to the agent (see below), and the agent uses whatever email capability is available.
 
-For the full reverse engineering methodology, see [Auth & Runtime](../reverse-engineering/3-auth/README.md).
+## Agent-in-the-loop auth flows
+
+Some login flows require input the skill can't obtain on its own — a verification code from email, an SMS code, or user approval. These flows must **yield back to the agent** rather than trying to handle the dependency internally.
+
+### Why not handle it in Python?
+
+- `_call` is same-skill only — Python can't call `gmail.search_emails` from inside `exa.py`
+- Hardcoding a specific email skill (Gmail) couples the skill to that provider — what if the user uses Mimestream?
+- Blocking in Python for 60 seconds while polling gives the agent no visibility or control
+
+### The multi-step pattern
+
+Split the flow so the agent orchestrates between HTTPX operations and Playwright when needed:
+
+```
+Agent calls skill.send_login_code({ email })
+  → Python/HTTPX: CSRF + trigger verification email
+  → Returns: { status: "code_sent", hint: "..." }
+
+Agent checks email (any provider) and extracts the code
+
+Agent uses Playwright to complete login (if HTTPX can't replay the code submission)
+  → Navigate to login page, type email, submit, type code, submit
+  → Extract cookies from browser
+
+Agent calls skill.store_session_cookies({ email, session_token, ... })
+  → Python/HTTPX: validates session, stores via __secrets__
+```
+
+The `hint` field tells the agent what to search for (e.g. "subject 'Sign in to Exa Dashboard' from exa.ai"). The agent knows how to search email — it picks the right provider and extracts the code.
+
+**Why Playwright for the code submission?** Some auth implementations (e.g. Exa's NextAuth) submit verification codes via a native HTML form POST that HTTPX cannot replay — the server-side handling differs from a programmatic POST. The fetch interceptor captures nothing, but the browser navigates successfully. When this happens, use Playwright for the form submission step and HTTPX for everything else.
+
+### When to use this pattern
+
+- Email verification codes (Exa, any NextAuth email provider)
+- SMS/TOTP verification
+- OAuth consent that requires user approval
+- Any flow where the skill needs external input it can't obtain via `_call`
+- Any step where HTTPX replay fails but the browser works (native form POSTs, complex redirect chains)
+
+### Example: Exa
+
+See `skills/exa/exa.py`:
+- `send_login_code` — triggers the verification email (HTTPX)
+- `store_session_cookies` — validates and stores browser-extracted session cookies (HTTPX)
+- The agent uses Playwright between these two operations to enter the code and complete login
+
+### Future: session-scoped state
+
+Passing CSRF tokens through params works but is noisy. The target is session-scoped temporary storage (tied to the MCP/agent session) so Python can write state in step 1 and read it in step 2 without the agent seeing the plumbing. See the engine roadmap for "Session-scoped state for auth flows."
+
+For the full reverse engineering methodology, see:
+- [Auth & Runtime](../reverse-engineering/3-auth/README.md) — credential bootstrap lifecycle, network interception, cookie mechanics, CSRF patterns, web navigation
+- [NextAuth.js guide](../reverse-engineering/3-auth/nextauth.md) — vendor-specific patterns for NextAuth/Auth.js sites
+- [WorkOS guide](../reverse-engineering/3-auth/workos.md) — vendor-specific patterns for WorkOS-based auth

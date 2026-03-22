@@ -19,6 +19,15 @@ connections:
     header: { x-api-key: .auth.key }
     label: API Key
     help_url: https://dashboard.exa.ai/api-keys
+
+  dashboard:
+    base_url: "https://dashboard.exa.ai"
+    cookies:
+      domain: ".exa.ai"
+      names: ["next-auth.session-token"]
+    login:
+      - email_code: true
+      - sso: google
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -49,9 +58,107 @@ adapters:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
+  # ─── Auth & dashboard ─────────────────────────────────────────────────────
+  send_login_code:
+    description: "Trigger a verification code email — agent then uses Playwright to complete login"
+    returns:
+      status: string
+      email: string
+      hint: string
+    connection: dashboard
+    params:
+      email: { type: string, required: true, description: "Email address to send the verification code to" }
+    python:
+      module: ./exa.py
+      function: send_login_code
+      args:
+        email: .params.email
+      timeout: 30
+
+  store_session_cookies:
+    description: "Store browser-extracted session cookies after Playwright login"
+    returns:
+      status: string
+      identifier: string
+      issuer: string
+      user_id: string
+      team: string
+    connection: dashboard
+    params:
+      email: { type: string, required: true, description: "Email address of the authenticated user" }
+      session_token: { type: string, required: true, description: "next-auth.session-token cookie value from Playwright" }
+      cf_clearance: { type: string, description: "Cloudflare cf_clearance cookie value (optional)" }
+    python:
+      module: ./exa.py
+      function: store_session_cookies
+      args:
+        email: .params.email
+        session_token: .params.session_token
+        cf_clearance: .params.cf_clearance
+      timeout: 30
+
+  get_api_keys:
+    description: List API keys from the Exa dashboard — extracts and stores the first enabled key
+    returns:
+      api_keys: array
+      count: integer
+    connection: dashboard
+    python:
+      module: ./exa.py
+      function: get_api_keys
+      args:
+        cookies: .auth.cookies
+      timeout: 30
+
+  get_teams:
+    description: Get team info including rate limits, credits, and usage
+    returns:
+      teams: array
+      count: integer
+    connection: dashboard
+    python:
+      module: ./exa.py
+      function: get_teams
+      args:
+        cookies: .auth.cookies
+      timeout: 30
+
+  create_api_key:
+    description: Create a new API key on the Exa dashboard — full key value returned only at creation
+    returns:
+      status: string
+      key_name: string
+      issuer: string
+      masked_key: string
+    connection: dashboard
+    params:
+      name: { type: string, description: "Name for the new key (default: agentOS)" }
+    python:
+      module: ./exa.py
+      function: create_api_key
+      args:
+        cookies: .auth.cookies
+        name: .params.name
+      timeout: 30
+
+  logout:
+    description: Sign out of the Exa dashboard and invalidate the session
+    returns:
+      status: string
+      hint: string
+    connection: dashboard
+    python:
+      module: ./exa.py
+      function: logout
+      args:
+        cookies: .auth.cookies
+      timeout: 30
+
+  # ─── Search & content ─────────────────────────────────────────────────────
   search:
     description: Search the web using neural/semantic search
     returns: result[]
+    connection: api
     wraps_as: search
     web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
     params:
@@ -76,6 +183,7 @@ operations:
   read_webpage:
     description: Extract full content from a URL
     returns: webpage
+    connection: api
     web_url: .params.url
     params:
       url: { type: string, required: true, description: "URL to fetch" }

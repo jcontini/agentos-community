@@ -6,12 +6,12 @@ with `httpx` + BeautifulSoup.
 
 This is Layer 4 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/index.html) — getting a response at all
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.html) — finding structured data in bundles
-- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/index.html) — credentials, sessions, rotating config
+- **Layer 1: Transport** — [1-transport](../1-transport/README.md) — getting a response at all
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/README.md) — finding structured data in bundles
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/README.md) — credentials, sessions, rotating config
 - **Layer 4: Content** (this file) — extracting data from HTML when there is no API
-- **Layer 5: Social Networks** — [5-social](../5-social/index.html) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.html) — macOS, Electron, local state, unofficial APIs
+- **Layer 5: Social Networks** — [5-social](../5-social/README.md) — modeling people, relationships, and social graphs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/README.md) — macOS, Electron, local state, unofficial APIs
 
 ---
 
@@ -377,4 +377,4 @@ test:
 | Future: `skills/twitter/` | Following, followers, tweets, likes | — |
 
 For social-network-specific modeling patterns (person vs account, relationship
-types, cross-platform identity), see [5-social](../5-social/index.html).
+types, cross-platform identity), see [5-social](../5-social/README.md).

@@ -4,19 +4,19 @@ How to discover, evaluate, and map Model Context Protocol (MCP) servers for skil
 
 This is Layer 7 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/index.html)
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.html)
-- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/index.html)
-- **Layer 4: Content** — [4-content](../4-content/index.html)
-- **Layer 5: Social Networks** — [5-social](../5-social/index.html)
-- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.html)
+- **Layer 1: Transport** — [1-transport](../1-transport/README.md)
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/README.md)
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/README.md)
+- **Layer 4: Content** — [4-content](../4-content/README.md)
+- **Layer 5: Social Networks** — [5-social](../5-social/README.md)
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/README.md)
 - **Layer 7: MCP Servers** (this file) — discovering and evaluating MCPs for skill integration
 
 **Tool:** The MCP test harness in `agentos/scripts/mcp-test.mjs` is the primary probe. Use it to discover tools, test calls, and inspect responses. Smithery registry (`mcp-test.mjs smithery search`) finds third-party MCPs.
 
 ### Transport — use httpx, not urllib
 
-HTTP MCPs (Granola, Linear, etc.) often sit behind CloudFront or Cloudflare. Python `urllib` and `requests` advertise `http/1.1` and get flagged by JA4 fingerprinting. **Follow [1-transport](../1-transport/index.html):** use `httpx` with `http2=True` for Python probes. Node `fetch` is fine (negotiates HTTP/2). Skill-local probe scripts (e.g. `skills/granola/mcp-probe.py`) should use httpx.
+HTTP MCPs (Granola, Linear, etc.) often sit behind CloudFront or Cloudflare. Python `urllib` and `requests` advertise `http/1.1` and get flagged by JA4 fingerprinting. **Follow [1-transport](../1-transport/README.md):** use `httpx` with `http2=True` for Python probes. Node `fetch` is fine (negotiates HTTP/2). Skill-local probe scripts (e.g. `skills/granola/mcp-probe.py`) should use httpx.
 
 ---
 

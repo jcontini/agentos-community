@@ -8,13 +8,13 @@ Each layer builds on the previous. Start at transport, work up.
 
 | Layer | What it covers | When you need it |
 |-------|---------------|-----------------|
-| [1. Transport](1-transport/index.html) | TLS fingerprinting, WAF bypass, Playwright stealth, HTTP/2 | Service blocks automated requests |
-| [2. Discovery](2-discovery/index.html) | Next.js/Apollo caches, JS bundle config, GraphQL schema scanning | Finding API endpoints and data shapes |
-| [3. Auth & Runtime](3-auth/index.html) | Session cookies, Cognito, cache+discovery+fallback, credential bootstrap | Logging in and managing session state |
-| [4. Content](4-content/index.html) | Pagination, infinite scroll, content extraction | Scraping actual data from pages |
-| [5. Social Networks](5-social/index.html) | Social graph traversal, friend lists, activity feeds | Working with social platforms |
-| [6. Desktop Apps](6-desktop-apps/index.html) | Electron asar extraction, native app IPC, plist configs | Local apps without web APIs |
-| [7. MCP Servers](7-mcp/index.html) | Wrapping existing MCP servers as skills | When someone already built an MCP server |
+| [1. Transport](1-transport/README.md) | TLS fingerprinting, WAF bypass, Playwright stealth, HTTP/2 | Service blocks automated requests |
+| [2. Discovery](2-discovery/README.md) | Next.js/Apollo caches, JS bundle config, GraphQL schema scanning | Finding API endpoints and data shapes |
+| [3. Auth & Runtime](3-auth/README.md) | Credential bootstrap, login/signup flows, CSRF, cookies, API key management, network interception | Logging in and managing session state |
+| [4. Content](4-content/README.md) | Pagination, infinite scroll, content extraction | Scraping actual data from pages |
+| [5. Social Networks](5-social/README.md) | Social graph traversal, friend lists, activity feeds | Working with social platforms |
+| [6. Desktop Apps](6-desktop-apps/README.md) | Electron asar extraction, native app IPC, plist configs | Local apps without web APIs |
+| [7. MCP Servers](7-mcp/README.md) | Wrapping existing MCP servers as skills | When someone already built an MCP server |
 
 ## Core principle
 
@@ -30,7 +30,14 @@ The progression:
 4. **Implement** — write the skill operation in Python with HTTPX. No browser dependency.
 5. **Test** — `test-skills.cjs` runs without a browser. If your skill needs Playwright at runtime, reconsider.
 
-See [Auth & Runtime](3-auth/index.html) for the full methodology on credential flows and the Playwright→HTTPX pattern.
+See [Auth & Runtime](3-auth/README.md) for the full methodology, including:
+- **Credential Bootstrap Lifecycle** — the five-phase pattern from entry through API key storage
+- **Network Interception** — three layers: `capture_network` for page-load, fetch interceptors for user interactions, DOM inspection for native form POSTs
+- **Cookie Mechanics** — SameSite, HttpOnly, cross-domain behavior, extraction methods
+- **CSRF Patterns** — double-submit cookies, synchronizer tokens, NextAuth CSRF
+- **Web Navigation** — redirect chains, interstitials, signup vs login, API key management flows
+- **Playwright Gotchas** — `type` vs `fill` for React forms, honeypot fields, and when HTTPX replay fails
+- **Vendor guides** — [NextAuth.js](3-auth/nextauth.md), [WorkOS](3-auth/workos.md)
 
 ## Starting a new reverse-engineered skill
 
@@ -47,7 +54,10 @@ npm run new-skill -- my-service
 
 For detailed examples, see each layer's documentation. Real-world reference implementations:
 
-- `skills/goodreads/` — multi-tier discovery, Apollo cache extraction, auth boundary mapping
-- `skills/claude/` — cookie-based auth, Cloudflare stealth, API replay
-- `skills/amazon/` — HTML identity resolution, session cookies, WAF handling
-- `skills/austin-boulder-project/` — JS bundle config extraction, tenant-namespace auth
+| Skill | What it demonstrates |
+|-------|---------------------|
+| `skills/exa/` | Full credential bootstrap: NextAuth email code → Playwright form submit → session cookies → API key extraction from dashboard API. Reference for [nextauth.md](3-auth/nextauth.md) |
+| `skills/goodreads/` | Multi-tier discovery, Apollo cache extraction, auth boundary mapping, runtime config fallback |
+| `skills/claude/` | Cookie-based auth, Cloudflare stealth settings, API replay from browser session |
+| `skills/amazon/` | HTML identity resolution, session cookies, WAF handling |
+| `skills/austin-boulder-project/` | JS bundle config extraction, tenant-namespace auth |
