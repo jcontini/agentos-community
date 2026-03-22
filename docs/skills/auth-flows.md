@@ -17,16 +17,21 @@ Skills with web dashboards declare a `dashboard` connection alongside their `api
 connections:
   api:
     base_url: "https://api.example.com"
-    header: { x-api-key: .auth.key }
+    auth:
+      type: api_key
+      header: { x-api-key: .key }
 
   dashboard:
     base_url: "https://dashboard.example.com"
+    auth:
+      type: cookies
+      domain: ".example.com"
     login:
       - sso: google
       - email_link: true
 ```
 
-The `login` block declares available login methods. Login operations are Python functions that execute the flow with HTTPX. See `spec/sso-credential-bootstrap.md` in the engine repo for the full design.
+All auth goes under a single `auth:` key with a `type` discriminator (`api_key`, `cookies`, `oauth`). The `login` block declares available login methods. Login operations are Python functions that execute the flow with HTTPX. See `specs/auth-model.md` in the engine repo for the unified auth model, and `specs/sso-credential-bootstrap.md` for the end-to-end bootstrap flow.
 
 ## Secret-safe credential return
 
