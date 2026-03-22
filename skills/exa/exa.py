@@ -220,6 +220,14 @@ def _make_dashboard_client(cookies) -> httpx.Client:
     )
 
 
+def _require_session(client: httpx.Client) -> dict:
+    """Check session and raise on failure so the engine's cookie retry fires."""
+    session = _check_session(client)
+    if not session:
+        raise Exception("Unauthorized (HTTP 403): Exa dashboard session expired or invalid")
+    return session
+
+
 def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     """List API keys from the Exa dashboard and optionally store the first enabled key.
 
@@ -233,9 +241,7 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
     with _make_dashboard_client(cookies) as client:
-        session = _check_session(client)
-        if not session:
-            return {"__result__": {"error": "Dashboard session expired — re-authenticate"}}
+        session = _require_session(client)
         email = session["user"]["email"]
 
         resp = client.get(f"{DASHBOARD_BASE}/api/get-api-keys")
@@ -286,6 +292,7 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
     with _make_dashboard_client(cookies) as client:
+        _require_session(client)
         resp = client.get(f"{DASHBOARD_BASE}/api/get-teams")
         resp.raise_for_status()
         data = resp.json()
@@ -322,8 +329,8 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
     with _make_dashboard_client(cookies) as client:
-        session = _check_session(client)
-        email = session["user"]["email"] if session else "unknown"
+        session = _require_session(client)
+        email = session["user"]["email"]
 
         resp = client.post(
             f"{DASHBOARD_BASE}/api/create-api-key",

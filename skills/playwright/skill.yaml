@@ -7,6 +7,12 @@ website: https://playwright.dev
 
 connections: {}
 
+provides:
+  - auth: cookies
+    via: cookie_get
+    account_param: domain
+    description: "Extract cookies from persistent Chromium session via CDP. Session-scoped — cookies do not survive browser restarts."
+
 adapters:
   webpage:
     id: .url
@@ -302,7 +308,7 @@ operations:
       working_dir: .
       timeout: 10
 
-  cookies:
+  cookie_get:
     description: |
       Extract cookies for a domain from the browser's active session via CDP.
       Returns all cookies matching the domain (including HttpOnly cookies that
