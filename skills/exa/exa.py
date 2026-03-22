@@ -194,20 +194,29 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
     }
 
 
-def _make_dashboard_client(cookies: dict) -> httpx.Client:
-    """Create an HTTPX client with dashboard auth cookies.
+def _parse_cookie_string(raw) -> dict:
+    """Accept cookie header string or dict and return a {name: value} dict."""
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        pairs = {}
+        for part in raw.split(";"):
+            part = part.strip()
+            if "=" in part:
+                name, _, value = part.partition("=")
+                pairs[name.strip()] = value.strip()
+        return pairs
+    return {}
 
-    The `cookies` param comes from the engine's credential resolution —
-    declared via `cookies:` on the dashboard connection in skill.yaml.
-    The engine resolves stored cookies (from __secrets__) and passes them
-    through .auth.cookies in the args context.
-    """
+
+def _make_dashboard_client(cookies) -> httpx.Client:
+    """Create an HTTPX client with dashboard auth cookies."""
     return httpx.Client(
         http2=True,
         follow_redirects=True,
         timeout=30,
         headers=HEADERS,
-        cookies=cookies,
+        cookies=_parse_cookie_string(cookies),
     )
 
 
