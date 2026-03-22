@@ -38,7 +38,7 @@ Playwright controls Chromium via the Chrome DevTools Protocol (CDP). The browser
 ```
 start → launches Chromium with --remote-debugging-port=9222
         ↓
-get_webpage/click/fill/screenshot → connects via CDP, acts, returns (~100ms connect)
+goto/click/fill/screenshot → connects via CDP, acts, returns (~100ms connect)
         ↓
 browser stays alive — sessions, cookies, tabs persist
         ↓
@@ -56,7 +56,7 @@ stop → kills the browser process (only when done)
 When using Playwright for reverse engineering, prefer this order:
 
 1. `status` or `tabs` to see whether a useful browser session already exists.
-2. `get_webpage` to load the target page, or `new_tab` if you want to preserve the current page.
+2. `goto` to load the target page, or `new_tab` if you want to preserve the current page.
 3. `inspect` before `screenshot` to understand the DOM cheaply.
 4. `read_webpage` for targeted extraction of a container, script tag, or hidden data block.
 5. `evaluate` when the page is framework-heavy and the interesting data is already in JS memory.
@@ -118,7 +118,7 @@ Example pattern: a GraphQL consumer site is often best *discovered* in a real br
 
 ### Pattern: Navigation Is Flaky But Network Capture Works
 
-If `get_webpage`, `read_webpage`, or `evaluate` are inconsistent, `capture_network` often still works:
+If `goto`, `read_webpage`, or `evaluate` are inconsistent, `capture_network` often still works:
 
 - Keep the browser running, verify with `status`
 - Call `capture_network` directly on the target URL
@@ -128,12 +128,12 @@ This can surface the backend contract even when DOM extraction is unreliable.
 
 ## Usage
 
-### get_webpage
+### goto
 
 Navigate to a URL. Returns the page title and final URL (after redirects).
 
 ```
-get_webpage { url: "https://example.com" }
+goto { url: "https://example.com" }
 → { url: "https://example.com/", title: "Example Domain" }
 ```
 
@@ -172,6 +172,7 @@ read_webpage { selector: "main", format: "html" } → HTML of main element
 | Operation | What it does |
 |---------|-------------|
 | `click` | Click an element by CSS selector. |
+| `dblclick` | Double-click an element. Required for opening desktop apps (icons need double-click). |
 | `fill` | Set an input's value (clears first). |
 | `select` | Choose a dropdown option. |
 | `type` | Type text character by character (for inputs needing keystrokes). |
@@ -230,7 +231,7 @@ If a page makes deferred async requests, increase `wait` before assuming nothing
 ### Example: Next.js Hydration Probe
 
 ```text
-get_webpage { url: "https://example.com/product/123" }
+goto { url: "https://example.com/product/123" }
 inspect { selector: "body" }
 read_webpage { selector: "script#__NEXT_DATA__", format: "text" }
 evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps ?? null)" }
@@ -261,7 +262,7 @@ Public catalog-style pages are a good example of why you should not jump straigh
 Useful sequence (replace URL with your target):
 
 ```text
-get_webpage { url: "https://example.com/item/123" }
+goto { url: "https://example.com/item/123" }
 inspect { selector: "body" }
 read_webpage { selector: "script#__NEXT_DATA__", format: "text" }
 evaluate { script: "JSON.stringify(window.__NEXT_DATA__?.props?.pageProps?.apolloState ?? null)" }
@@ -298,7 +299,7 @@ Use individual operations to walk through a login flow and understand it:
 
 ```
 start { }
-get_webpage { url: "https://app.example.com/login" }
+goto { url: "https://app.example.com/login" }
 inspect { }
 fill { selector: "input[type=email]", value: "user@example.com" }
 click { selector: "button[type=submit]" }

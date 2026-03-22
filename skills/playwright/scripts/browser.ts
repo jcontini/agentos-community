@@ -243,7 +243,7 @@ async function cmdGoto(): Promise<void> {
   const port = getPort();
   const url = (stdinParams.url as string) || process.argv[3];
   if (!url) err("Usage: goto <url>");
-  const waitUntil = (getOption("wait-until") || "networkidle") as
+  const waitUntil = (getOption("wait-until") || "load") as
     | "load"
     | "domcontentloaded"
     | "networkidle";
@@ -283,6 +283,18 @@ async function cmdClick(): Promise<void> {
   await page.locator(selector).first().click();
   await page.waitForTimeout(500);
   out({ selector, url: page.url(), title: await page.title() });
+  await browser.close();
+}
+
+async function cmdDblclick(): Promise<void> {
+  const port = getPort();
+  const selector = (stdinParams.selector as string) || process.argv[3];
+  if (!selector) err("Usage: dblclick <selector>");
+  const browser = await connectBrowser(port);
+  const page = await getPage(browser);
+  await page.locator(selector).first().dblclick();
+  await page.waitForTimeout(500);
+  out({ selector, url: page.url() });
   await browser.close();
 }
 
@@ -372,7 +384,7 @@ async function cmdErrors(): Promise<void> {
   });
   page.on("pageerror", (err) => errors.push(err.message));
 
-  await page.reload({ waitUntil: "networkidle", timeout: 15000 });
+  await page.reload({ waitUntil: "load", timeout: 15000 });
   await page.waitForTimeout(2000);
 
   out({ errors, count: errors.length, url: page.url() });
@@ -419,7 +431,7 @@ async function cmdNewTab(): Promise<void> {
   const context = browser.contexts()[0];
   const page = await context.newPage();
   if (url) {
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(url, { waitUntil: "load", timeout: 30000 });
   }
   out({ url: page.url(), title: await page.title() });
   await browser.close();
@@ -683,6 +695,7 @@ const commands: Record<string, () => Promise<void>> = {
   goto: cmdGoto,
   screenshot: cmdScreenshot,
   click: cmdClick,
+  dblclick: cmdDblclick,
   fill: cmdFill,
   select: cmdSelect,
   type: cmdType,
