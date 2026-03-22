@@ -107,27 +107,92 @@ client.post(
 This sends the verification email. The response is typically `{ "url": "..." }`
 pointing to a "check your email" page.
 
-### Step 2: Code submission (varies by implementation)
+### Step 2: Code/token submission
 
 **Standard NextAuth** uses a magic link that hits:
 ```
-GET /api/auth/callback/email?callbackUrl=...&token=CODE&email=EMAIL
+GET /api/auth/callback/email?callbackUrl=...&token=TOKEN&email=EMAIL
+```
+Where `TOKEN` is the raw verification token. NextAuth hashes it as
+`SHA256(token + NEXTAUTH_SECRET)` and compares with the stored hash.
+
+**Custom OTP implementations** (e.g. Exa) display a 6-digit code entry page
+instead of a magic link. These typically have a custom verification endpoint:
+
+```
+POST /api/verify-otp
+Body: {"email": "user@example.com", "otp": "123456"}
+→ {"email": "...", "hashedOtp": "$2a$10$...", "rawOtp": "123456"}
 ```
 
-**Custom implementations** (e.g. Exa) render a code entry page where the user
-types the 6-digit code. The form submits via a **native HTML form POST** — not
-a `fetch()` call. This means:
+The client-side JS then constructs the NextAuth callback token from the
+response and redirects to the standard callback:
 
-- The fetch interceptor captures nothing
-- HTTPX replay of the callback endpoint may fail
-- Playwright handles it natively
+```
+GET /api/auth/callback/email?token=HASHED_OTP:RAW_OTP&email=EMAIL&callbackUrl=...
+```
 
-**How to tell which one you're dealing with:**
-1. After triggering the email, check what the verification page looks like
-2. If it's a "check your email for a link" page → standard magic link flow
-3. If it's a "enter your code" page with an `<input>` → code entry form
-4. Install the fetch interceptor, enter the code, submit — if empty capture,
-   it's a native form POST
+The token format is `{hashedOtp}:{rawOtp}` — bcrypt hash, colon, raw code.
+This is fully replayable via HTTPX. No browser needed.
+
+### Discovery playbook for custom OTP flows
+
+When the standard NextAuth callback fails with `error=Verification`, the site
+has a custom OTP layer. Follow these steps to crack it:
+
+**Step A: Scan JS bundles for custom endpoints**
+
+```python
+# Search terms that reveal custom auth endpoints
+scan_bundles(auth_url, [
+    "verify-otp", "verify-code", "confirm-code",     # custom verification
+    "callback/email", "hashedOtp", "rawOtp",          # token construction
+    "fetch(", "/api/",                                 # general API calls
+])
+```
+
+Look for `fetch("/api/verify-...")` calls in the bundle context. The
+surrounding code usually reveals the request shape and response handling.
+
+**Step B: Read the library source**
+
+Check what the server expects. For NextAuth, the key file is
+[`callback/index.ts`](https://github.com/nextauthjs/next-auth/blob/main/packages/core/src/lib/actions/callback/index.ts).
+The email handler does `createHash(token + secret)` — this tells you the
+token parameter must match what the server originally stored.
+
+**Step C: Intercept the client-side token construction**
+
+If the bundle shows the endpoint but the token construction is complex or
+spread across minified closures, use the Navigation API interceptor:
+
+```
+evaluate { script: "navigation.addEventListener('navigate', (e) => { window.__intercepted_nav_url = e.destination.url; e.preventDefault(); }); 'interceptor installed'" }
+```
+
+Then trigger the action:
+```
+click { selector: "button:text-is('VERIFY CODE')" }
+evaluate { script: "window.__intercepted_nav_url" }
+```
+
+The captured URL will contain the fully-assembled token, e.g.:
+```
+https://auth.exa.ai/api/auth/callback/email?token=$2a$10$...%3A123456&email=...
+```
+
+URL-decode it and the format is obvious: `{bcrypt_hash}:{raw_otp}`.
+
+**Step D: Replay with HTTPX**
+
+Now you know the full flow — reproduce it with HTTPX:
+1. `POST /api/verify-otp` with `{email, otp}` → get `{hashedOtp, rawOtp}`
+2. Construct `token = f"{hashedOtp}:{rawOtp}"`
+3. `GET /api/auth/callback/email?token=...&email=...` → session cookie
+
+See [Discovery: JS Bundle Scanning](../2-discovery/README.md#js-bundle-scanning)
+and [Discovery: Navigation API Interception](../2-discovery/README.md#navigation-api-interception)
+for the general techniques.
 
 ### Step 3: Session establishment
 
@@ -169,8 +234,10 @@ can't decode it without the server's secret — but you don't need to. Just pass
 it as a cookie to authenticated endpoints.
 
 ```python
+# Use http2=False for Vercel-hosted dashboards (Security Checkpoint blocks h2)
+# Use http2=True for other hosts (CloudFront, plain Cloudflare, etc.)
 with httpx.Client(
-    http2=True,
+    http2=False,  # adjust per host — see 1-transport
     follow_redirects=True,
     cookies={"next-auth.session-token": session_token},
 ) as client:
@@ -178,7 +245,8 @@ with httpx.Client(
 ```
 
 The server decodes the JWT server-side and returns the session info via
-`/api/auth/session`.
+`/api/auth/session`. See [Transport: http2 selection](../1-transport/README.md#when-to-use-http2false)
+for how to determine the right setting per host.
 
 ---
 
@@ -205,17 +273,31 @@ command (real keystrokes) rather than `fill` (direct DOM manipulation). `fill`
 bypasses React's synthetic event system and leaves form state empty. See
 [Playwright Discovery Gotchas](./README.md#type-vs-fill-on-react-forms).
 
+### Vercel Security Checkpoint
+
+Many NextAuth dashboards are hosted on Vercel. Vercel's Security Checkpoint
+blocks `httpx(http2=True)` outright — returning `429` with a JS challenge
+page regardless of cookies or headers. The fix is `httpx(http2=False)`.
+
+This is purely a JA4 TLS fingerprint issue. httpx's h2 fingerprint is
+well-known to Vercel's bot detection. h1 is less distinctive and passes.
+See [Layer 1: Transport](../1-transport/README.md#when-to-use-http2false)
+for the full analysis.
+
+Not every Vercel subdomain enables the checkpoint. Test each one — during
+Exa reverse engineering, `auth.exa.ai` accepted h2 while `dashboard.exa.ai`
+rejected it. The checkpoint is a per-project Vercel Firewall setting.
+
 ### Cloudflare protection
 
-NextAuth sites behind Cloudflare (common) set a `cf_clearance` cookie after
-the JS challenge. For HTTPX replay:
-- If the challenge was solved by Playwright, extract `cf_clearance` along with
-  the session token
-- If using stored cookies, `cf_clearance` may expire (typically 24h) — the
-  session token lasts ~30 days but Cloudflare may block HTTPX after clearance
-  expires
-- For long-term access, you may need to re-solve the Cloudflare challenge
-  periodically via Playwright or the user's real browser
+Some NextAuth sites sit behind Cloudflare (separate from Vercel's layer)
+and set a `cf_clearance` cookie after a JS challenge. `cf_clearance` is
+bound to the client's TLS fingerprint and IP — it only works from the
+same fingerprint that solved the challenge.
+
+In practice, for Vercel-hosted dashboards the `http2=False` fix is
+sufficient and `cf_clearance` isn't needed. Store it if available (it's
+cheap insurance), but don't depend on it for HTTPX access.
 
 ---
 
@@ -248,25 +330,49 @@ for the general pattern.
 ## Real-world example: Exa
 
 Exa (`dashboard.exa.ai` / `auth.exa.ai`) is the reference implementation for
-this pattern in the agentOS skill library.
+this pattern in the agentOS skill library. **The entire email login flow is
+browser-free** — every step uses HTTPX.
 
 **Architecture:**
-- Auth domain: `auth.exa.ai` (NextAuth.js)
-- Dashboard domain: `dashboard.exa.ai`
+- Auth domain: `auth.exa.ai` (NextAuth.js, Vercel-hosted)
+- Dashboard domain: `dashboard.exa.ai` (Vercel-hosted, Security Checkpoint enabled)
 - Providers: `email`, `google`, `workos`
-- Email verification: 6-digit code (native form POST, not magic link)
+- Email verification: 6-digit OTP code (custom `/api/verify-otp` endpoint)
 - Session: encrypted JWT in `next-auth.session-token` on `.exa.ai`
-- Cloudflare: `cf_clearance` on `.exa.ai`
+- Transport: `httpx(http2=False)` for dashboard (Vercel checkpoint blocks h2)
 
 **Skill operations:**
 - `send_login_code` — triggers verification email via HTTPX
-- `store_session_cookies` — validates and stores browser-extracted session
+- `verify_login_code` — verifies OTP code, constructs token, completes login (fully HTTPX)
+- `store_session_cookies` — fallback for Google SSO (Playwright cookies)
 - `get_api_keys` — lists keys (full values in `id` field) via HTTPX
 - `get_teams` — team info, rate limits, credits via HTTPX
 - `create_api_key` — creates a new key via HTTPX
 
-**Key finding:** The `id` field in `/api/get-api-keys` is the full API key
-value (UUID format). The dashboard masks it, but the API returns it unmasked.
+**Key findings:**
+- The `id` field in `/api/get-api-keys` is the full API key value (UUID format).
+  The dashboard masks it, but the API returns it unmasked.
+- The custom OTP endpoint (`POST /api/verify-otp`) was found via JS bundle
+  scanning — it doesn't appear in any NextAuth documentation.
+- The callback token format (`hashedOtp:rawOtp`) was discovered using the
+  Navigation API interceptor in Playwright, then replayed entirely with HTTPX.
+
+**How it was reverse-engineered (summary):**
+
+1. **Identify framework:** `GET /api/auth/providers` → NextAuth
+2. **Try standard flow:** `POST /api/auth/signin/email` → sends code OK;
+   `GET /api/auth/callback/email?token=CODE` → `error=Verification` (6-digit
+   code isn't the raw token NextAuth expects)
+3. **Scan JS bundles:** search for `verify-otp`, `callback/email`, `fetch(`
+   → found `POST /api/verify-otp` accepting `{email, otp}` returning
+   `{hashedOtp, rawOtp}`
+4. **Read library source:** NextAuth's `callback/index.ts` shows the server
+   does `SHA256(token + secret)` — so the token must be the pre-hash value
+5. **Intercept with Navigation API:** inject `navigation.addEventListener`,
+   click "VERIFY CODE", capture the destination URL → token format is
+   `{hashedOtp}:{rawOtp}` (bcrypt hash, colon, raw OTP)
+6. **Replay with HTTPX:** `POST /api/verify-otp` → construct token →
+   `GET /api/auth/callback/email?token=...` → session cookie set
 
 See `skills/exa/exa.py` and `skills/exa/readme.md` for the full implementation.
 

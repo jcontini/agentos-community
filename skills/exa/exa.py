@@ -6,26 +6,24 @@ Auth architecture (discovered via Playwright reverse engineering):
   - Dashboard domain: dashboard.exa.ai
   - Login method:     Email verification code (6-digit, NOT a magic link)
   - Session:          JWT in `next-auth.session-token` cookie (.exa.ai)
-  - Protection:       Cloudflare cf_clearance on .exa.ai
+  - Protection:       Vercel Security Checkpoint on dashboard.exa.ai
+  - Transport:        httpx http2=False for dashboard API calls
+                      (Vercel checkpoint blocks httpx's h2 JA4 fingerprint;
+                      h1 passes regardless of cookies or headers)
 
-Login flow (agent-orchestrated, Playwright for code submission):
+Login flow (fully HTTPX, no browser needed):
   1. send_login_code(email)    [HTTPX]
      - GET  auth.exa.ai/api/auth/csrf       → CSRF token + cookie
      - POST auth.exa.ai/api/auth/signin/email → triggers verification code email
 
   2. Agent retrieves 6-digit code from email (any provider)
 
-  3. Code submission              [Playwright required]
-     - The auth page submits the code via a native HTML form POST that
-       Exa's custom NextAuth handles server-side. HTTPX cannot replay this
-       (tested: both GET and POST to /api/auth/callback/email fail with
-       ?error=Verification or ?error=configuration).
-     - The agent uses Playwright: type code into input, click submit,
-       then extract cookies from the browser.
-
-  4. store_session_cookies(cookies)   [HTTPX]
-     - Validates session via /api/auth/session
-     - Stores cookies via __secrets__
+  3. verify_login_code(email, code)   [HTTPX]
+     - POST auth.exa.ai/api/verify-otp     → {hashedOtp, rawOtp}
+     - Construct token = hashedOtp:rawOtp
+     - GET  auth.exa.ai/api/auth/callback/email?token=...&email=...
+       → sets next-auth.session-token cookie
+     - Validates session, stores cookies via __secrets__
 
 Dashboard API (authenticated, cookie-based):
   GET /api/auth/session         → { user: { email, id, currentTeamId, teams }, expires }
@@ -40,6 +38,7 @@ Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
 import json
+import urllib.parse
 import httpx
 
 AUTH_BASE = "https://auth.exa.ai"
@@ -53,6 +52,14 @@ HEADERS = {
         "Chrome/145.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-CH-UA": '"Chromium";v="145", "Google Chrome";v="145", "Not-A.Brand";v="99"',
+    "Sec-CH-UA-Mobile": "?0",
+    "Sec-CH-UA-Platform": '"macOS"',
 }
 
 
@@ -107,26 +114,24 @@ def _serialize_cookies(client: httpx.Client) -> dict:
 def send_login_code(*, email: str, **params) -> dict:
     """Trigger a verification code email for the given address.
 
-    This is the HTTPX-compatible part of the login flow. After calling this,
-    the agent must:
-      1. Check the user's email for the 6-digit code
-      2. Use Playwright to enter the code on the auth page and complete login
-      3. Extract browser cookies and call store_session_cookies
-
-    The auth page's code submission uses a native HTML form POST that HTTPX
-    cannot replay — Playwright is required for that step.
+    After calling this, the agent must:
+      1. Check the user's email for the 6-digit code (subject: 'Sign in to Exa Dashboard')
+      2. Call exa.verify_login_code with the email and code
     """
     if not email:
         return {"__result__": {"error": "email is required"}}
 
     with httpx.Client(
-        http2=True,
+        http2=False,
         follow_redirects=True,
         timeout=30,
         headers=HEADERS,
     ) as client:
         csrf_token = _get_csrf_token(client)
         _send_verification_email(client, csrf_token, email)
+
+        # Save the CSRF cookies so verify_login_code can use the same session
+        auth_cookies = _serialize_cookies(client)
 
     return {
         "__result__": {
@@ -136,20 +141,115 @@ def send_login_code(*, email: str, **params) -> dict:
                 "A 6-digit code was sent to the email. To complete login:\n"
                 "1. Search email for subject 'Sign in to Exa Dashboard' from exa.ai\n"
                 "2. Extract the 6-digit code\n"
-                "3. Use Playwright to navigate to https://dashboard.exa.ai (redirects to auth)\n"
-                "4. Type the email, submit, then type the code and submit\n"
-                "5. Extract cookies with: playwright.cookies({ domain: '.exa.ai' })\n"
-                "6. Call exa.store_session_cookies with the next-auth.session-token and cf_clearance cookies"
+                "3. Call exa.verify_login_code with the email and code"
             ),
+            "_auth_cookies": auth_cookies,
         }
+    }
+
+
+def verify_login_code(*, email: str, code: str, **params) -> dict:
+    """Verify the 6-digit code and complete login — fully HTTPX, no browser needed.
+
+    Flow:
+      1. POST /api/verify-otp with {email, otp} → {hashedOtp, rawOtp}
+      2. Construct NextAuth callback token = hashedOtp:rawOtp
+      3. GET /api/auth/callback/email?token=...&email=... → session cookie
+      4. Validate session and store cookies via __secrets__
+    """
+    if not email or not code:
+        return {"__result__": {"error": "email and code are required"}}
+
+    with httpx.Client(
+        http2=False,
+        follow_redirects=False,
+        timeout=30,
+        headers=HEADERS,
+    ) as client:
+        # Establish CSRF session (needed for the callback to accept our request)
+        _get_csrf_token(client)
+
+        # Verify the OTP — Exa's custom endpoint validates the 6-digit code
+        resp = client.post(
+            f"{AUTH_BASE}/api/verify-otp",
+            json={"email": email.lower(), "otp": code},
+        )
+        if resp.status_code != 200:
+            error_msg = "Invalid or expired verification code"
+            try:
+                error_msg = resp.json().get("error", error_msg)
+            except Exception:
+                pass
+            return {"__result__": {"error": error_msg}}
+
+        data = resp.json()
+        hashed_otp = data.get("hashedOtp", "")
+        raw_otp = data.get("rawOtp", "")
+
+        if not hashed_otp:
+            return {"__result__": {"error": "Unexpected verify-otp response", "raw": data}}
+
+        # Construct the token NextAuth expects: hashedOtp:rawOtp
+        # NextAuth hashes this with SHA256+secret and compares to the DB entry.
+        token = f"{hashed_otp}:{raw_otp}"
+        callback_url = (
+            f"{AUTH_BASE}/api/auth/callback/email"
+            f"?email={urllib.parse.quote(email.lower())}"
+            f"&token={urllib.parse.quote(token)}"
+            f"&callbackUrl={urllib.parse.quote(CALLBACK_URL)}"
+        )
+
+        # Hit the NextAuth callback — this sets the session-token cookie
+        resp2 = client.get(callback_url, follow_redirects=True)
+        if resp2.status_code >= 400:
+            return {"__result__": {"error": f"Callback failed: HTTP {resp2.status_code}"}}
+
+    # Extract the session token
+    session_token = None
+    for cookie in client.cookies.jar:
+        if cookie.name == "next-auth.session-token":
+            session_token = cookie.value
+            break
+
+    if not session_token:
+        return {"__result__": {"error": "Login succeeded but no session token received"}}
+
+    # Validate session and store via __secrets__
+    cookies = {"next-auth.session-token": session_token}
+    with _make_dashboard_client(cookies) as dashboard:
+        session = _check_session(dashboard)
+        if not session:
+            return {"__result__": {"error": "Session token invalid after login"}}
+
+    return {
+        "__secrets__": [{
+            "issuer": "dashboard.exa.ai",
+            "identifier": email,
+            "item_type": "cookie",
+            "label": "Exa Dashboard Session",
+            "source": "exa",
+            "value": cookies,
+            "metadata": {
+                "masked": {"next-auth.session-token": "••••(JWT)"},
+                "dashboard_url": DASHBOARD_BASE,
+                "user_id": session["user"].get("id"),
+                "team_id": session["user"].get("currentTeamId"),
+            },
+        }],
+        "__result__": {
+            "status": "authenticated",
+            "email": email,
+            "team": session["user"].get("currentTeamName", "unknown"),
+            "user_id": session["user"].get("id"),
+        },
     }
 
 
 def store_session_cookies(*, email: str, session_token: str, cf_clearance: str = "", **params) -> dict:
     """Store browser-extracted session cookies for authenticated dashboard access.
 
-    Called after Playwright login. Validates the session, then stores the
-    cookies via __secrets__ so get_api_keys and other dashboard operations work.
+    Fallback for when verify_login_code can't be used (e.g. Google SSO).
+    Validates the session, then stores the cookies via __secrets__.
     """
     if not email or not session_token:
         return {"__result__": {"error": "email and session_token are required"}}
@@ -158,13 +258,7 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
     if cf_clearance:
         cookies["cf_clearance"] = cf_clearance
 
-    with httpx.Client(
-        http2=True,
-        follow_redirects=True,
-        timeout=30,
-        headers=HEADERS,
-        cookies=cookies,
-    ) as client:
+    with _make_dashboard_client(cookies) as client:
         session = _check_session(client)
         if not session:
             return {"__result__": {"error": "Session token invalid or expired"}}
@@ -210,9 +304,14 @@ def _parse_cookie_string(raw) -> dict:
 
 
 def _make_dashboard_client(cookies) -> httpx.Client:
-    """Create an HTTPX client with dashboard auth cookies."""
+    """Create an httpx client for dashboard.exa.ai (Vercel-hosted).
+
+    Uses http2=False because Vercel's Security Checkpoint blocks httpx's
+    HTTP/2 JA4 fingerprint (429 regardless of cookies/headers). HTTP/1.1
+    with a browser User-Agent passes cleanly.
+    """
     return httpx.Client(
-        http2=True,
+        http2=False,
         follow_redirects=True,
         timeout=30,
         headers=HEADERS,
@@ -270,7 +369,7 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     if store and enabled_keys:
         key = enabled_keys[0]
         result["__secrets__"] = [{
-            "issuer": "api.exa.ai",
+            "issuer": "exa.ai",
             "identifier": email,
             "item_type": "api_key",
             "label": f"Exa API Key ({key['name']})",
@@ -339,20 +438,22 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
         resp.raise_for_status()
         data = resp.json()
 
-    api_key = data.get("apiKey") or data.get("key") or data.get("secret")
-    if not api_key:
+    key_obj = data.get("apiKey") or {}
+    api_key = key_obj.get("id") if isinstance(key_obj, dict) else key_obj
+    if not api_key or not isinstance(api_key, str):
         return {"__result__": {"error": "API key not found in creation response", "raw": data}}
 
+    masked = api_key[:6] + "••••" + api_key[-4:]
     return {
         "__secrets__": [{
-            "issuer": "api.exa.ai",
+            "issuer": "exa.ai",
             "identifier": email or "unknown",
             "item_type": "api_key",
             "label": f"Exa API Key ({name})",
             "source": "exa",
             "value": {"key": api_key},
             "metadata": {
-                "masked": {"key": "••••" + api_key[-4:]},
+                "masked": {"key": masked},
                 "dashboard_url": f"{DASHBOARD_BASE}/api-keys",
                 "key_name": name,
             },
@@ -360,8 +461,8 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
         "__result__": {
             "status": "created",
             "key_name": name,
-            "issuer": "api.exa.ai",
-            "masked_key": "••••" + api_key[-4:],
+            "issuer": "exa.ai",
+            "masked_key": masked,
         },
     }
 

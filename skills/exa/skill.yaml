@@ -63,7 +63,7 @@ adapters:
 operations:
   # ─── Auth & dashboard ─────────────────────────────────────────────────────
   send_login_code:
-    description: "Trigger a verification code email — agent then uses Playwright to complete login"
+    description: "Send a 6-digit verification code to the email — call verify_login_code next"
     returns:
       status: string
       email: string
@@ -78,8 +78,27 @@ operations:
         email: .params.email
       timeout: 30
 
+  verify_login_code:
+    description: "Verify the 6-digit code and complete login — fully HTTPX, no browser needed"
+    returns:
+      status: string
+      email: string
+      team: string
+      user_id: string
+    connection: dashboard
+    params:
+      email: { type: string, required: true, description: "Email address used in send_login_code" }
+      code: { type: string, required: true, description: "6-digit verification code from the email" }
+    python:
+      module: ./exa.py
+      function: verify_login_code
+      args:
+        email: .params.email
+        code: .params.code
+      timeout: 30
+
   store_session_cookies:
-    description: "Store browser-extracted session cookies after Playwright login"
+    description: "Store session cookies — fallback for Google SSO login via Playwright"
     returns:
       status: string
       identifier: string

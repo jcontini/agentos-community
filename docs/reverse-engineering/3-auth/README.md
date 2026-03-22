@@ -139,25 +139,44 @@ inspect { selector: "form" }
 ```
 
 This tells you:
-- **Email + code** → trigger via HTTPX, enter code via Playwright, extract cookies
+- **Email + code** → usually fully HTTPX-replayable (see below)
 - **Email + password** → replay entirely with HTTPX
 - **Google/GitHub OAuth** → Playwright for the consent screen, then cookies
 - **SSO (WorkOS, Okta)** → see vendor guides
 
 ### 3. Complete the login
 
-Walk through the login in Playwright. Use `type` (not `fill`) for input fields,
-click submit, wait for the redirect.
+**Try HTTPX first.** Many email+code flows that appear browser-only are actually
+fully replayable. The key technique is scanning the JS bundles for custom
+verification endpoints (e.g. `/api/verify-otp`) and using the Navigation API
+interceptor to discover token formats. See
+[Discovery: JS Bundle Scanning](../2-discovery/README.md#js-bundle-scanning) and
+[Discovery: Navigation API Interception](../2-discovery/README.md#navigation-api-interception).
 
+```python
+# Example: Exa email+code login — no browser needed
+# 1. Trigger code email
+csrf_token = client.get(f"{AUTH_BASE}/api/auth/csrf").json()["csrfToken"]
+client.post(f"{AUTH_BASE}/api/auth/signin/email", data={"email": email, "csrfToken": csrf_token, ...})
+
+# 2. Agent reads code from email (Gmail, etc.)
+
+# 3. Verify code via custom endpoint
+resp = client.post(f"{AUTH_BASE}/api/verify-otp", json={"email": email, "otp": code})
+data = resp.json()  # {hashedOtp, rawOtp}
+token = f"{data['hashedOtp']}:{data['rawOtp']}"
+
+# 4. Hit the standard callback with the constructed token
+client.get(f"{AUTH_BASE}/api/auth/callback/email?token={token}&email={email}&callbackUrl=...")
+# → session cookie is now set on the client
 ```
-type { selector: "input[type=email]", text: "user@example.com" }
-click { selector: "button[type=submit]" }
-# Wait for code entry page, enter code, submit again
-# Browser ends up on dashboard.example.com/home
-```
+
+**Fall back to Playwright** only for flows that genuinely require a browser
+(Google OAuth consent screens, CAPTCHAs, or complex multi-step redirects).
+Use `type` (not `fill`) for input fields on React forms.
 
 If the login involves a verification code from email, the agent checks email
-between steps. See the [agent-in-the-loop pattern](../../skills/auth-flows.md).
+between steps.
 
 ### 4. Grab the cookies
 
@@ -327,10 +346,12 @@ login, HTTPX handles the work. Each tool does what it's good at.
 | Situation | Solution |
 |-----------|----------|
 | Standard form POST or API call | HTTPX replay |
+| Custom OTP/code verification | Scan JS bundles for custom endpoints → HTTPX replay (see [discovery](../2-discovery/README.md#js-bundle-scanning)) |
 | Google OAuth consent screen | Playwright first login → cookies → HTTPX after |
 | Cloudflare JS challenge | Playwright or `brave-browser.cookie_get` for `cf_clearance` |
+| Vercel Security Checkpoint (`429`) | Switch to `httpx(http2=False)` — purely a JA4 fingerprint issue |
 | CAPTCHA | Cookies from user's real browser session |
-| Custom server-side form handling | Playwright submits the form → extract cookies → HTTPX for APIs |
+| Unknown client-side token construction | Navigation API interceptor → read the actual URL (see [discovery](../2-discovery/README.md#navigation-api-interception)) |
 
 ---
 
@@ -398,14 +419,17 @@ endpoints and `next-auth.*` cookies.
 - `GET /api/auth/providers` lists available login methods
 - Session cookie: `next-auth.session-token` (encrypted JWT, ~30 day expiry)
 
-**Email login flow:**
+**Email login flow (fully HTTPX for custom OTP sites):**
 1. `GET /api/auth/csrf` → CSRF token (HTTPX)
 2. `POST /api/auth/signin/email` → triggers email (HTTPX)
-3. User enters code → form submit or callback (Playwright if needed)
-4. Session cookie set → extract and use with HTTPX
+3. `POST /api/verify-otp` → verify code, get token components (HTTPX)
+4. `GET /api/auth/callback/email?token=...` → session cookie set (HTTPX)
 
-See [nextauth.md](./nextauth.md) for the full deep dive. Reference
-implementation: `skills/exa/`.
+The key insight: many NextAuth sites with custom OTP code entry have a hidden
+`/api/verify-otp` endpoint discoverable via JS bundle scanning. The callback
+token format (`hashedOtp:rawOtp`) was discovered using the Navigation API
+interceptor. See [nextauth.md](./nextauth.md) for the full deep dive.
+Reference implementation: `skills/exa/`.
 
 ### AWS Cognito
 
@@ -532,7 +556,7 @@ Reference: `skills/goodreads/public_graph.py` `discover_from_bundle()`.
 
 | Skill | Pattern | What to learn from it |
 |-------|---------|----------------------|
-| `skills/exa/` | NextAuth email code → Playwright → session → API keys | Full credential bootstrap, native form POST, honeypots, API values leaked in response |
+| `skills/exa/` | NextAuth email code → fully HTTPX (no browser) → API keys | JS bundle scanning for custom endpoints, Navigation API interception, OTP token format discovery, Vercel `http2=False` bypass |
 | `skills/goodreads/` | Multi-tier discovery, AppSync, auth boundary mapping | Bundle extraction, config rotation, public vs auth operations |
 | `skills/claude/` | Cloudflare-protected cookie extraction | Stealth Playwright settings, HttpOnly cookies via CDP |
 | `skills/austin-boulder-project/` | Bundle-extracted API key, tenant namespace | JS config scanning, namespace-as-auth |

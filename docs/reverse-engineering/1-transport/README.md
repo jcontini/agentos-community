@@ -14,13 +14,14 @@ This is Layer 1 of the reverse-engineering docs:
 
 ---
 
-## HTTP Client — Always Use `httpx`, Never `requests`
+## HTTP Client — Always `httpx`, But Not Always `http2=True`
 
 ### The short answer
 
 ```python
 import httpx
 
+# Default — works for most APIs (CloudFront, Cloudflare CDN, unprotected)
 with httpx.Client(http2=True, follow_redirects=True, timeout=30) as client:
     resp = client.get(url, headers=headers)
     resp.raise_for_status()
@@ -43,6 +44,71 @@ Additionally, `requests`/urllib3 has a well-known, publicly blocklisted JA3 hash
 from a CloudFront-fronted API that works fine in the browser, TLS fingerprinting is
 the most likely cause.
 
+### When to use `http2=False`
+
+**Vercel Security Checkpoint** blocks `httpx(http2=True)` outright — every request
+returns `429` with a JS challenge page, regardless of cookies or headers. But
+`httpx(http2=False)` passes cleanly, no cookies or special headers needed.
+
+This is the opposite of the CloudFront pattern and the reason is JA4 fingerprint
+specificity. HTTP/2 ALPN + httpx's cipher suite ordering produce a distinctive,
+well-known bot fingerprint that Vercel blocks. HTTP/1.1 has a much smaller
+fingerprint surface — fewer signals to distinguish httpx from a legitimate app,
+so Vercel lets it through.
+
+Not every Vercel-hosted endpoint enables the checkpoint. During Exa testing,
+`auth.exa.ai` (Vercel, no checkpoint) accepted h2; `dashboard.exa.ai`
+(Vercel, checkpoint enabled) rejected it. The checkpoint is a per-project
+Vercel Firewall setting — you have to test each subdomain.
+
+**Tested against `dashboard.exa.ai` (Vercel + Cloudflare):**
+
+| | `http2=True` | `http2=False` |
+|---|---|---|
+| session + cf_clearance | 429 | 200 |
+| session only | 429 | 200 |
+| no cookies at all | 429 | 200 (empty session) |
+
+Cookies and headers are irrelevant — the checkpoint triggers purely on
+the HTTP/2 TLS fingerprint.
+
+**Rule of thumb:** start with `http2=True`. If you get `429` with "Vercel
+Security Checkpoint" HTML, switch to `http2=False`. If you get `403`/`400`
+from CloudFront, make sure you're on `http2=True`.
+
+### Diagnostic protocol: isolating the variable
+
+When a request fails, don't guess — isolate. Test each transport variable
+independently to find the one that matters:
+
+```
+Step 1: Try httpx http2=True (default)
+  → Works?     Done.
+  → 429/403?   Continue.
+
+Step 2: Try httpx http2=False
+  → Works?     Vercel Security Checkpoint. Use http2=False, done.
+  → Still 403? Continue.
+
+Step 3: Try with full browser-like headers (Sec-Fetch-*, Sec-CH-UA, etc.)
+  → Works?     WAF header check. Add headers, done.
+  → Still 403? Continue.
+
+Step 4: Try with valid session cookies
+  → Works?     Auth required. Handle login first.
+  → Still 403? It's TLS fingerprint-level.
+
+Step 5: Use curl_cffi with Chrome impersonation
+  → Works?     Strict JA3/JA4 enforcement. Use curl_cffi.
+  → Still 403? Something non-standard (CAPTCHA, IP block).
+```
+
+The key insight from the Exa reverse engineering session: **test one variable
+at a time.** During Exa testing, we created a matrix of `http2=True/False` x
+`cookies/no-cookies` x `headers/no-headers` and discovered that ONLY the h2
+setting mattered. Cookies and headers were completely irrelevant to the
+Vercel checkpoint. This prevented unnecessary complexity in the skill code.
+
 ### If `httpx` isn't enough
 
 For the strictest Cloudflare Bot Management (Akamai-level h2 frame fingerprinting):
@@ -60,7 +126,7 @@ ALPN, and HTTP/2 `SETTINGS` frames — the full fingerprint. Use this as the nuc
 
 ```bash
 pip install "httpx[http2]"     # for httpx + HTTP/2 support
-pip install curl_cffi           # for full Chrome fingerprint impersonation
+pip install curl_cffi           # for full Chrome fingerprint impersonation (rarely needed)
 ```
 
 ### When `urllib` is acceptable
@@ -227,6 +293,7 @@ def _fetch(url: str, *, headers: dict | None = None, data: bytes | None = None) 
 | `400`, body looks like `"404"` | API Gateway can't route the request — usually a missing tenant/auth header | Find and add the missing header (check the bundle's axios factory) |
 | `403` for a same-origin API (e.g. `claude.ai`) | Missing `Sec-Fetch-*` headers | Add `Sec-Fetch-Site: same-origin` + `Sec-Fetch-Mode: cors` + `Sec-Fetch-Dest: empty` |
 | `403` from headless Playwright | Default Chromium automation fingerprint | Add stealth settings (see Headless Browser Stealth above) |
+| `429` with "Vercel Security Checkpoint" HTML | Vercel blocks httpx's h2 fingerprint | Switch to `httpx(http2=False)` — cookies and headers don't matter, it's purely TLS |
 | Works in browser, fails in Python regardless | Check for authorization that's not a JWT | Look for short `Authorization` values in the bundle (namespace, env name, etc.) |
 
 ### Using Playwright to capture exact headers
@@ -274,4 +341,5 @@ a new endpoint, figure out a new header, or resolve a mystery.
 |---|---|---|
 | `skills/austin-boulder-project/` | Tilefive / approach.app | `httpx(http2=True)` required for CloudFront, `Authorization` = namespace string |
 | `skills/claude/` | claude.ai (Cloudflare) | `Sec-Fetch-*` headers required, `403` without them even with valid cookies |
+| `skills/exa/` | dashboard.exa.ai (Vercel + Cloudflare) | `http2=False` bypasses Vercel Security Checkpoint — no cookies needed, h2 triggers 429 regardless. Full email login flow works with HTTPX alone. |
 | `skills/goodreads/` | Goodreads / AppSync | `urllib` works for AppSync (no WAF), but headless Playwright needs full stealth settings |

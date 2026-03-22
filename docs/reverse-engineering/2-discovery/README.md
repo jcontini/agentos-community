@@ -99,41 +99,96 @@ the Apollo cache without any GraphQL calls.
 
 ---
 
-## JS Bundle Config Discovery
+## JS Bundle Scanning
 
-SPAs embed configuration — API keys, endpoints, tenant IDs — in their minified
-JavaScript bundles. This is findable without login.
+SPAs embed everything in their JavaScript bundles — config values, API keys,
+custom endpoints, and auth flow logic. Scanning bundles is one of the highest-
+value reverse engineering techniques. It works without login, reveals hidden
+endpoints that network capture misses, and exposes the exact contracts the
+frontend uses.
+
+### Two levels of bundle scanning
+
+**Level 1: Config extraction** — find API keys, endpoints, tenant IDs.
+Standard search for known patterns.
+
+**Level 2: Endpoint and flow discovery** — find custom API endpoints that
+aren't in the standard framework (e.g. `/api/verify-otp`), understand what
+parameters they accept, and how the frontend processes the response. This
+is how you crack custom auth flows.
 
 ### General pattern
 
 ```python
-import re
+import re, httpx
 
-def discover_config_from_bundle(html: str, base_url: str) -> dict:
-    # Step 1: find the main JS bundle URL in the HTML
-    bundle_match = re.search(r'(/assets/app-[A-Za-z0-9]+\.js)', html)
-    # For Next.js apps:
-    bundle_match = re.search(r'(/_next/static/chunks/pages/_app-[a-f0-9]+\.js)', html)
+def scan_bundles(page_url: str, search_terms: list[str]) -> dict:
+    """Fetch a page, extract all JS bundle URLs, scan each for search terms."""
+    with httpx.Client(http2=False, follow_redirects=True, timeout=30) as client:
+        html = client.get(page_url).text
 
-    # Step 2: fetch the bundle
-    bundle_js = fetch(f"{base_url}{bundle_match.group()}")
+        # Extract all JS chunk URLs (Next.js / Turbopack pattern)
+        js_urls = list(set(re.findall(
+            r'["\'](/_next/static/[^"\' >]+\.js[^"\' >]*)', html
+        )))
 
-    # Step 3: regex-extract config values
-    configs = {}
-    for m in re.finditer(r'"apiKey":"([^"]+)"', bundle_js):
-        configs[m.group(1)] = True
-    return configs
+        results = {}
+        for url in js_urls:
+            js = client.get(f"{page_url.split('//')[0]}//{page_url.split('//')[1].split('/')[0]}{url}").text
+            for term in search_terms:
+                if term.lower() in js.lower():
+                    # Extract context around the match
+                    idx = js.lower().find(term.lower())
+                    context = js[max(0, idx-100):idx+200]
+                    results.setdefault(term, []).append({
+                        "chunk": url[-40:],
+                        "size": len(js),
+                        "context": context,
+                    })
+        return results
 ```
 
-### Common patterns to search for
+### Config patterns to search for
 
-| What | Regex pattern |
+| What | Search terms |
 |---|---|
 | API keys | `apiKey`, `api_key`, `X-Api-Key`, `widgetsApiKey` |
-| GraphQL endpoints | `appsync-api.*amazonaws\.com`, `graphql` |
-| Tenant / namespace | `host.split(".")[0]` or hardcoded subdomain strings |
-| Cognito credentials | `userPoolId`, `userPoolClientId` near `aws:` |
+| GraphQL endpoints | `appsync-api`, `graphql` |
+| Tenant / namespace | `host.split`, `subdomain` |
+| Cognito credentials | `userPoolId`, `userPoolClientId` |
 | Auth endpoints | `AuthFlow`, `InitiateAuth`, `cognito-idp` |
+
+### Custom endpoint patterns to search for
+
+| What | Search terms |
+|---|---|
+| Custom auth flows | `verify-otp`, `verify-code`, `verify-token`, `confirm-code` |
+| Hidden API routes | `fetch(`, `/api/` |
+| Token construction | `callback/email`, `hashedOtp`, `rawOtp`, `token=` |
+| Form submission handlers | `submit`, `handleSubmit`, `onSubmit` |
+
+### How we cracked Exa's custom OTP flow
+
+Exa's login page uses a custom 6-digit OTP system built on top of NextAuth.
+The standard NextAuth callback failed with `error=Verification`. Scanning
+the JS bundles revealed the actual flow:
+
+```python
+# Search terms that found the hidden endpoint
+results = scan_bundles("https://auth.exa.ai", ["verify-otp", "verify-code", "callback/email"])
+```
+
+In a 573KB chunk, this surfaced:
+```javascript
+fetch("/api/verify-otp", {method: "POST", headers: {"Content-Type": "application/json"},
+  body: JSON.stringify({email: e.toLowerCase(), otp: r})})
+// → response: {email, hashedOtp, rawOtp}
+// → constructs: token = hashedOtp + ":" + rawOtp
+// → redirects to: /api/auth/callback/email?token=...&email=...
+```
+
+This revealed the entire auth flow — custom endpoint, request/response shape,
+and token construction — all from static JS analysis.
 
 ### Multi-environment configs
 
@@ -168,6 +223,142 @@ function that generates them near the axios/fetch client factory in the bundle.
 
 - Goodreads: `skills/goodreads/public_graph.py` `discover_from_bundle()` — extracts Prod AppSync config from `_app` chunk
 - Austin Boulder Project: `skills/austin-boulder-project/abp.py` — API key and namespace from Tilefive bundle
+
+---
+
+## Navigation API Interception
+
+When JS bundle scanning reveals what endpoint gets called but not what happens
+with the result (e.g. a client-side token construction), you need to see the
+actual values the browser produces. The **Navigation API interceptor** is the
+key technique.
+
+### The problem
+
+Client-side JS often does: fetch → process response → set `window.location.href`.
+Once the navigation fires, the page is gone and you can't inspect the URL. Network
+capture only catches the fetch, not the outbound navigation. And the processing
+logic is buried in minified closures you can't easily call.
+
+### The solution
+
+Modern Chrome exposes the [Navigation API](https://developer.mozilla.org/en-US/docs/Web/API/Navigation_API).
+You can intercept navigation attempts, capture the destination URL, and prevent
+the actual navigation — all with a single `evaluate` call:
+
+```
+evaluate { script: "navigation.addEventListener('navigate', (e) => { window.__intercepted_nav_url = e.destination.url; e.preventDefault(); }); 'interceptor installed'" }
+```
+
+Then trigger the action (click a button, submit a form), and read the captured URL:
+
+```
+click { selector: "button#submit" }
+evaluate { script: "window.__intercepted_nav_url" }
+```
+
+The URL contains whatever the client-side JS constructed — tokens, hashes,
+callback parameters — fully assembled and ready to replay with HTTPX.
+
+### When to use this
+
+| Situation | Technique |
+|-----------|-----------|
+| Button click makes a `fetch()` call | Fetch interceptor (see 3-auth) |
+| Button click causes a page navigation | Navigation API interceptor |
+| Form does a native POST (page reloads) | Inspect the `<form>` action + inputs |
+| JS constructs a URL and redirects | Navigation API interceptor |
+
+### Real example: Exa OTP verification
+
+The Exa auth page's "VERIFY CODE" button calls `/api/verify-otp`, gets back
+`{hashedOtp, rawOtp}`, then does `window.location.href = callback_url_with_token`.
+The Navigation API interceptor captured the full callback URL, revealing the
+token format is `{bcrypt_hash}:{raw_code}`.
+
+This technique turned a "Playwright required" flow into a fully HTTPX-replayable
+one. See [NextAuth OTP flow](../3-auth/nextauth.md#step-2-codetoken-submission).
+
+### Combining with fetch interception
+
+For complete visibility, install both interceptors before triggering an action:
+
+```javascript
+// Capture all fetch calls AND navigations
+window.__cap = { fetches: [], navigations: [] };
+
+// Fetch interceptor
+const origFetch = window.fetch;
+window.fetch = async (...args) => {
+  const r = await origFetch(...args);
+  const c = r.clone();
+  window.__cap.fetches.push({
+    url: typeof args[0] === 'string' ? args[0] : args[0]?.url,
+    status: r.status,
+    body: (await c.text()).substring(0, 3000),
+  });
+  return r;
+};
+
+// Navigation interceptor
+navigation.addEventListener('navigate', (e) => {
+  window.__cap.navigations.push(e.destination.url);
+  e.preventDefault();
+});
+```
+
+Read everything after: `evaluate { script: "JSON.stringify(window.__cap)" }`
+
+---
+
+## Read the Source
+
+When bundle scanning and interception give you the *what* but not the *why*,
+go read the library's source code. This is especially valuable for
+well-known frameworks (NextAuth, Supabase, Clerk, Auth0) where the source
+is on GitHub.
+
+### Why this matters
+
+Minified bundle code tells you *what* the client does. The library source tells
+you *what the server expects*. These are two halves of the same flow.
+
+### Example: NextAuth email callback
+
+Bundle scanning revealed Exa calls `/api/auth/callback/email?token=...`. But
+what does the server do with that token? Reading the
+[NextAuth callback source](https://github.com/nextauthjs/next-auth/blob/main/packages/core/src/lib/actions/callback/index.ts)
+revealed the critical line:
+
+```typescript
+token: await createHash(`${paramToken}${secret}`)
+```
+
+The server SHA-256 hashes `token + NEXTAUTH_SECRET` and compares with the
+database. This told us the token format must be stable and deterministic — it
+can't be a random value. Combined with the Navigation API interception that
+showed `token = hashedOtp:rawOtp`, we had the complete picture.
+
+### When to read the source
+
+| Signal | Action |
+|--------|--------|
+| Standard framework (NextAuth, Supabase, etc.) | Read the auth callback handler source |
+| Custom error messages (e.g. `error=Verification`) | Search the library source for that error string |
+| Token/hash format is unclear | Read the token verification logic |
+| Framework does something "impossible" | The source always reveals how |
+
+### Where to find it
+
+```
+NextAuth:   github.com/nextauthjs/next-auth/tree/main/packages/core/src
+Supabase:   github.com/supabase/auth
+Clerk:      github.com/clerk/javascript
+Auth0:      github.com/auth0/nextjs-auth0
+```
+
+Search the repo for the endpoint path (e.g. `callback/email`) or error message
+(e.g. `Verification`) to find the relevant handler quickly.
 
 ---
 
@@ -362,6 +553,7 @@ HTML scraping should be the strategy of last resort, not the first attempt.
 
 | Skill | Discovery technique | Reference |
 |---|---|---|
+| `skills/exa/` | JS bundle scanning for custom `/api/verify-otp` endpoint + Navigation API interception for token format + reading NextAuth source for server-side verification logic | `exa.py`, [nextauth.md](../3-auth/nextauth.md) |
 | `skills/goodreads/` | Next.js Apollo cache + AppSync GraphQL + JS bundle scanning | `public_graph.py` |
 | `skills/austin-boulder-project/` | JS bundle config extraction (API key + namespace) | `abp.py` |
 | `skills/claude/` | Session cookie capture via Playwright | `claude-login.py` |
