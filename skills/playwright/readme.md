@@ -45,6 +45,12 @@ browser stays alive — sessions, cookies, tabs persist
 stop → kills the browser process (only when done)
 ```
 
+## Agent Usage Tips
+
+**Don't use `wait` between operations.** The round-trip latency between agent tool calls (model thinking + MCP overhead) is typically 1-3 seconds — more than enough for pages to settle. Explicit waits are almost never needed. If a page hasn't loaded, just call `screenshot` or `inspect` again rather than inserting `wait` calls. Only use `wait` if you have strong reason to believe async content needs extra time (e.g. a slow API response you're waiting to capture).
+
+**Prefer `inspect` over `screenshot` for understanding pages.** `inspect` returns structured DOM data instantly; `screenshot` is slow and produces large images. Use `screenshot` only when pixels matter or the user explicitly wants visual verification.
+
 ## Recommended Workflow
 
 When using Playwright for reverse engineering, prefer this order:
