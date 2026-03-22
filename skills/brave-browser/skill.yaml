@@ -21,10 +21,10 @@ accounts:
   id_field: name
 
 provides:
-  - cookies:
-      via: cookie_get
-      account_param: domain
-      description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
+  - auth: cookies
+    via: cookie_get
+    account_param: domain
+    description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
 
 # ==============================================================================
 # ADAPTERS

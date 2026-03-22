@@ -19,19 +19,18 @@ accounts:
   id_field: email
 
 provides:
-  - credentials:
-      oauth:
-        service: google
-        via: credential_get
-        account_param: account
-        scopes:
-          - https://mail.google.com/
-          - https://www.googleapis.com/auth/contacts
-          - https://www.googleapis.com/auth/contacts.other.readonly
-          - https://www.googleapis.com/auth/calendar.events
-          - https://www.googleapis.com/auth/directory.readonly
-          - https://www.googleapis.com/auth/gmail.settings.basic
-          - https://www.googleapis.com/auth/userinfo.profile
+  - auth: oauth
+    service: google
+    via: credential_get
+    account_param: account
+    scopes:
+      - https://mail.google.com/
+      - https://www.googleapis.com/auth/contacts
+      - https://www.googleapis.com/auth/contacts.other.readonly
+      - https://www.googleapis.com/auth/calendar.events
+      - https://www.googleapis.com/auth/directory.readonly
+      - https://www.googleapis.com/auth/gmail.settings.basic
+      - https://www.googleapis.com/auth/userinfo.profile
 
 # ==============================================================================
 # TRANSFORMERS

@@ -15,10 +15,10 @@ connections:
 # Firefox cookies are stored plaintext in SQLite, so this integration can act as a
 # lightweight cookie provider for connections that use cookie-based auth.
 provides:
-  - cookies:
-      via: cookie_get
-      account_param: domain
-      description: "Extract plaintext Firefox cookies from local profiles for cookie-based connections."
+  - auth: cookies
+    via: cookie_get
+    account_param: domain
+    description: "Extract plaintext Firefox cookies from local profiles for cookie-based connections."
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════

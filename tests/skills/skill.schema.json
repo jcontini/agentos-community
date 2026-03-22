@@ -139,42 +139,20 @@
     },
     "provides": {
       "type": "array",
-      "description": "Typed provides: OAuth/API credentials, cookies, or discoverable tools.",
+      "description": "Typed provides: auth supply (cookies, oauth, api_key) or discoverable tools.",
       "items": {
         "oneOf": [
           {
             "type": "object",
-            "required": ["credentials"],
+            "required": ["auth", "via"],
             "properties": {
-              "credentials": {
-                "type": "object",
-                "properties": {
-                  "oauth": { "$ref": "#/definitions/oauthProvides" },
-                  "api_key": { "$ref": "#/definitions/apiKeyProvides" }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": ["cookies"],
-            "properties": {
-              "cookies": {
-                "type": "object",
-                "required": ["via"],
-                "properties": {
-                  "via": { "type": "string" },
-                  "domains": {
-                    "type": "array",
-                    "items": { "type": "string" }
-                  },
-                  "description": { "type": "string" },
-                  "account_param": { "type": "string", "description": "Default: domain" }
-                },
-                "additionalProperties": false
-              }
+              "auth": { "type": "string", "enum": ["cookies", "oauth", "api_key"], "description": "Auth type this skill supplies" },
+              "via": { "type": "string", "description": "Operation that returns the auth material" },
+              "service": { "type": "string", "description": "Service identifier for matchmaking (oauth, api_key)" },
+              "domains": { "type": "array", "items": { "type": "string" }, "description": "Domain filters (cookies)" },
+              "scopes": { "type": "array", "items": { "type": "string" }, "description": "OAuth scopes this provider supplies" },
+              "description": { "type": "string", "description": "Human-readable description" },
+              "account_param": { "type": "string", "description": "Param name for multi-account selection (default: domain)" }
             },
             "additionalProperties": false
           },
