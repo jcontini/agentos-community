@@ -471,7 +471,28 @@ For any site that uses session cookies without a framework like NextAuth:
 2. Extract cookies: `cookies { domain: ".example.com" }`
 3. Use them in HTTPX: `httpx.Client(cookies={...})`
 
-Reference implementation: `skills/claude/claude-login.py` (Cloudflare-protected).
+Reference implementations:
+- `skills/claude/claude-login.py` (Cloudflare-protected)
+- `skills/amazon/amazon.py` (tiered cookie architecture, Siege bypass)
+
+### Tiered cookie architectures
+
+Large services like Amazon use multiple cookie tiers for different access levels:
+
+| Tier | Cookies | Access |
+|------|---------|--------|
+| Session | `session-id`, `session-token`, `ubid-main` | Browsing, search |
+| Persistence | `x-main` | "Remember me" across sessions |
+| Authentication | `at-main` (`Atza\|...`), `sess-at-main` | Account pages, order history |
+| SSO | `sst-main` (`Sst1\|...`), `sso-state-main` | Cross-service auth |
+
+When building a skill against a tiered service, you need the **full cookie jar**
+from a logged-in browser — not just the session cookie. The auth tokens are
+interdependent and the server validates them together.
+
+Some cookies should be **excluded** (see [1-transport](../1-transport/README.md)
+for cookie stripping) — encryption trigger cookies, WAF telemetry, etc. But
+the auth-tier cookies must all be present.
 
 ---
 
@@ -556,6 +577,7 @@ Reference: `skills/goodreads/public_graph.py` `discover_from_bundle()`.
 
 | Skill | Pattern | What to learn from it |
 |-------|---------|----------------------|
+| `skills/amazon/` | Tiered cookie auth, Siege encryption bypass, `SESSION_EXPIRED` retry | Full client hints, cookie stripping for anti-bot, session warming, provider retry convention |
 | `skills/exa/` | NextAuth email code → fully HTTPX (no browser) → API keys | JS bundle scanning for custom endpoints, Navigation API interception, OTP token format discovery, Vercel `http2=False` bypass |
 | `skills/goodreads/` | Multi-tier discovery, AppSync, auth boundary mapping | Bundle extraction, config rotation, public vs auth operations |
 | `skills/claude/` | Cloudflare-protected cookie extraction | Stealth Playwright settings, HttpOnly cookies via CDP |

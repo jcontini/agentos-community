@@ -59,5 +59,5 @@ For detailed examples, see each layer's documentation. Real-world reference impl
 | `skills/exa/` | Full credential bootstrap: NextAuth email code → Playwright form submit → session cookies → API key extraction from dashboard API. Reference for [nextauth.md](3-auth/nextauth.md) |
 | `skills/goodreads/` | Multi-tier discovery, Apollo cache extraction, auth boundary mapping, runtime config fallback |
 | `skills/claude/` | Cookie-based auth, Cloudflare stealth settings, API replay from browser session |
-| `skills/amazon/` | HTML identity resolution, session cookies, WAF handling |
+| `skills/amazon/` | Deep anti-bot bypass (client hints, Siege encryption, session warming), fallback CSS selector chains for resilient HTML parsing, AJAX endpoints for dynamic content, `SESSION_EXPIRED` provider retry convention, tiered cookie architecture. Full reference for [1-transport](1-transport/README.md) and [4-content](4-content/README.md). |
 | `skills/austin-boulder-project/` | JS bundle config extraction, tenant-namespace auth |

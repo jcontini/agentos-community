@@ -228,6 +228,47 @@ rating = int(stars["data-rating"]) if stars else None
 rating_el = row.select_one(".staticStars")
 ```
 
+### Fallback selector chains
+
+Large sites use different HTML structures across pages, A/B tests, and regions.
+Instead of matching a single selector, define a **priority-ordered list** and
+take the first match. This makes parsers resilient to markup changes.
+
+```python
+ORDER_ID_SEL = [
+    "[data-component='orderId']",
+    ".order-date-invoice-item :is(bdi, span)[dir='ltr']",
+    ".yohtmlc-order-id :is(bdi, span)[dir='ltr']",
+    ":is(bdi, span)[dir='ltr']",
+]
+
+ITEM_PRICE_SEL = [
+    ".a-price .a-offscreen",
+    "[data-component='unitPrice'] .a-text-price :not(.a-offscreen)",
+    ".yohtmlc-item .a-color-price",
+]
+
+def _select_one(tag, selectors: list[str]):
+    for sel in selectors:
+        result = tag.select_one(sel)
+        if result:
+            return result
+    return None
+
+def _select(tag, selectors: list[str]) -> list:
+    for sel in selectors:
+        result = tag.select(sel)
+        if result:
+            return result
+    return []
+```
+
+Put the most specific, modern selector first (e.g. `data-component` attributes)
+and the broadest fallback last. This pattern works especially well for sites
+like Amazon that ship multiple front-end variants simultaneously.
+
+Reference: `skills/amazon/amazon.py` — all order/item selectors use this pattern.
+
 ### Structured table pages (Goodreads `/review/list/`)
 
 Many sites render user data in HTML tables with class-coded columns. Each `<td>`
@@ -265,18 +306,89 @@ def _extract_rating(row):
     return None
 ```
 
-### Login detection
+### Login detection and `SESSION_EXPIRED`
 
-Check early and fail fast when cookies are invalid:
+Check early and fail fast when cookies are invalid. Use the `SESSION_EXPIRED:`
+prefix convention so the engine can automatically retry with a different cookie
+provider (see [connections.md](../../skills/connections.md)):
 
 ```python
-def _require_login(html_text):
-    snippet = html_text[:2000]
-    if "Sign in" in snippet or "Sign Up" in snippet:
-        title = re.search(r"<title>(.*?)</title>", html_text, re.S)
-        if title and ("Sign Up" in title.group(1) or "Sign in" in title.group(1)):
-            raise RuntimeError("Page requires login — cookies invalid or expired")
+def _is_login_redirect(resp, body: str) -> bool:
+    if "ap/signin" in str(resp.url):
+        return True
+    if "form[name='signIn']" in body[:5000]:
+        return True
+    return "ap_email" in body[:3000] or "signIn" in body[:3000]
+
+# In any authenticated operation:
+if _is_login_redirect(resp, body):
+    raise RuntimeError(
+        "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+    )
 ```
+
+The `SESSION_EXPIRED:` prefix triggers the engine's provider-exclusion retry:
+the engine marks the current cookie provider as stale, excludes it, and retries
+with the next-best provider. This handles the common case where one browser has
+stale cookies but another has a fresh session.
+
+**Convention:** `SESSION_EXPIRED: <human-readable reason>` for stale auth. Any
+other exception message means a real failure — the engine won't retry with
+different credentials.
+
+---
+
+## AJAX Endpoints for Dynamic Content
+
+Not everything is in the HTML. Many sites load sections dynamically via internal
+AJAX endpoints that return HTML fragments or JSON. These are often easier to
+parse than the full page and more stable across redesigns.
+
+### Discovering AJAX endpoints
+
+Use Playwright's `capture_network` while interacting with the page:
+
+```
+capture_network { url: "https://www.amazon.com/auto-deliveries", pattern: "**/ajax/**", wait: 5000 }
+```
+
+Or inject a fetch interceptor and click the relevant UI element — the interceptor
+captures the endpoint, params, and response shape.
+
+### Example: Amazon Subscribe & Save
+
+Amazon's subscription management page loads content via an AJAX endpoint that
+returns a JSON payload with embedded HTML:
+
+```python
+resp = client.get(
+    f"{BASE}/auto-deliveries/ajax/subscriptionList",
+    params={"pageNumber": 0},
+    headers={
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": f"{BASE}/auto-deliveries",
+    },
+)
+data = resp.json()
+html_fragment = data.get("subscriptionListHtml", "")
+soup = BeautifulSoup(html_fragment, "html.parser")
+```
+
+**Key headers for AJAX:** Always include `X-Requested-With: XMLHttpRequest` and
+a valid `Referer`. Many servers check these to distinguish AJAX from direct
+navigation.
+
+### When to look for AJAX endpoints
+
+| Signal | Likely AJAX |
+|---|---|
+| Content appears after page load (spinner, lazy-load) | Yes |
+| URL changes without full page reload | Yes — check for `pushState` + fetch |
+| Tab/section switching within a page | Yes — each tab may have its own endpoint |
+| Data differs between "View Source" and DevTools Elements | Yes — JS loaded it after |
+
+Reference: `skills/amazon/amazon.py` `subscriptions()` — AJAX endpoint for
+Subscribe & Save management.
 
 ---
 
@@ -371,11 +483,10 @@ test:
 
 ## Real-World Examples
 
-| Skill | What's scraped | Reference |
-|---|---|---|
-| `skills/goodreads/` | People (friends, following, followers), books, reviews, groups, quotes, rich profiles — all from HTML | `web_scraper.py` |
-| Future: `skills/myspace/` | Friends, followers, profile data from legacy HTML | — |
-| Future: `skills/twitter/` | Following, followers, tweets, likes | — |
+| Skill | What's scraped | Key patterns | Reference |
+|---|---|---|---|
+| `skills/amazon/` | Orders, products, subscriptions, account identity — all from server-rendered HTML and AJAX | Fallback selector chains, Siege cookie stripping, session warming, AJAX endpoints, `SESSION_EXPIRED` convention | `amazon.py` |
+| `skills/goodreads/` | People (friends, following, followers), books, reviews, groups, quotes, rich profiles — all from HTML | Structured table parsing, data attributes, pagination, dedup | `web_scraper.py` |
 
 For social-network-specific modeling patterns (person vs account, relationship
 types, cross-platform identity), see [5-social](../5-social/README.md).

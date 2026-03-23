@@ -83,7 +83,7 @@ connections:
     label: API Key
 ```
 
-**`cookies`** — session cookies resolved from the credential store (for stored sessions) or provider skills (Brave, Firefox):
+**`cookies`** — session cookies resolved from the credential store (for stored sessions) or provider skills (Brave, Firefox, Playwright):
 
 ```yaml
 connections:
@@ -113,10 +113,15 @@ All auth types follow the same resolution order:
 ```
 1. Check credential store (credentials.sqlite)
 2. Check provider skills (find_auth_providers)
+   - Score providers: has_all_required names → live session (Playwright) →
+     newest creation timestamp → cookie count
 3. If optional → skip auth; else → error with help_url
+4. On SESSION_EXPIRED or 401/403 → exclude failed provider, retry with next-best
 ```
 
-This means stored session cookies from `__secrets__` are found before falling back to browser providers.
+Stored session cookies from `__secrets__` are found before falling back to browser
+providers. On auth failure, the executor automatically retries with the next-best
+provider (one retry only).
 
 ### Cookie format contract for Python
 
@@ -232,23 +237,88 @@ Example references:
 
 ## Auth failure convention for Python skills
 
-When a Python skill detects an authentication failure from the upstream API (expired session, invalid token, etc.), it should **raise an exception** rather than returning an error dict. The exception message must contain one of: `401`, `403`, `unauthorized`, or `forbidden`. This allows the engine's cookie retry mechanism to detect the failure and retry with fresh cookies from a provider.
+When a Python skill detects an authentication failure, it should **raise an exception** rather than returning an error dict. Two conventions exist, and the engine handles both:
+
+### Convention 1: `SESSION_EXPIRED:` prefix (preferred for cookie-auth skills)
+
+Use `SESSION_EXPIRED:` when the skill can definitively detect that the session is stale — typically via login redirects, expired-session pages, or specific error responses. This is the **recommended convention** for cookie-authenticated skills.
 
 ```python
-# Bad — engine can't detect auth failure, no retry happens
-def get_api_keys(cookies: str) -> dict:
-    resp = client.get("/api/keys")
-    if resp.status_code == 403:
-        return {"error": "Session expired"}
+def list_orders(params):
+    cookie_header = _require_cookies(params, "list_orders")
+    with _auth_client(cookie_header) as client:
+        resp = client.get(f"{BASE}/your-orders/orders")
+        body = resp.text
 
-# Good — engine detects "403" in the exception, triggers retry
+    if _is_login_redirect(resp, body):
+        raise RuntimeError(
+            "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+        )
+    return _parse_orders(body)
+```
+
+**Format:** `SESSION_EXPIRED: <human-readable reason>`
+
+The engine catches this prefix, excludes the current cookie provider from the candidate list, and retries with the next-best provider. This handles the common case where one browser has stale cookies but another (e.g. Playwright with a live session) has fresh ones.
+
+### Convention 2: HTTP status codes in exception message (fallback)
+
+For API-style endpoints that return standard HTTP status codes, include `401`, `403`, `unauthorized`, or `forbidden` in the exception message:
+
+```python
 def get_api_keys(cookies: str) -> dict:
     resp = client.get("/api/keys")
     if resp.status_code in (401, 403):
         raise Exception(f"Unauthorized (HTTP {resp.status_code}): session expired")
-    data = resp.json()
-    if "error" in data and "expired" in data["error"].lower():
-        raise Exception("Unauthorized: dashboard session expired")
 ```
 
-This convention applies to any Python skill that consumes cookie auth (`.auth.cookies`). The engine's retry path invalidates the cookie cache and the credential store skip flag, then re-runs the operation with fresh cookies from a provider.
+Both conventions trigger the same retry behavior: invalidate the cookie cache, exclude the failing provider, and re-run with fresh cookies.
+
+### When to use which
+
+| Situation | Convention |
+|---|---|
+| HTML scraping — login redirect detected | `SESSION_EXPIRED:` prefix |
+| HTML scraping — auth wall / sign-in page | `SESSION_EXPIRED:` prefix |
+| JSON API returns 401/403 | HTTP status in exception |
+| Dashboard returns error JSON with "expired" | Either — `SESSION_EXPIRED:` is clearer |
+
+### Provider retry behavior
+
+The engine retries **once** on auth failure, with the failing provider excluded:
+
+```
+1. Engine selects best provider (e.g. Brave, 23 cookies)
+2. Skill runs, raises SESSION_EXPIRED
+3. Engine excludes Brave, re-selects (e.g. Playwright, 16 cookies)
+4. Skill runs again with Playwright's cookies
+5. If this also fails → error surfaces to the caller (no infinite loops)
+```
+
+## Cookie provider selection
+
+When multiple cookie providers are installed (Brave, Firefox, Playwright), the
+engine selects the best one using a scoring heuristic:
+
+1. **Required cookie names** — providers that have all cookies listed in the
+   connection's `names` field score highest (selection hint only — all cookies
+   are still passed to the skill)
+2. **Playwright preference** — Playwright (live browser session) is preferred
+   over database-extracted cookies when no timestamps are available
+3. **Creation timestamp** — the provider whose cookies were created most recently
+   wins. This is the key fix for stale-session problems: Playwright cookies from
+   today beat Brave cookies from last week, even if Brave has more cookies.
+4. **Cookie count** — final tiebreaker when all else is equal
+
+### Explicit provider override
+
+When the automatic selection picks wrong (or for testing), pass `provider` as a
+top-level argument to `run()`:
+
+```
+run({ skill: "amazon", tool: "list_orders", provider: "playwright" })
+```
+
+This bypasses the selection heuristic entirely and uses the specified provider.
+Valid provider names are the skill IDs of installed cookie providers (e.g.
+`"playwright"`, `"brave-browser"`, `"firefox"`).

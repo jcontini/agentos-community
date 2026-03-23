@@ -173,6 +173,144 @@ bypass its bot check. Without them, you get `403` even with a valid session cook
 | JS on `app.example.com` calling `api.example.com` | `same-site` |
 | JS on `portal.approach.app` calling `widgets.tilefive.com` | `cross-site` |
 
+### Client Hints — Beyond the Basics
+
+Some services go further than `Sec-CH-UA` and check for the full set of
+**client hints** that a real browser navigation produces. Amazon's bot detection
+(Lightsaber) is a prime example — it validates `Device-Memory`, `Downlink`, `Rtt`,
+and other hints that most scraping guides don't mention.
+
+**Full client hints header set (for page navigations):**
+
+```python
+AUTH_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ...",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,...",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Cache-Control": "max-age=0",
+    # --- Network quality hints ---
+    "Device-Memory": "8",
+    "Downlink": "10",
+    "Dpr": "2",
+    "Ect": "4g",
+    "Rtt": "50",
+    # --- Structured client hints ---
+    "Sec-Ch-Device-Memory": "8",
+    "Sec-Ch-Dpr": "2",
+    "Sec-Ch-Ua": '"Chromium";v="145", "Not:A-Brand";v="99"',
+    "Sec-Ch-Ua-Full-Version-List": '"Chromium";v="145.0.7632.6", "Not:A-Brand";v="99.0.0.0"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Ch-Viewport-Width": "1512",
+    # --- Navigation fetch metadata ---
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Viewport-Width": "1512",
+}
+```
+
+The critical ones most people miss: `Device-Memory`, `Rtt`, `Downlink`, `Ect`,
+`Dpr`, and `Sec-Ch-Ua-Full-Version-List`. These are sent by Chrome on every
+navigation and fingerprinted by Amazon, eBay, and other major retailers.
+
+**When to use which set:**
+
+| Request type | Headers needed |
+|---|---|
+| XHR / `fetch()` API calls | Basic set (`Sec-CH-UA`, `Sec-Fetch-*: cors`) |
+| Full page navigation | Full set with client hints, `Sec-Fetch-Dest: document`, `Sec-Fetch-Mode: navigate` |
+| Authenticated HTML pages | Full set — stricter bot detection on auth-gated content |
+
+**How to discover the right headers:** Use the Playwright skill's
+`capture_network` or the fetch interceptor to see exactly what headers a real
+browser sends on the same request. Copy them into your skill and test one at a
+time to find which ones matter. See `skills/amazon/amazon.py` `AUTH_HEADERS`
+for a complete real-world example.
+
+### Version drift
+
+Pin `Sec-Ch-Ua` and `Sec-Ch-Ua-Full-Version-List` to a current Chrome version.
+If you start getting unexpected 403s or redirects months later, the pinned
+version may be too old. Update it to match the current stable Chrome release.
+
+---
+
+## Cookie Stripping — Disabling Client-Side Features
+
+Some sites inject JavaScript-driven features via cookies. When you're scraping
+with HTTPX (no JS engine), these features produce unusable output. The fix:
+**strip the trigger cookies** so the server falls back to plain HTML.
+
+### Amazon's Siege Encryption
+
+Amazon uses a system called `SiegeClientSideDecryption` to encrypt page content
+client-side. When the `csd-key` cookie is present, Amazon sends encrypted HTML
+blobs instead of readable content. The browser decrypts them with JavaScript;
+HTTPX gets unreadable garbage.
+
+**Solution:** strip the trigger cookies before sending requests:
+
+```python
+SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
+
+def _auth_client(cookie_header: str) -> httpx.Client:
+    cookies = {
+        k: v for k, v in _parse_cookie_header(cookie_header).items()
+        if k not in SKIP_COOKIES
+    }
+    return httpx.Client(http2=True, cookies=cookies, ...)
+```
+
+With `csd-key` stripped, Amazon serves plain, parseable HTML. The `csm-hit` and
+`aws-waf-token` cookies are also stripped — they're telemetry/WAF cookies that
+can trigger additional client-side behavior.
+
+### Diagnosing encryption
+
+If your HTML responses contain garbled content, long base64 strings, or empty
+containers where data should be, check for client-side decryption:
+
+1. Compare the page source in the browser (View Source, not DevTools Elements)
+   with your HTTPX response
+2. Search for keywords like `decrypt`, `Siege`, `clientSide` in the page JS
+3. Try stripping cookies one at a time to find which one triggers encryption
+
+Reference: `skills/amazon/amazon.py` `SKIP_COOKIES`.
+
+---
+
+## Session Warming
+
+Some services track request patterns and flag direct deep-links from an unknown
+session as bot traffic. The fix: **warm the session** by visiting the homepage
+first, then navigate to the target page.
+
+```python
+def _warm_session(client: httpx.Client) -> None:
+    client.get("https://www.amazon.com", headers={"Sec-Fetch-Site": "none"})
+    time.sleep(1.0)
+```
+
+This establishes the session context (cookies, CSRF tokens, tracking state)
+before hitting authenticated pages. Without it, Amazon redirects order history
+and account pages to the login page even with valid session cookies.
+
+**When to warm:**
+- Before any authenticated page fetch (order history, account settings)
+- When the first request to a deep URL returns a login redirect despite valid cookies
+- When you see WAF-level blocks only on direct navigation
+
+**When warming isn't needed:**
+- API endpoints (JSON responses) — they don't use page-level session tracking
+- Public pages without authentication
+- Sites where direct deep-links work fine (test first)
+
+Reference: `skills/amazon/amazon.py` `_warm_session()`.
+
 ---
 
 ## Headless Browser Stealth
@@ -339,6 +477,7 @@ a new endpoint, figure out a new header, or resolve a mystery.
 
 | Skill | Service | Key transport learnings |
 |---|---|---|
+| `skills/amazon/` | Amazon (Lightsaber bot detection) | Full client hints required (`Device-Memory`, `Rtt`, `Downlink`, etc.), cookie stripping for Siege encryption bypass, session warming before deep-link navigation |
 | `skills/austin-boulder-project/` | Tilefive / approach.app | `httpx(http2=True)` required for CloudFront, `Authorization` = namespace string |
 | `skills/claude/` | claude.ai (Cloudflare) | `Sec-Fetch-*` headers required, `403` without them even with valid cookies |
 | `skills/exa/` | dashboard.exa.ai (Vercel + Cloudflare) | `http2=False` bypasses Vercel Security Checkpoint — no cookies needed, h2 triggers 429 regardless. Full email login flow works with HTTPX alone. |

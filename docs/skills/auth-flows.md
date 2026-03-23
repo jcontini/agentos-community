@@ -60,13 +60,52 @@ The engine writes `__secrets__` to the credential store, creates an account enti
 
 When the engine resolves cookie auth for a connection, it follows this order:
 
-1. **Credential store** — check `credentials.sqlite` for a stored cookie matching the issuer (derived from the connection's `base_url`) and the requested `names` filter.
-2. **Providers** — if the store has nothing (or on retry after 401/403), query all installed skills that `provides: - auth: cookies`. Three providers exist today: **Brave** (SQLite cookie DB), **Firefox** (SQLite cookie DB), **Playwright** (persistent Chromium session via CDP).
+1. **Credential store** — check `credentials.sqlite` for a stored cookie matching the issuer (derived from the connection's `base_url`).
+2. **Providers** — if the store has nothing (or on retry after auth failure), query all installed skills that `provides: - auth: cookies`. Three providers exist today: **Brave** (SQLite cookie DB), **Firefox** (SQLite cookie DB), **Playwright** (persistent Chromium session via CDP).
 3. **Fail** — if no provider can supply the cookies, raise a credential error.
 
 Playwright is the primary provider for cookies acquired through login automation. After a successful login flow, cookies live in Playwright's persistent browser context. The engine can query them via `playwright.cookies` the same way it queries `brave-browser.cookie_get`. The `store_session_cookies` step persists them to the credential store so future runs don't need Playwright.
 
-On 401/403 (or Python exceptions containing `401`, `403`, `unauthorized`, `forbidden`), the engine invalidates the store entry and retries with a fresh provider query. See `connections.md` for the Python exception convention.
+### Provider selection heuristic
+
+When multiple providers can supply cookies for the same domain, the engine scores
+them:
+
+1. **Required names** — providers with all cookies listed in `auth.names` score highest
+2. **Playwright preference** — live browser session beats database-extracted cookies
+3. **Creation timestamp** — most recently created cookies win (prevents stale Brave cookies from beating fresh Playwright ones just because Brave has more cookies)
+4. **Cookie count** — final tiebreaker
+
+### Retry on auth failure
+
+On `SESSION_EXPIRED:` prefix (or Python exceptions containing `401`, `403`,
+`unauthorized`, `forbidden`), the engine:
+
+1. Marks the current provider as failed
+2. Excludes it from the candidate list
+3. Re-runs provider selection — next-best provider wins
+4. Retries the operation once with the new provider's cookies
+
+This means a skill with stale Brave cookies and fresh Playwright cookies will
+automatically fall back to Playwright after Brave fails. One retry only — no
+infinite loops.
+
+### Explicit provider override
+
+For testing or when auto-selection picks wrong:
+
+```
+run({ skill: "amazon", tool: "list_orders", provider: "playwright" })
+```
+
+The `provider` argument bypasses the selection heuristic entirely.
+
+### Providers always return the full cookie jar
+
+The `names` field in connection auth is purely a **selection hint** — it helps
+the engine choose the right provider. Providers always return all cookies for the
+domain, never a filtered subset. Skills that need the full cookie jar (which is
+most of them) work correctly regardless of whether `names` is declared.
 
 ## Key rules
 
