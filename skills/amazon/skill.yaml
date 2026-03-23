@@ -36,6 +36,8 @@ adapters:
     data.status: .status
     data.delivery_date: .delivery_date
     data.shipping_address: .shipping_address
+    data.tracking_url: .tracking_url
+    data.summary: .summary
 
     contains:
       product[]:
@@ -45,6 +47,7 @@ adapters:
         url: .url
         image: .image_url
         data.price: .price
+        data.price_amount: .price_amount
         data.quantity: .quantity
 
   product:
@@ -198,18 +201,20 @@ operations:
 
   list_orders:
     description: >
-      List recent Amazon orders. Requires active session cookies.
-      Parses the order history page for order IDs, dates, totals, status, and items.
+      List Amazon orders with pagination. Returns 10 orders per page with totals,
+      status, items, and pagination metadata (total_orders, has_next, total_pages).
     returns: order[]
     connection: web
     params:
       filter:
         type: string
-        description: "Time filter: last30, months-6, year-2024, year-2023, etc. (default: last30)"
+        description: >
+          Time filter: last30 (default), months-3, or year-YYYY (e.g. year-2024).
+          Supports years back to 2006.
       page:
         type: integer
         default: 1
-        description: "Results page number"
+        description: "Page number (10 orders per page)"
     python:
       module: ./amazon.py
       function: list_orders
@@ -220,8 +225,9 @@ operations:
 
   get_order:
     description: >
-      Get details for a specific Amazon order by order ID.
-      Returns order metadata and line items with product details.
+      Get full details for a specific Amazon order. Returns per-item prices,
+      quantities, order summary (subtotal, shipping, tax, grand total),
+      shipping address, delivery status, and tracking link.
     returns: order
     connection: web
     params:
@@ -234,6 +240,39 @@ operations:
       function: get_order
       params: true
       timeout: 30
+    test:
+      mode: write
+
+  buy_again:
+    description: >
+      Get products Amazon recommends for repurchase based on order history.
+      Shows frequently bought items and reorder suggestions.
+    returns: product[]
+    connection: web
+    python:
+      module: ./amazon.py
+      function: buy_again
+      params: true
+      timeout: 30
+    test:
+      mode: write
+
+  subscriptions:
+    description: >
+      List active Subscribe & Save subscriptions. Shows each subscription's
+      product, delivery frequency, next delivery date, and upcoming scheduled
+      deliveries with edit deadlines.
+    returns:
+      subscriptions: array
+      subscription_count: integer
+      upcoming_deliveries: array
+      total_savings: string
+    connection: web
+    python:
+      module: ./amazon.py
+      function: subscriptions
+      params: true
+      timeout: 45
     test:
       mode: write
 

@@ -607,13 +607,19 @@ ITEM_LINK_SEL = [
 ]
 ITEM_IMG_SEL = ["a img"]
 ITEM_PRICE_SEL = [
+    ".a-price .a-offscreen",
     "[data-component='unitPrice'] .a-text-price :not(.a-offscreen)",
     ".yohtmlc-item .a-color-price",
+]
+ITEM_QTY_SEL = [
+    "[data-component='quantity']",
+    ".item-view-qty",
 ]
 SHIPMENT_STATUS_SEL = [
     "span.delivery-box__primary-text",
     ".yohtmlc-shipment-status-primaryText",
 ]
+DETAIL_STATUS_SEL = SHIPMENT_STATUS_SEL + ["h4"]
 
 
 def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -640,16 +646,27 @@ def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
 
     if _is_login_redirect(resp, body):
         raise RuntimeError(
-            "Amazon redirected to login — session cookies are expired or invalid. "
-            "Sign in at amazon.com again."
+            "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
         )
 
-    return _parse_order_history(body)
+    result = _parse_order_history(body, page=page, order_filter=order_filter)
+    return result["orders"]
 
 
-def _parse_order_history(body: str) -> list[dict[str, Any]]:
+def _parse_order_history(
+    body: str, *, page: int = 1, order_filter: str = "last30",
+) -> dict[str, Any]:
     soup = _soup(body)
     orders: list[dict[str, Any]] = []
+
+    total_orders = None
+    num_el = soup.select_one(".num-orders")
+    if num_el:
+        m = re.search(r"(\d+)", _text(num_el) or "")
+        if m:
+            total_orders = int(m.group(1))
+
+    has_next = bool(soup.select("ul.a-pagination li.a-last a"))
 
     order_cards = _select(soup, ORDER_CARD_SEL)
 
@@ -712,12 +729,68 @@ def _parse_order_history(body: str) -> list[dict[str, Any]]:
             "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
         })
 
-    return orders
+    total_pages = None
+    if total_orders is not None:
+        total_pages = (total_orders + 9) // 10
+
+    return {
+        "orders": orders,
+        "page": page,
+        "per_page": 10,
+        "total_orders": total_orders,
+        "total_pages": total_pages,
+        "has_next": has_next,
+        "filter": order_filter,
+    }
 
 
-def _parse_order_items(card: Tag) -> list[dict[str, Any]]:
+def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     seen_asins: set[str] = set()
+
+    if detail_page:
+        for title_el in card.select("[data-component='itemTitle']"):
+            title = _clean(_text(title_el))
+
+            container = title_el
+            for _ in range(10):
+                container = container.parent
+                if not container or not hasattr(container, "get"):
+                    break
+                if "a-fixed-left-grid" in (container.get("class") or []):
+                    break
+
+            asin = None
+            for a in (container or title_el.parent).select("a[href]"):
+                m = re.search(r"/dp/([A-Z0-9]{10})", a.get("href", ""))
+                if m:
+                    asin = m.group(1)
+                    break
+
+            if not asin or asin in seen_asins:
+                continue
+            seen_asins.add(asin)
+
+            price_tag = _select_one(container or title_el.parent, ITEM_PRICE_SEL)
+            price = _text(price_tag)
+
+            qty_tag = _select_one(container or title_el.parent, ITEM_QTY_SEL)
+            qty_text = _text(qty_tag)
+            quantity = int(qty_text) if qty_text and qty_text.isdigit() else 1
+
+            img_tag = (container or title_el.parent).select_one("img")
+            image_url = img_tag.get("src") if img_tag else None
+
+            items.append({
+                "asin": asin,
+                "title": title,
+                "url": f"{BASE}/dp/{asin}",
+                "image_url": str(image_url) if image_url else None,
+                "price": price,
+                "price_amount": _parse_price(price),
+                "quantity": quantity,
+            })
+        return items
 
     item_tags = _select(card, ITEM_SEL)
     for item_tag in item_tags:
@@ -745,21 +818,266 @@ def _parse_order_items(card: Tag) -> list[dict[str, Any]]:
             "url": f"{BASE}/dp/{asin}",
             "image_url": str(image_url) if image_url else None,
             "price": price,
+            "price_amount": _parse_price(price),
+            "quantity": 1,
         })
 
     if not items:
-        for asin_m in re.finditer(r'/(?:dp|gp/product)/([A-Z0-9]{10})', str(card)):
-            asin = asin_m.group(1)
+        asin_titles: dict[str, str | None] = {}
+        asin_images: dict[str, str | None] = {}
+        for a in card.select("a[href]"):
+            href = a.get("href", "")
+            m = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", str(href))
+            if not m:
+                continue
+            asin = m.group(1)
+            text = a.get_text(strip=True)
+            if text and asin not in asin_titles:
+                asin_titles[asin] = text
+            elif asin not in asin_titles:
+                asin_titles.setdefault(asin, None)
+            img = a.select_one("img")
+            if img and asin not in asin_images:
+                asin_images[asin] = str(img.get("src", ""))
+
+        for asin, title in asin_titles.items():
             if asin in seen_asins:
                 continue
             seen_asins.add(asin)
             items.append({
                 "asin": asin,
-                "title": None,
+                "title": title,
                 "url": f"{BASE}/dp/{asin}",
-                "image_url": None,
+                "image_url": asin_images.get(asin),
                 "price": None,
+                "price_amount": None,
+                "quantity": 1,
             })
+
+    return items
+
+
+def buy_again(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Get products Amazon recommends for repurchase."""
+    params = params or {}
+    cookie_header = _require_cookies(params, "buy_again")
+
+    with _auth_client(cookie_header) as client:
+        _warm_session(client)
+        resp = client.get(
+            f"{BASE}/gp/buyagain",
+            headers={"Referer": f"{BASE}/your-orders/orders"},
+        )
+        resp.raise_for_status()
+        body = resp.text
+
+    if _is_login_redirect(resp, body):
+        raise RuntimeError(
+            "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+        )
+
+    return _parse_buy_again(body)
+
+
+def _parse_buy_again(body: str) -> list[dict[str, Any]]:
+    soup = _soup(body)
+    products: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for el in soup.select("[data-asin]"):
+        asin = el.get("data-asin", "")
+        if not asin or not re.match(r"^[A-Z0-9]{10}$", asin) or asin in seen:
+            continue
+
+        title_el = (
+            el.select_one("span.a-truncate-full")
+            or el.select_one("[data-component='title']")
+        )
+        title = _clean(_text(title_el))
+        if not title:
+            continue
+
+        seen.add(asin)
+
+        price_el = el.select_one(".a-price .a-offscreen")
+        price = _text(price_el)
+
+        img = el.select_one("img")
+        image_url = str(img.get("src", "")) if img else None
+
+        prime = bool(el.select_one("i.a-icon-prime"))
+
+        badge_el = el.select_one(".a-badge-text")
+        badge = _text(badge_el)
+
+        products.append({
+            "asin": asin,
+            "title": title,
+            "url": f"{BASE}/dp/{asin}",
+            "image_url": image_url,
+            "price": price,
+            "price_amount": _parse_price(price),
+            "prime": prime,
+            "badge": badge,
+        })
+
+    return products
+
+
+def subscriptions(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """List active Subscribe & Save subscriptions and upcoming deliveries."""
+    params = params or {}
+    cookie_header = _require_cookies(params, "subscriptions")
+
+    with _auth_client(cookie_header) as client:
+        _warm_session(client)
+
+        mgmt_resp = client.get(
+            f"{BASE}/gp/subscribe-and-save/manager/viewsubscriptions",
+            headers={"Referer": f"{BASE}/your-orders/orders"},
+        )
+        mgmt_resp.raise_for_status()
+
+        if _is_login_redirect(mgmt_resp, mgmt_resp.text):
+            raise RuntimeError(
+                "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+            )
+
+        mgmt_soup = _soup(mgmt_resp.text)
+
+        ship_id = None
+        for tab in mgmt_soup.select("[role='tab']"):
+            href = tab.get("href", "")
+            m = re.search(r"shipId=([^&]+)", href)
+            if m:
+                ship_id = m.group(1)
+                break
+
+        deliveries: list[dict[str, Any]] = []
+        for card in mgmt_soup.select(".delivery-card"):
+            date_el = card.select_one("h2")
+            date_text = _text(date_el) if date_el else None
+            full_text = card.get_text(" ", strip=True)
+
+            edit_deadline = None
+            m = re.search(r"Last day to edit.*?:\s*(\S.*?)(?:\s*You|$)", full_text)
+            if m:
+                edit_deadline = m.group(1).strip()
+
+            item_count = None
+            m = re.search(r"(\d+)\s+items?\s+in\s+this\s+delivery", full_text)
+            if m:
+                item_count = int(m.group(1))
+
+            if date_text:
+                deliveries.append({
+                    "delivery_date": date_text,
+                    "edit_deadline": edit_deadline,
+                    "item_count": item_count,
+                })
+
+        savings = None
+        savings_el = mgmt_soup.select_one("h1")
+        if savings_el:
+            m = re.search(r"\$([\d,.]+)", _text(savings_el) or "")
+            if m:
+                savings = f"${m.group(1)}"
+
+        items: list[dict[str, Any]] = []
+        if ship_id:
+            ajax_resp = client.get(
+                f"{BASE}/auto-deliveries/ajax/subscriptionList",
+                params={
+                    "deviceType": "desktop",
+                    "deviceContext": "web",
+                    "shipId": ship_id,
+                },
+                headers={
+                    "Referer": f"{BASE}/auto-deliveries/subscriptionList",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "text/html, */*",
+                },
+            )
+            if ajax_resp.status_code == 200:
+                items = _parse_subscriptions(ajax_resp.text)
+
+    return {
+        "total_savings": savings,
+        "upcoming_deliveries": deliveries,
+        "subscriptions": items,
+        "subscription_count": len(items),
+    }
+
+
+def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
+    soup = _soup(body)
+    items: list[dict[str, Any]] = []
+
+    for el in soup.select("[data-subscription-id]"):
+        sub_id = el.get("data-subscription-id", "")
+
+        title_el = el.select_one("span.a-truncate-full")
+        title = _clean(_text(title_el))
+        if not title:
+            continue
+
+        # Image: use data-a-hires or data-src (src is a placeholder pixel)
+        img = el.select_one("img.sns-product-image, img")
+        image_url = None
+        if img:
+            image_url = (
+                img.get("data-a-hires")
+                or img.get("data-src")
+                or img.get("src", "")
+            )
+            if image_url and "grey-pixel" in image_url:
+                image_url = None
+
+        # Next delivery date
+        next_delivery = None
+        for div in el.select("div, span"):
+            text = _text(div) or ""
+            m = re.search(
+                r"Next delivery by\s*(.+)",
+                text, re.I,
+            )
+            if m:
+                next_delivery = m.group(1).strip()
+                break
+        if not next_delivery:
+            for span in el.select("span, div"):
+                text = _text(span) or ""
+                if re.match(r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2}", text) and len(text) < 30:
+                    next_delivery = text
+                    break
+
+        # Frequency (e.g., "1 unit every 3 months")
+        frequency = None
+        for a in el.select("a.consumption-pattern-ingress-text, span.a-declarative a"):
+            text = _text(a) or ""
+            if re.search(r"every\s+\d+", text, re.I):
+                frequency = text
+                break
+        if not frequency:
+            for span in el.select("span, div"):
+                text = _text(span) or ""
+                if re.search(r"\d+\s+unit.*every", text, re.I):
+                    frequency = text
+                    break
+
+        # Price (sometimes shown)
+        price_el = el.select_one(".a-price .a-offscreen")
+        price = _text(price_el)
+
+        items.append({
+            "subscription_id": sub_id,
+            "title": title,
+            "image_url": str(image_url) if image_url else None,
+            "next_delivery": next_delivery,
+            "frequency": frequency,
+            "price": price,
+            "price_amount": _parse_price(price),
+        })
 
     return items
 
@@ -784,7 +1102,7 @@ def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
         body = resp.text
 
     if _is_login_redirect(resp, body):
-        raise RuntimeError("Amazon redirected to login — session cookies expired.")
+        raise RuntimeError("SESSION_EXPIRED: Amazon redirected to login — session cookies expired.")
 
     return _parse_order_detail(body, order_id)
 
@@ -794,20 +1112,27 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
 
     container = _select_one(soup, ["div#orderDetails", "div#ordersContainer"]) or soup
 
+    # Order date — detail page puts it in .order-date-invoice-item directly
+    order_date = None
     date_tag = _select_one(container, ORDER_DATE_SEL)
-    order_date = _text(date_tag)
-    if order_date:
-        order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", order_date).strip()
+    if date_tag:
+        raw = _text(date_tag) or ""
+        order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", raw).strip() or raw
 
-    total = None
-    total_tag = _select_one(container, ORDER_TOTAL_SEL)
-    total_text = _text(total_tag)
-    if total_text:
-        m = re.search(r"\$[\d,.]+", total_text)
-        total = m.group() if m else None
-
-    status_tag = _select_one(container, SHIPMENT_STATUS_SEL)
-    status = _clean(_text(status_tag))
+    # Delivery status — detail page often uses <h4> with "DeliveredMarch 10" format
+    status = None
+    for sel_list in [SHIPMENT_STATUS_SEL, ["h4"]]:
+        for sel in sel_list:
+            for el in container.select(sel):
+                text = _text(el) or ""
+                if re.search(r"Deliver|Arriving|Shipped|Return|Cancel", text, re.I):
+                    status = re.sub(r"(Delivered|Arriving)", r"\1 ", text).strip()
+                    status = re.sub(r"\s{2,}", " ", status)
+                    break
+            if status:
+                break
+        if status:
+            break
 
     delivery_date = None
     if status:
@@ -817,13 +1142,61 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
         )
         delivery_date = dm.group(1) if dm else None
 
+    # Shipping address — extract from list items, join with newlines
+    shipping_address = None
     addr_tag = _select_one(container, [
-        "div.displayAddressDiv",
         "[data-component='shippingAddress']",
+        "div.displayAddressDiv",
     ])
-    shipping_address = _clean(_text(addr_tag))
+    if addr_tag:
+        parts = []
+        for li in addr_tag.select("li .a-list-item"):
+            text = li.get_text(separator=", ", strip=True)
+            if text:
+                parts.append(text)
+        if parts:
+            shipping_address = "\n".join(parts)
+        else:
+            raw_addr = _text(addr_tag) or ""
+            shipping_address = re.sub(r"^Ship\s*to\s*", "", raw_addr).strip()
 
-    items = _parse_order_items(container)
+    # Tracking link
+    track_tag = container.select_one("a[href*='track']")
+    tracking_url = None
+    if track_tag:
+        href = track_tag.get("href", "")
+        tracking_url = href if href.startswith("http") else f"{BASE}{href}"
+
+    # Order summary from #od-subtotals
+    summary: dict[str, str | None] = {}
+    subtotals = container.select_one("#od-subtotals")
+    if subtotals:
+        for row in subtotals.select(".a-row"):
+            label_el = row.select_one(".a-column.a-span7")
+            value_el = row.select_one(".a-column.a-span5")
+            if label_el and value_el:
+                label = (_text(label_el) or "").rstrip(":").strip()
+                value = _text(value_el)
+                if "Subtotal" in label:
+                    summary["subtotal"] = value
+                elif "Shipping" in label:
+                    summary["shipping"] = value
+                elif "tax" in label.lower():
+                    summary["tax"] = value
+                elif "Grand Total" in label:
+                    summary["grand_total"] = value
+                elif "saving" in label.lower() or "discount" in label.lower():
+                    summary["discount"] = value
+
+    total = summary.get("grand_total")
+    if not total:
+        total_tag = _select_one(container, ORDER_TOTAL_SEL)
+        total_text = _text(total_tag)
+        if total_text:
+            m = re.search(r"\$[\d,.]+", total_text)
+            total = m.group() if m else None
+
+    items = _parse_order_items(container, detail_page=True)
 
     return {
         "order_id": order_id,
@@ -833,6 +1206,8 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
         "status": status,
         "delivery_date": delivery_date,
         "shipping_address": shipping_address,
+        "tracking_url": tracking_url,
+        "summary": summary or None,
         "item_count": len(items),
         "items": items,
         "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
@@ -858,7 +1233,7 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
     body = resp.text
 
-    if "ap/signin" in resp.url.path:
+    if "ap/signin" in str(resp.url):
         return {"authenticated": False, "redirect": str(resp.url)}
 
     name_match = re.search(

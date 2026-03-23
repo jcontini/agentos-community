@@ -85,6 +85,24 @@ adapters:
         platform: '"email"'
         display_name: .name
 
+    # Domain extraction: auto-creates domain entities from email addresses.
+    # Uses the domain string as id for deduplication — all emails from clerk.dev resolve
+    # to the same domain node.
+    domain:
+      domain:
+        id: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end | if . != null and test("@") then split("@") | .[1] else null end) else null end'
+        name: 'if .payload then (.payload.headers | map(select(.name == "From")) | if length > 0 then .[0].value else null end | if . != null and test("<") then split("<") | .[1] | rtrimstr(">") elif . != null then . else null end | if . != null and test("@") then split("@") | .[1] else null end) else null end'
+    to_domain:
+      domain[]:
+        _source: 'if .payload then (.payload.headers | map(select(.name == "To")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then split("<") | .[1] | rtrimstr(">") elif test("@") then rtrimstr(">") else null end) | map(select(. != null and test("@"))) | map(split("@") | .[1]) | unique | map({id: ., name: .}) else [] end) else [] end'
+        id: .id
+        name: .name
+    cc_domain:
+      domain[]:
+        _source: 'if .payload then (.payload.headers | map(select(.name == "Cc")) | if length > 0 then .[0].value else null end | if . != null then split(">, ") | map(ltrimstr(" ") | if test("<") then split("<") | .[1] | rtrimstr(">") elif test("@") then rtrimstr(">") else null end) | map(select(. != null and test("@"))) | map(split("@") | .[1]) | unique | map({id: ., name: .}) else [] end) else [] end'
+        id: .id
+        name: .name
+
   conversation:
     id: .id
     name: 'if .messages then (.messages | .[0].payload.headers | map(select(.name == "Subject")) | if length > 0 then .[0].value else "(no subject)" end) else (.snippet // "" | if length > 120 then .[:120] + "…" else . end) end'
