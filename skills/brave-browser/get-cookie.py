@@ -118,7 +118,7 @@ def get_cookies(domain: str, names: list[str] | None = None,
         match_field = host or domain
         query = """
             SELECT name, host_key, path, encrypted_value,
-                   is_secure, is_httponly, expires_utc
+                   is_secure, is_httponly, expires_utc, creation_utc
             FROM cookies
             WHERE host_key LIKE ?
         """
@@ -147,6 +147,12 @@ def get_cookies(domain: str, names: list[str] | None = None,
             else:
                 expires_unix = -1
 
+            creation_utc = row["creation_utc"]
+            if creation_utc and creation_utc > 0:
+                created_unix = (creation_utc / 1000000) - 11644473600
+            else:
+                created_unix = -1
+
             cookies.append({
                 "name": row["name"],
                 "value": value,
@@ -155,6 +161,7 @@ def get_cookies(domain: str, names: list[str] | None = None,
                 "httpOnly": bool(row["is_httponly"]),
                 "secure": bool(row["is_secure"]),
                 "expires": expires_unix,
+                "created": created_unix,
             })
 
         return cookies

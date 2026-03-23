@@ -142,7 +142,8 @@ operations:
     sql:
       query: >
         SELECT name, value, host, path, expiry,
-               isSecure AS is_secure, isHttpOnly AS is_httponly
+               isSecure AS is_secure, isHttpOnly AS is_httponly,
+               (creationTime / 1000000) AS created
         FROM moz_cookies
         WHERE host LIKE :domain
         ORDER BY name
@@ -179,7 +180,8 @@ operations:
           database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
           query: >
             SELECT name, value, host, path, expiry,
-                   isSecure AS is_secure, isHttpOnly AS is_httponly
+                   isSecure AS is_secure, isHttpOnly AS is_httponly,
+                   (creationTime / 1000000) AS created
             FROM moz_cookies
             WHERE host LIKE :domain
               AND (:names = '' OR instr(',' || :names || ',', ',' || name || ',') > 0)

@@ -177,7 +177,7 @@ operations:
     sql:
       query: >
         SELECT name, host_key, path, hex(encrypted_value) as encrypted_value,
-               is_secure, is_httponly, expires_utc
+               is_secure, is_httponly, expires_utc, creation_utc
         FROM cookies
         WHERE host_key LIKE :domain
         ORDER BY name
