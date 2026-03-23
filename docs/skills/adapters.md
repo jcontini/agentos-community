@@ -46,29 +46,93 @@ For lightweight relationship entities you can use the shorter `# --- Canonical f
 
 Map each source field to one canonical key. The audit script flags duplicate jaq expressions across sibling keys — if you see the advisory, pick one key and use `data.*` for any secondary exposure.
 
-## Adapter relationships
+## Typed references (entity relationships)
 
-Adapters can declare relationships between entities. A nested block under a canonical field creates a graph edge from the adapted entity to the related entity:
+Typed references create **linked entities** and **graph edges** from a single adapter definition. The outer key becomes the edge label; the inner key is the entity tag. The engine auto-creates/deduplicates the linked entity and adds the edge.
+
+### Single typed ref
 
 ```yaml
 adapters:
-  account:
-    # --- Canonical fields (rendered in previews / markdown) ---
+  email:
     id: .id
-    name: .title
-    # --- Skill-specific data ---
-    data.category: .category
-
-    in_vault:
-      vault:
-        # --- Canonical fields ---
-        id: .vault.id
-        name: .vault.name
+    name: .subject
+    # Creates: email --from--> account entity
+    from:
+      account:
+        handle: '.from_email'
+        platform: '"email"'
+        display_name: '.from_name'
 ```
 
-This creates an `in_vault` edge from each `account` entity to its parent `vault` entity. The nested adapter (`vault:`) follows the same mapping rules — `id`, `name`, and `data.*` fields. The engine creates or finds the related entity and adds the edge.
+The `from:` field name becomes the edge label. `account:` is the entity tag — the linked entity is tagged `account` and deduped by its `id` (or first string field if no `id`). Each field inside (`handle`, `platform`, `display_name`) is a jaq expression evaluated against the raw API response.
 
-Use relationships when entities have a natural containment or ownership structure (items in vaults, messages in conversations, tasks in projects). The relationship name (`in_vault`) becomes the edge label on the graph.
+### Array typed ref (`[]` + `_source`)
+
+When a field can produce multiple linked entities, use the array syntax:
+
+```yaml
+    # Creates: email --to--> account (one edge per recipient)
+    to:
+      account[]:
+        _source: '.recipients | map({email: .address, name: .display_name})'
+        handle: .email
+        platform: '"email"'
+        display_name: .name
+```
+
+`account[]` signals the engine to expect an array. `_source` is a jaq expression evaluated against the raw response that produces an array of objects; each inner field is then evaluated per-element.
+
+### Deduplication
+
+Linked entities are deduped by `(skill_id, account, remote_id)` where `remote_id` comes from the `id` field in the typed ref (or the first string field as fallback). This means:
+
+- Two emails from `clerk.dev` produce **one** domain entity — the second is an upsert
+- Edges are created regardless — both emails link to the same domain node
+- Vals on the linked entity are updated on each upsert (last-write-wins)
+
+### Edge direction
+
+Edges always point **from the parent entity to the linked entity**:
+
+```
+email --from--> account
+email --domain--> domain
+order --contains--> product
+```
+
+The field name is the edge label. Choose names that read naturally as a relationship.
+
+### Real-world example: domain extraction
+
+The Gmail skill extracts sender domains from email addresses:
+
+```yaml
+adapters:
+  email:
+    # Sender domain (single)
+    domain:
+      domain:
+        id: '...jaq to extract domain from From header...'
+        name: '...same expression...'
+
+    # Recipient domains (array — multiple To addresses)
+    to_domain:
+      domain[]:
+        _source: '...jaq that produces [{id: "gmail.com", name: "gmail.com"}, ...]...'
+        id: .id
+        name: .name
+```
+
+This produces `email --domain--> domain` and `email --to_domain--> domain` edges, with domain entities automatically deduplicated by domain string.
+
+### How it works under the hood
+
+1. **Mapping** (`mapping.rs`): jaq expressions are evaluated against the raw API response, producing nested JSON like `{ "domain": { "domain": { "id": "exa.ai", "name": "exa.ai" } } }`
+2. **Extraction** (`extraction.rs`): `process_typed_references` reads the adapter mapping, detects typed refs via `parse_typed_reference`, finds the evaluated data in the mapped response, and calls `extract_linked_node_from_values` to create/upsert the linked entity
+3. **Edge creation**: `create_edge_on` links the parent entity to the linked entity using the field name as the edge label
+
+The extraction step loads the skill definition **fresh from disk** (via `load_skill_by_id`), so changes to `skill.yaml` take effect immediately on the next `run()` call — no engine restart needed.
 
 ## Rules
 
