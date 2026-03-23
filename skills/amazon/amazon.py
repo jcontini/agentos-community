@@ -1215,6 +1215,295 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LISTS — wishlists, shopping lists, idea lists
+# ═══════════════════════════════════════════════════════════════════════════════
+
+LIST_NAV_SEL = [
+    "#your-lists-nav .wl-list",
+    ".wl-list",
+]
+
+LIST_ITEM_SEL = [
+    "li.g-item-sortable[data-itemid]",
+    "li[data-itemid]",
+]
+
+ITEM_TITLE_SEL = [
+    "a[id^='itemName_']",
+    "h2 a.a-link-normal[title]",
+]
+
+ITEM_PRICE_SEL = [
+    ".price-section .a-price .a-offscreen",
+    ".a-price .a-offscreen",
+]
+
+ITEM_RATING_SEL = [
+    ".a-icon-star-small span.a-icon-alt",
+    "i.a-icon-star-small span.a-icon-alt",
+]
+
+ITEM_REVIEW_COUNT_SEL = [
+    "a[id^='review_count_']",
+    "a.a-link-normal[aria-label]",
+]
+
+MAX_LIST_PAGES = 20
+
+
+def list_lists(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """List all of the user's Amazon lists (wishlists, shopping lists, etc.)."""
+    params = params or {}
+    cookie_header = _require_cookies(params, "list_lists")
+
+    with _auth_client(cookie_header) as client:
+        _warm_session(client)
+        resp = client.get(
+            f"{BASE}/hz/wishlist/ls",
+            headers={"Referer": BASE},
+        )
+        resp.raise_for_status()
+        body = resp.text
+
+    if _is_login_redirect(resp, body):
+        raise RuntimeError(
+            "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+        )
+
+    return _parse_lists_nav(body)
+
+
+def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
+    soup = _soup(body)
+    lists: list[dict[str, Any]] = []
+
+    for entry in _select(soup, LIST_NAV_SEL):
+        link = entry.select_one("a[id^='wl-list-link-']")
+        if not link:
+            continue
+
+        link_id = (link.get("id") or "").replace("wl-list-link-", "")
+        if not link_id:
+            continue
+
+        title_el = entry.select_one("span[id^='wl-list-entry-title-']")
+        name = _text(title_el) or "Untitled List"
+
+        privacy_el = entry.select_one(".wl-list-entry-privacy span")
+        privacy = _text(privacy_el)
+
+        is_default = bool(entry.select_one("#list-default-collaborator-label"))
+        is_selected = "selected" in (entry.get("class") or [])
+
+        list_type = None
+        href = link.get("href", "")
+        if "type=" in href:
+            m = re.search(r"type=([^&]+)", href)
+            if m:
+                list_type = m.group(1)
+
+        lists.append({
+            "list_id": link_id,
+            "name": name,
+            "url": f"{BASE}/hz/wishlist/ls/{link_id}",
+            "privacy": privacy,
+            "is_default": is_default,
+            "list_type": list_type or "WishList",
+        })
+
+    return lists
+
+
+def get_list(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Get items from a specific Amazon list by list ID."""
+    params = params or {}
+    cookie_header = _require_cookies(params, "get_list")
+    list_id = (params.get("params") or {}).get("list_id")
+    if not list_id:
+        raise ValueError("get_list requires a list_id parameter")
+    item_filter = (params.get("params") or {}).get("filter") or "unpurchased"
+
+    all_items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    list_name = None
+    list_privacy = None
+    list_type = None
+
+    with _auth_client(cookie_header) as client:
+        _warm_session(client)
+
+        resp = client.get(
+            f"{BASE}/hz/wishlist/ls/{list_id}",
+            params={"filter": item_filter, "sort": "date-added", "viewType": "list"},
+            headers={"Referer": BASE},
+        )
+        resp.raise_for_status()
+        body = resp.text
+
+        if _is_login_redirect(resp, body):
+            raise RuntimeError(
+                "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
+            )
+
+        soup = _soup(body)
+
+        name_el = soup.select_one("#profile-list-name")
+        list_name = _text(name_el) or "Wish List"
+
+        privacy_el = soup.select_one("#listPrivacy")
+        list_privacy = _text(privacy_el)
+
+        remember_state = _extract_a_state(soup, "rememberState")
+        if remember_state:
+            list_type = remember_state.get("listType")
+
+        page_items = _parse_list_items(soup)
+        for item in page_items:
+            if item["asin"] not in seen:
+                seen.add(item["asin"])
+                all_items.append(item)
+
+        for _ in range(MAX_LIST_PAGES - 1):
+            scroll_state = _extract_a_state(soup, "scrollState")
+            if not scroll_state:
+                break
+            show_more = scroll_state.get("showMoreUrl")
+            if not show_more:
+                break
+
+            time.sleep(1.0)
+            ajax_resp = client.get(
+                f"{BASE}{show_more}" if show_more.startswith("/") else show_more,
+                headers={
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Referer": f"{BASE}/hz/wishlist/ls/{list_id}",
+                },
+            )
+            if ajax_resp.status_code != 200:
+                break
+
+            ajax_body = ajax_resp.text
+            ajax_soup = _soup(ajax_body)
+
+            page_items = _parse_list_items(ajax_soup)
+            if not page_items:
+                break
+
+            new_count = 0
+            for item in page_items:
+                if item["asin"] not in seen:
+                    seen.add(item["asin"])
+                    all_items.append(item)
+                    new_count += 1
+            if new_count == 0:
+                break
+
+            soup = ajax_soup
+
+    return {
+        "list_id": list_id,
+        "name": list_name,
+        "url": f"{BASE}/hz/wishlist/ls/{list_id}",
+        "privacy": list_privacy,
+        "list_type": list_type,
+        "item_count": len(all_items),
+        "items": all_items,
+    }
+
+
+def _extract_a_state(soup: BeautifulSoup, key: str) -> dict[str, Any] | None:
+    for script in soup.select('script[type="a-state"]'):
+        try:
+            state_meta = json.loads(script.get("data-a-state", "{}"))
+            if state_meta.get("key") == key:
+                return json.loads(script.string or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+    return None
+
+
+def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+
+    for li in _select(soup, LIST_ITEM_SEL):
+        item_id = li.get("data-itemid", "")
+        if not item_id:
+            continue
+
+        asin = None
+        repo_params_str = li.get("data-reposition-action-params", "")
+        if repo_params_str:
+            try:
+                repo = json.loads(repo_params_str)
+                ext_id = repo.get("itemExternalId", "")
+                m = re.match(r"ASIN:([A-Z0-9]{10})", ext_id)
+                if m:
+                    asin = m.group(1)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        title_el = _select_one(li, ITEM_TITLE_SEL)
+        title = None
+        if title_el:
+            title = title_el.get("title") or _text(title_el)
+            if not asin:
+                href = title_el.get("href", "")
+                m = re.search(r"/dp/([A-Z0-9]{10})", href)
+                if m:
+                    asin = m.group(1)
+
+        if not asin:
+            continue
+
+        price_el = _select_one(li, ITEM_PRICE_SEL)
+        price = _text(price_el)
+
+        byline_el = li.select_one(f"span[id^='item-byline-']")
+        byline = _text(byline_el)
+
+        rating_el = _select_one(li, ITEM_RATING_SEL)
+        rating_text = _text(rating_el)
+
+        review_el = _select_one(li, ITEM_REVIEW_COUNT_SEL)
+        review_text = _text(review_el)
+        review_count = None
+        if review_text:
+            clean = re.sub(r"[^\d]", "", review_text)
+            review_count = int(clean) if clean else None
+
+        img_el = li.select_one(f"#itemImage_{item_id} img") or li.select_one("img[alt]")
+        image_url = str(img_el.get("src", "")) if img_el else None
+
+        date_el = li.select_one(f"span[id^='itemAddedDate_']")
+        date_added = _text(date_el)
+        if date_added:
+            date_added = re.sub(r"^Item added\s*", "", date_added).strip()
+
+        priority_el = li.select_one(f"span[id^='itemPriorityLabel_']")
+        priority = _text(priority_el)
+
+        comment_el = li.select_one(f"span[id^='itemComment_']")
+        comment = _text(comment_el)
+
+        items.append({
+            "asin": asin,
+            "title": _clean(title),
+            "url": f"{BASE}/dp/{asin}",
+            "image_url": image_url,
+            "byline": _clean(byline),
+            "price": price,
+            "price_amount": _parse_price(price),
+            "rating": _parse_rating(rating_text),
+            "ratings_count": review_count,
+            "date_added": date_added,
+            "priority": priority,
+            "comment": comment if comment else None,
+        })
+
+    return items
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # IDENTITY — session check + account identity from HTML
 # ═══════════════════════════════════════════════════════════════════════════════
 

@@ -286,6 +286,86 @@ Signals checked: client hint headers (`sec-ch-device-memory`, `sec-ch-dpr`, `sec
 
 ---
 
+### 11. Wishlists / Lists (Authenticated)
+
+Your Lists page: `GET /hz/wishlist/ls` — requires session cookies. Shows all user lists with a left nav and item view.
+
+#### Page Structure
+
+- **Container:** `#wishlist-page` with tab navigation (`#my-lists-tab`, `#friends-tab`)
+- **Left nav:** `#your-lists-nav` contains all user lists as `.wl-list` entries
+- **Content area:** `#content-right` shows the currently selected list's items
+- **Hidden input:** `#listId` holds the current list's external ID
+
+#### Left Nav — List of Lists
+
+Each list entry in the left nav:
+
+| Element | Selector |
+|---------|----------|
+| List link | `a[id^="wl-list-link-"]` — href is `/hz/wishlist/ls/{LIST_ID}` |
+| List name | `.wl-list-entry-title span[id^="wl-list-entry-title-"]` |
+| Default label | `#list-default-collaborator-label` (only on default list, text "Default List") |
+| Privacy | `.wl-list-entry-privacy span` (e.g. "Public", "Private") |
+| Selected state | `.wl-list.selected` class on the container |
+
+The list ID is an alphanumeric string like `OCYU5PINQ1B7`, embedded in the link's `id` attribute and `href`.
+
+#### `a-state` Blocks (Structured Data)
+
+| State Key | Contents |
+|-----------|----------|
+| `pageInfo` | `listExternalId`, `listType` ("wishlist"), `sid`, `countryCode`, `customerId`, `filter`, `sort`, `viewType`, `numberOfItemsBeforeCF` |
+| `viewState` | `filter` ("unpurchased"), `sort` ("date-added"), `page`, `viewType` ("list"), `store` |
+| `scrollState` | `showMoreUrl` (AJAX pagination endpoint), `paginationToken`, `itemsRenderedSoFar` |
+| `rememberState` | `listId`, `listType` ("WishList"), `isSharedWL` |
+
+#### List Item DOM — `<li class="g-item-sortable">`
+
+Data attributes on each `<li>`:
+
+| Attribute | Value |
+|-----------|-------|
+| `data-id` | List ID (e.g. "OCYU5PINQ1B7") |
+| `data-itemid` | Item ID (e.g. "I2O54JU3IOWCUH") |
+| `data-price` | Price as string (e.g. "14.99") |
+| `data-reposition-action-params` | JSON with `itemExternalId` ("ASIN:0316129445\|ATVPDKIKX0DER"), `listType`, `sid` |
+
+Inner selectors:
+
+| Data Point | Selector |
+|------------|----------|
+| Title & product link | `a[id^="itemName_"]` — `title` attr has name, `href` has `/dp/{ASIN}/` |
+| Image | `#itemImage_{ITEM_ID} img` |
+| Byline (author/format) | `span[id^="item-byline-"]` (e.g. "by Andrew Weil MD (Hardcover)") |
+| Price | `.price-section .a-price .a-offscreen` (e.g. "$14.99") |
+| Rating | `.a-icon-star-small span.a-icon-alt` (e.g. "4.5 out of 5 stars") |
+| Review count | `a[id^="review_count_"]` |
+| Comment | `span[id^="itemComment_"]` |
+| Priority | `span[id^="itemPriorityLabel_"]` (e.g. "medium") |
+| Quantity needed | `span[id^="itemRequested_"]` |
+| Quantity purchased | `span[id^="itemPurchased_"]` |
+| Date added | `span[id^="itemAddedDate_"]` (e.g. "Item added December 21, 2011") |
+| Price drop | `span[id^="itemPriceDrop_"]` + sibling span with original price |
+
+ASIN extraction: from `data-reposition-action-params` JSON field `itemExternalId` (format `ASIN:{ASIN}|{MARKETPLACE_ID}`), or regex from the product link href `/dp/{ASIN}/`.
+
+#### Pagination — Token-Based AJAX
+
+Items load 10 at a time. Additional items are fetched via the `showMoreUrl` from the `scrollState` a-state block:
+
+```
+GET /hz/wishlist/slv/items?filter=unpurchased&paginationToken={TOKEN}&itemsLayout=LIST&sort=purchase-date-added&type=wishlist&lid={LIST_ID}
+```
+
+Returns HTML fragments appended to `#g-items`. The response likely contains updated `scrollState` with the next `paginationToken` for continued pagination. Requires `X-Requested-With: XMLHttpRequest` and `Referer` headers (following the AJAX pattern from subscriptions).
+
+#### List Settings
+
+Manage list modal: `GET /hz/wishlist/settings/{LIST_ID}?type=WishList&ajax=true` — returns list configuration (name, privacy, type). The list type is stored as `WishList` (capital W, capital L).
+
+---
+
 ## Implementation Priority
 
 1. **`search_suggestions`** — Autocomplete API. Trivial. Clean JSON. Start here.
@@ -293,3 +373,5 @@ Signals checked: client hint headers (`sec-ch-device-memory`, `sec-ch-dpr`, `sec
 3. **`get_product`** — HTML parse product page + `a-state` extraction. Medium. Rich data.
 4. **`list_orders`** — HTML parse order history with session cookies. Medium. Auth infra exists.
 5. **`get_order`** — HTML parse order detail page. Medium. Depends on `list_orders`.
+6. **`list_lists`** — HTML parse left nav of `/hz/wishlist/ls`. Easy. Auth infra exists.
+7. **`get_list`** — HTML parse list items from `/hz/wishlist/ls/{LIST_ID}`. Medium. Token-based pagination.
