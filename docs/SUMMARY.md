@@ -2,6 +2,10 @@
 
 [Introduction](intro.md)
 
+# Skill Book maintenance
+
+- [Editing This Book](editing-the-book.md)
+
 # Getting Started
 
 - [Setup & Workflow](getting-started.md)
@@ -24,16 +28,16 @@
 # Reverse Engineering
 
 - [Overview](reverse-engineering/overview.md)
-- [Transport](reverse-engineering/1-transport/README.md)
-- [Discovery](reverse-engineering/2-discovery/README.md)
-- [Auth & Credentials](reverse-engineering/3-auth/README.md)
+- [Transport](reverse-engineering/1-transport/index.md)
+- [Discovery](reverse-engineering/2-discovery/index.md)
+- [Auth & Credentials](reverse-engineering/3-auth/index.md)
   - [NextAuth.js / Auth.js](reverse-engineering/3-auth/nextauth.md)
   - [WorkOS / Supabase](reverse-engineering/3-auth/workos.md)
-- [Content Extraction](reverse-engineering/4-content/README.md)
-- [Social Networks](reverse-engineering/5-social/README.md)
-- [Desktop Apps](reverse-engineering/6-desktop-apps/README.md)
+- [Content Extraction](reverse-engineering/4-content/index.md)
+- [Social Networks](reverse-engineering/5-social/index.md)
+- [Desktop Apps](reverse-engineering/6-desktop-apps/index.md)
   - [Electron](reverse-engineering/6-desktop-apps/electron.md)
-- [MCP Servers](reverse-engineering/7-mcp/README.md)
+- [MCP Servers](reverse-engineering/7-mcp/index.md)
 
 # Reference
 

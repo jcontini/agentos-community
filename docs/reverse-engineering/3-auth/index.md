@@ -4,14 +4,14 @@ How to log into things, get API keys, and store credentials — for any web serv
 
 This is Layer 3 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/README.md)
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/README.md)
+- **Layer 1: Transport** — [1-transport](../1-transport/index.md)
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.md)
 - **Layer 3: Auth & Credentials** (this file)
   - [nextauth.md](./nextauth.md) — NextAuth.js / Auth.js deep dive
   - [workos.md](./workos.md) — WorkOS auth pattern
-- **Layer 4: Content** — [4-content](../4-content/README.md)
-- **Layer 5: Social Networks** — [5-social](../5-social/README.md)
-- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/README.md)
+- **Layer 4: Content** — [4-content](../4-content/index.md)
+- **Layer 5: Social Networks** — [5-social](../5-social/index.md)
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.md)
 
 ---
 
@@ -150,8 +150,8 @@ This tells you:
 fully replayable. The key technique is scanning the JS bundles for custom
 verification endpoints (e.g. `/api/verify-otp`) and using the Navigation API
 interceptor to discover token formats. See
-[Discovery: JS Bundle Scanning](../2-discovery/README.md#js-bundle-scanning) and
-[Discovery: Navigation API Interception](../2-discovery/README.md#navigation-api-interception).
+[Discovery: JS Bundle Scanning](../2-discovery/index.md#js-bundle-scanning) and
+[Discovery: Navigation API Interception](../2-discovery/index.md#navigation-api-interception).
 
 ```python
 # Example: Exa email+code login — no browser needed
@@ -346,12 +346,12 @@ login, HTTPX handles the work. Each tool does what it's good at.
 | Situation | Solution |
 |-----------|----------|
 | Standard form POST or API call | HTTPX replay |
-| Custom OTP/code verification | Scan JS bundles for custom endpoints → HTTPX replay (see [discovery](../2-discovery/README.md#js-bundle-scanning)) |
+| Custom OTP/code verification | Scan JS bundles for custom endpoints → HTTPX replay (see [discovery](../2-discovery/index.md#js-bundle-scanning)) |
 | Google OAuth consent screen | Playwright first login → cookies → HTTPX after |
 | Cloudflare JS challenge | Playwright or `brave-browser.cookie_get` for `cf_clearance` |
 | Vercel Security Checkpoint (`429`) | Switch to `httpx(http2=False)` — purely a JA4 fingerprint issue |
 | CAPTCHA | Cookies from user's real browser session |
-| Unknown client-side token construction | Navigation API interceptor → read the actual URL (see [discovery](../2-discovery/README.md#navigation-api-interception)) |
+| Unknown client-side token construction | Navigation API interceptor → read the actual URL (see [discovery](../2-discovery/index.md#navigation-api-interception)) |
 
 ---
 
@@ -490,7 +490,7 @@ When building a skill against a tiered service, you need the **full cookie jar**
 from a logged-in browser — not just the session cookie. The auth tokens are
 interdependent and the server validates them together.
 
-Some cookies should be **excluded** (see [1-transport](../1-transport/README.md)
+Some cookies should be **excluded** (see [1-transport](../1-transport/index.md)
 for cookie stripping) — encryption trigger cookies, WAF telemetry, etc. But
 the auth-tier cookies must all be present.
 

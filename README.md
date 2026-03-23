@@ -4,6 +4,17 @@ Community skills and skill docs for [AgentOS](https://github.com/jcontini/agentO
 
 ---
 
+## Before you do anything else (humans and agents)
+
+This repo’s **Skill Book** (`docs/`) is our **internal knowledge store** for how skills work and how we reverse-engineer services. **Read the landing page and the full table of contents before** you edit skills, run validation, or open a PR:
+
+- **Published:** [jcontini.github.io/agentos-community](https://jcontini.github.io/agentos-community/) — start at *Introduction*, then scan every section in the sidebar (same order as `docs/SUMMARY.md`).
+- **In-repo:** open [`docs/intro.md`](docs/intro.md), then [`docs/SUMMARY.md`](docs/SUMMARY.md).
+
+Maintainers: after that, read **[Editing This Book](docs/editing-the-book.md)** for mdBook commands, linking rules, and what to update when the contract changes.
+
+---
+
 ## What is AgentOS?
 
 **AgentOS is the semantic layer between AI assistants and your digital life.**

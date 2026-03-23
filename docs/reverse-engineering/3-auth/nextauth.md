@@ -6,7 +6,7 @@ auth (via WorkOS or similar). Understanding its conventions accelerates reverse
 engineering because the endpoint structure, cookie names, and flow mechanics
 are predictable.
 
-Part of [Layer 3: Auth & Runtime](./README.md). Discovered during the
+Part of [Layer 3: Auth & Runtime](./index.md). Discovered during the
 [Exa skill](../../../skills/exa/readme.md) reverse engineering session.
 
 ---
@@ -190,8 +190,8 @@ Now you know the full flow — reproduce it with HTTPX:
 2. Construct `token = f"{hashedOtp}:{rawOtp}"`
 3. `GET /api/auth/callback/email?token=...&email=...` → session cookie
 
-See [Discovery: JS Bundle Scanning](../2-discovery/README.md#js-bundle-scanning)
-and [Discovery: Navigation API Interception](../2-discovery/README.md#navigation-api-interception)
+See [Discovery: JS Bundle Scanning](../2-discovery/index.md#js-bundle-scanning)
+and [Discovery: Navigation API Interception](../2-discovery/index.md#navigation-api-interception)
 for the general techniques.
 
 ### Step 3: Session establishment
@@ -245,7 +245,7 @@ with httpx.Client(
 ```
 
 The server decodes the JWT server-side and returns the session info via
-`/api/auth/session`. See [Transport: http2 selection](../1-transport/README.md#when-to-use-http2false)
+`/api/auth/session`. See [Transport: http2 selection](../1-transport/index.md#when-to-use-http2false)
 for how to determine the right setting per host.
 
 ---
@@ -264,14 +264,14 @@ incorrectly" errors because the callback URL is missing.
 
 Some NextAuth login forms include hidden honeypot fields (e.g.
 `input[name="website"]`). Never fill these in HTTPX replay. See
-[Playwright Discovery Gotchas](./README.md#honeypot-fields) for details.
+[Playwright Discovery Gotchas](./index.md#honeypot-fields) for details.
 
 ### React forms need `type` not `fill`
 
 NextAuth login pages built with React/Next.js require Playwright's `type`
 command (real keystrokes) rather than `fill` (direct DOM manipulation). `fill`
 bypasses React's synthetic event system and leaves form state empty. See
-[Playwright Discovery Gotchas](./README.md#type-vs-fill-on-react-forms).
+[Playwright Discovery Gotchas](./index.md#type-vs-fill-on-react-forms).
 
 ### Vercel Security Checkpoint
 
@@ -281,7 +281,7 @@ page regardless of cookies or headers. The fix is `httpx(http2=False)`.
 
 This is purely a JA4 TLS fingerprint issue. httpx's h2 fingerprint is
 well-known to Vercel's bot detection. h1 is less distinctive and passes.
-See [Layer 1: Transport](../1-transport/README.md#when-to-use-http2false)
+See [Layer 1: Transport](../1-transport/index.md#when-to-use-http2false)
 for the full analysis.
 
 Not every Vercel subdomain enables the checkpoint. Test each one — during
@@ -322,7 +322,7 @@ values (API keys, tokens) client-side, but the underlying API returns them in
 full. During reverse engineering, use `capture_network` on authenticated pages
 and read the complete JSON response bodies.
 
-See [Dashboard APIs leak more than the UI](./README.md#dashboard-apis-often-leak-more-than-the-ui-shows)
+See [Dashboard APIs leak more than the UI](./index.md#dashboard-apis-often-leak-more-than-the-ui-shows)
 for the general pattern.
 
 ---

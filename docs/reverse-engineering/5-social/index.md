@@ -5,12 +5,12 @@ Goodreads, Twitter/X, MySpace, LinkedIn, Instagram, etc.
 
 This is Layer 5 of the reverse-engineering docs:
 
-- **Layer 1: Transport** — [1-transport](../1-transport/README.md) — getting a response at all
-- **Layer 2: Discovery** — [2-discovery](../2-discovery/README.md) — finding structured data in bundles
-- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/README.md) — credentials, sessions, rotating config
-- **Layer 4: Content** — [4-content](../4-content/README.md) — extracting data from HTML when there is no API
+- **Layer 1: Transport** — [1-transport](../1-transport/index.md) — getting a response at all
+- **Layer 2: Discovery** — [2-discovery](../2-discovery/index.md) — finding structured data in bundles
+- **Layer 3: Auth & Runtime** — [3-auth](../3-auth/index.md) — credentials, sessions, rotating config
+- **Layer 4: Content** — [4-content](../4-content/index.md) — extracting data from HTML when there is no API
 - **Layer 5: Social Networks** (this file) — modeling people, relationships, and social graphs
-- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/README.md) — macOS, Electron, local state, unofficial APIs
+- **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.md) — macOS, Electron, local state, unofficial APIs
 
 ---
 

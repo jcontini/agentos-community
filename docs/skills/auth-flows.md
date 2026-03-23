@@ -167,6 +167,6 @@ See `skills/exa/exa.py`:
 Passing CSRF tokens through params works but is noisy. The target is session-scoped temporary storage (tied to the MCP/agent session) so Python can write state in step 1 and read it in step 2 without the agent seeing the plumbing. See the engine roadmap for "Session-scoped state for auth flows."
 
 For the full reverse engineering methodology, see:
-- [Auth & Runtime](../reverse-engineering/3-auth/README.md) — credential bootstrap lifecycle, network interception, cookie mechanics, CSRF patterns, web navigation
+- [Auth & Runtime](../reverse-engineering/3-auth/index.md) — credential bootstrap lifecycle, network interception, cookie mechanics, CSRF patterns, web navigation
 - [NextAuth.js guide](../reverse-engineering/3-auth/nextauth.md) — vendor-specific patterns for NextAuth/Auth.js sites
 - [WorkOS guide](../reverse-engineering/3-auth/workos.md) — vendor-specific patterns for WorkOS-based auth

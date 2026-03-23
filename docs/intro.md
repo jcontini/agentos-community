@@ -23,6 +23,11 @@
 | [Reverse Engineering](reverse-engineering/overview.md) | 7-layer playbook for services without public APIs |
 | [Helper Files & Patterns](skills/reference.md) | Leading examples, advanced patterns |
 | [Skill Catalog](catalog.md) | All available skills by category |
+| [Editing This Book](editing-the-book.md) | How to maintain this book — tooling, links, mdBook quirks |
+
+## Internal knowledge store
+
+This repository’s **`docs/`** tree is the **Skill Book** — our shared playbook for building skills, testing them, and reverse-engineering services when there is no clean public API. Treat it like an internal wiki: if you learn something durable, it belongs here. Maintainer-focused workflow (build commands, linking rules, what to update when) lives in **[Editing This Book](editing-the-book.md)**.
 
 ## Two repos
 
@@ -31,7 +36,9 @@
 
 ## For AI agents
 
-Read [Skill Anatomy](skills/anatomy.md) first, then follow the links for your task. The [Testing](skills/testing.md) chapter covers `mcp:call` and `mcp:test` — use those to verify your changes.
+**Start here every session:** read this introduction in full, then read **`docs/SUMMARY.md`** (the table of contents) so you know what chapters exist and where topics live. On the [published book](https://jcontini.github.io/agentos-community/), that is the sidebar — use it before searching at random.
+
+Then read [Skill Anatomy](skills/anatomy.md) and follow links for your task. The [Testing](skills/testing.md) chapter covers `mcp:call` and `mcp:test` — use those to verify your changes. If you are editing the book itself, read [Editing This Book](editing-the-book.md) first.
 
 ## Maintaining these docs
 
@@ -48,7 +55,7 @@ gaps you don't fill. Pay it forward.
 
 **Conventions:**
 
-- **Links:** Always use `.md` extensions for internal links (e.g. `[Auth](./README.md)`). mdbook converts them to `.html` automatically during build. Never link to `.html` — those paths don't exist until build time and break local preview, GitHub rendering, and AI navigation.
+- **Links:** Use `.md` paths for pages inside this book; mdBook rewrites them to `.html` in the build output. Do not hand-author `.html` URLs in markdown. For a **chapter’s main file in a subdirectory**, use **`index.md`** (not `README.md`) — mdBook maps `README.md` to `index.html` but still rewrites links to `README.html`, which breaks navigation on GitHub Pages. See [Editing This Book](editing-the-book.md).
 - **Examples over theory.** Point to real skill implementations. A working `exa.py` teaches more than a paragraph of explanation.
 - **Show your work.** When reverse engineering, document what you tried, what worked, and what didn't. The next agent hitting the same service will thank you.
 - **Skill readmes are living docs.** Each skill's `readme.md` should reflect the current state of the implementation — auth flow, known endpoints, gotchas, and next steps.

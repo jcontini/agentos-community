@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Probe a Streamable HTTP MCP endpoint for reverse-engineering.
 
-Follows the layers in this folder's README.md. Uses httpx with HTTP/2 —
+Follows the layers in this folder's index.md. Uses httpx with HTTP/2 —
 MCP servers behind CDNs may flag urllib's TLS fingerprint.
 
 Requires: pip install "httpx[http2]"
