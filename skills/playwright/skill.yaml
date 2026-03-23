@@ -11,6 +11,8 @@ provides:
   - auth: cookies
     via: cookie_get
     account_param: domain
+    live_session: true
+    creation_timestamps: false
     description: "Extract cookies from persistent Chromium session via CDP. Session-scoped — cookies do not survive browser restarts."
 
 operations:

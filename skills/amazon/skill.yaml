@@ -27,7 +27,7 @@ adapters:
   order:
     id: .order_id
     name: '("Order " + (.order_date // "Unknown") + " — " + (.total // ""))'
-    text: '((.status // "") + " — " + ((.items // [])[:4] | map(.title | split(" – ")[0] | split(",")[0] | .[0:45]) | join(", ")) + (if ((.items // []) | length) > 4 then (", +" + (((.items // []) | length) - 4 | tostring) + " more") else "" end))'
+    text: '((.status // "") + " — " + ((.items // [])[:4] | map((.title | tostring | .[0:45])) | join(", ")) + (if ((.items // []) | length) > 4 then (", +" + (((.items // []) | length) - 4 | tostring) + " more") else "" end))'
     url: .url
     datePublished: .order_date
     data.total: .total

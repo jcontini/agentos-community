@@ -152,7 +152,9 @@
               "domains": { "type": "array", "items": { "type": "string" }, "description": "Domain filters (cookies)" },
               "scopes": { "type": "array", "items": { "type": "string" }, "description": "OAuth scopes this provider supplies" },
               "description": { "type": "string", "description": "Human-readable description" },
-              "account_param": { "type": "string", "description": "Param name for multi-account selection (default: domain)" }
+              "account_param": { "type": "string", "description": "Param name for multi-account selection (default: domain)" },
+              "live_session": { "type": "boolean", "description": "Provider has live browser context (scores above stored-session providers)" },
+              "creation_timestamps": { "type": "boolean", "description": "Provider returns cookie creation timestamps (used for freshness scoring)" }
             },
             "additionalProperties": false
           },
