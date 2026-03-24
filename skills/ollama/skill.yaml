@@ -4,64 +4,254 @@ description: Local AI models running on your machine via Ollama
 color: "#0F172A"
 website: https://ollama.com
 privacy_url: https://ollama.com/privacy
-terms_url: https://ollama.com/terms
 
-connections: {}
+connections:
+  api:
+    description: "Ollama REST API — fast inference path, requires server to be running"
+    base_url: "http://localhost:11434"
+  cli:
+    description: "Ollama CLI — can start the server, pull/delete models, management ops"
+    vars:
+      binary: "/opt/homebrew/bin/ollama"
+
+adapters:
+  model:
+    id: .name
+    datePublished: .modified_at
+    data.size: .size
+    data.digest: .digest
+    data.format: .details.format
+    data.family: .details.family
+    data.parameter_size: .details.parameter_size
+    data.quantization_level: .details.quantization_level
+
+  loaded_model:
+    id: .name
+    data.size: .size
+    data.digest: .digest
+    data.expires_at: .expires_at
+    data.size_vram: .size_vram
 
 operations:
-  chat:
-    description: Send a chat request to the local Ollama API
+
+  # ── Server management ──────────────────────────────────────────────────────
+
+  status:
+    description: >
+      Check if the Ollama server is running at localhost:11434. If not running,
+      starts it automatically via the CLI binary. Returns version, running state,
+      and whether it was just started.
     returns:
-      content:
-        type: string
-        description: Text response from the model (null if tool calls only)
-      tool_calls:
-        type: array
-        description: Tool calls the model wants to make
-      stop_reason:
-        type: string
-        enum: [end_turn, tool_use, max_tokens]
-      usage:
-        type: object
-        description: Token usage (input_tokens, output_tokens)
+      running: { type: boolean }
+      version: { type: string }
+      started: { type: boolean }
+      message: { type: string }
+    connection: cli
+    python:
+      module: ./ollama.py
+      function: op_status
+      args:
+        connection: '.connection'
+      timeout: 30
+
+  # ── Inference ──────────────────────────────────────────────────────────────
+
+  chat:
+    description: >
+      Send a chat message to a local Ollama model. Supports tool calling, system
+      prompts, and extended thinking mode. Uses the REST API by default; falls back
+      to the CLI for single-turn prompts if the API connection is chosen as cli.
+      Auto-starts the Ollama server if it is not running.
+    returns:
+      content: { type: string, description: "Text response (null if tool calls only)" }
+      thinking: { type: string, description: "Reasoning trace (only for thinking models)" }
+      tool_calls: { type: array, description: "Tool calls the model wants to make" }
+      stop_reason: { type: string, enum: [end_turn, tool_use, max_tokens] }
+      usage: { type: object, description: "Token counts: input_tokens, output_tokens" }
+    connection: [api, cli]
     params:
       model:
         type: string
         required: true
-        description: "Local model name (e.g., llama3.2, qwen2.5-coder:7b)"
+        description: "Model name (e.g. qwen3.5:9b-q8_0, glm-4.7-flash)"
       messages:
         type: array
         required: true
-        description: "Array of message objects with role and content"
+        description: "Array of {role, content} message objects"
       tools:
         type: array
-        description: "Optional canonical tool definitions ({name, description, input_schema})"
+        description: "Optional tool definitions ({name, description, input_schema})"
+      system:
+        type: string
+        description: "Optional system prompt (prepended as first message)"
       max_tokens:
         type: integer
         default: 4096
-        description: "Maximum tokens to generate (num_predict)"
+        description: "Maximum tokens to generate"
       temperature:
         type: number
         default: 0
-        description: "Sampling temperature (0 = deterministic for agents)"
+        description: "Sampling temperature (0 = deterministic, good for agents)"
+      thinking:
+        type: boolean
+        default: false
+        description: "Enable extended thinking / reasoning mode (qwen3, glm-4.7, etc.)"
+    python:
+      module: ./ollama.py
+      function: op_chat
+      args:
+        model: .params.model
+        messages: .params.messages
+        tools: '.params.tools // []'
+        system: '.params.system // null'
+        max_tokens: '.params.max_tokens // 4096'
+        temperature: '.params.temperature // 0'
+        thinking: '.params.thinking // false'
+        connection: '.connection'
+      timeout: 300
+
+  generate:
+    description: >
+      One-shot text generation — no chat history, faster for simple single-turn
+      prompts. Returns the raw response text and token counts.
+    returns:
+      response: { type: string }
+      usage: { type: object, description: "input_tokens, output_tokens" }
+    connection: api
+    params:
+      model:
+        type: string
+        required: true
+      prompt:
+        type: string
+        required: true
       system:
         type: string
-        description: "Optional system prompt"
-    rest:
-      method: POST
-      url: http://localhost:11434/api/chat
-      body:
+        description: "Optional system context"
+      max_tokens:
+        type: integer
+        default: 4096
+      temperature:
+        type: number
+        default: 0
+    python:
+      module: ./ollama.py
+      function: op_generate
+      args:
         model: .params.model
-        messages: 'if .params.system then ([{role: "system", content: .params.system}] + .params.messages) else .params.messages end'
-        tools: '(.params.tools // []) | map({type: "function", function: {name: .name, description: (.description // ""), parameters: (.input_schema // {type: "object", properties: {}})}})'
-        stream: false
-        options:
-          temperature: '.params.temperature // 0'
-          num_predict: '.params.max_tokens // 4096'
+        prompt: .params.prompt
+        system: '.params.system // null'
+        max_tokens: '.params.max_tokens // 4096'
+        temperature: '.params.temperature // 0'
+        connection: '.connection'
+      timeout: 300
+
+  # ── Model management ───────────────────────────────────────────────────────
+
+  list_models:
+    description: >
+      List all models downloaded on this machine with size and metadata.
+      Uses the REST executor (in-process ureq) — no subprocess, ~50ms via MCP.
+    returns: model[]
+    connection: api
+    rest:
+      method: GET
+      url: /api/tags
       response:
-        transform: '{content: (.message.content // null), tool_calls: [(.message.tool_calls // [])[] | {id: (.id // .function.name // "tool_call"), name: .function.name, input: (((.function.arguments // "{}") | (if type == "string" then (fromjson? // {}) else . end)) // {})}], stop_reason: (if .done_reason == "tool_calls" then "tool_use" elif .done_reason == "length" then "max_tokens" else "end_turn" end), usage: {input_tokens: (.prompt_eval_count // 0), output_tokens: (.eval_count // 0)}}'
-        mapping:
-          content: .content
-          tool_calls: .tool_calls
-          stop_reason: .stop_reason
-          usage: .usage
+        root: /models
+
+  list_models_cli:
+    description: >
+      List models via the Ollama CLI binary. Use when the REST server may not be
+      running or you want to verify from the CLI side.
+    returns: model[]
+    connection: cli
+    command:
+      binary: sh
+      args:
+        - -c
+        - "ollama list --json 2>/dev/null | python3 -c \"import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('models', d)))\" 2>/dev/null || ollama list"
+      timeout: 15
+
+  pull_model:
+    description: >
+      Download a model from the Ollama registry. Uses the CLI by default for
+      reliable progress on large downloads; can also use the REST API.
+      Timeout is 10 minutes — large models (e.g. 19GB GLM) take several minutes.
+    returns:
+      status: { type: string }
+      model: { type: string }
+      message: { type: string }
+    connection: [cli, api]
+    params:
+      model:
+        type: string
+        required: true
+        description: "Model tag to pull (e.g. qwen3.5:9b-q8_0, glm-4.7-flash)"
+    python:
+      module: ./ollama.py
+      function: op_pull_model
+      args:
+        model: .params.model
+        connection: '.connection'
+      timeout: 600
+
+  delete_model:
+    description: Delete a downloaded model, freeing disk space.
+    returns:
+      status: { type: string }
+      model: { type: string }
+      message: { type: string }
+    connection: [api, cli]
+    params:
+      model:
+        type: string
+        required: true
+        description: "Model name to delete (e.g. qwen3.5:9b)"
+    python:
+      module: ./ollama.py
+      function: op_delete_model
+      args:
+        model: .params.model
+        connection: '.connection'
+      timeout: 30
+
+  ps:
+    description: >
+      Show which models are currently loaded in memory (GPU/unified RAM).
+      Useful for checking what's hot and what will need to reload on next use.
+    returns: loaded_model[]
+    connection: api
+    rest:
+      method: GET
+      url: /api/ps
+      response:
+        root: /models
+
+
+  show_model:
+    description: >
+      Show detailed model info: architecture, parameter count, quantization,
+      context window length, template, and system prompt.
+    returns:
+      name: { type: string }
+      format: { type: string }
+      family: { type: string }
+      parameter_size: { type: string }
+      quantization_level: { type: string }
+      context_length: { type: integer }
+      template: { type: string }
+      system_prompt: { type: string }
+    connection: api
+    params:
+      model:
+        type: string
+        required: true
+        description: "Model name"
+    python:
+      module: ./ollama.py
+      function: op_show_model
+      args:
+        model: .params.model
+        connection: '.connection'
+      timeout: 15

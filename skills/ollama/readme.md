@@ -1,31 +1,62 @@
 # Ollama
 
-Ollama lets AgentOS run intelligence locally, offline, and without API costs.
+Run local AI models — inference, tool calling, and model management — entirely on your machine. No API keys, no cloud, no cost per token.
 
 ## Setup
 
-1. Install Ollama: https://ollama.com/download
-2. Pull a model, for example:
+Install Ollama (if not already installed):
 
 ```bash
-ollama pull llama3.2
+brew install ollama
+brew services start ollama
 ```
 
-3. Ensure Ollama daemon is running (`http://localhost:11434`)
+Pull a model to use:
+
+```bash
+ollama pull qwen3.5:9b-q8_0    # recommended: 11GB, tools + vision + thinking, 256K ctx
+ollama pull glm-4.7-flash       # coding specialist: 19GB, best local SWE-bench
+```
+
+The skill auto-starts the Ollama server if it is not running — no manual setup required.
+
+## Connections
+
+| Connection | What it does |
+|---|---|
+| `api` (default) | REST API at `localhost:11434` — fast inference, most operations |
+| `cli` | Ollama CLI binary — server start/stop, model pulls, management |
 
 ## Usage
 
-```bash
-curl -X POST http://localhost:3456/api/skills/ollama/chat \
-  -H "X-Agent: cursor" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama3.2",
-    "messages": [
-      { "role": "user", "content": "Give me three bullet points on local-first apps." }
-    ]
-  }'
+| Tool | Connection | Description |
+|---|---|---|
+| `status` | cli | Check if server is running; start it if not |
+| `chat` | api / cli | Multi-turn chat with tool calling and thinking mode |
+| `generate` | api | One-shot text generation (faster for simple prompts) |
+| `list_models` | api / cli | List all downloaded models with size and metadata |
+| `pull_model` | cli / api | Download a model from the Ollama registry |
+| `delete_model` | api / cli | Delete a model to free disk space |
+| `ps` | api | Show models currently loaded in memory |
+| `show_model` | api | Show model details: arch, context length, template |
+
+## Tool calling
+
+`chat` normalizes Ollama's tool call format to the canonical AgentOS shape:
+
+```
+{ id, name, input }
 ```
 
-The response is normalized to the canonical `chat` output:
-`content`, `tool_calls`, `stop_reason`, and `usage`.
+Pass tools as `{ name, description, input_schema }` — the same format used by the Anthropic skill.
+
+## Thinking mode
+
+Models that support extended reasoning (qwen3, glm-4.7-flash, etc.) can be activated with `thinking: true`. The reasoning trace is returned in the `thinking` field, separate from `content`.
+
+## Notes
+
+- `chat` with `connection: cli` collapses message history into a single prompt — suitable for single-turn only
+- `pull_model` defaults to the CLI connection for reliable progress on large downloads (19GB models)
+- `ps` shows what is currently warm in unified memory — useful before running a new model to estimate reload time
+- The `generate` operation skips chat overhead — use it for classification, extraction, or quick single-turn tasks where speed matters
