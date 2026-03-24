@@ -33,6 +33,7 @@
 - [Auth & Credentials](reverse-engineering/3-auth/index.md)
   - [NextAuth.js / Auth.js](reverse-engineering/3-auth/nextauth.md)
   - [WorkOS / Supabase](reverse-engineering/3-auth/workos.md)
+  - [macOS Keychain](reverse-engineering/3-auth/macos-keychain.md)
 - [Content Extraction](reverse-engineering/4-content/index.md)
 - [Social Networks](reverse-engineering/5-social/index.md)
 - [Desktop Apps](reverse-engineering/6-desktop-apps/index.md)

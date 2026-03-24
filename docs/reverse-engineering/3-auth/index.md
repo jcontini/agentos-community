@@ -589,3 +589,4 @@ Reference: `skills/goodreads/public_graph.py` `discover_from_bundle()`.
 |-------|----------------|
 | [nextauth.md](./nextauth.md) | Sites with `/api/auth/*` endpoints, `next-auth.*` cookies |
 | [workos.md](./workos.md) | Sites with `workos_id` in JWT claims, WorkOS session IDs |
+| [macos-keychain.md](./macos-keychain.md) | Native macOS apps, Electron Safe Storage, Google OAuth tokens, full credential audit |
