@@ -1,0 +1,84 @@
+id: macos-security
+name: macOS Security
+description: >
+  Audit macOS credentials, Keychain entries, and app tokens.
+  Lists what OAuth tokens, API keys, and session credentials are stored on this machine,
+  extracts specific tokens, and identifies which apps have Google OAuth access.
+color: "#6B7280"
+
+website: https://support.apple.com/guide/keychain-access
+
+auth: none
+
+operations:
+  audit:
+    description: >
+      Full inventory of non-Apple credentials stored on this Mac. Returns categorized
+      entries: native OAuth tokens (e.g. Mimestream/Google), Electron Safe Storage keys,
+      direct API keys, CLI tool tokens, and app session tokens.
+    returns:
+      category: string
+      app: string
+      account: string
+      note: string
+    python:
+      module: ./macos_security.py
+      function: cmd_audit
+      params: true
+      timeout: 30
+
+  get_token:
+    description: >
+      Extract a specific token value from the Keychain by service name and account.
+      Returns the raw string value. For binary plist entries (e.g. Mimestream OAuth),
+      returns the hex-encoded plist — use audit first to find service/account names.
+    params:
+      service: { type: string, required: true, description: "Keychain service name (svce), e.g. 'Mimestream: user@example.com'" }
+      account: { type: string, required: true, description: "Keychain account name (acct), e.g. 'OAuth'" }
+    returns:
+      service: string
+      account: string
+      value: string
+      format: string
+      note: string
+    python:
+      module: ./macos_security.py
+      function: cmd_get_token
+      params: true
+      timeout: 10
+
+  scan_google_oauth:
+    description: >
+      Scan all installed apps in /Applications for Google OAuth client IDs.
+      Reads Info.plist URL schemes — the reversed client ID is registered as a
+      URL scheme so Google can redirect back after login. Returns app name and client ID.
+    returns:
+      app: string
+      bundle_id: string
+      version: string
+      client_id: string
+      url_scheme: string
+      note: string
+    python:
+      module: ./macos_security.py
+      function: cmd_scan_google_oauth
+      params: true
+      timeout: 60
+
+  list_electron_apps:
+    description: >
+      List all apps using the Electron Safe Storage pattern. Each of these apps
+      stores a master encryption key in the Keychain that encrypts all locally
+      stored credentials, cookies, and session data.
+    returns:
+      name: string
+    steps:
+      - id: raw
+        command:
+          binary: bash
+          args:
+            - "-c"
+            - "security dump-keychain 2>/dev/null | grep 'Safe Storage' | grep -o '\"[^\"]*Safe Storage\"' | sort -u"
+    response:
+      transform: |
+        (.raw | split("\n") | map(select(. != "")) | map({name: (gsub("\""; "") | gsub(" Safe Storage"; ""))}))

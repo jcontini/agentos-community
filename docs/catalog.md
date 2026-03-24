@@ -75,6 +75,7 @@ All skills in this repo. Each skill folder contains `skill.yaml` (the manifest) 
 | `brave-browser` | webpage, history | Browser history and cookie provider |
 | `firefox` | — | Firefox cookie provider |
 | `macos-control` | — | macOS automation (windows, apps, screenshots) |
+| `macos-security` | — | Keychain audit, token extraction, Google OAuth app scanning |
 | `kitty` | — | Kitty terminal control |
 | `raycast` | — | Raycast extension control |
 
