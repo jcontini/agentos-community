@@ -8,7 +8,7 @@ color: "#6B7280"
 
 website: https://support.apple.com/guide/keychain-access
 
-auth: none
+connections: {}
 
 operations:
   audit:
