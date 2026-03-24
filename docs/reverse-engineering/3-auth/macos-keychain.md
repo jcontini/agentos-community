@@ -240,6 +240,72 @@ It is **not** protected against:
 
 ---
 
+## How the Keychain Is Actually Encrypted
+
+The login keychain (`~/Library/Keychains/login.keychain-db`) is an encrypted
+SQLite file, but your processes never decrypt it directly. The OS handles this
+through a privileged daemon called **`securityd`**.
+
+**Key derivation chain:**
+
+```
+Login password
+    ↓  PBKDF2 (salt stored in the .keychain-db file)
+Master encryption key  ←── held in securityd memory after login
+    ↓  wraps
+Per-item encryption keys
+    ↓  decrypts
+Item plaintext values
+```
+
+When you log in, macOS unlocks the keychain and `securityd` holds the master
+key in memory for the session. The `security` CLI and `Security.framework` API
+talk to `securityd` — they never read raw bytes from the file. `securityd`
+checks ACLs, then hands back plaintext to any authorized caller.
+
+**Why your session already has full access:** No password is needed at runtime
+because `securityd` has the master key in memory from login. Any process you
+launch inherits your UID, which is all `securityd` checks for no-ACL items.
+
+**The offline copy attack:** Because PBKDF2 is deterministic (same
+password + same salt → same master key, on any machine), copying the
+`.keychain-db` file and running `security unlock-keychain -p "password" <file>`
+decrypts it fully — no active session needed. File + password = complete access.
+
+---
+
+## Secure Enclave — The Real Hardware Boundary
+
+Touch ID-gated items (`kSecAccessControlUserPresence`) use a fundamentally
+different mechanism: the **Secure Enclave** coprocessor.
+
+```
+Secure Enclave key  ←── hardware-bound, NEVER extractable, tied to this chip
+    ↓  wraps
+Item encryption key  (stored in .keychain-db, but useless without the Enclave key)
+    ↓  decrypts
+Item plaintext value
+```
+
+The Enclave key cannot be exported, dumped, or migrated. Touch ID just proves
+"user is present" to the Enclave, which unwraps the key inside hardware and
+returns the plaintext. This is the only mechanism where copying the file +
+knowing the password is not sufficient — the Enclave key lives on a specific
+chip and nowhere else.
+
+**Access matrix:**
+
+| Item type | Active session (no password) | File copy + password | Different machine |
+|-----------|------------------------------|----------------------|-------------------|
+| No ACL | ✅ silent | ✅ works | ✅ works |
+| App ACL | ✅ with prompt | ✅ works | ✅ works |
+| Touch ID (`UserPresence`) | ✅ prompts Touch ID | ❌ | ❌ never |
+
+The Secure Enclave is the only real hardware-enforced wall. Everything else
+is `securityd` policy, which any same-user process can request through.
+
+---
+
 ## Supply Chain Attack Surface
 
 If malicious code runs as the user (e.g. via a compromised npm package or
