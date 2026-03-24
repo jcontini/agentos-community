@@ -18,9 +18,10 @@ MCP config locations:
 
 You are running in Cursor.
 
-- MCP config: `~/.cursor/mcp.json`
-- To reload MCP config: rename `~/.cursor/mcp.json` → `mcp.json.bak` → then back to `mcp.json` (triggers hot reload without restart)
-- If any apps are disconnected or inaccessible, reload the MCP config using the rename trick above, sleep exactly 1 second, then try again
+- MCP config: `~/.cursor/mcp.json` (user-level; applies to all projects)
+- To reload MCP config: `cp ~/.cursor/mcp.json ~/.cursor/mcp.json.nudge && sleep 0.5 && mv ~/.cursor/mcp.json.nudge ~/.cursor/mcp.json` — triggers hot reload without restarting Cursor. Use `cp` not `mv` so the original is never missing if interrupted.
+- If any tools are disconnected, reload MCP config using the command above, then retry.
+- To install or remove the agentOS MCP entry: use `run({ skill: "cursor", tool: "install_mcp" })` / `uninstall_mcp`.
 
 ## Recommended settings
 
@@ -35,6 +36,33 @@ When the user asks to configure Cursor or improve their setup, offer these setti
 | `cursor.experimental.reviewWorkflow.enabled` | `false` | Disable the forced review workflow; use Git for review instead |
 
 Restart Cursor after changing settings for them to take effect.
+
+---
+
+## MCP Configuration
+
+The `install_mcp` and `uninstall_mcp` operations manage the agentOS MCP entry in a client's config file.
+
+```js
+// Install (auto-detects binary path)
+run({ skill: "cursor", tool: "install_mcp" })
+
+// Install with explicit path
+run({ skill: "cursor", tool: "install_mcp", params: { binary_path: "/Users/you/dev/agentos/target/release/agentos" } })
+
+// Remove
+run({ skill: "cursor", tool: "uninstall_mcp" })
+```
+
+**Binary path auto-detection** (in order):
+1. Running engine PID (`~/.agentos/engine.pid`) → `lsof` to read the actual binary path
+2. Existing `~/.cursor/mcp.json` → reuse the current `command` value
+3. `which agentos`
+4. Fails with an actionable error if none found
+
+**Use the release binary** in production (`target/release/agentos`). Debug builds go stale between rebuilds; `restart.sh` only rebuilds release by default. The auto-detection picks up whichever binary is currently running — if you just ran `restart.sh`, that's the release build.
+
+The config is written atomically (temp file + rename) so a crash mid-write never leaves `mcp.json` missing or truncated.
 
 ---
 
@@ -66,7 +94,7 @@ After import, all sessions are FTS5-searchable:
 search({ query: "Langfuse pipeline", types: ["session"] })
 ```
 
-**Stats:** Run `python3 list-conversations.py --stats` to see how many sessions are available across both sources and all workspaces before importing.
+**Stats:** Run `python3 cursor.py --stats` to see how many sessions are available across both sources and all workspaces before importing. (The old `list-conversations.py` still exists for standalone use but skill operations now use `cursor.py`.)
 
 **Deduplication:** Sessions are deduplicated by UUID (remote_id). Safe to run backfill multiple times — existing sessions won't be duplicated.
 
@@ -176,12 +204,16 @@ urls_fetched:
 (full markdown research content)
 ```
 
-### extract-research.py
+### Research extraction
 
-`extract-research.py` (in this directory) scans Cursor's database for research-quality sub-agent outputs and saves them to `.research/`.
+The `pull_document` skill operation and the standalone `extract-research.py` script both scan Cursor's database for research-quality sub-agent outputs.
 
-**Usage:**
+**Via skill (imports into graph):**
+```js
+run({ skill: "cursor", tool: "pull_document" })
+```
 
+**Standalone script (saves to `.research/` directory):**
 ```bash
 # List new research (not yet saved)
 python3 ./extract-research.py --workspace .

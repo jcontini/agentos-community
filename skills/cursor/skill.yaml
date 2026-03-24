@@ -32,14 +32,8 @@ adapters:
     content: .transcript
 
 operations:
-  pull_document:
-    description: Extract research reports from Cursor sub-agent conversations into the graph
-    returns: document[]
-    params: {}
-    python:
-      module: ./extract-research.py
-      function: op_pull_document
-      timeout: 120
+
+  # ── Session history ──────────────────────────────────────────────────────────
 
   list_sessions:
     description: >
@@ -49,7 +43,7 @@ operations:
     returns: session[]
     params: {}
     python:
-      module: ./list-conversations.py
+      module: ./cursor.py
       function: op_list_sessions
       timeout: 60
 
@@ -57,9 +51,8 @@ operations:
     description: >
       Import ALL Cursor sessions including full history from SQLite databases.
       Reads both JSONL transcripts (recent) and Cursor's workspace/global SQLite
-      databases (going back months). This is the one-time import — run it once to
-      seed the graph with your full conversation history. Subsequent calls to
-      session.list will keep it current with new sessions.
+      databases (going back months). Run once to seed the graph with full conversation
+      history; subsequent list_sessions calls keep it current.
       Optionally filter to a specific workspace path.
     returns: session[]
     params:
@@ -67,14 +60,14 @@ operations:
         type: string
         description: Filter to workspace path (e.g. /Users/joe/dev/agentos). Omit for all workspaces.
     python:
-      module: ./list-conversations.py
+      module: ./cursor.py
       function: op_backfill_session
       args:
         workspace: .params.workspace
       timeout: 300
 
   get_session:
-    description: Get a Cursor session by UUID with full transcript (checks both JSONL and SQLite sources)
+    description: Get a Cursor session by UUID with full transcript (checks JSONL then SQLite)
     returns: session
     params:
       id:
@@ -82,8 +75,72 @@ operations:
         required: true
         description: Session UUID
     python:
-      module: ./list-conversations.py
+      module: ./cursor.py
       function: op_get_session
       args:
         id: .params.id
       timeout: 30
+
+  # ── Research extraction ──────────────────────────────────────────────────────
+
+  pull_document:
+    description: >
+      Extract research reports from Cursor sub-agent Task tool results.
+      Scans the global Cursor SQLite store for Task blobs that meet research thresholds
+      (3+ web searches, 3000+ chars output, 5+ conversation steps) and returns them
+      as document entities for the graph.
+    returns: document[]
+    params: {}
+    python:
+      module: ./cursor.py
+      function: op_pull_document
+      timeout: 120
+
+  # ── MCP configuration ────────────────────────────────────────────────────────
+
+  install_mcp:
+    description: >
+      Install the agentOS MCP server into a client's config so agents can use agentOS tools.
+      For Cursor, writes to ~/.cursor/mcp.json (user-level, not project-level).
+      Auto-detects the agentos binary from the running engine PID, existing config, or PATH.
+      Writes atomically to prevent config corruption.
+    returns:
+      status: string
+      path: string
+      config: string
+      message: string
+    params:
+      binary_path:
+        type: string
+        description: >
+          Path to the agentos binary. Auto-detected if omitted — checks the running
+          engine process, existing mcp.json, then PATH.
+      client:
+        type: string
+        description: "MCP client to configure. Supported: cursor (default). More clients coming."
+    python:
+      module: ./cursor.py
+      function: install_mcp
+      args:
+        binary_path: .params.binary_path
+        client: '.params.client // "cursor"'
+      timeout: 15
+
+  uninstall_mcp:
+    description: >
+      Remove the agentOS MCP server from a client's config file.
+      For Cursor, edits ~/.cursor/mcp.json atomically.
+    returns:
+      status: string
+      config: string
+      message: string
+    params:
+      client:
+        type: string
+        description: "MCP client to configure. Supported: cursor (default)."
+    python:
+      module: ./cursor.py
+      function: uninstall_mcp
+      args:
+        client: '.params.client // "cursor"'
+      timeout: 15
