@@ -1509,7 +1509,14 @@ def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
 
 
 def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Check session liveness and extract account identity from the Your Account page."""
+    """Check session liveness and extract account identity.
+
+    Fetches two pages:
+    1. /gp/css/homepage.html — nav bar display name, customerId, marketplace, Prime status
+    2. /ax/account/manage  — Login & Security page, contains the account email
+
+    The email is the canonical identifier (unique per Amazon account).
+    """
     params = params or {}
     cookie_header = _require_cookies(params, "whoami")
 
@@ -1517,37 +1524,47 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
         _warm_session(client)
         resp = client.get(f"{BASE}/gp/css/homepage.html")
 
-    if resp.status_code != 200:
-        return {"authenticated": False, "status_code": resp.status_code}
+        if resp.status_code != 200:
+            return {"authenticated": False, "status_code": resp.status_code}
 
-    body = resp.text
+        body = resp.text
 
-    if "ap/signin" in str(resp.url):
-        return {"authenticated": False, "redirect": str(resp.url)}
+        if "ap/signin" in str(resp.url):
+            return {"authenticated": False, "redirect": str(resp.url)}
 
-    name_match = re.search(
-        r'nav-link-accountList-nav-line-1[^>]*>Hello,\s*([^<]+)<', body
-    )
-    customer_name_match = re.search(
-        r"""\$Nav\.declare\(['"]config\.customerName['"],\s*'([^']+)'\)""", body
-    )
-    customer_id_match = re.search(r'"customerId"\s*:\s*"([A-Z0-9]+)"', body)
-    marketplace_match = re.search(r"ue_mid\s*=\s*'([^']+)'", body)
-    prime_match = re.search(r"isPrimeMember[=:]\s*['\"]?true", body, re.I)
+        name_match = re.search(
+            r'nav-link-accountList-nav-line-1[^>]*>Hello,\s*([^<]+)<', body
+        )
+        customer_name_match = re.search(
+            r"""\$Nav\.declare\(['"]config\.customerName['"],\s*'([^']+)'\)""", body
+        )
+        customer_id_match = re.search(r'"customerId"\s*:\s*"([A-Z0-9]+)"', body)
+        marketplace_match = re.search(r"ue_mid\s*=\s*'([^']+)'", body)
+        prime_match = re.search(r"isPrimeMember[=:]\s*['\"]?true", body, re.I)
 
-    display = (
-        name_match.group(1).strip() if name_match
-        else customer_name_match.group(1).strip() if customer_name_match
-        else None
-    )
-    customer_id = customer_id_match.group(1) if customer_id_match else None
-    marketplace_id = marketplace_match.group(1) if marketplace_match else None
+        display = (
+            name_match.group(1).strip() if name_match
+            else customer_name_match.group(1).strip() if customer_name_match
+            else None
+        )
+        customer_id = customer_id_match.group(1) if customer_id_match else None
+        marketplace_id = marketplace_match.group(1) if marketplace_match else None
+
+        # Fetch Login & Security page to get the account email.
+        email = None
+        manage_resp = client.get(f"{BASE}/ax/account/manage")
+        if manage_resp.status_code == 200 and "ap/signin" not in str(manage_resp.url):
+            email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", manage_resp.text)
+            if email_match:
+                email = email_match.group(0)
 
     return {
         "authenticated": True,
         "issuer": "amazon.com",
-        "customer_id": customer_id or display,
+        "identifier": email or customer_id or display,
+        "customer_id": customer_id,
         "display": display,
+        "email": email,
         "marketplace_id": marketplace_id,
         "is_prime": prime_match is not None,
     }
