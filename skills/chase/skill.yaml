@@ -13,6 +13,7 @@ connections:
       check:
         url: "https://secure.chase.com/svc/rl/accounts/l4/v1/app/data/list"
         expect_status: 200
+        identifier: '.cache | map(select(.url | contains("tiles/list"))) | .[0].response.accountTiles[0].accountId'
       login:
         account_prompt: "What is your Chase username?"
         phases:

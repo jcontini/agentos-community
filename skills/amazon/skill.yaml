@@ -16,6 +16,11 @@ connections:
       check:
         url: "https://www.amazon.com/gp/css/homepage.html"
         expect_status: 200
+        # identifier: not supported here — this URL returns HTML, not JSON.
+        # Identity is available via the whoami Python operation (amazon.py) which
+        # regex-parses the embedded "customerId" from the HTML. To add identifier
+        # support, switch to a JSON endpoint that returns customer identity
+        # (e.g. a nav data API) and add the jaq expression.
     label: Amazon Session
     help_url: https://www.amazon.com/ap/signin
 
