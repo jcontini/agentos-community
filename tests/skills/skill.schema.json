@@ -228,6 +228,26 @@
         "domain": { "type": "string", "description": "Cookie domain" },
         "names": { "type": "array", "items": { "type": "string" }, "description": "Cookie names" },
         "check": { "$ref": "#/definitions/auth/properties/cookies/properties/check" },
+        "liveness": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string", "format": "uri" },
+            "expect_status": { "type": "integer", "default": 200 }
+          },
+          "required": ["url"],
+          "additionalProperties": false,
+          "description": "Fast liveness probe — URL + status only. No identity, no Python."
+        },
+        "account": {
+          "type": "object",
+          "properties": {
+            "check": { "type": "string", "description": "Operation for session verification + identity" },
+            "profile": { "type": "string", "description": "Operation for full profile info" },
+            "logout": { "type": "string", "description": "Operation to invalidate session" }
+          },
+          "additionalProperties": false,
+          "description": "Account management operations"
+        },
         "browser": { "type": "string", "description": "Preferred browser provider" },
         "login": { "description": "Login flow configuration" },
         "service": { "type": "string", "description": "OAuth service for matchmaking" },

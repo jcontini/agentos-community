@@ -13,14 +13,11 @@ connections:
     auth:
       type: cookies
       domain: ".amazon.com"
-      check:
+      liveness:
         url: "https://www.amazon.com/gp/css/homepage.html"
         expect_status: 200
-        # identifier: Amazon has no JSON identity endpoint — all pages are
-        # server-rendered HTML. Identity (email, customerId) is extracted by
-        # the check_session/whoami Python operation which fetches
-        # /ax/account/manage (Login & Security) for the account email.
-        # Engine support for whoami:-based identifier is needed (see roadmap).
+      account:
+        check: check_session
     label: Amazon Session
     help_url: https://www.amazon.com/ap/signin
 
