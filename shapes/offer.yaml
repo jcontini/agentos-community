@@ -1,0 +1,20 @@
+offer:
+  fields:
+    price:             number
+    currency:          string
+    offer_type:        string
+    availability:      string
+    valid_from:        datetime
+    valid_until:       datetime
+    booking_token:     string
+  relations:
+    for:               product
+    offered_by:        organization
+  display:
+    title: name
+    description: content
+    columns:
+      - name:            Offer
+      - price:           Price
+      - currency:        Currency
+      - offer_type:      Type

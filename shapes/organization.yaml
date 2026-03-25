@@ -1,0 +1,20 @@
+organization:
+  also: [actor]
+  fields:
+    industry:          string
+    employee_count:    integer
+    founded:           datetime
+  relations:
+    member:            person[]
+    domain:            domain
+    website:           website
+    headquarters:      place
+  display:
+    title: name
+    subtitle: industry
+    image: image
+    columns:
+      - name:            Name
+      - industry:        Industry
+      - employee_count:  Employees
+      - founded:         Founded

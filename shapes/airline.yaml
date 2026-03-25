@@ -1,0 +1,17 @@
+airline:
+  also: [organization]
+  fields:
+    iata_code:         string
+    icao_code:         string
+    callsign:          string
+    country:           string
+    alliance:          string
+  display:
+    title: name
+    subtitle: iata_code
+    image: image
+    columns:
+      - name:            Airline
+      - iata_code:       IATA
+      - country:         Country
+      - alliance:        Alliance

@@ -1,0 +1,27 @@
+task:
+  fields:
+    priority:          integer
+    state:             string
+    remote_id:         string
+    repository:        string
+    labels:            string[]
+    posting_date:      datetime
+    started_at:        datetime
+    target_date:       datetime
+  relations:
+    assigned_to:       person
+    project:           project
+    parent:            task
+    children:          task[]
+    blocked_by:        task[]
+    blocks:            task[]
+  display:
+    title: name
+    subtitle: state
+    description: text
+    date: datePublished
+    columns:
+      - name:            Task
+      - state:           State
+      - priority:        Priority
+      - datePublished:   Created

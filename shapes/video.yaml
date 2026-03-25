@@ -1,0 +1,25 @@
+video:
+  also: [post]
+  fields:
+    duration_ms:       integer
+    resolution:        string
+    view_count:        integer
+    like_count:        integer
+    comment_count:     integer
+  relations:
+    posted_by:         account
+    upload:            channel
+    transcribe:        transcript
+    embed:             post
+    add_to:            playlist
+  display:
+    title: name
+    subtitle: author
+    image: image
+    date: datePublished
+    columns:
+      - name:            Title
+      - author:          Channel
+      - view_count:      Views
+      - like_count:      Likes
+      - datePublished:   Published

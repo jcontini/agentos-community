@@ -27,21 +27,21 @@ adapters:
     datePublished: .created_at
     updated_at: .updated_at
     completed_at: '.closed_at // null'
-    data.state: .state
-    data.repository: '.repository // null'
-    data.author: '.author // null'
-    data.labels: '.labels // []'
+    state: .state
+    repository: '.repository // null'
+    author: '.author // null'
+    labels: '.labels // []'
 
   document:
     id: '.sha // .path'
     name: .name
     url: '.url // null'
     content: '.content // null'
-    data.path: .path
-    data.kind: '.kind // null'
-    data.sha: '.sha // null'
-    data.size: '.size // null'
-    data.repository: '.repository // null'
+    path: .path
+    kind: '.kind // null'
+    sha: '.sha // null'
+    size: '.size // null'
+    repository: '.repository // null'
 
 operations:
   list_tasks:

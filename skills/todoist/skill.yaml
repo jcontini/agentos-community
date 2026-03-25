@@ -52,7 +52,7 @@ adapters:
   project:
     id: .id
     name: .name
-    data.color: .color
+    color: .color
     _parent_id: .parent_id
 
   tag:

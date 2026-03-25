@@ -36,22 +36,22 @@ adapters:
     id: .accountId
     name: .name
     text: '(.type + " •••• " + .last4)'
-    data.account_type: .type
-    data.last4: .last4
-    data.balance: .balance
-    data.available: .available
-    data.card_type: .cardType
+    account_type: .type
+    last4: .last4
+    balance: .balance
+    available: .available
+    card_type: .cardType
 
   transaction:
     id: '(.accountId + ":" + (.postingDate // .date) + ":" + (.description // .details.description // "transaction") + ":" + (.amount | tostring))'
     name: .description
     account: .accountId
-    data.posting_date: '.postingDate // .date'
-    data.amount: .amount
-    data.balance: .balance
-    data.category: '.category // .categoryDescription'
-    data.pending: '.pending // false'
-    data.details: .details
+    posting_date: '.postingDate // .date'
+    amount: .amount
+    balance: .balance
+    category: '.category // .categoryDescription'
+    pending: '.pending // false'
+    details: .details
 
 # ==============================================================================
 # OPERATIONS

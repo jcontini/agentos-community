@@ -1,0 +1,43 @@
+email:
+  also: [message]
+  fields:
+    subject:           string
+    message_id:        string
+    in_reply_to:       string
+    is_unread:         boolean
+    is_starred:        boolean
+    is_draft:          boolean
+    is_sent:           boolean
+    is_trash:          boolean
+    is_spam:           boolean
+    has_attachments:   boolean
+    label_ids:         string[]
+    account_email:     string
+    size_estimate:     integer
+    references:        string
+    reply_to:          string
+    delivered_to:      string
+    attachments:       json
+    to_raw:            string
+    cc_raw:            string
+    bcc_raw:           string
+    body_html:         text
+  relations:
+    from:              account
+    to:                account[]
+    cc:                account[]
+    bcc:               account[]
+    domain:            domain
+    to_domain:         domain[]
+    cc_domain:         domain[]
+  display:
+    title: subject
+    subtitle: author
+    description: text
+    date: datePublished
+    columns:
+      - subject:         Subject
+      - author:          From
+      - datePublished:   Date
+      - is_unread:       Unread
+      - is_starred:      Starred

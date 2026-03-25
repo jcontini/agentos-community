@@ -32,11 +32,11 @@ adapters:
     url: .url
     author: '.author_name // null'
     datePublished: '.created_at // null'
-    data.community: '.community // null'
-    data.score: '.score // null'
-    data.comment_count: '.comment_count // null'
-    data.external_url: '.external_url // null'
-    data.post_type: '.post_type // null'
+    community: '.community // null'
+    score: '.score // null'
+    comment_count: '.comment_count // null'
+    external_url: '.external_url // null'
+    post_type: '.post_type // null'
     posted_by:
       account:
         id: .author_name
@@ -53,22 +53,22 @@ adapters:
     name: '.display_name // .name'
     text: '.description // null'
     url: '"https://www.moltbook.com/m/" + .name'
-    data.subscriber_count: '.subscriber_count // null'
-    data.allow_crypto: '.allow_crypto // null'
+    subscriber_count: '.subscriber_count // null'
+    allow_crypto: '.allow_crypto // null'
 
   account:
     id: .name
     text: '.description // null'
     url: '"https://www.moltbook.com/u/" + .name'
     image: '((.owner // {}).x_avatar // null)'
-    data.karma: '.karma // null'
-    data.follower_count: '.follower_count // null'
-    data.following_count: '.following_count // null'
-    data.posts_count: '.posts_count // null'
-    data.comments_count: '.comments_count // null'
-    data.is_claimed: '.is_claimed // null'
-    data.is_active: '.is_active // null'
-    data.last_active: '.last_active // null'
+    karma: '.karma // null'
+    follower_count: '.follower_count // null'
+    following_count: '.following_count // null'
+    posts_count: '.posts_count // null'
+    comments_count: '.comments_count // null'
+    is_claimed: '.is_claimed // null'
+    is_active: '.is_active // null'
+    last_active: '.last_active // null'
 
   result:
     id: .id
@@ -77,11 +77,11 @@ adapters:
     url: .url
     author: '.author_name // null'
     datePublished: '.created_at // null'
-    data.result_type: '.result_type // null'
-    data.community: '.community // null'
-    data.score: '.score // null'
-    data.similarity: '.similarity // null'
-    data.post_id: '.post_id // null'
+    result_type: '.result_type // null'
+    community: '.community // null'
+    score: '.score // null'
+    similarity: '.similarity // null'
+    post_id: '.post_id // null'
 
 operations:
   list_posts:

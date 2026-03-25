@@ -29,9 +29,9 @@ adapters:
     datePublished: .updatedAt
     version_id: .currentVersionId
     expires_at: '.expiresAt?'
-    data.anonymous: '.anonymous? // false'
-    data.claim_token: '.claimToken?'
-    data.claim_url: '.claimUrl?'
+    anonymous: '.anonymous? // false'
+    claim_token: '.claimToken?'
+    claim_url: '.claimUrl?'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

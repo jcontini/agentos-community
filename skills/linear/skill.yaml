@@ -52,12 +52,12 @@ adapters:
     priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
     started_at: 'if .state.type == "started" then .updatedAt else null end'
     target.date: .dueDate
-    data.remote_id: .identifier
-    data.url: .url
+    remote_id: .identifier
+    url: .url
     datePublished: .createdAt
     updated_at: .updatedAt
-    data.assignee.id: '(.assignee // {}).id'
-    data.assignee.name: '(.assignee // {}).name'
+    assignee.id: '(.assignee // {}).id'
+    assignee.name: '(.assignee // {}).name'
     assigned_to:
       person:
         id: '(.assignee // {}).id'
@@ -81,7 +81,7 @@ adapters:
   project:
     id: .id
     name: .name
-    data.state: .state
+    state: .state
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

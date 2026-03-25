@@ -1,0 +1,16 @@
+result:
+  fields:
+    indexed_at:        datetime
+    result_type:       string
+    score:             number
+    similarity:        number
+  display:
+    title: name
+    subtitle: url
+    description: text
+    image: image
+    date: datePublished
+    columns:
+      - name:            Title
+      - url:             URL
+      - datePublished:   Date

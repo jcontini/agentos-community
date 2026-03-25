@@ -1,0 +1,23 @@
+repository:
+  fields:
+    stars:             integer
+    forks:             integer
+    language:          string
+    topics:            string[]
+    open_issues:       integer
+    is_fork:           boolean
+    is_archived:       boolean
+    is_private:        boolean
+    default_branch:    string
+    license:           string
+    size:              integer
+  display:
+    title: name
+    subtitle: language
+    description: text
+    date: datePublished
+    columns:
+      - name:            Name
+      - language:        Language
+      - stars:           Stars
+      - forks:           Forks

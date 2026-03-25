@@ -1,0 +1,25 @@
+post:
+  fields:
+    external_url:      url
+    post_type:         string
+    parent_id:         string
+    replies:           json
+    engagement.score:  integer
+    engagement.comment_count: integer
+    engagement.likes:  integer
+  relations:
+    posted_by:         account
+    publish:           community
+    replies_to:        post
+    embed:             video
+  display:
+    title: name
+    subtitle: author
+    description: text
+    date: datePublished
+    columns:
+      - name:            Title
+      - author:          Author
+      - engagement.score: Score
+      - engagement.comment_count: Comments
+      - datePublished:   Date

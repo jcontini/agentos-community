@@ -32,14 +32,14 @@ adapters:
     text: '((.status // "") + " — " + ((.items // [])[:4] | map((.title | tostring | .[0:45])) | join(", ")) + (if ((.items // []) | length) > 4 then (", +" + (((.items // []) | length) - 4 | tostring) + " more") else "" end))'
     url: .url
     datePublished: .order_date
-    data.total: .total
-    data.total_amount: .total_amount
-    data.item_count: .item_count
-    data.status: .status
-    data.delivery_date: .delivery_date
-    data.shipping_address: .shipping_address
-    data.tracking_url: .tracking_url
-    data.summary: .summary
+    total: .total
+    total_amount: .total_amount
+    item_count: .item_count
+    status: .status
+    delivery_date: .delivery_date
+    shipping_address: .shipping_address
+    tracking_url: .tracking_url
+    summary: .summary
 
     contains:
       product[]:
@@ -48,9 +48,9 @@ adapters:
         name: .title
         url: .url
         image: .image_url
-        data.price: .price
-        data.price_amount: .price_amount
-        data.quantity: .quantity
+        price: .price
+        price_amount: .price_amount
+        quantity: .quantity
 
   product:
     id: .asin
@@ -59,25 +59,25 @@ adapters:
     url: .url
     image: .image_url
     author: .brand
-    data.price: .price
-    data.price_amount: .price_amount
-    data.rating: .rating
-    data.ratings_count: .ratings_count
-    data.review_count: .review_count
-    data.prime: .prime
-    data.availability: .availability
-    data.categories: .categories
-    data.sponsored: .sponsored
-    data.images: .images
+    price: .price
+    price_amount: .price_amount
+    rating: .rating
+    ratings_count: .ratings_count
+    review_count: .review_count
+    prime: .prime
+    availability: .availability
+    categories: .categories
+    sponsored: .sponsored
+    images: .images
 
   list:
     id: .list_id
     name: .name
     url: .url
-    data.item_count: .item_count
-    data.privacy: .privacy
-    data.is_default: .is_default
-    data.list_type: .list_type
+    item_count: .item_count
+    privacy: .privacy
+    is_default: .is_default
+    list_type: .list_type
 
     contains:
       product[]:
@@ -87,19 +87,19 @@ adapters:
         url: .url
         image: .image_url
         author: .byline
-        data.price: .price
-        data.price_amount: .price_amount
-        data.rating: .rating
-        data.ratings_count: .ratings_count
-        data.date_added: .date_added
-        data.priority: .priority
+        price: .price
+        price_amount: .price_amount
+        rating: .rating
+        ratings_count: .ratings_count
+        date_added: .date_added
+        priority: .priority
 
   account:
     id: .customer_id
     name: .display
     issuer: .issuer
-    data.marketplace_id: .marketplace_id
-    data.is_prime: .is_prime
+    marketplace_id: .marketplace_id
+    is_prime: .is_prime
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

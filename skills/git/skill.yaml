@@ -39,10 +39,10 @@ adapters:
 
   tag:
     id: .name
-    data.hash: .hash
-    data.date: .date
-    data.message: .message
-    data.annotated: .annotated
+    hash: .hash
+    date: .date
+    message: .message
+    annotated: .annotated
 
 operations:
   list_git_commits:

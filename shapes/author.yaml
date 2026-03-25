@@ -1,0 +1,22 @@
+author:
+  fields:
+    location:          string
+    average_rating:    number
+    works_count:       integer
+    birth_date:        string
+    website:           url
+    twitter:           string
+    member_since:      datetime
+    followers_count:   integer
+  relations:
+    books:             book[]
+  display:
+    title: name
+    subtitle: location
+    image: image
+    description: text
+    columns:
+      - name:            Author
+      - works_count:     Works
+      - average_rating:  Rating
+      - followers_count: Followers

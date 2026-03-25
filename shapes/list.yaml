@@ -1,0 +1,16 @@
+list:
+  fields:
+    item_count:      integer
+    privacy:         string
+    list_type:       string
+    is_default:      boolean
+  relations:
+    contains:        product[]
+  display:
+    title: name
+    date: datePublished
+    columns:
+      - name:            Name
+      - item_count:      Items
+      - privacy:         Privacy
+      - list_type:       Type

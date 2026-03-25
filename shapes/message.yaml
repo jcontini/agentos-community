@@ -1,0 +1,20 @@
+message:
+  fields:
+    conversation_id:   string
+    is_outgoing:       boolean
+    platform:          string
+  relations:
+    from:              account
+    in_conversation:   conversation
+    replies_to:        message
+  display:
+    title: name
+    subtitle: author
+    description: content
+    date: datePublished
+    columns:
+      - name:            Name
+      - author:          From
+      - datePublished:   Date
+      - platform:        Platform
+      - is_outgoing:     Sent

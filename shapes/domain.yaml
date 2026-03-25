@@ -1,0 +1,15 @@
+domain:
+  fields:
+    status:            string
+    registrar:         string
+    expires_at:        datetime
+    auto_renew:        boolean
+    nameservers:       string[]
+  display:
+    title: name
+    date: expires_at
+    columns:
+      - name:            Domain
+      - registrar:       Registrar
+      - expires_at:      Expires
+      - status:          Status

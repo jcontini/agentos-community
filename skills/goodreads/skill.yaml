@@ -46,19 +46,19 @@ adapters:
     name: .name
     image: .photo_url
     location: .location
-    data.gender: .gender
-    data.age: .age
-    data.birthday: .birthday
-    data.website: .website
-    data.about: .about
-    data.interests: .interests
-    data.joined_date: .joined_date
-    data.last_active: .last_active
-    data.ratings_count: .ratings_count
-    data.avg_rating: .avg_rating
-    data.reviews_count: .reviews_count
-    data.friends_count: .friends_count
-    data.favorite_genres: .favorite_genres
+    gender: .gender
+    age: .age
+    birthday: .birthday
+    website: .website
+    about: .about
+    interests: .interests
+    joined_date: .joined_date
+    last_active: .last_active
+    ratings_count: .ratings_count
+    avg_rating: .avg_rating
+    reviews_count: .reviews_count
+    friends_count: .friends_count
+    favorite_genres: .favorite_genres
 
     has_account:
       account:
@@ -67,8 +67,8 @@ adapters:
         handle: .handle
         url: '.url // ("https://goodreads.com/user/show/" + (.user_id | tostring))'
         image: .photo_url
-        data.books_count: .books_count
-        data.friends_count: .friends_count
+        books_count: .books_count
+        friends_count: .friends_count
 
     favorite_books:
       book[]:
@@ -83,7 +83,7 @@ adapters:
         id: .book_id
         name: .title
         author: .author
-        data.date_added: .date_added
+        date_added: .date_added
 
   account:
     id: .user_id
@@ -93,14 +93,14 @@ adapters:
     image: .photo_url
     text: .about
     location: .location
-    data.books_count: .books_count
-    data.ratings_count: .ratings_count
-    data.avg_rating: .avg_rating
-    data.reviews_count: .reviews_count
-    data.website: .website
-    data.birthday: .birthday
-    data.joined_date: .joined_date
-    data.favorite_genres: .favorite_genres
+    books_count: .books_count
+    ratings_count: .ratings_count
+    avg_rating: .avg_rating
+    reviews_count: .reviews_count
+    website: .website
+    birthday: .birthday
+    joined_date: .joined_date
+    favorite_genres: .favorite_genres
 
     favorite_books:
       book[]:
@@ -126,7 +126,7 @@ adapters:
         id: .shelf_id
         name: .name
         url: .url
-        data.book_count: .book_count
+        book_count: .book_count
 
   book:
     id: .book_id
@@ -138,27 +138,27 @@ adapters:
     isbn: .isbn
     isbn13: .isbn13
     datePublished: '.publication_date // .date_published'
-    data.average_rating: '.average_rating // .avg_rating'
-    data.ratings_count: .ratings_count
-    data.review_count: .review_count
-    data.genres: .genres
-    data.series: .series_name
-    data.pages: '.pages // .num_pages'
-    data.publisher: .publisher
-    data.format: .format
-    data.language: .language
-    data.original_title: .original_title
-    data.currently_reading_count: .currently_reading_count
-    data.to_read_count: .to_read_count
-    data.places: .places
-    data.characters: .characters
-    data.awards_won: .awards_won
-    data.work_url: .work_url
-    data.user_rating: .rating
-    data.date_read: .date_read
-    data.date_started: .date_started
-    data.date_added: .date_added
-    data.shelf: .shelf
+    average_rating: '.average_rating // .avg_rating'
+    ratings_count: .ratings_count
+    review_count: .review_count
+    genres: .genres
+    series: .series_name
+    pages: '.pages // .num_pages'
+    publisher: .publisher
+    format: .format
+    language: .language
+    original_title: .original_title
+    currently_reading_count: .currently_reading_count
+    to_read_count: .to_read_count
+    places: .places
+    characters: .characters
+    awards_won: .awards_won
+    work_url: .work_url
+    user_rating: .rating
+    date_read: .date_read
+    date_started: .date_started
+    date_added: .date_added
+    shelf: .shelf
 
     written_by:
       author:
@@ -173,7 +173,7 @@ adapters:
         name: .name
         url: .url
         image: .image_url
-        data.role: .role
+        role: .role
 
   review:
     id: .review_id
@@ -184,9 +184,9 @@ adapters:
     datePublished: .review_date
     engagement.rating: .rating
     engagement.likes: .likes_count
-    data.comment_count: .comment_count
-    data.tags: .tags
-    data.shelf_name: .shelf_name
+    comment_count: .comment_count
+    tags: .tags
+    shelf_name: .shelf_name
     
     posted_by:
       account:
@@ -194,8 +194,8 @@ adapters:
         name: .reviewer_name
         url: '.reviewer_url // ("https://goodreads.com/user/show/" + (.reviewer_id | tostring))'
         image: .reviewer_image_url
-        data.followers_count: .reviewer_followers_count
-        data.reviews_count: .reviewer_reviews_count
+        followers_count: .reviewer_followers_count
+        reviews_count: .reviewer_reviews_count
 
     references:
       book:
@@ -218,13 +218,13 @@ adapters:
     url: '"https://goodreads.com/author/show/" + (.author_id | tostring)'
     image: .photo_url
     location: .location
-    data.average_rating: .average_rating
-    data.works_count: .works_count
-    data.birth_date: .birth_date
-    data.website: .website
-    data.twitter: .twitter
-    data.member_since: .member_since
-    data.followers_count: .followers_count
+    average_rating: .average_rating
+    works_count: .works_count
+    birth_date: .birth_date
+    website: .website
+    twitter: .twitter
+    member_since: .member_since
+    followers_count: .followers_count
 
     books:
       book[]:
@@ -234,23 +234,23 @@ adapters:
         url: .web_url
         image: .cover_url
         author: .primary_author
-        data.average_rating: .average_rating
-        data.ratings_count: .ratings_count
+        average_rating: .average_rating
+        ratings_count: .ratings_count
 
   shelf:
     id: .shelf_id
     name: .name
     text: .description
     url: '"https://goodreads.com/shelf/show/" + (.shelf_id | tostring)'
-    data.book_count: .book_count
-    data.is_exclusive: .is_exclusive
+    book_count: .book_count
+    is_exclusive: .is_exclusive
 
   quote:
     id: '.author_id + ":" + (.text | tostring | .[0:40])'
     name: '.text | .[0:80]'
     text: .text
     author: .author_name
-    data.book_title: .book_title
+    book_title: .book_title
 
     attributed_to:
       author:
@@ -268,8 +268,8 @@ adapters:
     name: .name
     url: .url
     image: .image_url
-    data.member_count: .member_count
-    data.last_active: .last_active
+    member_count: .member_count
+    last_active: .last_active
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS - API Endpoints

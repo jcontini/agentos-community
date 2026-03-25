@@ -1,0 +1,16 @@
+playlist:
+  fields:
+    item_count:        integer
+    is_public:         boolean
+    platform:          string
+  relations:
+    belongs_to:        account
+    contains:          video[]
+  display:
+    title: name
+    subtitle: text
+    image: image
+    columns:
+      - name:            Playlist
+      - item_count:      Items
+      - platform:        Platform

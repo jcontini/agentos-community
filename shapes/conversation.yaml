@@ -1,0 +1,24 @@
+conversation:
+  fields:
+    participant_count: integer
+    message_count:     integer
+    is_group:          boolean
+    is_archived:       boolean
+    unread_count:      integer
+    platform:          string
+    has_unread:        boolean
+    has_attachments:   boolean
+    account_email:     string
+  relations:
+    participant:       account[]
+    message:           message[]
+  display:
+    title: name
+    subtitle: text
+    date: datePublished
+    columns:
+      - name:            Name
+      - participant_count: Participants
+      - datePublished:   Last Activity
+      - platform:        Platform
+      - unread_count:    Unread

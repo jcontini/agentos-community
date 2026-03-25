@@ -1,0 +1,10 @@
+project:
+  fields:
+    state:             string
+    color:             string
+  display:
+    title: name
+    subtitle: state
+    columns:
+      - name:            Project
+      - state:           State

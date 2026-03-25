@@ -1,0 +1,40 @@
+book:
+  also: [product]
+  fields:
+    isbn:              string
+    isbn13:            string
+    pages:             integer
+    genres:            string[]
+    series:            string
+    publisher:         string
+    format:            string
+    language:          string
+    original_title:    string
+    average_rating:    number
+    ratings_count:     integer
+    review_count:      integer
+    currently_reading_count: integer
+    to_read_count:     integer
+    places:            string[]
+    characters:        string[]
+    awards_won:        string[]
+    work_url:          url
+    user_rating:       number
+    date_read:         datetime
+    date_started:      datetime
+    date_added:        datetime
+    shelf:             string
+  relations:
+    written_by:        author
+    contributors:      author[]
+  display:
+    title: name
+    subtitle: author
+    image: image
+    date: datePublished
+    columns:
+      - name:            Title
+      - author:          Author
+      - average_rating:  Rating
+      - pages:           Pages
+      - datePublished:   Published

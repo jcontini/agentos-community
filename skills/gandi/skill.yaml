@@ -20,21 +20,21 @@ adapters:
   domain:
     id: .fqdn
     url: '"https://" + .fqdn'
-    data.status: .status
-    data.registrar: '"gandi"'
-    data.expires_at: .dates.registry_ends_at
-    data.auto_renew: .autorenew
-    data.nameservers: .nameserver.current
+    status: .status
+    registrar: '"gandi"'
+    expires_at: .dates.registry_ends_at
+    auto_renew: .autorenew
+    nameservers: .nameserver.current
 
   dns_record:
     id: '.domain + ":" + .rrset_name + ":" + .rrset_type'
     name: 'if (.rrset_name // "") == "" or .rrset_name == "@" then .domain else .rrset_name + "." + .domain end'
     text: '.rrset_type + " " + ((.rrset_values // []) | join(", "))'
-    data.domain: .domain
-    data.name: .rrset_name
-    data.type: .rrset_type
-    data.ttl: .rrset_ttl
-    data.values: .rrset_values
+    domain: .domain
+    record_name: .rrset_name
+    record_type: .rrset_type
+    ttl: .rrset_ttl
+    values: .rrset_values
 
 operations:
   list_domains:

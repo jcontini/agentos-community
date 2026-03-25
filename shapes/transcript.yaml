@@ -1,0 +1,17 @@
+transcript:
+  fields:
+    language:          string
+    source_type:       string
+    content_role:      string
+    duration_ms:       integer
+    segment_count:     integer
+    segments:          json
+  display:
+    title: name
+    description: content
+    date: datePublished
+    columns:
+      - name:            Transcript
+      - language:        Language
+      - duration_ms:     Duration
+      - source_type:     Source

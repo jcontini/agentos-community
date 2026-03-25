@@ -1,0 +1,28 @@
+product:
+  fields:
+    price:             string
+    price_amount:      number
+    currency:          string
+    rating:            number
+    ratings_count:     integer
+    review_count:      integer
+    brand:             string
+    categories:        string[]
+    availability:      string
+    prime:             boolean
+    sponsored:         boolean
+    images:            json
+    quantity:          integer
+  display:
+    title: name
+    subtitle: author
+    description: text
+    image: image
+    date: datePublished
+    columns:
+      - name:            Name
+      - brand:           Brand
+      - price:           Price
+      - rating:          Rating
+      - ratings_count:   Reviews
+      - availability:    Available

@@ -31,7 +31,7 @@ adapters:
     image: '.metadata.ogImage // .metadata.image // .metadata["og:image"]'
     author: '.metadata.author // .metadata["article:author"]'
     datePublished: '.metadata.publishedTime // .metadata.publishedDate // .metadata["article:published_time"]'
-    data.content_type: '"text/markdown"'
+    content_type: '"text/markdown"'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

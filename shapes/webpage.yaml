@@ -1,0 +1,15 @@
+webpage:
+  fields:
+    visit_count:       integer
+    last_visit_unix:   integer
+    content_type:      string
+  display:
+    title: name
+    subtitle: url
+    description: text
+    image: image
+    date: datePublished
+    columns:
+      - name:            Title
+      - url:             URL
+      - datePublished:   Date

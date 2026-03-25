@@ -1,0 +1,23 @@
+transaction:
+  fields:
+    amount:            number
+    currency:          string
+    balance:           number
+    category:          string
+    posting_date:      datetime
+    pending:           boolean
+    recurring:         boolean
+    notes:             string
+    type:              string
+    details:           json
+    account_id:        string
+  display:
+    title: name
+    subtitle: category
+    date: posting_date
+    columns:
+      - name:            Description
+      - amount:          Amount
+      - category:        Category
+      - posting_date:    Date
+      - pending:         Pending

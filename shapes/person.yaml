@@ -1,0 +1,25 @@
+person:
+  also: [actor]
+  fields:
+    first_name:        string
+    last_name:         string
+    middle_name:       string
+    nickname:          string
+    birthday:          datetime
+    notes:             text
+    gender:            string
+    about:             text
+  relations:
+    accounts:          account[]
+    roles:             role[]
+    location:          place
+    website:           website
+  display:
+    title: name
+    subtitle: about
+    image: image
+    columns:
+      - name:            Name
+      - first_name:      First
+      - last_name:       Last
+      - birthday:        Birthday

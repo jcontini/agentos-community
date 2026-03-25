@@ -21,22 +21,22 @@ adapters:
   domain:
     id: .domain
     url: '"https://" + .domain'
-    data.status: .status
-    data.registrar: '"porkbun"'
-    data.expires_at: .expireDate
-    data.auto_renew: '.autoRenew == "yes"'
-    data.created_at: .createDate
+    status: .status
+    registrar: '"porkbun"'
+    expires_at: .expireDate
+    auto_renew: '.autoRenew == "yes"'
+    created_at: .createDate
 
   dns_record:
     id: '.domain + ":" + (.id | tostring)'
     name: 'if (.name // "") == "" then .domain else .name + "." + .domain end'
     text: '.type + " " + .content'
-    data.record_id: '.id | tostring'
-    data.domain: .domain
-    data.type: .type
-    data.content: .content
-    data.ttl: '.ttl | tonumber'
-    data.priority: '.prio // null'
+    record_id: '.id | tostring'
+    domain: .domain
+    type: .type
+    content: .content
+    ttl: '.ttl | tonumber'
+    priority: '.prio // null'
 
 operations:
   list_domains:

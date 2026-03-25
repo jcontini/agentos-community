@@ -3,7 +3,9 @@ name: macOS Security
 description: >
   Audit macOS credentials, Keychain entries, and app tokens.
   Lists what OAuth tokens, API keys, and session credentials are stored on this machine,
-  extracts specific tokens, and identifies which apps have Google OAuth access.
+  extracts specific tokens, identifies which apps have Google OAuth access, and scans
+  macOS Internet Accounts (the OS-level connections that appear as "macOS" in Google's
+  authorized apps list).
 color: "#6B7280"
 
 website: https://support.apple.com/guide/keychain-access
@@ -15,7 +17,7 @@ operations:
     description: >
       Full inventory of non-Apple credentials stored on this Mac. Returns categorized
       entries: native OAuth tokens (e.g. Mimestream/Google), Electron Safe Storage keys,
-      direct API keys, CLI tool tokens, and app session tokens.
+      direct API keys, CLI tool tokens, Spark auth keys, and app session tokens.
     returns:
       category: string
       app: string
@@ -49,11 +51,14 @@ operations:
 
   scan_google_oauth:
     description: >
-      Scan all installed apps in /Applications for Google OAuth client IDs.
-      Reads Info.plist URL schemes — the reversed client ID is registered as a
-      URL scheme so Google can redirect back after login. Returns app name and client ID.
+      Scan all installed apps for Google OAuth client IDs embedded in their Info.plist.
+      Searches /Applications, /Applications/Setapp, ~/Applications, and /System/Applications.
+      Finds apps registered as Google OAuth providers via the reversed-client-ID URL scheme
+      (e.g. BusyContacts, Strongbox, Mimestream). These are the apps that appear in
+      Google's "Apps with access to your account" list as native desktop clients.
     returns:
       app: string
+      install_path: string
       bundle_id: string
       version: string
       client_id: string
@@ -64,6 +69,25 @@ operations:
       function: cmd_scan_google_oauth
       params: true
       timeout: 60
+
+  scan_macos_accounts:
+    description: >
+      Scan macOS Internet Accounts (Account.framework) — the OS-level OAuth connections
+      added via System Settings → Internet Accounts. This is what appears as "macOS" in
+      Google's authorized apps list. Finds Google, Exchange, CardDAV, CalDAV accounts
+      registered at the OS level (used by Calendar, Contacts, Mail, and third-party apps
+      that delegate to the system account rather than storing their own tokens).
+      Requires Full Disk Access granted to the calling app.
+    returns:
+      username: string
+      account_type: string
+      identifier: string
+      note: string
+    python:
+      module: ./macos_security.py
+      function: cmd_scan_macos_accounts
+      params: true
+      timeout: 15
 
   list_electron_apps:
     description: >

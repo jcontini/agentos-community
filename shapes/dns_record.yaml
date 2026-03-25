@@ -1,0 +1,16 @@
+dns_record:
+  fields:
+    domain:            string
+    record_name:       string
+    record_type:       string
+    ttl:               integer
+    values:            string[]
+  display:
+    title: name
+    subtitle: record_type
+    description: text
+    columns:
+      - name:            Record
+      - record_type:     Type
+      - ttl:             TTL
+      - domain:          Domain

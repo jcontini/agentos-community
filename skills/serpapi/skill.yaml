@@ -41,15 +41,15 @@ adapters:
     price: .price
     currency: '"USD"'
     offer_type: '"flight"'
-    data.trip_type: .type
-    data.total_duration: .total_duration
-    data.flights: .flights
-    data.layovers: .layovers
-    data.carbon_emissions: .carbon_emissions
-    data.airline_logo: .airline_logo
-    data.extensions: .extensions
-    data.departure_token: .departure_token
-    data.booking_token: .booking_token
+    trip_type: .type
+    total_duration: .total_duration
+    flights: .flights
+    layovers: .layovers
+    carbon_emissions: .carbon_emissions
+    airline_logo: .airline_logo
+    extensions: .extensions
+    departure_token: .departure_token
+    booking_token: .booking_token
     content: >
         ((.flights[0].departure_airport.id) + " → " +
          (.flights[-1].arrival_airport.id) + "\n" +

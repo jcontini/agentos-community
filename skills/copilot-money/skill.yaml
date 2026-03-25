@@ -21,10 +21,10 @@ adapters:
     handle: .mask
     platform: '"copilot-money"'
     text: '.name + if .mask then " (••••" + .mask + ")" else "" end'
-    data.balance: .balance
-    data.limit: .limit
-    data.institution_id: .institution_id
-    data.color: .color
+    balance: .balance
+    limit: .limit
+    institution_id: .institution_id
+    color: .color
 
     # Auto-create tag entities and link via tagged_with
     # Python script emits tags like ["financial", "credit", "taxable"]
@@ -37,14 +37,14 @@ adapters:
     id: '.id | tostring'
     name: '.merchant_name // "Unknown"'
     text: '(.merchant_name // "Unknown") + " — $" + ((.amount // 0) | tostring)'
-    data.amount: .amount
-    data.date: .date
-    data.account_id: .account_id
-    data.category_id: .category_id
-    data.pending: '.pending == 1 or .pending == true'
-    data.recurring: '.recurring == 1 or .recurring == true'
-    data.notes: .notes
-    data.type: .type
+    amount: .amount
+    date: .date
+    account_id: .account_id
+    category_id: .category_id
+    pending: '.pending == 1 or .pending == true'
+    recurring: '.recurring == 1 or .recurring == true'
+    notes: .notes
+    type: .type
 
     # Tags: recurring, internal-transfer, and Copilot spending category (with emoji + color)
     # Python script emits tags as [{name, emoji?, color?}]

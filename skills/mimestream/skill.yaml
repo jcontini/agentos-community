@@ -49,17 +49,17 @@ adapters:
     in_reply_to: .in_reply_to
     conversation_id: '.thread_id | tostring'
     content: .body_text
-    data.account_email: .account_email
-    data.is_unread: '.is_unread == 1'
-    data.has_attachments: '.has_attachments == 1'
-    data.is_sent: '.is_sent == 1'
-    data.is_trash: '.is_trash == 1'
-    data.is_spam: '.is_spam == 1'
-    data.to_raw: .to_raw
-    data.cc_raw: .cc_raw
-    data.bcc_raw: .bcc_raw
-    data.body_html: .body_html
-    data.size_estimate: .size_estimate
+    account_email: .account_email
+    is_unread: '.is_unread == 1'
+    has_attachments: '.has_attachments == 1'
+    is_sent: '.is_sent == 1'
+    is_trash: '.is_trash == 1'
+    is_spam: '.is_spam == 1'
+    to_raw: .to_raw
+    cc_raw: .cc_raw
+    bcc_raw: .bcc_raw
+    body_html: .body_html
+    size_estimate: .size_estimate
     from:
       account:
         handle: .from_email
@@ -71,10 +71,10 @@ adapters:
     name: .subject
     text: .snippet
     datePublished: .date_updated
-    data.account_email: .account_email
-    data.message_count: .message_count
-    data.has_unread: '.has_unread == 1'
-    data.has_attachments: '.has_attachments == 1'
+    account_email: .account_email
+    message_count: .message_count
+    has_unread: '.has_unread == 1'
+    has_attachments: '.has_attachments == 1'
 
   # BLOCKED: file entity type not yet registered in engine type system (task eb14f8fa)
   # Uncomment when _type creation via MCP lands data in the right column

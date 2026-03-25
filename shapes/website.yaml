@@ -1,0 +1,17 @@
+website:
+  fields:
+    status:            string
+    version_id:        string
+    expires_at:        datetime
+    anonymous:         boolean
+    claim_token:       string
+    claim_url:         url
+  display:
+    title: name
+    subtitle: url
+    date: datePublished
+    columns:
+      - name:            Site
+      - url:             URL
+      - status:          Status
+      - datePublished:   Updated

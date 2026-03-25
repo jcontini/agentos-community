@@ -38,7 +38,7 @@ adapters:
     is_archived: '.is_archived == 1 or .is_archived == true'
     unread_count: .unread_count
     participant_count: .participant_count
-    data.message_count: .message_count
+    message_count: .message_count
     _contact_jid: .contact_jid
     participant:
       account:
@@ -55,7 +55,7 @@ adapters:
     datePublished: .timestamp
     conversation_id: .conversation_id
     is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
-    data.is_starred: .is_starred
+    is_starred: .is_starred
     _reply_to_id: .reply_to_id
     _sender_jid: .sender_jid
     _sender_name: .sender_name

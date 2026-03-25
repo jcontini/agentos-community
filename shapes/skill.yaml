@@ -1,0 +1,17 @@
+skill:
+  fields:
+    skill_id:          string
+    description:       text
+    color:             string
+    status:            string
+    error:             text
+    website:           url
+    privacy_url:       url
+    terms_url:         url
+  display:
+    title: name
+    subtitle: description
+    columns:
+      - name:            Skill
+      - status:          Status
+      - website:         Website

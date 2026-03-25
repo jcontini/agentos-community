@@ -21,14 +21,14 @@ adapters:
     text: .text
     datePublished: .startDT
     url: '"https://boulderingproject.portal.approach.app/schedule"'
-    data.endDT: .endDT
-    data.status: .status
-    data.ticketsRemaining: .ticketsRemaining
-    data.capacity: .capacity
-    data.locationName: .locationName
-    data.locationId: .locationId
-    data.activityName: .activityName
-    data.isFull: .isFull
+    endDT: .endDT
+    status: .status
+    ticketsRemaining: .ticketsRemaining
+    capacity: .capacity
+    locationName: .locationName
+    locationId: .locationId
+    activityName: .activityName
+    isFull: .isFull
 
 operations:
   get_schedule:

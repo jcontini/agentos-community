@@ -12,6 +12,7 @@
 
 # Writing Skills
 
+- [Shapes](skills/shapes.md)
 - [Skill Anatomy](skills/anatomy.md)
 - [Operations](skills/operations.md)
 - [Connections & Auth](skills/connections.md)

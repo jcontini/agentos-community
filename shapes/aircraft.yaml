@@ -1,0 +1,20 @@
+aircraft:
+  also: [product]
+  fields:
+    model:             string
+    variant:           string
+    seat_capacity:     integer
+    range_km:          integer
+    iata_code:         string
+    icao_code:         string
+  relations:
+    manufacturer:      organization
+  display:
+    title: name
+    subtitle: model
+    image: image
+    columns:
+      - name:            Aircraft
+      - model:           Model
+      - seat_capacity:   Seats
+      - range_km:        Range

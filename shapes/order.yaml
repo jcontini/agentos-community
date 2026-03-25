@@ -1,0 +1,22 @@
+order:
+  fields:
+    total:             string
+    total_amount:      number
+    currency:          string
+    item_count:        integer
+    status:            string
+    delivery_date:     datetime
+    summary:           string
+  relations:
+    contains:          product[]
+    shipping_address:  place
+    tracking:          webpage
+  display:
+    title: name
+    date: datePublished
+    columns:
+      - name:            Order
+      - status:          Status
+      - total:           Total
+      - item_count:      Items
+      - delivery_date:   Delivery

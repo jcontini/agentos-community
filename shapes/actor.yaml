@@ -1,0 +1,10 @@
+actor:
+  fields:
+    actor_type:        string
+  display:
+    title: name
+    subtitle: actor_type
+    image: image
+    columns:
+      - name:            Actor
+      - actor_type:      Type

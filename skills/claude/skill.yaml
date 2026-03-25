@@ -53,9 +53,9 @@ adapters:
     name: .name
     content: .content
     datePublished: .updated_at
-    data.created_at: .created_at
-    data.org_uuid: .org_uuid
-    data.message_count: .message_count
+    created_at: .created_at
+    org_uuid: .org_uuid
+    message_count: .message_count
 
   message:
     id: .id
@@ -65,7 +65,7 @@ adapters:
     author: .role
     datePublished: .created_at
     is_outgoing: '.role == "human"'
-    data.conversation_id: .conversation_id
+    conversation_id: .conversation_id
 
 # ==============================================================================
 # OPERATIONS

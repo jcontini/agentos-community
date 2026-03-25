@@ -28,8 +28,8 @@ adapters:
   webpage:
     id: .url
     name: '.title // .url'
-    data.visit_count: .visit_count
-    data.last_visit_unix: .last_visit_unix
+    visit_count: .visit_count
+    last_visit_unix: .last_visit_unix
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

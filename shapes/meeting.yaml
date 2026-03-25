@@ -1,0 +1,24 @@
+meeting:
+  fields:
+    end:               datetime
+    all_day:           boolean
+    recurrence:        string
+    calendar_link:     url
+    creation_source:   string
+    is_virtual:        boolean
+    meeting_url:       url
+  relations:
+    location:          place
+    organizer:         person
+    attendees:         person[]
+    transcribe:        transcript
+  display:
+    title: name
+    subtitle: location
+    description: text
+    date: datePublished
+    columns:
+      - name:            Meeting
+      - location:        Location
+      - datePublished:   Start
+      - end:             End

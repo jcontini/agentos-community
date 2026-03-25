@@ -1,0 +1,25 @@
+flight:
+  fields:
+    flight_number:     string
+    departure_time:    datetime
+    arrival_time:      datetime
+    duration_minutes:  integer
+    cabin_class:       string
+    stops:             integer
+    carbon_emissions:  json
+  relations:
+    airline:           airline
+    departs_from:      airport
+    arrives_at:        airport
+    aircraft:          aircraft
+    layovers:          airport[]
+  display:
+    title: name
+    subtitle: airline
+    date: departure_time
+    columns:
+      - name:            Flight
+      - airline:         Airline
+      - departure_time:  Departs
+      - arrival_time:    Arrives
+      - duration_minutes: Duration

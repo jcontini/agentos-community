@@ -18,19 +18,19 @@ adapters:
   model:
     id: .name
     datePublished: .modified_at
-    data.size: .size
-    data.digest: .digest
-    data.format: .details.format
-    data.family: .details.family
-    data.parameter_size: .details.parameter_size
-    data.quantization_level: .details.quantization_level
+    size: .size
+    digest: .digest
+    format: .details.format
+    family: .details.family
+    parameter_size: .details.parameter_size
+    quantization_level: .details.quantization_level
 
   loaded_model:
     id: .name
-    data.size: .size
-    data.digest: .digest
-    data.expires_at: .expires_at
-    data.size_vram: .size_vram
+    size: .size
+    digest: .digest
+    expires_at: .expires_at
+    size_vram: .size_vram
 
 operations:
 

@@ -1,0 +1,13 @@
+agent:
+  also: [actor]
+  fields:
+    model:             string
+    provider:          string
+    session_id:        string
+  display:
+    title: name
+    subtitle: model
+    columns:
+      - name:            Agent
+      - model:           Model
+      - provider:        Provider

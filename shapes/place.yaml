@@ -1,0 +1,19 @@
+place:
+  fields:
+    street:            string
+    city:              string
+    region:            string
+    postal_code:       string
+    country:           string
+    country_code:      string
+    latitude:          number
+    longitude:         number
+    place_type:        string
+  display:
+    title: name
+    subtitle: city
+    columns:
+      - name:            Place
+      - city:            City
+      - region:          Region
+      - country:         Country

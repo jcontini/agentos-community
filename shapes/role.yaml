@@ -1,0 +1,20 @@
+role:
+  fields:
+    title:             string
+    role_type:         string
+    start_date:        datetime
+    end_date:          datetime
+    is_current:        boolean
+  relations:
+    person:            person
+    organization:      organization
+  display:
+    title: title
+    subtitle: name
+    date: start_date
+    columns:
+      - title:           Title
+      - name:            Organization
+      - start_date:      From
+      - end_date:        To
+      - is_current:      Current

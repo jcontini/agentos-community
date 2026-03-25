@@ -1,0 +1,17 @@
+community:
+  fields:
+    member_count:      integer
+    subscriber_count:  integer
+    privacy:           string
+    platform:          string
+    allow_crypto:      boolean
+  display:
+    title: name
+    subtitle: text
+    image: image
+    columns:
+      - name:            Community
+      - member_count:    Members
+      - subscriber_count: Subscribers
+      - platform:        Platform
+      - privacy:         Privacy

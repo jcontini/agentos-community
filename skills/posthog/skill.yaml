@@ -26,22 +26,22 @@ adapters:
     name: '(.properties.name // .properties.email // .distinct_ids[0] // "Unknown")'
     email: .properties.email
     datePublished: .created_at
-    data.distinct_ids: .distinct_ids
-    data.last_seen_at: .last_seen_at
-    data.browser: .properties."$browser"
-    data.os: .properties."$os"
-    data.initial_referrer: .properties."$initial_referrer"
-    data.initial_utm_source: .properties."$initial_utm_source"
+    distinct_ids: .distinct_ids
+    last_seen_at: .last_seen_at
+    browser: .properties."$browser"
+    os: .properties."$os"
+    initial_referrer: .properties."$initial_referrer"
+    initial_utm_source: .properties."$initial_utm_source"
 
   event:
     id: .id
     name: .event
     datePublished: .timestamp
     text: '(.properties | keys | join(", "))'
-    data.distinct_id: .distinct_id
-    data.properties: .properties
-    data.current_url: .properties."$current_url"
-    data.person: .person
+    distinct_id: .distinct_id
+    properties: .properties
+    current_url: .properties."$current_url"
+    person: .person
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS

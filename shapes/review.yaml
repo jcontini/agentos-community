@@ -1,0 +1,22 @@
+review:
+  also: [post]
+  fields:
+    engagement.rating: number
+    engagement.likes:  integer
+    comment_count:     integer
+    tags:              string[]
+    shelf_name:        string
+  relations:
+    posted_by:         account
+    references:        book
+    written_by:        author
+  display:
+    title: name
+    subtitle: author
+    description: text
+    date: datePublished
+    columns:
+      - name:            Review
+      - engagement.rating: Rating
+      - author:          By
+      - datePublished:   Date

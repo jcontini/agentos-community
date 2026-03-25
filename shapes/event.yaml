@@ -1,0 +1,14 @@
+event:
+  fields:
+    distinct_id:       string
+    properties:        json
+    current_url:       url
+  relations:
+    person:            person
+  display:
+    title: name
+    date: datePublished
+    columns:
+      - name:            Event
+      - datePublished:   Time
+      - distinct_id:     User

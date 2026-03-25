@@ -32,12 +32,12 @@ adapters:
     datePublished: .start
     end: .end
     location: .location
-    data.calendar_link: .calendar_link
-    data.creation_source: .creation_source
-    data.valid_meeting: .valid_meeting
-    data.organizer_email: .organizer_email
-    data.organizer_name: .organizer_name
-    data.attendees: .attendees
+    calendar_link: .calendar_link
+    creation_source: .creation_source
+    valid_meeting: .valid_meeting
+    organizer_email: .organizer_email
+    organizer_name: .organizer_name
+    attendees: .attendees
 
     transcribe:
       transcript:
@@ -57,9 +57,9 @@ adapters:
     url: .notes_url
     # Last activity (same idea as imessage/claude conversation adapters)
     datePublished: .updated_at
-    data.created_at: .created_at
-    data.document_id: .document_id
-    data.message_count: 'if .messages then (.messages | length) else null end'
+    created_at: .created_at
+    document_id: .document_id
+    message_count: 'if .messages then (.messages | length) else null end'
 
 operations:
   list_meetings:

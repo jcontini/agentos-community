@@ -1,0 +1,12 @@
+channel:
+  fields:
+    subscriber_count:  integer
+    platform:          string
+    banner:            url
+  display:
+    title: name
+    image: image
+    columns:
+      - name:            Channel
+      - subscriber_count: Subscribers
+      - platform:        Platform

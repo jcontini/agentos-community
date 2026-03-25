@@ -1,0 +1,21 @@
+airport:
+  fields:
+    iata_code:         string
+    icao_code:         string
+    city:              string
+    country:           string
+    country_code:      string
+    timezone:          string
+    elevation_ft:      integer
+    terminal_count:    integer
+  relations:
+    location:          place
+    operator:          organization
+  display:
+    title: name
+    subtitle: iata_code
+    columns:
+      - name:            Airport
+      - iata_code:       IATA
+      - city:            City
+      - country:         Country
