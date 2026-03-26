@@ -1,11 +1,12 @@
-# A web search result. Results are also webpages, so they carry URL/title/content.
+# A search result — a pointer to something found. Not the thing itself.
+# A search might return webpages, products, people, articles — anything.
+# The result just carries search-specific metadata (when indexed, what type).
 #
-# Sources: Brave Search, Exa
+# Sources: Brave Search, Exa, Moltbook
 result:
-  also: [webpage]     # a search result is also a webpage
   fields:
-    indexed_at:        datetime  # when the search engine last crawled this page
-    result_type:       string
+    indexed_at:        datetime  # when the search engine last crawled this
+    result_type:       string    # web, image, video, news, etc.
   display:
     title: name
     subtitle: url

@@ -1,19 +1,18 @@
-# A calendar event or meeting. datePublished is the start time.
+# A calendar meeting — an event with calendar-specific extras like
+# recurrence rules, virtual meeting URLs, and transcripts. Querying
+# by "event" returns meetings too.
 #
 # Sources: Apple Calendar, Granola
 meeting:
+  also: [event]       # a meeting is also an event
   fields:
-    end:               datetime
     all_day:           boolean
     recurrence:        string    # iCal RRULE (e.g. FREQ=WEEKLY;BYDAY=MO)
     calendar_link:     url
-    creation_source:   string    # how the meeting was created (e.g. "granola", "calendar")
     is_virtual:        boolean
     meeting_url:       url       # Zoom/Meet/Teams link
   relations:
-    location:          place
     organizer:         person
-    attendees:         person[]
     transcribe:        transcript # meeting recording transcript
   display:
     title: name

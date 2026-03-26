@@ -10,7 +10,6 @@ book:
     pages:             integer
     genres:            string[]
     series:            string
-    publisher:         string
     format:            string    # hardcover, paperback, ebook, audiobook
     language:          string
     original_title:    string    # title in original language if translated
@@ -31,6 +30,7 @@ book:
   relations:
     written_by:        author
     contributors:      author[]  # editors, translators, illustrators
+    publisher:         organization
   display:
     title: name
     subtitle: author
