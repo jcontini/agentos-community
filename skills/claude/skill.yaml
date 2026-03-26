@@ -8,6 +8,7 @@ terms_url: https://www.anthropic.com/terms-of-service
 
 connections:
   web:
+    domain: "claude.ai"
     auth:
       type: cookies
       domain: ".claude.ai"
