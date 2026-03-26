@@ -1,0 +1,33 @@
+# A life event — something that happened to one or more people at a place
+# and time. Births, deaths, marriages, divorces, graduations, immigrations,
+# naturalizations, name changes.
+#
+# Inspired by FamilySearch's GEDCOM X model (facts on relationships) and the
+# Adavia backend (Event model with EventType enum + many-to-many people).
+#
+# The event is the central entity connecting people, places, times, and
+# documents. A birth certificate is a document linked to a birth event.
+# A marriage involves two people at a place on a date.
+#
+# Sources: Apple Contacts (birth dates), future genealogy/civic integrations
+life_event:
+  fields:
+    event_type:        string    # birth, death, marriage, divorce, adoption,
+                                 # graduation, immigration, emigration,
+                                 # naturalization, name_change, residence
+    event_date:        datetime
+    end_date:          datetime  # for events with duration (residence, employment)
+    details:           json      # type-specific metadata (e.g. new name for name_change)
+    confidence:        string    # proven, challenged, estimated (FamilySearch pattern)
+  relations:
+    involves:          person[]  # people this event happened to (many-to-many)
+    location:          place     # where it happened
+    documents:         file[]    # supporting evidence (certificates, records)
+  display:
+    title: name
+    subtitle: event_type
+    date: event_date
+    columns:
+      - name:            Event
+      - event_type:      Type
+      - event_date:      Date

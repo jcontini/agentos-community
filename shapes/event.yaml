@@ -1,7 +1,8 @@
 # A product analytics event — a single user action tracked by PostHog.
+# NOT a life event — see life_event.yaml for births, marriages, etc.
 #
 # Sources: PostHog
-event:
+analytics_event:
   fields:
     distinct_id:       string    # PostHog user identifier
     properties:        json      # arbitrary event properties
