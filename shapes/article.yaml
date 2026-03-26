@@ -1,13 +1,13 @@
-# A long-form published work — blog post, essay, news article, newsletter.
-# Articles are also posts, so they inherit engagement metrics, posted_by,
-# and community context. The distinction: articles have publication structure
-# (word count, sections, publisher).
+# A published written work — essay, news article, blog post, paper, newsletter.
+# NOT necessarily a social post. "As We May Think" (1945) is an article with
+# no engagement metrics. A blog post shared on HN is both an article AND a
+# post — the skill tags it with both shapes.
 #
-# Querying by "post" returns articles too (via also).
+# article and post are siblings, not parent-child. When something is both
+# (a modern blog post with comments), it gets both tags.
 #
 # Sources: Exa (web articles), Firecrawl, future RSS integration
 article:
-  also: [post]        # an article is also a post
   fields:
     word_count:        integer
     reading_time:      integer   # estimated minutes
