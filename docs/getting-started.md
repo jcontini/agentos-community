@@ -7,7 +7,8 @@
 - `skills/kitty/skill.yaml` + `skills/kitty/readme.md` — canonical local-control/action example
 - `~/dev/agentos/bin/audit-skills.py` — unknown-key and structural checks against Rust `types.rs` (run via `npm run validate`); duplicate adapter-mapping expressions emit non-blocking `⚠` advisories
 - `~/dev/agentos/spec/skill-manifest.target.yaml` — narrative target shape (`provides`, connections, operations); `ProvidesEntry` / auth in `~/dev/agentos/crates/core/src/skills/types.rs`
-- `test-skills.cjs` — direct MCP smoke testing (`mcp:call`, `mcp:test`)
+- `agentos test <skill>` — shape validation (validates operation output against declared shapes)
+- `test-skills.cjs` — direct MCP smoke testing (`mcp:call`)
 - `~/dev/agentos/scripts/mcp-test.mjs` — engine-level MCP test harness (raw JSON-RPC, verifies dynamic tools from `provides:`)
 
 Only treat two skills as primary copy-from examples:
@@ -44,8 +45,8 @@ npm run validate -- my-skill
 # 4. Semantic lint for request-template consistency
 npm run lint:semantic -- my-skill
 
-# 5. Filter large runs while cleaning up families of skills
-npm run validate -- --filter browser
+# 5. Shape validation — does output match declared shapes?
+agentos test my-skill
 
 # 6. Ground-truth live MCP call through run({ skill, tool, params, account?, remember? })
 npm run mcp:call -- \
@@ -54,9 +55,6 @@ npm run mcp:call -- \
   --params '{"query":"rust ownership","limit":1}' \
   --format json \
   --detail full
-
-# 7. Strict smoke test for a skill
-npm run mcp:test -- exa --verbose
 ```
 
 What each step means:
@@ -66,13 +64,9 @@ What each step means:
 - `lint:semantic` is an advisory semantic pass for auth patterns, `base_url` consistency, request roots, returns/adapters drift, executor types, and endpoint consistency
 - Pass `--strict` to `lint:semantic` if you want it to fail on semantic errors
 - The pre-push hook runs `lint:semantic --strict` on changed top-level skills, so the main skill set is expected to stay semantically clean
-- Step 6 is the ground-truth live `run()` path; `run()` is always live, and `remember` defaults to true when you want imported graph state to reflect the result
+- `agentos test` validates that every operation's output matches its declared shape — field types, extra fields, missing fields, relations. See [Testing](skills/testing.md) for details
 - `mcp:call` proves the live runtime can load the skill and execute one real tool
 - Pass `--account <name>` to `mcp:call` for multi-account skills that need an explicit account choice
-- `mcp:test` is the strict smoke path for explicitly annotated runtime coverage
-- Only operations with a `test:` block are included in default smoke
-- The only intended skip class is `skip_write` for mutating or human-gated operations
-- If a read-safe operation cannot be exercised because required params are unresolved, that is a failure, not a skip
 
 ## Keeping the book in sync
 
@@ -92,4 +86,4 @@ When Python needs to make HTTP requests directly (scraping, APIs without a REST 
 
 - `agentos mcp` is a proxy to the engine daemon
 - If you changed Rust core in `~/dev/agentos`, restart the engine before trusting `mcp:call`
-- If Cursor MCP looks stale, use `npm run mcp:call` and `npm run mcp:test` as the ground-truth path while you restart the engine or reconnect the editor
+- If Cursor MCP looks stale, use `agentos test` and `npm run mcp:call` as the ground-truth path while you restart the engine or reconnect the editor

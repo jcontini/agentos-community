@@ -1,55 +1,96 @@
 # Testing & Validation
 
+## Shape validation: `agentos test`
+
+The primary tool for validating that skill output matches declared shapes. Run it after any skill change.
+
+```bash
+agentos test hackernews                    # test all operations
+agentos test amazon --op search_products   # test one operation
+```
+
+This loads `skill.yaml` and `shapes/*.yaml` from disk, executes each testable operation, and validates the output field-by-field against the shape. No running engine needed.
+
+```
+  hackernews
+  ──────────
+  list_posts (post[])
+    ✓ 20 records returned (485ms)
+    ✓ author — 20/20 valid
+    ✓ datePublished — 20/20 valid
+    ✓ name — 20/20 valid
+    ✓ url — 20/20 valid
+    ⚠ 3 extra fields not in shape: account, engagement, skill
+  search_posts (post[]) — skipped (required params missing from test.params)
+
+  4 operations · 1 tested · 3 skipped
+```
+
+### Test configuration
+
+Add a `test:` block to operations in `skill.yaml` to provide test params or skip dangerous operations:
+
+```yaml
+operations:
+  search_products:
+    returns: product[]
+    test:
+      params:                    # input params for test execution
+        query: "usb c cable"
+
+  create_order:
+    returns: order
+    test:
+      skip: true                 # has side effects — don't auto-run
+```
+
+| Field | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `params` | object | `{}` | Params passed to the operation during test |
+| `skip` | boolean | `false` | Skip this operation in automated test runs |
+
+**When operations are skipped:**
+- `skip: true` — explicitly opted out
+- Required params have no defaults and no `test.params`
+- `returns` is `void` or an inline schema (not a shape reference)
+- The shape referenced in `returns` doesn't exist in the registry
+
+**When operations run:**
+- Operations with no params run automatically
+- Operations with all-optional params (or params with defaults) run automatically
+- Operations with `test.params` covering required params run with those params
+
 ## Direct MCP testing
 
-Use direct MCP testing whenever you change a skill. This is the fastest way to verify the real output contract.
+For inspecting the full MCP response (including rendering, entity extraction, and metadata), use direct MCP calls:
 
 ### Skill-level testing (community repo)
 
 `mcp:call` and `mcp:test` automatically use the newest built `agentos` binary. Set `AGENTOS_BINARY=/path/to/agentos` if you need to force a specific one.
 
-JSON preview:
-
 ```bash
+# JSON preview
 npm run mcp:call -- \
-  --skill exa \
-  --tool search \
+  --skill exa --tool search \
   --params '{"query":"rust ownership","limit":1}' \
-  --format json \
-  --detail preview
-```
+  --format json --detail preview
 
-JSON full:
-
-```bash
+# JSON full
 npm run mcp:call -- \
-  --skill exa \
-  --tool search \
+  --skill exa --tool search \
   --params '{"query":"rust ownership","limit":1}' \
-  --format json \
-  --detail full
-```
+  --format json --detail full
 
-Markdown full:
-
-```bash
+# Markdown full (raw MCP response)
 npm run mcp:call -- \
-  --skill exa \
-  --tool search \
+  --skill exa --tool search \
   --params '{"query":"rust ownership","limit":1}' \
-  --detail full \
-  --raw
-```
-
-YAML-driven smoke test:
-
-```bash
-npm run mcp:test -- exa --verbose
+  --detail full --raw
 ```
 
 ### Engine-level testing (core repo)
 
-The core repo has a generic MCP test harness at `~/dev/agentos/scripts/mcp-test.mjs` that speaks raw JSON-RPC to the engine binary. Use it to verify the full tool surface — including dynamically generated capability tools from `provides:` — without going through the editor.
+The core repo has a generic MCP test harness at `~/dev/agentos/scripts/mcp-test.mjs` that speaks raw JSON-RPC to the engine binary:
 
 ```bash
 cd ~/dev/agentos
@@ -59,89 +100,50 @@ node scripts/mcp-test.mjs stdio "./target/release/agentos mcp"
 
 # Call a dynamic capability tool
 node scripts/mcp-test.mjs stdio "./target/release/agentos mcp" call web_search '{"query":"rust"}'
-
-# Call with URL routing
-node scripts/mcp-test.mjs stdio "./target/release/agentos mcp" call web_read '{"url":"https://youtube.com/watch?v=abc"}'
 ```
 
-This is the fastest path when you're changing `provides:` entries, engine routing, or tool schemas. It spawns a fresh MCP process, bypasses the editor, and prints the result directly. Use it before restarting the editor connection.
+Use this when you're changing `provides:` entries, engine routing, or tool schemas.
 
-## Smoke metadata
+### Quick smoke test: `agentos call`
 
-Use per-operation `test:` metadata to opt an operation into smoke coverage and provide fixtures, discovery, or explicit write classification.
+Native Rust MCP client built into the binary — fastest path for one-off checks:
 
-```yaml
-operations:
-  get_post:
-    description: Get one post
-    returns: post
-    test:
-      mode: read
-      discover_from:
-        op: list_posts
-        params:
-          limit: 3
-        map:
-          id: id
-
-  create_post:
-    description: Create one post
-    returns: post
-    test:
-      mode: write
+```bash
+agentos call boot                                    # verify engine is alive
+agentos call run '{"skill":"exa","tool":"search","params":{"query":"test"}}'
 ```
-
-Supported fields:
-
-- `test.mode: read | write`
-- `test.fixtures: { ... }`
-- `test.discover_from: <string | object | array>`
-- `test.account: <name>` when a run-level account must be passed to `run()`
-
-Fixture resolution order in `mcp:test`:
-
-1. `test.fixtures`
-2. YAML param `default`
-3. shared smoke-safe defaults from the runner
-4. declared `test.discover_from`
-
-Use `test.mode: write` for:
-
-- mutating operations
-- destructive operations
-- human-gated flows
-- actions that would send messages, emails, follows, votes, registrations, or state changes during smoke testing
-
-If an operation should not be part of default smoke, omit the `test:` block entirely.
-
-Do not add a `tests/` folder by default. For normal validation, use `mcp:call` first.
 
 ## Validation
 
-Before committing:
+Before committing a skill:
 
-- Run `npm run validate`
-- Run direct MCP checks for the changed skill
-- Run `npm run mcp:test -- <skill> --verbose`
-- If you changed the authoring contract, update the book in the same change
+```bash
+npm run validate                           # schema + structural checks
+agentos test <skill>                       # shape validation
+npm run mcp:call -- --skill <skill> ...    # inspect full MCP output
+```
 
-What `validate` should catch:
-
+What `validate` catches:
 - Schema shape and unknown keys (via `audit-skills.py` vs Rust `types.rs`)
 - Basic structural problems
-- Advisory duplicate adapter mappings (same jaq expression on multiple fields — shown as `⚠`, does not fail the audit)
+- Advisory duplicate adapter mappings
+
+What `agentos test` catches:
+- Field type mismatches (value doesn't match declared shape type)
+- Extra fields returned but not declared in the shape
+- Missing shape fields (info only — fields are optional)
+- Relation target validation (nested records checked recursively)
 
 ## Checklist
 
 Before you commit a skill:
 
 - [ ] `npm run validate` passes
-- [ ] `npm run mcp:test -- <skill> --verbose` passes
+- [ ] `agentos test <skill>` passes (no field errors)
 - [ ] Direct MCP preview/full output looks correct
-- [ ] Adapters use canonical mapping fields with `# --- Canonical fields ---` / `# --- Skill-specific data ---` markers
 - [ ] Uses inline `returns:` schemas for non-entity or action-style tools
-- [ ] Read-safe ops are smoke-testable with `test.fixtures` and/or `test.discover_from`
-- [ ] Mutating or human-gated ops declare `test.mode: write`
+- [ ] Read-safe ops have `test.params` for automated testing
+- [ ] Mutating ops declare `test.skip: true`
 - [ ] Multi-connection skill declares `connection:` on each operation
 - [ ] REST URLs are relative when the connection has a `base_url`
 - [ ] If the contract changed, the book is updated in the same PR

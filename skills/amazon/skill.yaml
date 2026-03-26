@@ -145,8 +145,7 @@ operations:
         marketplace: .params.marketplace
       timeout: 15
     test:
-      mode: read
-      fixtures:
+      params:
         query: "wireless headphones"
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -186,8 +185,7 @@ operations:
         marketplace: .params.marketplace
       timeout: 30
     test:
-      mode: read
-      fixtures:
+      params:
         query: "usb c cable"
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -217,8 +215,7 @@ operations:
         marketplace: .params.marketplace
       timeout: 30
     test:
-      mode: read
-      fixtures:
+      params:
         asin: "B0BQPNMXQV"
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +244,7 @@ operations:
       params: true
       timeout: 30
     test:
-      mode: write
+      skip: true
 
   get_order:
     description: >
@@ -267,7 +264,7 @@ operations:
       params: true
       timeout: 30
     test:
-      mode: write
+      skip: true
 
   buy_again:
     description: >
@@ -281,7 +278,7 @@ operations:
       params: true
       timeout: 30
     test:
-      mode: write
+      skip: true
 
   subscriptions:
     description: >
@@ -300,7 +297,7 @@ operations:
       params: true
       timeout: 45
     test:
-      mode: write
+      skip: true
 
   # ─────────────────────────────────────────────────────────────────────────────
   # LISTS — authenticated, requires session cookies
@@ -318,7 +315,7 @@ operations:
       params: true
       timeout: 30
     test:
-      mode: write
+      skip: true
 
   get_list:
     description: >
@@ -341,7 +338,7 @@ operations:
       params: true
       timeout: 60
     test:
-      mode: write
+      skip: true
 
   # ─────────────────────────────────────────────────────────────────────────────
   # SESSION — cookie-based auth check
@@ -359,4 +356,4 @@ operations:
       params: true
       timeout: 30
     test:
-      mode: write
+      skip: true

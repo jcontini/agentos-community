@@ -2,7 +2,7 @@
 
 Shapes are typed record schemas that define the contract between skills and the engine. A shape declares what a record looks like: field names, types, relations to other records, and display rules.
 
-Shapes live in `shapes/*.yaml` in source directories. The engine loads them at boot.
+Shapes live in `shapes/*.yaml` in source directories. The engine loads them at boot. Use `agentos test <skill>` to validate that your skill's output matches the declared shapes (see [Testing](testing.md)).
 
 ## Format
 
@@ -172,7 +172,7 @@ When a field represents something with an international standard, use the standa
 - **Currencies** — ISO 4217 codes (`USD`, `EUR`, `JPY`). Use `currency` field.
 - **Timezones** — IANA timezone names (`America/New_York`, `Europe/London`).
 
-Don't enforce via enum (too many values). Document the convention and let `agentos test` flag non-compliant values.
+Don't enforce via enum (too many values). Document the convention and let `agentos test` flag non-compliant values. See [Testing & Validation](testing.md) for how to run shape validation.
 
 ### 11. Separate content from context (NEPOMUK principle)
 
