@@ -4,6 +4,8 @@ Converts display dates, fuzzy dates, and timestamps to ISO 8601 partial dates.
 Skills should store dates as ISO — the engine and test harness reject display strings.
 """
 
+from __future__ import annotations
+
 import re
 from datetime import datetime, timezone
 from typing import Any

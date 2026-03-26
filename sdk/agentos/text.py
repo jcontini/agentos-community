@@ -9,6 +9,8 @@ Specific functions available for fine-grained control:
   parse_int, parse_float
 """
 
+from __future__ import annotations
+
 import html as html_lib
 import re
 from typing import Any

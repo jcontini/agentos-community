@@ -1,38 +1,32 @@
-"""agentOS SDK — shared utilities for skills.
+"""agentOS SDK — three imports, entire toolkit.
 
-Primary API:
-    from agentos import molt, surf
+    from agentos import molt, surf, shape
 
-    molt(s)                       # shed the mess → clean string
-    molt('1,234 reviews', int)    # shed the noise → 1234
-    molt('August 2010', 'date')   # shed display format → '2010-08'
+    molt(s)                        # shed the mess → clean string
+    molt('1,234 reviews', int)     # shed the noise → 1234
+    molt('August 2010', 'date')    # shed display format → '2010-08'
 
-    with surf(cookies=header) as s:   # surf through WAFs
+    with surf(cookies=header) as s:  # surf through WAFs
         resp = s.get(url)
 
-Full API:
-    from agentos import molt, surf, get_cookies, parse_cookies
-    from agentos import clean_text, clean_html, clean_sentinel  # fine-grained
-    from agentos import parse_int, parse_float, parse_date      # specific parsers
-    from agentos import iso_from_ms, iso_from_seconds           # timestamp helpers
+    book: shape.Book = {'id': '123', 'name': 'Karamazov'}
 """
 
-# --- Primary ---
+# --- The three pillars ---
 from agentos.text import molt
 from agentos.http import surf, parse_cookies, get_cookies
+from agentos import shapes as shape
 
-# --- Fine-grained text cleaning ---
+# --- Fine-grained (available when you need specific control) ---
 from agentos.text import clean_text, clean_html, clean_sentinel, strip_tags
-
-# --- Specific parsers ---
 from agentos.text import parse_int, parse_float
 from agentos.dates import parse_date, iso_from_ms, iso_from_seconds
 
 __all__ = [
-    # Primary
-    "molt",
-    # HTTP
-    "surf", "parse_cookies", "get_cookies",
+    # The three pillars
+    "molt", "surf", "shape",
+    # HTTP helpers
+    "parse_cookies", "get_cookies",
     # Text (fine-grained)
     "clean_text", "clean_html", "clean_sentinel", "strip_tags",
     # Parsers (specific)

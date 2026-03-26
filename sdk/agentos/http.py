@@ -12,6 +12,8 @@ Profiles (from docs/reverse-engineering/1-transport/):
 Skills should use client() instead of building their own httpx.Client.
 """
 
+from __future__ import annotations
+
 import httpx
 
 _UA = (
