@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import httpx
-from agentos import molt, parse_int, http_client, get_cookies
+from agentos import molt, parse_int, surf, get_cookies
 from bs4 import BeautifulSoup, Tag
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -160,7 +160,7 @@ def search_suggestions(
 
     url = f"https://completion.amazon.{tld}/api/2017/suggestions"
 
-    with http_client() as client:
+    with surf() as client:
         resp = client.get(url, params=params)
         resp.raise_for_status()
         data = resp.json()
@@ -207,7 +207,7 @@ def search_products(
     if alias != "aps":
         search_params["i"] = alias
 
-    with http_client() as client:
+    with surf() as client:
         client.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
         resp = client.get(
@@ -301,7 +301,7 @@ def get_product(
     tld = mp["tld"]
     base = f"https://www.amazon.{tld}"
 
-    with http_client() as client:
+    with surf() as client:
         client.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
         resp = client.get(
@@ -431,7 +431,7 @@ def _require_cookies(params: dict[str, Any] | None, op: str) -> str:
 
 
 def _auth_client(cookie_header: str) -> httpx.Client:
-    return http_client(
+    return surf(
         cookies=cookie_header,
         profile="navigate",
         skip_cookies=_SKIP_COOKIES,

@@ -133,7 +133,7 @@ def parse_cookies(
 # ---------------------------------------------------------------------------
 
 
-def client(
+def surf(
     cookies: str | httpx.Cookies | None = None,
     *,
     headers: dict | None = None,
@@ -143,7 +143,7 @@ def client(
     timeout: float = 30.0,
     http2: bool = True,
 ) -> httpx.Client:
-    """Create a pre-configured httpx Client.
+    """Surf the web — create an httpx Client that rides through WAFs.
 
     Args:
         cookies: Raw cookie header string or httpx.Cookies jar.
