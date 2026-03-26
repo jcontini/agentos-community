@@ -1,0 +1,444 @@
+# agentOS SDK Specification
+#
+# Single source of truth for SDK behavior across all languages.
+# Test vectors are the contract — if an implementation passes all vectors,
+# it's correct. A TS/Go/Rust author should never need to read the Python source.
+#
+# Vector format: [input_value, as_type, expected_output]
+# Use null (not None/nil/undefined) in all vectors.
+
+sdk:
+  name: agentos
+  version: 0.2.0
+  imports:
+    primary: [molt, surf, shape]
+
+# =============================================================================
+# molt — shed the outer layer
+# =============================================================================
+#
+# One function replaces all text cleaning, sentinel detection, and type parsing.
+#
+#   molt(value)              → clean string or null
+#   molt(value, "int")       → integer or null
+#   molt(value, "float")     → float or null
+#   molt(value, "date")      → ISO 8601 partial date string or null
+#   molt(value, "string")    → explicit string coercion
+#
+# When no type is given and value is not a string, it passes through unchanged.
+# When a type is given, value is always coerced toward that type.
+
+functions:
+  molt:
+    summary: Shed the outer layer — clean and optionally convert any scraped value
+    params:
+      - name: value
+        type: any
+        required: true
+        doc: The raw scraped value. Can be string, number, boolean, or null.
+      - name: as_type
+        type: molt_type
+        required: false
+        doc: >
+          Target type to convert to. When omitted, strings are cleaned
+          (HTML stripped, whitespace normalized, sentinels nulled) and
+          non-strings pass through unchanged.
+    returns: any | null
+
+    # -------------------------------------------------------------------------
+    # Behavior specification (implement these rules in order)
+    # -------------------------------------------------------------------------
+    behavior:
+      no_type:
+        - If value is null, return null
+        - If value is not a string, return value unchanged
+        - If value is a string, apply text cleaning (see below)
+
+      text_cleaning:
+        - If string contains HTML tags, replace <br> (any variant) with a space, then strip all other tags
+        - "Decode HTML entities (&amp; becomes &, &#39; becomes ', etc.)"
+        - Collapse all whitespace (spaces, tabs, newlines) to single spaces
+        - Trim leading/trailing whitespace
+        - If result is empty, return null
+        - Run sentinel detection (see below)
+
+      sentinel_detection:
+        exact_match_case_insensitive:
+          - "n/a"
+          - "na"
+          - "none"
+          - "unknown"
+          - "null"
+          - "undefined"
+          - "-"
+          - "—"    # em dash U+2014
+          - "–"    # en dash U+2013
+        contains_match_case_insensitive:
+          - "hasn't added any details yet"
+          - "has not added any details yet"
+          - "no description available"
+          - "no description"
+          - "not available"
+          - "not specified"
+          - "not provided"
+          - "none provided"
+          - "none available"
+          - "no data"
+          - "no information"
+
+      int_parsing:
+        - If value is null, return null
+        - If value is already an integer, return as-is
+        - "Convert to string, then check for K/k suffix (multiply by 1,000)"
+        - "Check for M/m suffix (multiply by 1,000,000)"
+        - Otherwise strip all non-digit characters and parse
+        - If no digits remain, return null
+        - Note — negative signs are stripped. This is intentional for scraped data.
+
+      float_parsing:
+        - If value is null, return null
+        - If value is already a number (int or float), return as float
+        - Convert to string, strip all non-digit/non-dot characters, parse as float
+        - If parsing fails, return null
+        - "KNOWN LIMITATION: strings with multiple numbers concatenate digits."
+        - "Example: '4.5 out of 5' strips to '4.55' which parses as 4.55 (not 4.5)."
+        - "Skill authors should extract the target number before calling molt."
+
+      date_parsing:
+        string:
+          - If value is empty or null, return null
+          - "Strip leading 'in ' (case-insensitive)"
+          - "If already ISO 8601 (starts with YYYY), pass through unchanged"
+          - "'Month YYYY' parses to 'YYYY-MM' (full month names only, not abbreviations)"
+          - "'Month DD, YYYY' or 'Month DD YYYY' parses to 'YYYY-MM-DD'"
+          - "'YYYY' (four digits alone) passes through as 'YYYY'"
+          - "Anything else (relative dates, abbreviations, garbage) returns null"
+        timestamp:
+          - "If value is a number > 1,000,000,000,000, treat as milliseconds"
+          - "If value is a number <= 1,000,000,000,000, treat as seconds"
+          - Convert to UTC ISO 8601 datetime string
+        recognized_months:
+          - january, february, march, april, may, june
+          - july, august, september, october, november, december
+
+      string_coercion:
+        - If value is null, return null
+        - If value is a string, apply text cleaning (same as no-type path)
+        - If value is not a string, convert via str() / toString() / equivalent
+
+    # -------------------------------------------------------------------------
+    # Test vectors
+    # -------------------------------------------------------------------------
+    # Format: [input_value, as_type, expected_output]
+    # null as_type means no type argument (clean text only).
+    #
+    # Total: 97 vectors covering every code path.
+
+    vectors:
+
+      # --- Null and empty inputs ---
+      - [null, null, null]
+      - ["", null, null]
+      - ["   ", null, null]
+      - ["\t\n", null, null]
+
+      # --- Plain text cleaning (no type) ---
+      - ["hello", null, "hello"]
+      - ["  Joe   Contini  ", null, "Joe Contini"]
+      - ["hello\tworld", null, "hello world"]
+      - ["hello\nworld", null, "hello world"]
+      - ["  multiple   spaces   here  ", null, "multiple spaces here"]
+
+      # --- HTML stripping ---
+      - ["<b>Hello</b> world", null, "Hello world"]
+      - ["<br>line 1<br>line 2", null, "line 1 line 2"]
+      - ["<br/>text", null, "text"]
+      - ["<BR>text", null, "text"]
+      - ["<p>paragraph</p>", null, "paragraph"]
+      - ["<a href='http://example.com'>link text</a>", null, "link text"]
+      - ["<p><b>Bold</b> and <i>italic</i></p>", null, "Bold and italic"]
+      - ["<b></b>", null, null]
+      - ["  <b>  </b>  ", null, null]
+      - ["<br>", null, null]
+      - ["text with <b>no</b> closing issues", null, "text with no closing issues"]
+
+      # --- HTML entity decoding ---
+      - ["&amp; &lt; &gt;", null, "& < >"]
+      - ["Ben &amp; Jerry&#39;s", null, "Ben & Jerry's"]
+      - ["caf&eacute;", null, "café"]
+      - ["&#8212; dash", null, "— dash"]
+      - ["no entities here", null, "no entities here"]
+
+      # --- Sentinel detection: exact matches (case-insensitive) ---
+      - ["N/A", null, null]
+      - ["n/a", null, null]
+      - ["NA", null, null]
+      - ["na", null, null]
+      - ["none", null, null]
+      - ["None", null, null]
+      - ["NONE", null, null]
+      - ["unknown", null, null]
+      - ["Unknown", null, null]
+      - ["UNKNOWN", null, null]
+      - ["null", null, null]
+      - ["undefined", null, null]
+      - ["-", null, null]
+      - ["—", null, null]     # em dash
+      - ["–", null, null]     # en dash
+
+      # --- Sentinel detection: contains matches ---
+      - ["hasn't added any details yet", null, null]
+      - ["This user hasn't added any details yet.", null, null]
+      - ["has not added any details yet", null, null]
+      - ["no description available", null, null]
+      - ["No Description Available", null, null]
+      - ["not available", null, null]
+      - ["not specified", null, null]
+      - ["not provided", null, null]
+      - ["none provided", null, null]
+      - ["none available", null, null]
+      - ["no data", null, null]
+      - ["no information", null, null]
+      - ["There is no description for this item", null, null]
+
+      # --- NOT sentinels (tricky cases that should survive) ---
+      - ["None of the above", null, "None of the above"]
+      - ["Unknown author", null, "Unknown author"]
+      - ["not bad", null, "not bad"]
+      - ["noted", null, "noted"]
+      - ["nothing special", null, "nothing special"]
+      - ["0", null, "0"]
+      - ["false", null, "false"]
+      - ["no", null, "no"]
+
+      # --- Non-string passthrough (no type) ---
+      - [42, null, 42]
+      - [0, null, 0]
+      - [3.14, null, 3.14]
+      - [true, null, true]
+      - [false, null, false]
+
+      # --- Integer parsing ---
+      - [null, "int", null]
+      - [42, "int", 42]
+      - [0, "int", 0]
+      - ["42", "int", 42]
+      - ["0", "int", 0]
+      - ["1,234", "int", 1234]
+      - ["1,234 reviews", "int", 1234]
+      - ["$99", "int", 99]
+      - ["about 500 items", "int", 500]
+      - ["2.5K", "int", 2500]
+      - ["2.5k", "int", 2500]
+      - ["10K", "int", 10000]
+      - ["1.2M", "int", 1200000]
+      - ["1.2m", "int", 1200000]
+      - ["3M", "int", 3000000]
+      - ["<span>1,234</span>", "int", 1234]   # HTML tags stripped as non-digits
+      - ["abc", "int", null]
+      - ["", "int", null]
+      - ["no numbers", "int", null]
+
+      # --- Float parsing ---
+      - [null, "float", null]
+      - [42, "float", 42.0]
+      - [3.14, "float", 3.14]
+      - [0, "float", 0.0]
+      - ["4.5", "float", 4.5]
+      - ["$1,234.56", "float", 1234.56]
+      - ["3.7/5", "float", 3.75]              # known limitation: strips "/" → "3.75"
+      - ["abc", "float", null]
+      - ["", "float", null]
+
+      # --- Date parsing: string inputs ---
+      - [null, "date", null]
+      - ["", "date", null]
+      - ["August 2010", "date", "2010-08"]
+      - ["august 2010", "date", "2010-08"]      # case-insensitive month lookup
+      - ["January 2025", "date", "2025-01"]
+      - ["December 13, 2024", "date", "2024-12-13"]
+      - ["December 13 2024", "date", "2024-12-13"]
+      - ["January 1, 2000", "date", "2000-01-01"]
+      - ["March 5 2026", "date", "2026-03-05"]
+      - ["in January 2026", "date", "2026-01"]
+      - ["in August 2010", "date", "2010-08"]
+      - ["2024", "date", "2024"]
+      - ["2024-03-15", "date", "2024-03-15"]
+      - ["2024-03", "date", "2024-03"]
+      - ["2024-03-15T10:30:00", "date", "2024-03-15T10:30:00"]
+      - ["this month", "date", null]
+      - ["3 days ago", "date", null]
+      - ["yesterday", "date", null]
+      - ["Mar 2024", "date", null]             # abbreviated months not recognized
+      - ["Dec 13, 2024", "date", null]         # abbreviated months not recognized
+      - ["13 December 2024", "date", null]     # DD Month YYYY not supported
+
+      # --- Date parsing: timestamp inputs ---
+      - [1703980800000, "date", "2023-12-31T00:00:00+00:00"]    # ms (> 1 trillion)
+      - [1703980800, "date", "2023-12-31T00:00:00+00:00"]       # seconds (≤ 1 trillion)
+      - [0, "date", "1970-01-01T00:00:00+00:00"]                # epoch zero (seconds)
+      - [1616025600000, "date", "2021-03-18T00:00:00+00:00"]    # ms
+
+      # --- Explicit string coercion ---
+      - [null, "string", null]
+      - ["  hello  ", "string", "hello"]
+      - ["<b>bold</b>", "string", "bold"]
+      - ["N/A", "string", null]                # sentinel detection still applies
+      - [42, "string", "42"]
+      - [true, "string", "True"]               # language-dependent: Python "True", JS/Go/Rust "true"
+
+  # ===========================================================================
+  # surf — ride through WAFs
+  # ===========================================================================
+  #
+  # Pre-configured HTTP client with anti-bot header profiles.
+  # Each language implements surf natively using its own HTTP stack
+  # (Python: httpx, TS: undici/fetch, Go: net/http, Rust: reqwest)
+  # because TLS fingerprinting is the entire point.
+  #
+  # surf is not tested with input/output vectors — it's specified by its
+  # configuration (profiles, options, cookie handling).
+
+  surf:
+    summary: Create an HTTP client that rides through WAFs
+    context_manager: true    # Python: with surf() as s; Go: defer s.Close(); Rust: Drop
+    params:
+      - name: cookies
+        type: string | cookie_jar
+        required: false
+        doc: Raw "name=val; name2=val2" cookie header string, or native cookie jar.
+      - name: profile
+        type: surf_profile
+        required: false
+        default: default
+        doc: Header tier. Controls which anti-bot headers are sent.
+      - name: skip_cookies
+        type: set<string>
+        required: false
+        doc: >
+          Cookie names to filter out before sending. Used to strip cookies that
+          trigger client-side encryption (e.g. Amazon's csd-key for Siege).
+      - name: http2
+        type: bool
+        required: false
+        default: true
+        doc: Enable HTTP/2. Set false for Vercel Security Checkpoint.
+      - name: headers
+        type: map<string, string>
+        required: false
+        doc: Extra headers merged on top of profile defaults.
+      - name: timeout
+        type: float
+        required: false
+        default: 30.0
+        doc: Request timeout in seconds.
+    returns: http_client
+
+    profiles:
+      default:
+        doc: Basic browser headers. Works for most APIs and simple pages.
+        headers:
+          User-Agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          Accept-Language: "en-US,en;q=0.9"
+
+      json:
+        doc: JSON API variant of default. Same UA, Accept changed to application/json.
+        headers:
+          User-Agent: "<<same as default>>"
+          Accept: "application/json"
+          Accept-Language: "en-US,en;q=0.9"
+
+      api:
+        doc: >
+          CDN/API profile. Adds Sec-CH-UA and Sec-Fetch-* headers that pass
+          Cloudflare and CloudFront WAF checks for XHR/fetch requests.
+        adds_over_default:
+          - Accept-Encoding
+          - Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform
+          - Sec-Fetch-Dest (empty), Sec-Fetch-Mode (cors), Sec-Fetch-Site (cross-site)
+
+      navigate:
+        doc: >
+          Full navigation profile. Passes Amazon Lightsaber and all CDN checks.
+          Includes client hints (Device-Memory, Downlink, Rtt, Ect, Dpr) that
+          most scraping guides miss but Amazon/eBay fingerprint.
+        adds_over_api:
+          - Cache-Control (max-age=0)
+          - Device-Memory, Downlink, Dpr, Ect, Rtt
+          - Sec-Ch-Device-Memory, Sec-Ch-Dpr
+          - Sec-Ch-Ua-Full-Version-List
+          - Sec-Ch-Viewport-Width, Viewport-Width
+          - Sec-Fetch-Dest (document), Sec-Fetch-Mode (navigate), Sec-Fetch-User (?1)
+          - Upgrade-Insecure-Requests
+
+    cookie_handling:
+      - Raw cookie header string is parsed into a native cookie jar
+      - Each "name=val" pair split by ";" becomes a jar entry
+      - skip_cookies filters by cookie name before adding to jar
+      - Cookie jar enables automatic Set-Cookie tracking on redirects
+
+    client_config:
+      - follow_redirects: true
+      - HTTP/2 enabled by default (disable for Vercel)
+      - Profile headers are base; extra headers merge on top (override)
+
+# =============================================================================
+# Types
+# =============================================================================
+
+types:
+  molt_type:
+    enum: [int, float, date, string]
+    language_map:
+      python: "type | str"       # accepts int, float, or string literals
+      typescript: string         # "int" | "float" | "date" | "string"
+      go: "sdk.Type"             # sdk.Int, sdk.Float, sdk.Date, sdk.String
+      rust: "Type"               # Type::Int, Type::Float, Type::Date, Type::String
+
+  surf_profile:
+    enum: [default, json, api, navigate]
+
+# =============================================================================
+# Shapes
+# =============================================================================
+#
+# 56 entity types generated from shape YAML definitions.
+# Source of truth: agentos-community/shapes/*.yaml
+#
+# Generation: shapes YAML → converter (flattens `also` chains, resolves
+# relations, injects well-known fields) → JTD (RFC 8927) → jtd-codegen
+# → Python TypedDict / TS interfaces / Go structs / Rust structs
+
+shapes:
+  source: ../shapes/*.yaml
+  generator: jtd-codegen
+  namespace: shape
+
+  well_known_fields:
+    id: string
+    name: string
+    text: string
+    url: string
+    image: string
+    author: string
+    datePublished: string
+    content: string
+
+  converter_rules:
+    - "Resolve 'also' chains — inherited fields are flattened into each shape"
+    - "Relations become typed fields (e.g. written_by: author becomes written_by: Author)"
+    - "Array relations (e.g. accounts: account[]) become list/array of the target type"
+    - Well-known fields are prepended to every shape
+    - Display metadata is dropped (not part of the data type)
+    - "Field types map to language types (string to str, integer to int, etc.)"
+
+# =============================================================================
+# Naming conventions per language
+# =============================================================================
+
+naming:
+  python: snake_case
+  typescript: camelCase
+  go: PascalCase
+  rust: snake_case
