@@ -90,6 +90,54 @@ def _require_cookies(cookie_header: str | None, params: dict | None, op: str) ->
 
 
 # ---------------------------------------------------------------------------
+# Session check — called by account.check with params: true
+# ---------------------------------------------------------------------------
+
+
+def check_session(params: dict | None = None) -> dict[str, Any]:
+    """Verify Goodreads session and identify the logged-in user.
+
+    Fetches the Goodreads homepage with cookies and extracts the logged-in
+    user's ID and name from the navigation HTML.
+    """
+    params = params or {}
+    cookie_header = get_cookies(params)
+    if not cookie_header:
+        return {"authenticated": False, "error": "no cookies"}
+
+    with surf(cookies=cookie_header) as client:
+        resp = client.get(BASE)
+        if resp.status_code != 200:
+            return {"authenticated": False, "status_code": resp.status_code}
+
+        body = resp.text
+
+        # Redirect to sign-in means cookies are invalid
+        if "/user/sign_in" in str(resp.url):
+            return {"authenticated": False, "redirect": str(resp.url)}
+
+        # Extract user ID from profile link: /user/show/12345-name
+        user_id_match = re.search(r'/user/show/(\d+)', body)
+        # Extract display name from URL slug: /user/show/12345-first-last
+        name = ""
+        slug_match = re.search(r'/user/show/\d+-([^"&?/]+)', body)
+        if slug_match:
+            name = slug_match.group(1).replace("-", " ").strip().title()
+
+        user_id = user_id_match.group(1) if user_id_match else ""
+
+        if user_id:
+            return {
+                "authenticated": True,
+                "issuer": "goodreads.com",
+                "identifier": user_id,
+                "display": name,
+            }
+
+    return {"authenticated": False}
+
+
+# ---------------------------------------------------------------------------
 # Entry points (called by AgentOS with params: true)
 # ---------------------------------------------------------------------------
 

@@ -13,11 +13,8 @@ connections:
     auth:
       type: cookies
       domain: ".goodreads.com"
-      check:
-        url: "https://www.goodreads.com/api/current_user"
-        expect_status: 200
-        identifier: '.user.id'
-        display: '.user.name'
+      account:
+        check: check_session
     optional: true
     label: Goodreads Session
     help_url: https://www.goodreads.com/user/sign_in
@@ -41,6 +38,24 @@ provides:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 operations:
+  # ───────────────────────────────────────────────────────────────────────────
+  # SESSION
+  # ───────────────────────────────────────────────────────────────────────────
+
+  check_session:
+    description: >
+      Verify Goodreads session cookies and identify the logged-in user.
+      Returns user ID and display name from the current_user API.
+    connection: web
+    returns: account
+    python:
+      module: ./web_scraper.py
+      function: check_session
+      params: true
+      timeout: 15
+    test:
+      skip: true
+
   # ───────────────────────────────────────────────────────────────────────────
   # PROFILE & USER OPERATIONS
   # ───────────────────────────────────────────────────────────────────────────

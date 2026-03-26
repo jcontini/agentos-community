@@ -28,8 +28,10 @@ Org discovery:
 
 import argparse
 import json
+import re
 import sys
 import httpx
+from agentos import get_cookies
 
 BASE_URL = "https://claude.ai"
 
@@ -274,6 +276,56 @@ def op_import_conversation(session_key: str, account: str = None, limit: int = 5
 
 def op_list_orgs(session_key: str) -> list:
     return get_organizations(session_key)
+
+
+# -- Session check — called by account.check with params: true -----------------
+
+def check_session(params: dict | None = None) -> dict:
+    """Verify Claude.ai session and identify the logged-in account."""
+    params = params or {}
+    cookie_header = get_cookies(params)
+    if not cookie_header:
+        return {"authenticated": False, "error": "no cookies"}
+
+    headers = dict(HEADERS)
+    headers["Cookie"] = cookie_header
+
+    try:
+        with httpx.Client(headers=headers, follow_redirects=True) as client:
+            resp = client.get(f"{BASE_URL}/api/organizations")
+            if resp.status_code != 200:
+                return {"authenticated": False, "status_code": resp.status_code}
+            orgs = resp.json()
+    except Exception:
+        return {"authenticated": False}
+
+    # Find the org with chat capability — that's the user's personal org
+    for org in orgs:
+        if "chat" in org.get("capabilities", []):
+            name = org.get("name", "")
+            # Extract email from org name (e.g. "joe@example.com's Organization")
+            email = ""
+            m = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", name)
+            if m:
+                email = m.group(0)
+            return {
+                "authenticated": True,
+                "issuer": "claude.ai",
+                "identifier": email or name,
+                "display": email or name,
+            }
+
+    # Fallback to first org
+    if orgs:
+        name = orgs[0].get("name", "")
+        return {
+            "authenticated": True,
+            "issuer": "claude.ai",
+            "identifier": name,
+            "display": name,
+        }
+
+    return {"authenticated": False}
 
 
 # -- CLI entry point -----------------------------------------------------------

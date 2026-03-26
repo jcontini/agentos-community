@@ -10,10 +10,11 @@ connections:
       type: cookies
       domain: ".chase.com"
       names: ["AMSESSION", "sessioncacheid", "auth-guid", "dps-pod-id", "x-auth-activity-info", "akaalb_secure_chase_com", "auth-site-info"]
-      check:
+      liveness:
         url: "https://secure.chase.com/svc/rl/accounts/l4/v1/app/data/list"
         expect_status: 200
-        identifier: '.cache | map(select(.url | contains("tiles/list"))) | .[0].response.accountTiles[0].accountId'
+      account:
+        check: check_session
       login:
         account_prompt: "What is your Chase username?"
         phases:
@@ -58,6 +59,20 @@ adapters:
 # ==============================================================================
 
 operations:
+  check_session:
+    description: >
+      Verify Chase session cookies and identify the logged-in account holder.
+      Returns the primary account ID and nickname from the accounts API.
+    connection: web
+    returns: account
+    python:
+      module: ./chase-api.py
+      function: check_session
+      params: true
+      timeout: 20
+    test:
+      skip: true
+
   list_accounts:
     description: >
       List all Chase accounts with current balances.

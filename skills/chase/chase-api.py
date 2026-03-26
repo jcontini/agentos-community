@@ -74,6 +74,35 @@ def request(method: str, path: str, cookies: str, body: bytes = b"", extra_heade
         return {"error": f"HTTP {e.code}", "detail": detail}
 
 
+def check_session(params: dict | None = None) -> dict:
+    """Verify Chase session and identify the account holder."""
+    params = params or {}
+    cookie_header = (params.get("auth") or {}).get("cookies", "")
+    if not cookie_header:
+        return {"authenticated": False, "error": "no cookies"}
+
+    data = request("POST", "/svc/rl/accounts/l4/v1/app/data/list", cookie_header)
+    if "error" in data:
+        return {"authenticated": False, "error": data.get("error")}
+
+    # Find account tiles
+    for entry in data.get("cache", []):
+        if not isinstance(entry, dict):
+            continue
+        if "tiles/list" in entry.get("url", ""):
+            tiles = entry.get("response", {}).get("accountTiles", [])
+            if tiles:
+                first = tiles[0]
+                return {
+                    "authenticated": True,
+                    "issuer": "chase.com",
+                    "identifier": first.get("accountId", ""),
+                    "display": first.get("nickname", ""),
+                }
+
+    return {"authenticated": False, "error": "no account tiles"}
+
+
 def get_accounts(cookies: str) -> list | dict:
     data = request("POST", "/svc/rl/accounts/l4/v1/app/data/list", cookies)
     if "error" in data:

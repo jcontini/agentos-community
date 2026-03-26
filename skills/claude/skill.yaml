@@ -12,11 +12,11 @@ connections:
       type: cookies
       domain: ".claude.ai"
       names: ["sessionKey"]
-      check:
+      liveness:
         url: "https://claude.ai/api/organizations"
         expect_status: 200
-        identifier: '.[] | select(.capabilities | contains(["chat"])) | .email'
-        display: '.[] | select(.capabilities | contains(["chat"])) | .name'
+      account:
+        check: check_session
       login:
         account_prompt: "What email do you use for claude.ai?"
         phases:
@@ -72,6 +72,20 @@ adapters:
 # ==============================================================================
 
 operations:
+  check_session:
+    description: >
+      Verify Claude.ai session cookies and identify the logged-in account.
+      Returns the email and display name from the chat-capable organization.
+    connection: web
+    returns: account
+    python:
+      module: ./claude-api.py
+      function: check_session
+      params: true
+      timeout: 30
+    test:
+      skip: true
+
   list_conversations:
     description: >
       List claude.ai web chat conversations, most recently updated first.
