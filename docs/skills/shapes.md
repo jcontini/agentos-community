@@ -214,3 +214,32 @@ After writing or editing a shape, ask yourself:
 - [ ] **Nesting via reply_to?** Is a "sub-type" really just this shape with a parent relation?
 - [ ] **ISO standards?** Are languages (ISO 639-1), countries (ISO 3166-1), currencies (ISO 4217) using standard codes?
 - [ ] **Booleans or relations?** Does any boolean imply a relationship? (`is_fork` → `forked_from`)
+
+---
+
+## Prior Research
+
+Extensive entity modeling research lives in `/Users/joe/dev/entity-experiments/`. These are not authoritative — many are outdated — but contain valuable principles and platform analysis worth consulting when designing new shapes.
+
+### Entity & Ontology Research
+- `schema-entities.md` — Core entity type definitions, OGP foundation, Joe's hypotheses on note vs article
+- `schema-relationships.md` — Relationship type catalog and design patterns
+- `research/entities/open-graph-protocol.md` — OGP types, why flat beats hierarchical
+- `research/entities/google-structured-data.md` — Schema.org structured data patterns
+
+### Platform Research
+- `research/platforms/google-takeout.md` — 72 Google products analyzed for entity types (Contacts, Calendar, Drive, Gmail, Photos, YouTube, Maps, Chrome, Pay, Play)
+- `research/platforms/facebook-graph.md` — Facebook Graph API entity model
+- `research/platforms/familysearch.md` — GEDCOM X genealogical data model (two relationship types + qualifiers, computed derivations, source citations)
+
+### Relationship Research
+- `research/relationships/genealogical-relationships.md` — Family relationship modeling patterns
+- `research/relationships/relationship-modeling.md` — General relationship design
+- `research/relationships/schema-org-relationships.md` — Schema.org relationship types
+- `research/relationships/ogp-relationships.md` — OGP relationship patterns
+- `research/relationships/no-orphans-constraint.md` — Why every entity needs at least one connection
+
+### Systems Research
+- `research/systems/outcome-entity.md` — Outcome/goal entity modeling
+- `research/context/pkm-community.md` — Personal knowledge management patterns
+- `research/context/semantic-file-systems.md` — NEPOMUK and semantic desktop research
