@@ -8,11 +8,49 @@ No network calls. Requires macOS.
 import json
 import os
 import re
+import sqlite3
 import subprocess
 from pathlib import Path
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── App discovery ──────────────────────────────────────────────────────────────
+
+_APP_DIRS = [
+    Path("/Applications"),
+    Path("/Applications/Setapp"),
+    Path.home() / "Applications",
+    Path("/System/Applications"),
+]
+
+def _find_all_apps() -> list[Path]:
+    """Find .app bundles across all common install locations."""
+    seen: set[Path] = set()
+    apps: list[Path] = []
+    for base in _APP_DIRS:
+        if not base.exists():
+            continue
+        for app_path in sorted(base.glob("*.app")):
+            if app_path not in seen:
+                seen.add(app_path)
+                apps.append(app_path)
+    return apps
+
+
+def _read_plist_json(plist_path: Path) -> dict | None:
+    """Parse an Info.plist file to a dict via plutil."""
+    try:
+        proc = subprocess.run(
+            ["plutil", "-convert", "json", str(plist_path), "-o", "-"],
+            capture_output=True, text=True, timeout=5
+        )
+        if proc.returncode != 0:
+            return None
+        return json.loads(proc.stdout)
+    except Exception:
+        return None
+
+
+# ── Keychain helpers ───────────────────────────────────────────────────────────
 
 def _security(*args) -> str:
     """Run a `security` CLI command, return stdout."""
@@ -36,20 +74,17 @@ def _parse_keychain_entries(dump: str) -> list[dict]:
     current: dict = {}
 
     for line in dump.splitlines():
-        # New item starts with a line like: keychain: "/Users/.../login.keychain-db"
         if line.startswith("keychain:"):
             if current:
                 entries.append(current)
             current = {}
             continue
 
-        # Parse tagged fields like:    "svce"<blob>="Cursor Safe Storage"
         m = re.search(r'"(\w+)"<\w+>="([^"]*)"', line)
         if m:
             current[m.group(1)] = m.group(2)
             continue
 
-        # Handle NULL values:    "svce"<blob>=<NULL>
         m = re.search(r'"(\w+)"<\w+>=<NULL>', line)
         if m:
             current[m.group(1)] = None
@@ -73,10 +108,13 @@ def _is_interesting(entry: dict) -> bool:
     return not _APPLE_NOISE.search(combined)
 
 
+# Match "AppName: email@domain" — native OAuth pattern used by Mimestream, BusyContacts, etc.
+_NATIVE_OAUTH = re.compile(r"^(.+): (.+@.+)$")
 _SAFE_STORAGE = re.compile(r"^(.+) Safe Storage$")
-_MIMESTREAM   = re.compile(r"^Mimestream: (.+)$")
 _GH_CLI       = re.compile(r"^gh:(.+)$")
 _CURSOR_TOK   = re.compile(r"^cursor-(access|refresh)-token$")
+# Spark uses its own account auth service names
+_SPARK        = re.compile(r"^(SparkDesktop|com\.readdle\.spark\..+)$")
 
 def _categorize(entry: dict) -> str | None:
     svce = entry.get("svce") or ""
@@ -84,8 +122,10 @@ def _categorize(entry: dict) -> str | None:
 
     if _SAFE_STORAGE.match(svce):
         return "electron_safe_storage"
-    if _MIMESTREAM.match(svce) and acct == "OAuth":
+    if _NATIVE_OAUTH.match(svce) and acct == "OAuth":
         return "google_oauth_native"
+    if _SPARK.match(svce):
+        return "spark_auth"
     if _GH_CLI.match(svce):
         return "github_cli"
     if _CURSOR_TOK.match(svce):
@@ -127,12 +167,18 @@ def cmd_audit(**kwargs) -> list[dict]:
                 item["data_path"] = str(app_support)
 
         elif category == "google_oauth_native":
-            m = _MIMESTREAM.match(svce)
-            item["app"] = "Mimestream"
-            item["account"] = m.group(1) if m else acct
+            m = _NATIVE_OAUTH.match(svce)
+            item["app"] = m.group(1) if m else svce
+            item["account"] = m.group(2) if m else acct
             item["service_name"] = svce
             item["account_name"] = acct
-            item["note"] = "Google OAuth tokens (Gmail, Calendar, Contacts scopes)"
+            item["note"] = "Native Google OAuth tokens stored by app in Keychain"
+
+        elif category == "spark_auth":
+            item["app"] = "Spark"
+            item["service"] = svce
+            item["account"] = acct
+            item["note"] = "Spark account auth key (Secure Enclave or RSA)"
 
         elif category == "github_cli":
             m = _GH_CLI.match(svce)
@@ -151,9 +197,8 @@ def cmd_audit(**kwargs) -> list[dict]:
 
         results.append(item)
 
-    # Sort by category for readability
     order = [
-        "google_oauth_native", "github_cli", "cursor_token",
+        "google_oauth_native", "spark_auth", "github_cli", "cursor_token",
         "electron_safe_storage", "app_token", "api_key_or_secret", "other"
     ]
     results.sort(key=lambda x: (order.index(x["category"]) if x["category"] in order else 99))
@@ -176,7 +221,6 @@ def cmd_get_token(service: str, account: str, **kwargs) -> dict:
     if not value:
         return {"error": f"No Keychain entry found for service='{service}' account='{account}'"}
 
-    # Detect if it's hex-encoded binary plist (starts with common bplist magic in hex)
     is_hex_plist = bool(re.match(r'^[0-9a-f]{8,}$', value, re.IGNORECASE))
 
     return {
@@ -193,44 +237,33 @@ def cmd_get_token(service: str, account: str, **kwargs) -> dict:
 
 def cmd_scan_google_oauth(**kwargs) -> list[dict]:
     """
-    Scan /Applications for apps with Google OAuth client IDs.
+    Scan all installed apps for Google OAuth client IDs.
+    Searches /Applications, /Applications/Setapp, ~/Applications, /System/Applications.
     Reads Info.plist URL schemes — apps register the reversed client ID
     as a URL scheme so Google can redirect back after login.
     """
     results = []
-    apps_dir = Path("/Applications")
 
-    for app_path in sorted(apps_dir.glob("*.app")):
+    for app_path in _find_all_apps():
         plist_path = app_path / "Contents" / "Info.plist"
         if not plist_path.exists():
             continue
 
-        try:
-            proc = subprocess.run(
-                ["plutil", "-convert", "json", str(plist_path), "-o", "-"],
-                capture_output=True, text=True, timeout=5
-            )
-            if proc.returncode != 0:
-                continue
-
-            plist = json.loads(proc.stdout)
-        except Exception:
+        plist = _read_plist_json(plist_path)
+        if plist is None:
             continue
 
-        # Check URL schemes for reversed Google client IDs
         url_types = plist.get("CFBundleURLTypes", [])
         for url_type in url_types:
             for scheme in url_type.get("CFBundleURLSchemes", []):
                 if "googleusercontent.apps" in scheme:
-                    # Reverse to get the client ID
-                    # e.g. com.googleusercontent.apps.1064022179695-abc -> 1064022179695-abc.apps.googleusercontent.com
                     parts = scheme.split(".")
-                    # Remove 'com', 'googleusercontent', 'apps' prefix, keep the ID part
                     client_id_part = ".".join(parts[3:]) if len(parts) > 3 else scheme
                     client_id = f"{client_id_part}.apps.googleusercontent.com"
 
                     results.append({
                         "app": app_path.stem,
+                        "install_path": str(app_path),
                         "bundle_id": plist.get("CFBundleIdentifier"),
                         "version": plist.get("CFBundleShortVersionString"),
                         "client_id": client_id,
@@ -242,3 +275,122 @@ def cmd_scan_google_oauth(**kwargs) -> list[dict]:
                     })
 
     return results
+
+
+def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
+    """
+    Scan macOS Internet Accounts (Account.framework).
+    These are OS-level OAuth connections added via System Settings → Internet Accounts.
+    The 'macOS' entry in Google's authorized apps list comes from here.
+    Requires Full Disk Access — returns a permission error if denied.
+    """
+    accounts_dir = Path.home() / "Library" / "Accounts"
+
+    # macOS uses Accounts3, 4, or 5 depending on version
+    accounts_db = None
+    for name in ("Accounts5.sqlite", "Accounts4.sqlite", "Accounts3.sqlite"):
+        candidate = accounts_dir / name
+        if candidate.exists():
+            accounts_db = candidate
+            break
+
+    if accounts_db is None:
+        return [{"error": "No Accounts DB found in ~/Library/Accounts/", "note": "Grant Full Disk Access to enable"}]
+
+    results = []
+    try:
+        conn = sqlite3.connect(f"file:{accounts_db}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Get table names to handle schema variations across macOS versions
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in cursor.fetchall()}
+
+        if "ZACCOUNT" not in tables:
+            conn.close()
+            return [{"error": "Unexpected DB schema — ZACCOUNT table not found"}]
+
+        has_type_table = "ZACCOUNTTYPE" in tables
+
+        if has_type_table:
+            cursor.execute("""
+                SELECT
+                    a.ZUSERNAME   AS username,
+                    a.ZIDENTIFIER AS identifier,
+                    t.ZIDENTIFIER AS account_type
+                FROM ZACCOUNT a
+                LEFT JOIN ZACCOUNTTYPE t ON a.ZACCOUNTTYPE = t.Z_PK
+                ORDER BY t.ZIDENTIFIER, a.ZUSERNAME
+            """)
+        else:
+            cursor.execute("""
+                SELECT ZUSERNAME AS username, ZIDENTIFIER AS identifier, NULL AS account_type
+                FROM ZACCOUNT
+                ORDER BY ZUSERNAME
+            """)
+
+        # Only show top-level provider accounts (Google, Exchange, etc.)
+        # CalDAV/CardDAV/IMAP/SMTP are child accounts created by macOS under
+        # the parent Google/Exchange account — showing them is noise.
+        _SHOW_TYPES = {
+            "com.apple.account.Google",
+            "com.apple.account.Exchange",
+            "com.apple.account.Facebook",
+            "com.apple.account.Twitter",
+            "com.apple.account.LinkedIn",
+        }
+
+        for row in cursor.fetchall():
+            account_type = row["account_type"] or ""
+            if account_type not in _SHOW_TYPES:
+                continue
+            # Skip rows where username is just a UUID (no real identity)
+            username = row["username"] or row["identifier"]
+            if re.match(r'^[0-9A-F]{8}-', username):
+                continue
+            results.append({
+                "username": username,
+                "account_type": account_type or "unknown",
+                "identifier": row["identifier"],
+                "note": _account_type_note(account_type),
+            })
+
+        conn.close()
+
+    except sqlite3.OperationalError as e:
+        if "unable to open" in str(e) or "permission" in str(e).lower():
+            return [{
+                "error": "Permission denied reading Accounts5.sqlite",
+                "note": "Grant Full Disk Access to Terminal or Claude in System Settings → Privacy",
+            }]
+        return [{"error": str(e)}]
+    except Exception as e:
+        return [{"error": str(e)}]
+
+    return results
+
+
+def _account_type_note(account_type: str) -> str:
+    notes = {
+        "com.apple.account.Google": "Google account — Calendar, Contacts, Mail via macOS",
+        "com.apple.account.Exchange": "Microsoft Exchange account",
+        "com.apple.account.Facebook": "Facebook account (deprecated in newer macOS)",
+        "com.apple.account.Twitter": "Twitter/X account (deprecated in newer macOS)",
+        "com.apple.account.LinkedIn": "LinkedIn account (deprecated in newer macOS)",
+        "com.apple.account.CardDAV": "CardDAV contacts account",
+        "com.apple.account.CalDAV": "CalDAV calendar account",
+        "com.apple.account.IMAP": "IMAP email account",
+    }
+    for key, note in notes.items():
+        if account_type.startswith(key):
+            return note
+    return "macOS Internet Account"
+
+
+def cmd_list_electron_apps(**kwargs) -> list[dict]:
+    """
+    List all apps using the Electron Safe Storage pattern.
+    (Stub — implemented via skill.yaml command step for now.)
+    """
+    return []

@@ -106,17 +106,18 @@ don't bother with ACLs.
 
 ---
 
-## Finding Google OAuth Client IDs
+## Three Google OAuth Patterns on macOS
 
-Google OAuth client IDs are embedded in app binaries. Desktop apps register a
-**reversed client ID** as a URL scheme in `Info.plist` — this is how Google
-redirects the auth code back to the app. It's public by design.
+Not all Google-authorized apps look the same locally. When you check
+`myaccount.google.com/permissions`, the entries come from three distinct
+mechanisms — each with different detection methods and different local traces.
 
-```bash
-plutil -p /Applications/SomeApp.app/Contents/Info.plist | grep googleusercontent
-```
+### Pattern 1: Native PKCE apps (Info.plist URL scheme)
 
-The registered URL scheme looks like:
+Apps like **Mimestream**, **BusyContacts**, and **Strongbox** embed a Google
+client ID directly in their app bundle. They register a **reversed client ID**
+as a URL scheme in `Info.plist` — this is how Google redirects the auth code
+back to the app after the user approves.
 
 ```
 com.googleusercontent.apps.1064022179695-5793e1qdeuvrmvi5bfgg3rcv3aj62nfb
@@ -128,17 +129,113 @@ Reverse it to get the client ID:
 1064022179695-5793e1qdeuvrmvi5bfgg3rcv3aj62nfb.apps.googleusercontent.com
 ```
 
-This is Mimestream's Google OAuth client ID — visible in plain text in their
-`Info.plist`, registered as a URL scheme so Google can redirect `mimestream://`
-after the user approves.
+These are "public clients" — the client ID is public by design. What protects
+the user is **PKCE** during login and the **refresh token** afterward (see
+sections below).
 
-**Scanning all installed apps for Google OAuth:**
+**Detection:** Scan `Info.plist` URL schemes for `googleusercontent.apps`.
+
+**Where to scan:** Apps install in multiple locations — scanning only
+`/Applications/*.app` misses a lot:
 
 ```bash
-for app in /Applications/*.app; do
-    result=$(plutil -p "$app/Contents/Info.plist" 2>/dev/null | grep "googleusercontent")
-    [ -n "$result" ] && echo "$(basename $app): $result"
+# All common install locations
+for dir in /Applications /Applications/Setapp ~/Applications /System/Applications; do
+    [ -d "$dir" ] || continue
+    for app in "$dir"/*.app; do
+        result=$(plutil -p "$app/Contents/Info.plist" 2>/dev/null | grep "googleusercontent")
+        [ -n "$result" ] && echo "$(basename $app .app) ($dir): $result"
+    done
 done
+```
+
+Real-world example: BusyContacts and Strongbox are Setapp apps — they live in
+`/Applications/Setapp/` and are invisible to a top-level-only scan.
+
+**Local traces:**
+- `Info.plist` URL scheme (always present while installed)
+- Keychain entry with per-account OAuth tokens (e.g. `"svce" = "Mimestream: user@example.com"`)
+
+### Pattern 2: macOS Internet Accounts (Account.framework)
+
+When you add a Google account in **System Settings → Internet Accounts**,
+macOS registers it at the OS level. This shows up as **"macOS"** in Google's
+authorized apps list. Calendar, Contacts, Mail, and third-party apps that
+delegate to the system (like BusyContacts for CardDAV) all use this connection.
+
+The accounts live in a SQLite database:
+
+```
+~/Library/Accounts/Accounts4.sqlite   (macOS 15+)
+~/Library/Accounts/Accounts5.sqlite   (some macOS versions)
+```
+
+**Detection:** Query the `ZACCOUNT` / `ZACCOUNTTYPE` tables:
+
+```python
+import sqlite3
+conn = sqlite3.connect(f"file:{accounts_db}?mode=ro", uri=True)
+cursor = conn.cursor()
+cursor.execute("""
+    SELECT a.ZUSERNAME, t.ZIDENTIFIER
+    FROM ZACCOUNT a
+    LEFT JOIN ZACCOUNTTYPE t ON a.ZACCOUNTTYPE = t.Z_PK
+    WHERE t.ZIDENTIFIER = 'com.apple.account.Google'
+""")
+```
+
+**Requires Full Disk Access** — `~/Library/Accounts/` is protected by macOS
+TCC. The process reading it (Terminal, VS Code, the AgentOS engine) must have
+Full Disk Access granted in System Settings → Privacy & Security.
+
+**Local traces:**
+- Rows in `Accounts4.sqlite` with type `com.apple.account.Google`
+- Child accounts for CalDAV, CardDAV, IMAP, SMTP under the parent Google entry
+
+### Pattern 3: Server-side OAuth (vendor backend)
+
+Apps like **Spark** (Readdle) authenticate through their vendor's backend
+server. The user authorizes Readdle's server-side OAuth app in their browser,
+and the server manages the Google tokens. The local app communicates with the
+vendor server, not directly with Google.
+
+**This pattern is invisible to local scanning.** There's no Google client ID
+in Info.plist, no OAuth token in the Keychain. The only local traces are:
+
+```
+"svce" = "SparkDesktop"              "acct" = "RSMSecureEnclaveKey"
+"svce" = "com.readdle.spark.account.auth"  "acct" = "RSMSecureEnclaveKey"
+```
+
+These are Secure Enclave keys for the app's own auth — they don't contain
+Google tokens, they protect the app's session with Readdle's servers.
+
+**Detection:** No reliable local detection. The only way to see these is to
+query Google's OAuth management API or check `myaccount.google.com/permissions`
+directly.
+
+**Ghost entries:** When server-side OAuth apps are uninstalled, the Keychain
+entries remain but the app bundle is gone. The Google authorization also
+persists (the vendor server still has the tokens) until the user explicitly
+revokes it in Google's settings.
+
+### Summary
+
+| Pattern | Examples | How to detect | Shows in Google as |
+|---------|----------|---------------|--------------------|
+| Native PKCE | Mimestream, BusyContacts, Strongbox | `Info.plist` URL scheme scan | App name |
+| macOS Internet Accounts | Calendar, Contacts, Mail | `Accounts4.sqlite` (needs FDA) | "macOS" |
+| Server-side OAuth | Spark, potentially others | Not locally detectable | Vendor name (Readdle) |
+
+---
+
+## Finding Google OAuth Client IDs (Native PKCE)
+
+The detailed walkthrough for Pattern 1 above. The registered URL scheme in
+`Info.plist` encodes the client ID:
+
+```bash
+plutil -p /Applications/SomeApp.app/Contents/Info.plist | grep googleusercontent
 ```
 
 ### Client secrets in binaries
@@ -173,10 +270,13 @@ security dump-keychain 2>/dev/null \
   | grep -iv "apple\|icloud\|cloudkit\|wifi\|bluetooth\|cert\|nsurl\|networkservice\|airportd\|safari\|webkit\|xpc\|com\.apple\." \
   | sort -u
 
-# 2. Apps with Google OAuth client IDs
-for app in /Applications/*.app; do
-    r=$(plutil -p "$app/Contents/Info.plist" 2>/dev/null | grep "googleusercontent")
-    [ -n "$r" ] && echo "$(basename $app .app): $r"
+# 2. Apps with Google OAuth client IDs (all install locations)
+for dir in /Applications /Applications/Setapp ~/Applications; do
+    [ -d "$dir" ] || continue
+    for app in "$dir"/*.app; do
+        r=$(plutil -p "$app/Contents/Info.plist" 2>/dev/null | grep "googleusercontent")
+        [ -n "$r" ] && echo "$(basename $app .app) ($dir): $r"
+    done
 done
 
 # 3. Apps using the Electron Safe Storage pattern
