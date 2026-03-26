@@ -1,18 +1,36 @@
-# A product analytics event — a single user action tracked by PostHog.
-# NOT a life event — see life_event.yaml for births, marriages, etc.
+# Something that happened — to people, at a place, at a time.
 #
-# Sources: PostHog
-analytics_event:
+# Three things that are NOT the same:
+#   1. The EVENT — what happened (a wedding celebration, a birth, an immigration)
+#   2. The RECORD — official proof it happened (certificate, filing) → linked via documents: file[]
+#   3. The RELATIONSHIP STATE — ongoing fact (they ARE married) → edge vals on person↔person
+#
+# A courthouse marriage and a wedding celebration are two different events
+# involving the same people. The certificate is a file linked to the legal event.
+#
+# Inspired by FamilySearch GEDCOM X (facts on relationships, computed derivations)
+# and the Adavia backend (Event + EventType, many-to-many people, place hierarchy).
+#
+# Sources: Apple Calendar, Apple Contacts (birth dates), future integrations
+event:
   fields:
-    distinct_id:       string    # PostHog user identifier
-    properties:        json      # arbitrary event properties
-    current_url:       url       # page URL where the event fired
+    event_type:        string    # birth, death, marriage, divorce, adoption,
+                                 # wedding, graduation, immigration, emigration,
+                                 # naturalization, name_change, ceremony,
+                                 # civil_union, celebration
+    event_date:        datetime
+    end_date:          datetime  # for events with duration (residence, conference)
+    details:           json      # type-specific metadata (e.g. new name for name_change)
+    confidence:        string    # proven, challenged, estimated (FamilySearch pattern)
   relations:
-    person:            person
+    involves:          person[]  # people this event happened to (many-to-many)
+    location:          place     # where it happened
+    documents:         file[]    # supporting evidence (certificates, records)
   display:
     title: name
-    date: datePublished
+    subtitle: event_type
+    date: event_date
     columns:
       - name:            Event
-      - datePublished:   Time
-      - distinct_id:     User
+      - event_type:      Type
+      - event_date:      Date
