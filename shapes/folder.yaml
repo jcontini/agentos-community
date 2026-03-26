@@ -1,0 +1,19 @@
+# A filesystem directory or workspace. Used to track project roots,
+# working directories, and document collections.
+#
+# Sources: agentOS engine (session working directories), filesystem
+folder:
+  fields:
+    path:              string    # absolute filesystem path
+    workspace_type:    string    # git, node, python, rust, etc.
+    has_readme:        boolean
+  relations:
+    repository:        repository  # git repo at this path
+    contains:          file[]
+  display:
+    title: name
+    subtitle: path
+    columns:
+      - name:            Folder
+      - path:            Path
+      - workspace_type:  Type

@@ -1,0 +1,18 @@
+# An image file. Photos, screenshots, diagrams, artwork.
+#
+# Sources: macOS screenshots, email attachments, web scraping
+image:
+  also: [file]        # an image is also a file
+  fields:
+    width:             integer   # pixels
+    height:            integer   # pixels
+    format:            string    # PNG, JPEG, WebP, SVG, etc.
+    alt_text:          string    # accessibility description
+  display:
+    title: name
+    image: image
+    columns:
+      - name:            Image
+      - width:           Width
+      - height:          Height
+      - format:          Format

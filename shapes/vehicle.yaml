@@ -1,0 +1,37 @@
+# A vehicle — car, truck, motorcycle. Tracked with VIN, registration, ownership.
+#
+# Sources: manual entry, document extraction
+vehicle:
+  also: [product]     # a vehicle is also a product
+  fields:
+    vin:               string    # Vehicle Identification Number (17 chars)
+    plate:             string    # license plate
+    plate_state:       string    # state/region of registration
+    year:              integer   # model year
+    make:              string    # manufacturer name (e.g. Honda, Audi)
+    model:             string    # model name (e.g. Accord, A4)
+    trim:              string    # trim level (e.g. EX-L, Premium)
+    body_type:         string    # sedan, SUV, truck, etc.
+    fuel_type:         string    # gas, diesel, hybrid, electric
+    transmission:      string    # automatic, manual, CVT, e-CVT
+    drivetrain:        string    # FWD, RWD, AWD, 4WD
+    color:             string
+    odometer:          integer   # miles or km
+    purchase_price:    number
+    purchase_date:     datetime
+    purchase_location: string
+    status:            string    # active, sold, totaled
+  relations:
+    manufacturer:      organization
+    purchased_from:    organization
+    owner:             person
+  display:
+    title: name
+    subtitle: vin
+    image: image
+    date: purchase_date
+    columns:
+      - name:            Vehicle
+      - year:            Year
+      - status:          Status
+      - plate:           Plate

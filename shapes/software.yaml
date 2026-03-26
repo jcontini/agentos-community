@@ -1,0 +1,24 @@
+# A software application — web app, desktop app, mobile app, CLI tool.
+# Software is also a product, but with additional fields for platforms,
+# versions, and runtime requirements.
+#
+# Examples: Gmail, Cursor, Slack, yt-dlp, agentOS itself
+software:
+  also: [product]     # software is also a product
+  fields:
+    version:           string    # current/latest version
+    license:           string    # SPDX identifier (e.g. MIT, proprietary)
+    platform:          string[]  # web, macos, windows, linux, ios, android
+    open_source:       boolean
+    repository_url:    url       # source code URL
+  relations:
+    developer:         organization  # who makes it
+    repository:        repository    # source code repo (if open source)
+  display:
+    title: name
+    subtitle: text
+    image: image
+    columns:
+      - name:            Software
+      - version:         Version
+      - license:         License

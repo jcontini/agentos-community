@@ -1,0 +1,21 @@
+# A file — document, attachment, download, or any discrete digital artifact.
+# Base type for image. Files can be attached to emails, messages, or any entity.
+#
+# Sources: Mimestream (email attachments), filesystem, any skill with downloads
+file:
+  fields:
+    filename:          string    # original filename with extension
+    mime_type:         string    # IANA MIME type (e.g. application/pdf, text/plain)
+    size:              integer   # file size in bytes
+    path:              string    # local filesystem path (if available)
+    format:            string    # human-readable format (e.g. "PDF", "DOCX")
+  relations:
+    attached_to:       message   # email/message this file was attached to
+  display:
+    title: name
+    subtitle: mime_type
+    columns:
+      - name:            File
+      - filename:        Filename
+      - mime_type:       Type
+      - size:            Size
