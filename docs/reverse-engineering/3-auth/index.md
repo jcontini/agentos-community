@@ -355,6 +355,84 @@ login, HTTPX handles the work. Each tool does what it's good at.
 
 ---
 
+## Cookie injection from real browsers
+
+**The fastest way to do authenticated discovery.**  When the user is already
+logged into a site in Brave/Firefox, skip the login flow entirely — extract
+cookies from their real browser and inject them into Playwright or HTTPX.
+
+### The pattern
+
+```
+# 1. Get decrypted cookies from the user's browser
+brave-browser.cookie_get({ domain: "goodreads.com" })
+# → returns { cookies: [{name, value, domain, path, httpOnly, secure, ...}], count: 13 }
+
+# 2a. Inject into Playwright for visual discovery
+playwright.capture_network({
+  url: "https://www.goodreads.com/friend/find_friend",
+  cookies: [
+    { name: "_session_id2", value: "443a469...", domain: "www.goodreads.com", path: "/" },
+    { name: "at-main", value: "Atza|gQCkt...", domain: ".goodreads.com", path: "/" },
+    ...
+  ],
+  pattern: "**friend**",
+  wait: 5000
+})
+# → page loads authenticated, you can inspect/interact
+
+# 2b. OR parse into httpx.Cookies() for direct HTTPX calls
+cookies = httpx.Cookies()
+for part in cookie_header.split(";"):
+    name, val = part.strip().split("=", 1)
+    cookies.set(name.strip(), val.strip())
+client = httpx.Client(cookies=cookies, ...)
+```
+
+### Why this matters
+
+- **No login flow needed.** The user is already logged in. Don't waste time
+  reverse-engineering auth when you just need to see what a page looks like.
+- **Real session state.** You get the exact cookies the browser has — including
+  HttpOnly cookies, auth tokens, and CSRF state that would be hard to reproduce.
+- **Playwright stays authenticated.** After injecting cookies into
+  `capture_network` or `goto`, the Playwright browser session keeps them.
+  Subsequent `click`, `fill`, `inspect` calls stay logged in.
+
+### Cookie jar vs raw Cookie header (HTTPX gotcha)
+
+When making **multi-step HTTPX requests** (e.g., fetch a form page, then submit
+it), use `httpx.Cookies()` instead of a raw `Cookie` header:
+
+```python
+# WRONG — raw header doesn't track Set-Cookie responses
+headers = {"Cookie": cookie_header}
+client = httpx.Client(headers=headers)
+# Step 1 may set a new _session_id2, but step 2 sends the OLD one
+
+# RIGHT — cookie jar tracks Set-Cookie automatically
+cookies = httpx.Cookies()
+for part in cookie_header.split(";"):
+    name, val = part.strip().split("=", 1)
+    cookies.set(name.strip(), val.strip())
+client = httpx.Client(cookies=cookies)
+# Step 1's Set-Cookie is carried to step 2
+```
+
+This is critical when CSRF tokens (like Goodreads' `n=` param) are tied to
+the session cookie. If step 1 refreshes the session cookie but step 2 sends
+the stale one, the server silently ignores the request.
+
+### Available cookie providers
+
+| Provider | Tool | Notes |
+|----------|------|-------|
+| `brave-browser` | `cookie_get({ domain: "..." })` | Decrypts from Brave's encrypted cookie DB |
+| `firefox` | `cookie_get({ domain: "..." })` | Reads from Firefox profile |
+| `playwright` | `cookie_get({ domain: "..." })` | From Playwright's own browser session (after login) |
+
+---
+
 ## Working with Playwright
 
 Practical notes for using the Playwright skill during discovery.

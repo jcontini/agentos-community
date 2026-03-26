@@ -31,11 +31,31 @@ _HEADERS = {
 # ---------------------------------------------------------------------------
 
 
+def _parse_cookies(cookie_header: str) -> httpx.Cookies:
+    """Parse a raw Cookie header string into an httpx cookie jar.
+
+    Using a cookie jar instead of a raw header means httpx tracks Set-Cookie
+    responses automatically.  This is critical for multi-step flows where the
+    server refreshes the session cookie between requests (e.g. CSRF-protected
+    forms like Goodreads friend search).
+    """
+    jar = httpx.Cookies()
+    for part in cookie_header.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" in part:
+            name, val = part.split("=", 1)
+            jar.set(name.strip(), val.strip())
+    return jar
+
+
 def _client(cookie_header: str | None) -> httpx.Client:
-    headers = dict(_HEADERS)
-    if cookie_header:
-        headers["Cookie"] = cookie_header
-    return httpx.Client(http2=True, follow_redirects=True, timeout=30, headers=headers)
+    cookies = _parse_cookies(cookie_header) if cookie_header else None
+    return httpx.Client(
+        http2=True, follow_redirects=True, timeout=30,
+        headers=_HEADERS, cookies=cookies,
+    )
 
 
 def _fetch(client: httpx.Client, url: str) -> tuple[int, str]:
@@ -661,7 +681,7 @@ def resolve_email(
     cookie_header = _require_cookies(cookie_header, params, "resolve_email")
 
     with _client(cookie_header) as client:
-        # Step 1: load the find_friend page to get the session token (n=)
+        # Step 1: load the find_friend page to get the CSRF token (n=)
         status, form_html = _fetch(client, f"{BASE}/friend/find_friend")
         if status != 200:
             raise RuntimeError(f"Find friend page returned {status}")
@@ -670,10 +690,10 @@ def resolve_email(
         n_input = form_soup.select_one('input[name="n"]')
         n_token = n_input.get("value", "") if n_input else ""
 
-        # Step 2: submit the search
+        # Step 2: submit the search (cookie jar carries Set-Cookie from step 1)
         search_url = (
             f"{BASE}/friend/find_friend?utf8=%E2%9C%93"
-            f"&n={n_token}&q={quote_plus(email)}&commit=search+members"
+            f"&n={n_token}&q={quote_plus(email)}"
         )
         status2, results_html = _fetch(client, search_url)
         if status2 != 200:
