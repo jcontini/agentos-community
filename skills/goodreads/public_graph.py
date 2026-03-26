@@ -478,34 +478,54 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
         if isinstance(item, dict) and item.get("name")
     ]
 
-    return {
-        "book_id": book.get("legacyId"),
-        "title": book.get("title"),
-        "description": book.get('description({"stripped":true})') or book.get("description"),
-        "cover_url": book.get("imageUrl"),
-        "primary_author": primary_contributor.get("name"),
-        "primary_author_id": primary_contributor.get("legacyId"),
-        "primary_author_url": primary_contributor.get("webUrl"),
+    author_id = primary_contributor.get("legacyId")
+    author_name = primary_contributor.get("name")
+    author_url = primary_contributor.get("webUrl")
+
+    # Shape-native contributor dicts (author shape)
+    shaped_contributors = []
+    for c in unique_by(contributors, "name"):
+        shaped_contributors.append({
+            "id": c.get("author_id") or c.get("name"),
+            "name": c.get("name"),
+            "url": c.get("url"),
+            "image": c.get("image_url"),
+            "role": c.get("role"),
+        })
+
+    result = {
+        "id": book.get("legacyId"),
+        "name": book.get("title"),
+        "text": book.get('description({"stripped":true})') or book.get("description"),
+        "url": book.get("webUrl") or (f"https://goodreads.com/book/show/{book.get('legacyId')}" if book.get("legacyId") else None),
+        "image": book.get("imageUrl"),
+        "author": author_name,
         "isbn": details.get("isbn"),
         "isbn13": details.get("isbn13"),
-        "publication_date": iso_from_ms(details.get("publicationTime") or work_details.get("publicationTime")),
+        "datePublished": iso_from_ms(details.get("publicationTime") or work_details.get("publicationTime")),
         "average_rating": work_stats.get("averageRating"),
         "ratings_count": work_stats.get("ratingsCount"),
         "review_count": work_stats.get("textReviewsCount"),
         "pages": details.get("numPages"),
         "genres": genres,
-        "series_name": series[0] if series else None,
-        "series": series,
+        "series": series[0] if series else None,
         "publisher": details.get("publisher"),
         "format": details.get("format"),
         "language": ((details.get("language") or {}).get("name")),
-        "web_url": book.get("webUrl"),
         "work_url": work_details.get("webUrl"),
         "original_title": work_details.get("originalTitle"),
         "currently_reading_count": social_counts.get("CURRENTLY_READING"),
         "to_read_count": social_counts.get("TO_READ"),
-        "contributors": unique_by(contributors, "name"),
     }
+    if author_id or author_name:
+        result["written_by"] = {
+            "id": author_id or author_name,
+            "name": author_name,
+            "url": author_url,
+        }
+    if shaped_contributors:
+        result["contributors"] = shaped_contributors
+    return result
 
 
 def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: dict[str, Any]) -> list[dict[str, Any]]:
@@ -523,30 +543,71 @@ def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: d
             for tagging in taggings
             if (tagging.get("tag") or {}).get("name")
         ]
-        reviews.append(
-            {
-                "review_id": parse_review_id(review),
-                "book_id": book.get("legacyId"),
-                "book_title": book.get("title"),
-                "review_text": review.get("text"),
-                "review_date": iso_from_ms(review.get("createdAt")),
-                "review_updated_at": iso_from_ms(review.get("updatedAt")),
+        review_id = parse_review_id(review)
+        book_id = book.get("legacyId")
+        book_title = book.get("title")
+        reviewer_id = creator.get("legacyId") or creator.get("id")
+        reviewer_name = creator.get("name")
+
+        entry: dict[str, Any] = {
+            "id": review_id,
+            "name": f"Review of {book_title}" if book_title else "Review",
+            "text": review.get("text"),
+            "url": shelving.get("webUrl") or (f"https://goodreads.com/review/show/{review_id}" if review_id else None),
+            "author": reviewer_name,
+            "datePublished": iso_from_ms(review.get("createdAt")),
+            "engagement": {
                 "rating": review.get("rating"),
-                "likes_count": review.get("likeCount"),
-                "comment_count": review.get("commentCount"),
-                "reviewer_id": creator.get("legacyId") or creator.get("id"),
-                "reviewer_name": creator.get("name"),
-                "reviewer_url": creator.get("webUrl"),
-                "reviewer_image_url": creator.get("imageUrlSquare"),
-                "reviewer_followers_count": creator.get("followersCount"),
-                "reviewer_reviews_count": creator.get("textReviewsCount"),
-                "shelf_name": shelf.get("name"),
-                "shelf_display_name": shelf.get("displayName"),
-                "review_url": shelving.get("webUrl"),
-                "tags": tags,
+                "likes": review.get("likeCount"),
+            },
+            "comment_count": review.get("commentCount"),
+            "tags": tags,
+            "shelf_name": shelf.get("name"),
+        }
+        if reviewer_id or reviewer_name:
+            entry["posted_by"] = {
+                "id": reviewer_id,
+                "name": reviewer_name,
+                "url": creator.get("webUrl") or (f"https://goodreads.com/user/show/{reviewer_id}" if reviewer_id else None),
+                "image": creator.get("imageUrlSquare"),
+                "followers_count": creator.get("followersCount"),
+                "reviews_count": creator.get("textReviewsCount"),
             }
-        )
+        if book_id or book_title:
+            entry["references"] = {
+                "id": book_id,
+                "name": book_title,
+                "url": f"https://goodreads.com/book/show/{book_id}" if book_id else None,
+                "image": book.get("imageUrl"),
+                "author": book.get("primaryContributorEdge", {}).get("node", {}).get("name") if isinstance(book.get("primaryContributorEdge"), dict) else None,
+            }
+        reviews.append(entry)
     return reviews
+
+
+def _simple_book(book_id: Any, title: str | None, cover_url: str | None,
+                  web_url: str | None, author: str | None,
+                  author_id: Any = None, avg_rating: Any = None,
+                  ratings_count: Any = None, **extra: Any) -> dict[str, Any]:
+    """Build a minimal shape-native book dict."""
+    result: dict[str, Any] = {
+        "id": book_id,
+        "name": title,
+        "image": cover_url,
+        "url": web_url or (f"https://goodreads.com/book/show/{book_id}" if book_id else None),
+        "author": author,
+    }
+    if avg_rating is not None:
+        result["average_rating"] = avg_rating
+    if ratings_count is not None:
+        result["ratings_count"] = ratings_count
+    if author_id or author:
+        result["written_by"] = {
+            "id": author_id or author,
+            "name": author,
+        }
+    result.update(extra)
+    return result
 
 
 def get_public_book(book_id: str) -> dict[str, Any]:
@@ -661,17 +722,16 @@ query getSimilarBooks($id: ID!, $limit: Int!) {
         node = edge.get("node") or {}
         web_url = node.get("webUrl")
         match = re.search(r"/book/show/([0-9]+)", web_url or "")
-        books.append(
-            {
-                "book_id": int(match.group(1)) if match else web_url,
-                "title": node.get("title"),
-                "cover_url": node.get("imageUrl"),
-                "primary_author": (((node.get("primaryContributorEdge") or {}).get("node")) or {}).get("name"),
-                "average_rating": ((((node.get("work") or {}).get("stats")) or {}).get("averageRating")),
-                "ratings_count": ((((node.get("work") or {}).get("stats")) or {}).get("ratingsCount")),
-                "web_url": web_url,
-            }
-        )
+        stats = (node.get("work") or {}).get("stats") or {}
+        books.append(_simple_book(
+            book_id=int(match.group(1)) if match else web_url,
+            title=node.get("title"),
+            cover_url=node.get("imageUrl"),
+            web_url=web_url,
+            author=(((node.get("primaryContributorEdge") or {}).get("node")) or {}).get("name"),
+            avg_rating=stats.get("averageRating"),
+            ratings_count=stats.get("ratingsCount"),
+        ))
     return _wrap_result(books, runtime, was_cached)
 
 
@@ -707,16 +767,14 @@ query getSearchSuggestions($searchQuery: String!) {
         web_url = node.get("webUrl") or ""
         match = re.search(r"/book/show/([0-9]+)", web_url)
         contributor = ((node.get("primaryContributorEdge") or {}).get("node")) or {}
-        books.append(
-            {
-                "book_id": int(match.group(1)) if match else None,
-                "title": node.get("title"),
-                "cover_url": node.get("imageUrl"),
-                "primary_author": contributor.get("name"),
-                "primary_author_id": contributor.get("legacyId"),
-                "web_url": web_url,
-            }
-        )
+        books.append(_simple_book(
+            book_id=int(match.group(1)) if match else None,
+            title=node.get("title"),
+            cover_url=node.get("imageUrl"),
+            web_url=web_url,
+            author=contributor.get("name"),
+            author_id=contributor.get("legacyId"),
+        ))
     return _wrap_result(books, runtime, was_cached)
 
 
@@ -764,20 +822,18 @@ query getWorksForSeries($input: GetWorksForSeriesInput!, $pagination: Pagination
         best = node.get("bestBook") or {}
         contributor = ((best.get("primaryContributorEdge") or {}).get("node")) or {}
         stats = node.get("stats") or {}
-        books.append(
-            {
-                "book_id": best.get("legacyId"),
-                "title": best.get("title"),
-                "cover_url": best.get("imageUrl"),
-                "web_url": best.get("webUrl"),
-                "primary_author": contributor.get("name"),
-                "primary_author_id": contributor.get("legacyId"),
-                "average_rating": stats.get("averageRating"),
-                "ratings_count": stats.get("ratingsCount"),
-                "series_placement": edge.get("seriesPlacement"),
-                "is_primary": edge.get("isPrimary"),
-            }
-        )
+        books.append(_simple_book(
+            book_id=best.get("legacyId"),
+            title=best.get("title"),
+            cover_url=best.get("imageUrl"),
+            web_url=best.get("webUrl"),
+            author=contributor.get("name"),
+            author_id=contributor.get("legacyId"),
+            avg_rating=stats.get("averageRating"),
+            ratings_count=stats.get("ratingsCount"),
+            series_placement=edge.get("seriesPlacement"),
+            is_primary=edge.get("isPrimary"),
+        ))
     return _wrap_result(books, runtime, was_cached)
 
 
@@ -803,15 +859,13 @@ def parse_profile_favorite_books(html_text: str, limit: int) -> list[dict[str, A
         author = None
         if " by " in title:
             title, author = title.rsplit(" by ", 1)
-        books.append(
-            {
-                "book_id": parse_int(first_match(r"/book/show/([0-9]+)", href)),
-                "title": title,
-                "primary_author": author,
-                "cover_url": image,
-                "web_url": absolute_url(href),
-            }
-        )
+        books.append(_simple_book(
+            book_id=parse_int(first_match(r"/book/show/([0-9]+)", href)),
+            title=title,
+            cover_url=image,
+            web_url=absolute_url(href),
+            author=author,
+        ))
         if len(books) >= limit:
             break
     return unique_by(books, "book_id")
@@ -827,14 +881,12 @@ def parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict
         section,
         re.S,
     ):
-        shelves.append(
-            {
-                "shelf_id": f"{user_id}:{html.unescape(shelf_name)}",
-                "name": clean_text(label),
-                "book_count": parse_int(count),
-                "url": absolute_url(href),
-            }
-        )
+        shelves.append({
+            "id": f"{user_id}:{html.unescape(shelf_name)}",
+            "name": clean_text(label),
+            "book_count": parse_int(count),
+            "url": absolute_url(href),
+        })
         if len(shelves) >= limit:
             break
     return unique_by(shelves, "shelf_id")
@@ -855,17 +907,14 @@ def parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str
         re.S,
     )
     for match in pattern.finditer(section):
-        books.append(
-            {
-                "book_id": parse_int(first_match(r"/book/show/([0-9]+)", match.group("book_href"))),
-                "title": clean_html_text(match.group("title")),
-                "cover_url": match.group("cover"),
-                "web_url": absolute_url(match.group("book_href")),
-                "primary_author": clean_html_text(match.group("author_name")),
-                "primary_author_id": parse_int(first_match(r"/author/show/([0-9]+)", match.group("author_href"))),
-                "primary_author_url": absolute_url(match.group("author_href")),
-            }
-        )
+        books.append(_simple_book(
+            book_id=parse_int(first_match(r"/book/show/([0-9]+)", match.group("book_href"))),
+            title=clean_html_text(match.group("title")),
+            cover_url=match.group("cover"),
+            web_url=absolute_url(match.group("book_href")),
+            author=clean_html_text(match.group("author_name")),
+            author_id=parse_int(first_match(r"/author/show/([0-9]+)", match.group("author_href"))),
+        ))
         if len(books) >= limit:
             break
     return unique_by(books, "book_id")
@@ -886,21 +935,30 @@ def get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
     photo_url = first_match(r'<meta property="og:image" content="([^"]+)"', html_text)
     website = first_match(r'<a rel="me noopener noreferrer"[^>]*href="([^"]+)"', html_text)
 
-    return {
-        "user_id": parse_int(user_id),
+    uid = parse_int(user_id)
+    result: dict[str, Any] = {
+        "id": uid,
         "name": name or (title_match.group(1) if title_match else None),
-        "username": username or (title_match.group(2) if title_match else None),
+        "handle": username or (title_match.group(2) if title_match else None),
+        "url": f"https://goodreads.com/user/show/{uid}" if uid else None,
+        "image": photo_url,
         "location": title_match.group(3) if title_match else None,
         "books_count": parse_int(title_match.group(4) if title_match else None),
         "ratings_count": ratings_count,
         "avg_rating": float(avg_rating) if avg_rating else None,
         "reviews_count": reviews_count,
-        "photo_url": photo_url,
         "website": website,
-        "favorite_books": parse_profile_favorite_books(html_text, limit),
-        "currently_reading": parse_profile_currently_reading(html_text, limit),
-        "shelves": parse_profile_shelves(html_text, parse_int(user_id) or 0, limit),
     }
+    favorite_books = parse_profile_favorite_books(html_text, limit)
+    if favorite_books:
+        result["favorite_books"] = favorite_books
+    currently_reading = parse_profile_currently_reading(html_text, limit)
+    if currently_reading:
+        result["currently_reading"] = currently_reading
+    shelves = parse_profile_shelves(html_text, uid or 0, limit)
+    if shelves:
+        result["shelves"] = shelves
+    return result
 
 
 def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
@@ -917,18 +975,16 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
         title = clean_html_text(match.group("title_attr"))
         href = match.group("book_href")
         image = first_match(rf'{re.escape(href)}">\s*<img[^>]+src="([^"]+)"', html_text)
-        books.append(
-            {
-                "book_id": parse_int(first_match(r"/book/show/([0-9]+)", href)),
-                "title": title,
-                "cover_url": image,
-                "web_url": absolute_url(href),
-                "primary_author": clean_html_text(match.group("author_name")),
-                "primary_author_id": parse_int(match.group("author_id")),
-                "average_rating": float(match.group("average")),
-                "ratings_count": parse_int(match.group("ratings")),
-            }
-        )
+        books.append(_simple_book(
+            book_id=parse_int(first_match(r"/book/show/([0-9]+)", href)),
+            title=title,
+            cover_url=image,
+            web_url=absolute_url(href),
+            author=clean_html_text(match.group("author_name")),
+            author_id=parse_int(match.group("author_id")),
+            avg_rating=float(match.group("average")),
+            ratings_count=parse_int(match.group("ratings")),
+        ))
         if len(books) >= limit:
             break
     return unique_by(books, "book_id")
@@ -951,20 +1007,25 @@ def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
     works_count = parse_int(first_match(r"([\d,]+)\s+distinct works", html_text))
     photo_url = first_match(rf'<img[^>]+alt="{re.escape(name or "")}"[^>]+src="([^"]+)"', html_text) if name else None
 
-    return {
-        "author_id": parse_int(author_id),
+    aid = parse_int(author_id)
+    result: dict[str, Any] = {
+        "id": aid,
         "name": name,
-        "bio": bio,
+        "text": bio,
+        "url": f"https://goodreads.com/author/show/{aid}" if aid else None,
+        "image": photo_url,
         "location": location,
-        "photo_url": photo_url,
         "average_rating": float(average_rating) if average_rating else None,
         "works_count": works_count,
         "website": website,
         "twitter": twitter,
         "member_since": member_since,
         "followers_count": followers_count,
-        "books": parse_author_books(author_id, limit),
     }
+    books = parse_author_books(author_id, limit)
+    if books:
+        result["books"] = books
+    return result
 
 
 def emit_json(value: Any) -> None:
