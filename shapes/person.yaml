@@ -13,11 +13,15 @@ person:
     notes:             text
     gender:            string
     about:             text
+    joined_date:       datetime  # when they joined a platform (partial OK: 2013-12)
+    last_active:       datetime  # when last seen active
   relations:
     accounts:          account[] # platform identities this person owns
     roles:             role[]    # positions at organizations
     location:          place
     website:           website
+    favorite_books:    book[]    # books this person has marked as favorites
+    currently_reading: book[]    # books this person is currently reading
   display:
     title: name
     subtitle: about

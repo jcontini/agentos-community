@@ -97,6 +97,78 @@ def _abs_url(path: str | None) -> str | None:
     return f"{BASE}{path}" if path.startswith("/") else path
 
 
+_MONTHS = {
+    "january": "01", "february": "02", "march": "03", "april": "04",
+    "may": "05", "june": "06", "july": "07", "august": "08",
+    "september": "09", "october": "10", "november": "11", "december": "12",
+}
+
+
+def _to_iso_date(s: str | None) -> str | None:
+    """Convert display dates to ISO 8601 partial dates.
+
+    'August 2010'     → '2010-08'
+    'December 2013'   → '2013-12'
+    'in January 2026' → '2026-01'
+    'November 26'     → None (no year — ambiguous)
+    'this month'      → None (relative — can't store)
+    '3 days ago'      → None
+    Already ISO       → pass through
+    """
+    if not s:
+        return None
+    s = s.strip()
+    # Strip leading "in " (e.g. "in January 2026")
+    s = re.sub(r"^in\s+", "", s, flags=re.I)
+
+    # Already ISO? (starts with 4 digits)
+    if re.match(r"^\d{4}(-\d{2})?(-\d{2})?(T|$)", s):
+        return s
+
+    # "Month YYYY" pattern
+    m = re.match(r"^([A-Za-z]+)\s+(\d{4})$", s)
+    if m:
+        month = _MONTHS.get(m.group(1).lower())
+        if month:
+            return f"{m.group(2)}-{month}"
+
+    # "Month DD, YYYY" pattern
+    m = re.match(r"^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$", s)
+    if m:
+        month = _MONTHS.get(m.group(1).lower())
+        if month:
+            return f"{m.group(3)}-{month}-{int(m.group(2)):02d}"
+
+    # Year only
+    m = re.match(r"^(\d{4})$", s)
+    if m:
+        return m.group(1)
+
+    # Can't parse — return None rather than garbage
+    return None
+
+
+def _clean_sentinel(s: str | None) -> str | None:
+    """Return None if the string looks like a placeholder/sentinel."""
+    if not s:
+        return None
+    lower = s.strip().lower()
+    if not lower:
+        return None
+    sentinels = [
+        "hasn't added any details yet",
+        "has not added any details yet",
+        "no description available",
+        "not available",
+        "not specified",
+        "n/a", "none", "unknown",
+    ]
+    for sentinel in sentinels:
+        if sentinel in lower:
+            return None
+    return s.strip()
+
+
 def _flip_name(name: str) -> str:
     """Convert 'LastName, FirstName' to 'FirstName LastName'."""
     if "," in name:
@@ -308,7 +380,7 @@ def get_person(
     elif not age_m and not gender_m and details:
         location = details
 
-    birthday = info.get("birthday")
+    birthday = _to_iso_date(info.get("birthday"))
     website = info.get("website")
     interests = info.get("interests")
     about = info.get("about me")
@@ -319,10 +391,10 @@ def get_person(
     last_active = None
     jm = re.search(r"Joined in\s+(.+?)(?:,|$)", activity)
     if jm:
-        joined_date = jm.group(1).strip()
+        joined_date = _to_iso_date(jm.group(1).strip())
     am = re.search(r"last active\s+(.+)", activity)
     if am:
-        last_active = am.group(1).strip()
+        last_active = _to_iso_date(am.group(1).strip())
 
     # Stats: ratings, avg, reviews
     stats_el = soup.select_one(".profilePageUserStatsInfo")
@@ -394,7 +466,7 @@ def get_person(
                     continue
 
                 date_el = update.select_one("a.updatedTimestamp")
-                date_added = _clean(date_el.get_text()) if date_el else None
+                date_added = _to_iso_date(_clean(date_el.get_text())) if date_el else None
 
                 author_link = update.select_one("a.authorName")
                 author_name = _clean(author_link.get_text()) if author_link else None
@@ -433,10 +505,10 @@ def get_person(
         "gender": gender,
         "age": age,
         "birthday": birthday,
-        "location": location,
-        "website": website,
-        "about": about,
-        "interests": interests,
+        "location": _clean_sentinel(location),
+        "website": _clean_sentinel(website),
+        "about": _clean_sentinel(about),
+        "interests": _clean_sentinel(interests),
         "joined_date": joined_date,
         "last_active": last_active,
         "ratings_count": ratings_count,
