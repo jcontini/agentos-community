@@ -352,10 +352,12 @@ def get_person(
                 bm = re.search(r"/book/show/(\d+)", a.get("href", ""))
                 if bm and btitle:
                     cover = bimg.get("src") if bimg else None
+                    bid = bm.group(1)
                     favorite_books.append({
-                        "book_id": bm.group(1),
-                        "title": btitle,
-                        "cover_url": cover,
+                        "id": bid,
+                        "name": btitle,
+                        "image": cover,
+                        "url": f"{BASE}/book/show/{bid}",
                     })
 
     # Currently reading — each .Updates div has a book + timestamp
@@ -382,15 +384,16 @@ def get_person(
                     if am:
                         author_id = am.group(1)
 
+                bid = bm.group(1)
                 entry: dict[str, Any] = {
-                    "book_id": bm.group(1),
-                    "title": btitle,
+                    "id": bid,
+                    "name": btitle,
+                    "url": f"{BASE}/book/show/{bid}",
                     "date_added": date_added,
                 }
                 if author_name:
                     entry["author"] = author_name
-                if author_id:
-                    entry["author_id"] = author_id
+                    entry["written_by"] = {"id": author_id or author_name, "name": author_name}
                 currently_reading.append(entry)
 
     # Favorite genres
@@ -401,11 +404,12 @@ def get_person(
                 _clean(a.get_text()) for a in body.select("a") if _clean(a.get_text())
             ]
 
+    uid = user_id
     person: dict[str, Any] = {
-        "user_id": user_id,
+        "id": uid,
         "name": name,
-        "handle": handle,
-        "photo_url": photo_url,
+        "image": photo_url,
+        "url": f"{BASE}/user/show/{uid}",
         "gender": gender,
         "age": age,
         "birthday": birthday,
@@ -420,9 +424,18 @@ def get_person(
         "reviews_count": reviews_count,
         "friends_count": friends_count,
         "favorite_genres": favorite_genres if favorite_genres else None,
-        "favorite_books": favorite_books if favorite_books else None,
-        "currently_reading": currently_reading if currently_reading else None,
+        "accounts": [{
+            "id": uid,
+            "name": name,
+            "handle": handle,
+            "url": f"{BASE}/user/show/{uid}",
+            "image": photo_url,
+        }],
     }
+    if favorite_books:
+        person["favorite_books"] = favorite_books
+    if currently_reading:
+        person["currently_reading"] = currently_reading
 
     return person
 
@@ -507,16 +520,19 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
                 book_text = _clean(book_link.get_text())
                 if book_text:
                     bm2 = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
+                    bid = bm2.group(1) if bm2 else None
                     currently_reading = {
-                        "book_id": bm2.group(1) if bm2 else None,
-                        "title": book_text,
+                        "id": bid,
+                        "name": book_text,
+                        "url": f"{BASE}/book/show/{bid}" if bid else None,
                     }
                     break
 
         friend: dict[str, Any] = {
-            "user_id": uid,
+            "id": uid,
             "name": name,
-            "photo_url": photo_url,
+            "image": photo_url,
+            "url": f"{BASE}/user/show/{uid}",
             "location": location,
             "books_count": books_count,
             "friends_count": friends_count,
@@ -541,7 +557,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         if not name or name.lower() in ("profile", "view profile"):
             continue
         seen.add(uid)
-        friends.append({"user_id": uid, "name": name})
+        friends.append({"id": uid, "name": name, "url": f"{BASE}/user/show/{uid}"})
 
     return friends
 
@@ -579,8 +595,8 @@ def list_friends(
                 _require_login(html_text)
             page_friends = _parse_friends_page(BeautifulSoup(html_text, "html.parser"), user_id)
             for f in page_friends:
-                if f["user_id"] not in seen:
-                    seen.add(f["user_id"])
+                if f["id"] not in seen:
+                    seen.add(f["id"])
                     all_friends.append(f)
             if not page_friends or not _has_next(html_text):
                 break
@@ -623,7 +639,7 @@ def search_people(
         if not name or name.lower() in ("profile", "view profile", "compare books"):
             continue
         seen.add(uid)
-        results.append({"user_id": uid, "name": name})
+        results.append({"id": uid, "name": name, "url": f"{BASE}/user/show/{uid}"})
         if len(results) >= limit:
             break
 
@@ -711,9 +727,10 @@ def resolve_email(
                         break
 
         people.append({
-            "user_id": uid,
+            "id": uid,
             "name": name,
-            "photo_url": photo_url,
+            "image": photo_url,
+            "url": f"{BASE}/user/show/{uid}",
             "location": location,
             "books_count": _parse_int(books_m.group(1)) if books_m else None,
             "friends_count": _parse_int(friends_m.group(1)) if friends_m else None,
@@ -761,7 +778,7 @@ def list_shelves(
         count_m = re.search(r"\(([\d,]+)\)", link.get_text())
         book_count = _parse_int(count_m.group(1)) if count_m else None
         shelves.append({
-            "shelf_id": f"{user_id}:{shelf_id}",
+            "id": f"{user_id}:{shelf_id}",
             "name": name or shelf_id,
             "book_count": book_count,
             "url": _abs_url(href),
@@ -880,6 +897,13 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
         num_pages = _field_value(row, "num_pages")
         date_pub = _field_value(row, "date_pub")
 
+        # Shape-native relation dict for author
+        written_by = None
+        if author_id or author:
+            written_by = {"id": author_id or author, "name": author}
+            if author_url:
+                written_by["url"] = author_url
+
         if as_reviews:
             review_id = None
             for a in row.select('a[href*="/review/show/"]'):
@@ -888,40 +912,50 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
                     review_id = m.group(1)
                     break
             review_text = _extract_review_text(row)
-            items.append({
-                "review_id": review_id,
-                "book_id": str(book_id),
-                "book_title": title,
-                "cover_url": cover_url,
-                "primary_author": author,
-                "primary_author_id": author_id,
-                "primary_author_url": author_url,
+            entry: dict[str, Any] = {
+                "id": review_id,
+                "name": f"Review of {title}" if title else "Review",
+                "text": review_text,
+                "url": f"{BASE}/review/show/{review_id}" if review_id else None,
+                "author": author,
+                "datePublished": date_read or date_added,
                 "rating": rating,
-                "review_text": review_text,
                 "date_read": date_read,
                 "date_started": date_started,
                 "date_added": date_added,
-                "shelf": shelf,
-            })
+                "shelf_name": shelf,
+            }
+            if written_by:
+                entry["written_by"] = written_by
+            entry["references"] = {
+                "id": str(book_id),
+                "name": title,
+                "url": f"{BASE}/book/show/{book_id}",
+                "image": cover_url,
+                "author": author,
+            }
+            items.append(entry)
         else:
-            items.append({
-                "book_id": str(book_id),
-                "title": title,
-                "cover_url": cover_url,
-                "primary_author": author,
-                "primary_author_id": author_id,
-                "primary_author_url": author_url,
+            entry = {
+                "id": str(book_id),
+                "name": title,
+                "image": cover_url,
+                "url": f"{BASE}/book/show/{book_id}",
+                "author": author,
                 "isbn": isbn,
                 "isbn13": isbn13,
-                "rating": rating,
-                "avg_rating": avg_rating,
-                "num_pages": _parse_int(num_pages),
-                "date_published": date_pub,
+                "user_rating": rating,
+                "average_rating": avg_rating,
+                "pages": _parse_int(num_pages),
+                "datePublished": date_pub,
                 "date_added": date_added,
                 "date_read": date_read,
                 "date_started": date_started,
                 "shelf": shelf,
-            })
+            }
+            if written_by:
+                entry["written_by"] = written_by
+            items.append(entry)
 
     return items
 
@@ -951,7 +985,7 @@ def _fetch_book_pages(
             _require_login(html_text)
         items = _parse_book_rows(BeautifulSoup(html_text, "html.parser"), as_reviews)
         for item in items:
-            key = item.get("review_id") or item.get("book_id", "")
+            key = item.get("id", "")
             if key and key not in seen_ids:
                 seen_ids.add(key)
                 all_items.append(item)
@@ -1057,12 +1091,12 @@ def list_groups(
         image_url = img.get("src") if img else None
 
         groups.append({
-            "group_id": gid,
+            "id": gid,
             "name": name,
+            "image": image_url,
+            "url": _abs_url(f"/group/show/{gid}"),
             "member_count": members,
             "last_active": last_active,
-            "image_url": image_url,
-            "url": _abs_url(f"/group/show/{gid}"),
         })
 
     return groups
@@ -1101,16 +1135,17 @@ def _parse_follow_page(
 
         if kind == "author":
             authors.append({
-                "author_id": uid,
+                "id": uid,
                 "name": name,
-                "photo_url": photo,
+                "image": photo,
                 "url": f"{BASE}/author/show/{uid}",
             })
         else:
             users.append({
-                "user_id": uid,
+                "id": uid,
                 "name": name,
-                "photo_url": photo,
+                "image": photo,
+                "url": f"{BASE}/user/show/{uid}",
             })
 
     return users, authors
@@ -1138,7 +1173,6 @@ def list_following(
         results.append(u)
     for a in authors:
         a["type"] = "author"
-        a["user_id"] = a["author_id"]
         results.append(a)
     return results
 
@@ -1165,7 +1199,6 @@ def list_followers(
         results.append(u)
     for a in authors:
         a["type"] = "author"
-        a["user_id"] = a["author_id"]
         results.append(a)
     return results
 
@@ -1244,14 +1277,25 @@ def list_quotes(
                 book_id = bm.group(1)
 
         if text:
+            qid = f"{author_id or 'unknown'}:{text[:40]}"
             quote: dict[str, Any] = {
+                "id": qid,
+                "name": text[:80],
                 "text": text,
-                "author_name": author_name,
-                "author_id": author_id,
+                "author": author_name,
             }
+            if author_id or author_name:
+                quote["spoken_by"] = {
+                    "id": author_id or author_name,
+                    "name": author_name,
+                    "url": f"{BASE}/author/show/{author_id}" if author_id else None,
+                }
             if book_id:
-                quote["book_id"] = book_id
-                quote["book_title"] = book_title
+                quote["appears_in"] = {
+                    "id": book_id,
+                    "name": book_title,
+                    "url": f"{BASE}/book/show/{book_id}",
+                }
             quotes.append(quote)
 
     return quotes

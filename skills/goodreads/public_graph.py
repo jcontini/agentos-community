@@ -509,7 +509,7 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
         "pages": details.get("numPages"),
         "genres": genres,
         "series": series[0] if series else None,
-        "publisher": details.get("publisher"),
+        "publisher": {"id": details.get("publisher"), "name": details.get("publisher")} if details.get("publisher") else None,
         "format": details.get("format"),
         "language": ((details.get("language") or {}).get("name")),
         "work_url": work_details.get("webUrl"),
@@ -1026,6 +1026,84 @@ def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
     if books:
         result["books"] = books
     return result
+
+
+# ---------------------------------------------------------------------------
+# Entry points (called by AgentOS with params: true)
+# ---------------------------------------------------------------------------
+
+
+def _p(d: dict | None, key: str, default: Any = None) -> Any:
+    """Get from params sub-dict or top-level."""
+    if not d:
+        return default
+    p = d.get("params", d) if isinstance(d, dict) else {}
+    return p.get(key, default) if isinstance(p, dict) else default
+
+
+def _extract_id_from_url(params: dict | None, url_key: str, id_key: str, pattern: str) -> str | None:
+    """Extract an ID from a URL param, falling back to the explicit ID param."""
+    url = _p(params, url_key)
+    if url:
+        m = re.search(pattern, url)
+        if m:
+            return m.group(1)
+    return _p(params, id_key)
+
+
+def run_get_profile(params: dict | None = None) -> dict[str, Any]:
+    return get_public_profile(
+        user_id=str(_p(params, "user_id", "")),
+        limit=int(_p(params, "limit") or 10),
+    )
+
+
+def run_get_book(params: dict | None = None) -> dict[str, Any]:
+    book_id = _extract_id_from_url(params, "url", "book_id", r"/book/show/(\d+)")
+    return get_public_book(str(book_id or ""))
+
+
+def run_list_book_reviews(params: dict | None = None) -> Any:
+    return list_book_reviews(
+        book_id=str(_p(params, "book_id", "")),
+        limit=int(_p(params, "limit") or 30),
+    )
+
+
+def run_list_similar_books(params: dict | None = None) -> Any:
+    return list_similar_books(
+        book_id=str(_p(params, "book_id", "")),
+        limit=int(_p(params, "limit") or 20),
+    )
+
+
+def run_list_series_books(params: dict | None = None) -> Any:
+    return list_series_books(
+        book_id=str(_p(params, "book_id", "")),
+        limit=int(_p(params, "limit") or 20),
+    )
+
+
+def run_search_books(params: dict | None = None) -> Any:
+    return search_books(
+        query=str(_p(params, "query", "")),
+        limit=int(_p(params, "limit") or 10),
+    )
+
+
+def run_get_author(params: dict | None = None) -> dict[str, Any]:
+    author_id = _extract_id_from_url(params, "url", "author_id", r"/author/show/(\d+)")
+    return get_public_author(
+        author_id=str(author_id or ""),
+        limit=int(_p(params, "limit") or 10),
+    )
+
+
+def run_list_author_books(params: dict | None = None) -> list[dict[str, Any]]:
+    return parse_author_books(
+        author_id=str(_p(params, "author_id", "")),
+        limit=int(_p(params, "limit") or 10),
+    )
 
 
 def emit_json(value: Any) -> None:
