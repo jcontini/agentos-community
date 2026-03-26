@@ -7,9 +7,10 @@ import subprocess
 import sys
 import time
 import urllib.request
-from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
+
+from agentos import molt, clean_html, parse_int, iso_from_ms
 
 
 USER_AGENT = "Mozilla/5.0 (compatible; AgentOS/1.0)"
@@ -67,26 +68,6 @@ def fetch_url(
     raise RuntimeError(f"Failed Goodreads request: {last_error}")
 
 
-def clean_html_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    value = re.sub(r"<br\s*/?>", "\n", value, flags=re.I)
-    value = re.sub(r"</p\s*>", "\n\n", value, flags=re.I)
-    value = re.sub(r"<[^>]+>", "", value)
-    value = html.unescape(value)
-    value = re.sub(r"[ \t\f\v]+", " ", value)
-    value = re.sub(r"\n[ \t]+", "\n", value)
-    value = re.sub(r"\n{3,}", "\n\n", value)
-    value = value.strip()
-    return value or None
-
-
-def clean_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    value = html.unescape(value)
-    value = re.sub(r"\s+", " ", value).strip()
-    return value or None
 
 
 def absolute_url(url: str | None) -> str | None:
@@ -97,22 +78,6 @@ def absolute_url(url: str | None) -> str | None:
     return f"{BASE_URL}{url}"
 
 
-def parse_int(value: str | int | None) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, int):
-        return value
-    digits = re.sub(r"[^\d]", "", str(value))
-    return int(digits) if digits else None
-
-
-def iso_from_ms(value: Any) -> str | None:
-    if not isinstance(value, (int, float)):
-        return None
-    try:
-        return datetime.fromtimestamp(value / 1000, tz=timezone.utc).isoformat()
-    except (ValueError, OSError):
-        return None
 
 
 def first_match(pattern: str, text: str, flags: int = re.S) -> str | None:
@@ -855,7 +820,7 @@ def parse_profile_favorite_books(html_text: str, limit: int) -> list[dict[str, A
         section,
         re.S,
     ):
-        title = clean_text(alt) or ""
+        title = molt(alt) or ""
         author = None
         if " by " in title:
             title, author = title.rsplit(" by ", 1)
@@ -883,7 +848,7 @@ def parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict
     ):
         shelves.append({
             "id": f"{user_id}:{html.unescape(shelf_name)}",
-            "name": clean_text(label),
+            "name": molt(label),
             "book_count": parse_int(count),
             "url": absolute_url(href),
         })
@@ -909,10 +874,10 @@ def parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str
     for match in pattern.finditer(section):
         books.append(_simple_book(
             book_id=parse_int(first_match(r"/book/show/([0-9]+)", match.group("book_href"))),
-            title=clean_html_text(match.group("title")),
+            title=clean_html(match.group("title")),
             cover_url=match.group("cover"),
             web_url=absolute_url(match.group("book_href")),
-            author=clean_html_text(match.group("author_name")),
+            author=clean_html(match.group("author_name")),
             author_id=parse_int(first_match(r"/author/show/([0-9]+)", match.group("author_href"))),
         ))
         if len(books) >= limit:
@@ -922,9 +887,9 @@ def parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str
 
 def get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
     html_text = fetch_html(f"{BASE_URL}/user/show/{user_id}")
-    title = clean_text(first_match(r"<title>(.*?)</title>", html_text)) or ""
+    title = molt(first_match(r"<title>(.*?)</title>", html_text)) or ""
     title_match = re.match(r"^(.*?) \((.*?)\) - (.*?) \(([\d,]+) books\)$", title)
-    name = clean_html_text(first_match(r'<h1 id="profileNameTopHeading"[^>]*>(.*?)</h1>', html_text))
+    name = clean_html(first_match(r'<h1 id="profileNameTopHeading"[^>]*>(.*?)</h1>', html_text))
     username = first_match(r'<meta property="profile:username" content="([^"]+)"', html_text)
     ratings_count = parse_int(first_match(r'>([\d,]+) ratings</a>', html_text))
     avg_rating = first_match(r"\(([\d.]+) avg\)", html_text)
@@ -972,7 +937,7 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
         re.S,
     )
     for match in pattern.finditer(html_text):
-        title = clean_html_text(match.group("title_attr"))
+        title = clean_html(match.group("title_attr"))
         href = match.group("book_href")
         image = first_match(rf'{re.escape(href)}">\s*<img[^>]+src="([^"]+)"', html_text)
         books.append(_simple_book(
@@ -980,7 +945,7 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
             title=title,
             cover_url=image,
             web_url=absolute_url(href),
-            author=clean_html_text(match.group("author_name")),
+            author=clean_html(match.group("author_name")),
             author_id=parse_int(match.group("author_id")),
             avg_rating=float(match.group("average")),
             ratings_count=parse_int(match.group("ratings")),
@@ -993,12 +958,12 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
 def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
     html_text = fetch_html(f"{BASE_URL}/author/show/{author_id}")
     author_list_html = fetch_html(f"{BASE_URL}/author/list/{author_id}")
-    name = clean_html_text(first_match(r'<h1[^>]*>\s*(?:<span itemprop="name">)?(.*?)(?:</span>)?\s*</h1>', html_text))
-    bio = clean_html_text(first_match(rf'<span id="freeTextContainerauthor{author_id}">(.*?)</span>', html_text))
-    location = clean_html_text(first_match(r'<div class="dataTitle">Born</div>\s*(.*?)\s*<br class="clear"/>', html_text))
+    name = clean_html(first_match(r'<h1[^>]*>\s*(?:<span itemprop="name">)?(.*?)(?:</span>)?\s*</h1>', html_text))
+    bio = clean_html(first_match(rf'<span id="freeTextContainerauthor{author_id}">(.*?)</span>', html_text))
+    location = clean_html(first_match(r'<div class="dataTitle">Born</div>\s*(.*?)\s*<br class="clear"/>', html_text))
     website = first_match(r'<div class="dataTitle">Website</div>\s*<div class="dataItem">\s*<a[^>]+href="([^"]+)"', html_text)
-    twitter = clean_html_text(first_match(r'<div class="dataTitle">Twitter</div>\s*<div class="dataItem">\s*<a[^>]*>(.*?)</a>', html_text))
-    member_since = clean_html_text(first_match(r'<div class="dataTitle">Member Since</div>\s*<div class="dataItem">(.*?)</div>', html_text))
+    twitter = clean_html(first_match(r'<div class="dataTitle">Twitter</div>\s*<div class="dataItem">\s*<a[^>]*>(.*?)</a>', html_text))
+    member_since = clean_html(first_match(r'<div class="dataTitle">Member Since</div>\s*<div class="dataItem">(.*?)</div>', html_text))
     followers_count = parse_int(first_match(r"Followers \(([\d,]+)\)", html_text))
     average_rating = first_match(r"Average rating ([0-9.]+)", author_list_html) or first_match(
         r"Average rating:\s*([0-9.]+)",

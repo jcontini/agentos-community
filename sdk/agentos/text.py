@@ -1,13 +1,85 @@
-"""Text cleaning utilities for skills.
+"""Text cleaning and parsing utilities for skills.
 
-Handles HTML stripping, sentinel detection, and number parsing.
-Skills should return None instead of placeholder strings — the engine
-and test harness flag sentinels as warnings.
+Primary entry points:
+  clean(value)          — smart clean: HTML strip + normalize + sentinel → None
+  parse(value, as_type) — clean + convert to int/float/date
+
+Specific functions available for fine-grained control:
+  clean_text, clean_html, clean_sentinel, strip_tags,
+  parse_int, parse_float
 """
 
 import html as html_lib
 import re
 from typing import Any
+
+
+# ---------------------------------------------------------------------------
+# Universal cleaner + parser
+# ---------------------------------------------------------------------------
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def molt(value: Any, as_type: type | str | None = None) -> Any:
+    """Shed the outer layer — clean and optionally convert any scraped value.
+
+    Like molting — the messy outer layer falls away, revealing clean data.
+
+    molt(s)                        → clean string (HTML, whitespace, sentinels)
+    molt('1,234 reviews', int)     → 1234
+    molt('4.5 out of 5', float)    → 4.5
+    molt('August 2010', 'date')    → '2010-08'
+    molt(1616025600000, 'date')    → '2021-03-18T...'
+    molt(None)                     → None
+
+    Works across languages:
+      Python:     molt('1,234 reviews', int)
+      TypeScript: molt('1,234 reviews', 'int')
+      Go:         sdk.Molt('1,234 reviews', sdk.Int)
+    """
+    if value is None:
+        return None
+
+    # No type = clean text
+    if as_type is None:
+        return _molt_text(value) if isinstance(value, str) else value
+
+    # Integer
+    if as_type is int or as_type == "int" or as_type == "integer":
+        return parse_int(value)
+
+    # Float
+    if as_type is float or as_type == "float" or as_type == "number":
+        return parse_float(value)
+
+    # Date
+    if as_type == "date" or as_type == "datetime":
+        from agentos.dates import parse_date, iso_from_ms
+        if isinstance(value, (int, float)):
+            if value > 1_000_000_000_000:
+                return iso_from_ms(value)
+            from agentos.dates import iso_from_seconds
+            return iso_from_seconds(value)
+        return parse_date(str(value)) if value else None
+
+    # String (explicit)
+    if as_type is str or as_type == "str" or as_type == "string":
+        return _molt_text(value) if isinstance(value, str) else str(value)
+
+    return _molt_text(value) if isinstance(value, str) else value
+
+
+def _molt_text(value: str) -> str | None:
+    """Internal: clean a string value (HTML strip + normalize + sentinel)."""
+    if _TAG_RE.search(value):
+        value = re.sub(r"<br\s*/?>", " ", value, flags=re.I)
+        value = re.sub(r"<[^>]+>", "", value)
+    value = html_lib.unescape(value)
+    value = re.sub(r"\s+", " ", value).strip()
+    if not value:
+        return None
+    return clean_sentinel(value)
 
 # ---------------------------------------------------------------------------
 # Sentinel detection

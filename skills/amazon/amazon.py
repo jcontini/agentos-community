@@ -7,7 +7,6 @@ httpx with HTTP/2 for HTML page parsing. Order history and account operations
 use session cookies from a browser cookie provider. No API keys required.
 """
 
-import html as html_lib
 import json
 import re
 import sys
@@ -16,6 +15,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import httpx
+from agentos import molt, parse_int, http_client, get_cookies
 from bs4 import BeautifulSoup, Tag
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -76,12 +76,6 @@ DEPARTMENTS: dict[str, str] = {
     "kindle": "digital-text",
 }
 
-USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
-)
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -98,30 +92,8 @@ def _alias(department: str | None) -> str:
     return DEPARTMENTS.get(key, key)
 
 
-def _client(**kwargs: Any) -> httpx.Client:
-    return httpx.Client(
-        http2=True,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-        follow_redirects=True,
-        timeout=30.0,
-        **kwargs,
-    )
-
-
-def _clean(text: str | None) -> str | None:
-    if not text:
-        return None
-    text = re.sub(r"<[^>]+>", "", text)
-    text = html_lib.unescape(text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text or None
-
-
-def _extract(pattern: str, text: str, group: int = 1) -> str | None:
-    m = re.search(pattern, text, re.S)
+def _extract(pattern: str, s: str, group: int = 1) -> str | None:
+    m = re.search(pattern, s, re.S)
     return m.group(group).strip() if m else None
 
 
@@ -145,19 +117,6 @@ def _parse_rating(rating_str: str | None) -> float | None:
         except ValueError:
             pass
     return None
-
-
-def _parse_count(count_str: str | None) -> int | None:
-    if not count_str:
-        return None
-    count_str = count_str.replace(",", "").strip("() \t\n")
-    if count_str.upper().endswith("K"):
-        try:
-            return int(float(count_str[:-1]) * 1000)
-        except ValueError:
-            return None
-    digits = re.sub(r"[^\d]", "", count_str)
-    return int(digits) if digits else None
 
 
 def _is_captcha(body: str) -> bool:
@@ -201,7 +160,7 @@ def search_suggestions(
 
     url = f"https://completion.amazon.{tld}/api/2017/suggestions"
 
-    with _client() as client:
+    with http_client() as client:
         resp = client.get(url, params=params)
         resp.raise_for_status()
         data = resp.json()
@@ -248,7 +207,7 @@ def search_products(
     if alias != "aps":
         search_params["i"] = alias
 
-    with _client() as client:
+    with http_client() as client:
         client.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
         resp = client.get(
@@ -290,7 +249,7 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
         title_m = re.search(r'<h2[^>]*aria-label="([^"]+)"', block)
         if not title_m:
             title_m = re.search(r"<h2[^>]*>.*?<span[^>]*>(.*?)</span>", block, re.S)
-        title = _clean(title_m.group(1)) if title_m else None
+        title = molt(title_m.group(1)) if title_m else None
         if not title:
             continue
 
@@ -304,7 +263,7 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
         rating = _parse_rating(rating_m.group(1) if rating_m else None)
 
         count_m = re.search(r'<span[^>]*class="[^"]*s-underline-text[^"]*"[^>]*>(.*?)</span>', block)
-        ratings_count = _parse_count(count_m.group(1) if count_m else None)
+        ratings_count = parse_int(count_m.group(1) if count_m else None)
 
         img_m = re.search(r'<img[^>]+class="s-image"[^>]+src="([^"]+)"', block)
         image = img_m.group(1) if img_m else None
@@ -342,7 +301,7 @@ def get_product(
     tld = mp["tld"]
     base = f"https://www.amazon.{tld}"
 
-    with _client() as client:
+    with http_client() as client:
         client.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
         resp = client.get(
@@ -359,7 +318,7 @@ def get_product(
 
 
 def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
-    title = _clean(_extract(r'<span id="productTitle"[^>]*>(.*?)</span>', body))
+    title = molt(_extract(r'<span id="productTitle"[^>]*>(.*?)</span>', body))
 
     price = _extract(
         r'(?:id="corePrice_feature_div"|id="corePriceDisplay_desktop_feature_div").*?'
@@ -373,28 +332,28 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
         r'id="acrPopover".*?<span class="a-icon-alt">(.*?)</span>', body,
     ))
 
-    ratings_count = _parse_count(_extract(
+    ratings_count = parse_int(_extract(
         r'id="acrCustomerReviewText"[^>]*>(.*?)</span>', body,
     ))
 
-    brand_raw = _clean(_extract(r'<a id="bylineInfo"[^>]*>(.*?)</a>', body))
+    brand_raw = molt(_extract(r'<a id="bylineInfo"[^>]*>(.*?)</a>', body))
     brand = brand_raw
     if brand:
         brand = re.sub(r"^Visit the\s+", "", brand, flags=re.I)
         brand = re.sub(r"\s+Store$", "", brand, flags=re.I)
         brand = re.sub(r"^Brand:\s*", "", brand, flags=re.I)
 
-    availability = _clean(_extract(
+    availability = molt(_extract(
         r'id="availability".*?<span[^>]*>(.*?)</span>', body,
     ))
 
     main_image = _extract(r'id="landingImage"[^>]+src="([^"]+)"', body)
 
-    description = _clean(_extract(
+    description = molt(_extract(
         r'id="productDescription"[^>]*>(.*?)</div>', body,
     ))
     if not description:
-        description = _clean(_extract(
+        description = molt(_extract(
             r'id="feature-bullets"[^>]*>(.*?)</div>', body,
         ))
 
@@ -406,7 +365,7 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
     )
     categories: list[str] = []
     if cats_raw:
-        categories = [c for c in (_clean(c) for c in re.findall(r"<a[^>]*>(.*?)</a>", cats_raw[0], re.S)) if c]
+        categories = [c for c in (molt(c) for c in re.findall(r"<a[^>]*>(.*?)</a>", cats_raw[0], re.S)) if c]
 
     # Images from ImageBlockATF — extract the JSON array after 'initial':
     images: list[str] = []
@@ -458,40 +417,11 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
 
 BASE = "https://www.amazon.com"
 
-AUTH_HEADERS = {
-    "User-Agent": USER_AGENT,
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Cache-Control": "max-age=0",
-    "Device-Memory": "8",
-    "Downlink": "10",
-    "Dpr": "2",
-    "Ect": "4g",
-    "Rtt": "50",
-    "Sec-Ch-Device-Memory": "8",
-    "Sec-Ch-Dpr": "2",
-    "Sec-Ch-Ua": '"Chromium";v="145", "Not:A-Brand";v="99"',
-    "Sec-Ch-Ua-Full-Version-List": '"Chromium";v="145.0.7632.6", "Not:A-Brand";v="99.0.0.0"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"macOS"',
-    "Sec-Ch-Viewport-Width": "1512",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "Upgrade-Insecure-Requests": "1",
-    "Viewport-Width": "1512",
-}
-
-
-def _cookie(ctx: dict[str, Any]) -> str | None:
-    c = (ctx.get("auth") or {}).get("cookies") or ""
-    return c if c else None
+_SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
 
 
 def _require_cookies(params: dict[str, Any] | None, op: str) -> str:
-    cookie_header = params and _cookie(params)
+    cookie_header = get_cookies(params)
     if not cookie_header:
         raise ValueError(
             f"{op} requires Amazon session cookies. "
@@ -500,33 +430,12 @@ def _require_cookies(params: dict[str, Any] | None, op: str) -> str:
     return cookie_header
 
 
-def _parse_cookie_header(cookie_header: str) -> dict[str, str]:
-    """Parse a raw Cookie header string into a dict for httpx's cookie jar."""
-    cookies: dict[str, str] = {}
-    for pair in cookie_header.split(";"):
-        pair = pair.strip()
-        if "=" in pair:
-            k, v = pair.split("=", 1)
-            cookies[k.strip()] = v.strip()
-    return cookies
-
-
-SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
-
-
 def _auth_client(cookie_header: str) -> httpx.Client:
-    headers = dict(AUTH_HEADERS)
-    headers["Host"] = "www.amazon.com"
-    cookies = {
-        k: v for k, v in _parse_cookie_header(cookie_header).items()
-        if k not in SKIP_COOKIES
-    }
-    return httpx.Client(
-        http2=True,
-        headers=headers,
-        cookies=cookies,
-        follow_redirects=True,
-        timeout=30.0,
+    return http_client(
+        cookies=cookie_header,
+        profile="navigate",
+        skip_cookies=_SKIP_COOKIES,
+        headers={"Host": "www.amazon.com"},
     )
 
 
@@ -705,7 +614,7 @@ def _parse_order_history(
         status = None
         status_tag = _select_one(card, SHIPMENT_STATUS_SEL)
         if status_tag:
-            status = _clean(_text(status_tag))
+            status = molt(_text(status_tag))
 
         delivery_date = None
         if status:
@@ -750,7 +659,7 @@ def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str
 
     if detail_page:
         for title_el in card.select("[data-component='itemTitle']"):
-            title = _clean(_text(title_el))
+            title = molt(_text(title_el))
 
             container = title_el
             for _ in range(10):
@@ -804,7 +713,7 @@ def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str
         seen_asins.add(asin)
 
         title_tag = _select_one(item_tag, ITEM_TITLE_SEL)
-        title = _clean(_text(title_tag))
+        title = molt(_text(title_tag))
 
         img_tag = _select_one(item_tag, ITEM_IMG_SEL)
         image_url = img_tag.get("src") if img_tag else None
@@ -893,7 +802,7 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
             el.select_one("span.a-truncate-full")
             or el.select_one("[data-component='title']")
         )
-        title = _clean(_text(title_el))
+        title = molt(_text(title_el))
         if not title:
             continue
 
@@ -1017,7 +926,7 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
         sub_id = el.get("data-subscription-id", "")
 
         title_el = el.select_one("span.a-truncate-full")
-        title = _clean(_text(title_el))
+        title = molt(_text(title_el))
         if not title:
             continue
 
@@ -1487,10 +1396,10 @@ def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
 
         items.append({
             "asin": asin,
-            "title": _clean(title),
+            "title": molt(title),
             "url": f"{BASE}/dp/{asin}",
             "image_url": image_url,
-            "byline": _clean(byline),
+            "byline": molt(byline),
             "price": price,
             "price_amount": _parse_price(price),
             "rating": _parse_rating(rating_text),

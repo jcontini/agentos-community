@@ -15,7 +15,7 @@ _MONTHS = {
 }
 
 
-def parse_fuzzy_date(s: str | None) -> str | None:
+def parse_date(s: str | None) -> str | None:
     """Convert a display date to ISO 8601 partial date.
 
     'August 2010'       → '2010-08'

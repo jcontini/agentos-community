@@ -48,13 +48,13 @@ adapters:
     publish:
       community:
         id: .subreddit
+        name: .subreddit
         url: '"https://reddit.com/r/" + .subreddit'
-        platform: '"reddit"'
 
     posted_by:
       account:
         id: .author
-        platform: '"reddit"'
+        name: .author
         url: '"https://reddit.com/u/" + .author'
 
     parent_id:
@@ -152,9 +152,8 @@ operations:
               posted_by: {
                 account: {
                   id: .author,
-                  platform: "reddit",
+                  name: .author,
                   handle: .author,
-                  display_name: .author,
                   url: ("https://reddit.com/u/" + .author)
                 }
               },

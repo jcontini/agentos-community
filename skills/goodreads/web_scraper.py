@@ -6,12 +6,12 @@ Uses httpx + BeautifulSoup. Requires cookies via connection: web; AgentOS provid
 Separate from public_graph.py which handles public GraphQL/Apollo data.
 """
 
-import html
 import re
 from typing import Any
 from urllib.parse import quote_plus
 
 import httpx
+from agentos import molt, parse_int, parse_date, http_client, get_cookies
 from bs4 import BeautifulSoup
 
 BASE = "https://www.goodreads.com"
@@ -19,43 +19,9 @@ MAX_PAGES = 20
 PER_PAGE_FRIENDS = 30
 PER_PAGE_BOOKS = 25
 
-_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _parse_cookies(cookie_header: str) -> httpx.Cookies:
-    """Parse a raw Cookie header string into an httpx cookie jar.
-
-    Using a cookie jar instead of a raw header means httpx tracks Set-Cookie
-    responses automatically.  This is critical for multi-step flows where the
-    server refreshes the session cookie between requests (e.g. CSRF-protected
-    forms like Goodreads friend search).
-    """
-    jar = httpx.Cookies()
-    for part in cookie_header.split(";"):
-        part = part.strip()
-        if not part:
-            continue
-        if "=" in part:
-            name, val = part.split("=", 1)
-            jar.set(name.strip(), val.strip())
-    return jar
-
-
-def _client(cookie_header: str | None) -> httpx.Client:
-    cookies = _parse_cookies(cookie_header) if cookie_header else None
-    return httpx.Client(
-        http2=True, follow_redirects=True, timeout=30,
-        headers=_HEADERS, cookies=cookies,
-    )
 
 
 def _fetch(client: httpx.Client, url: str) -> tuple[int, str]:
@@ -77,96 +43,12 @@ def _require_login(html_text: str) -> None:
             raise RuntimeError("Page requires login — cookies invalid or expired")
 
 
-def _clean(s: str | None) -> str | None:
-    if s is None:
-        return None
-    s = html.unescape(s).strip()
-    return s if s else None
-
-
-def _parse_int(s: str | None) -> int | None:
-    if s is None:
-        return None
-    digits = re.sub(r"[^\d]", "", str(s))
-    return int(digits) if digits else None
-
 
 def _abs_url(path: str | None) -> str | None:
     if not path:
         return None
     return f"{BASE}{path}" if path.startswith("/") else path
 
-
-_MONTHS = {
-    "january": "01", "february": "02", "march": "03", "april": "04",
-    "may": "05", "june": "06", "july": "07", "august": "08",
-    "september": "09", "october": "10", "november": "11", "december": "12",
-}
-
-
-def _to_iso_date(s: str | None) -> str | None:
-    """Convert display dates to ISO 8601 partial dates.
-
-    'August 2010'     → '2010-08'
-    'December 2013'   → '2013-12'
-    'in January 2026' → '2026-01'
-    'November 26'     → None (no year — ambiguous)
-    'this month'      → None (relative — can't store)
-    '3 days ago'      → None
-    Already ISO       → pass through
-    """
-    if not s:
-        return None
-    s = s.strip()
-    # Strip leading "in " (e.g. "in January 2026")
-    s = re.sub(r"^in\s+", "", s, flags=re.I)
-
-    # Already ISO? (starts with 4 digits)
-    if re.match(r"^\d{4}(-\d{2})?(-\d{2})?(T|$)", s):
-        return s
-
-    # "Month YYYY" pattern
-    m = re.match(r"^([A-Za-z]+)\s+(\d{4})$", s)
-    if m:
-        month = _MONTHS.get(m.group(1).lower())
-        if month:
-            return f"{m.group(2)}-{month}"
-
-    # "Month DD, YYYY" pattern
-    m = re.match(r"^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$", s)
-    if m:
-        month = _MONTHS.get(m.group(1).lower())
-        if month:
-            return f"{m.group(3)}-{month}-{int(m.group(2)):02d}"
-
-    # Year only
-    m = re.match(r"^(\d{4})$", s)
-    if m:
-        return m.group(1)
-
-    # Can't parse — return None rather than garbage
-    return None
-
-
-def _clean_sentinel(s: str | None) -> str | None:
-    """Return None if the string looks like a placeholder/sentinel."""
-    if not s:
-        return None
-    lower = s.strip().lower()
-    if not lower:
-        return None
-    sentinels = [
-        "hasn't added any details yet",
-        "has not added any details yet",
-        "no description available",
-        "not available",
-        "not specified",
-        "n/a", "none", "unknown",
-    ]
-    for sentinel in sentinels:
-        if sentinel in lower:
-            return None
-    return s.strip()
 
 
 def _flip_name(name: str) -> str:
@@ -184,16 +66,11 @@ def _field_value(row: Any, field_class: str) -> str | None:
     if not td:
         return None
     val_el = td.select_one(".value")
-    text = _clean((val_el or td).get_text())
+    text = molt((val_el or td).get_text())
     if text and text.lower() in ("not set", "unknown"):
         return None
     return text
 
-
-def _cookie(ctx: dict) -> str | None:
-    """Extract cookie header from runtime context."""
-    c = (ctx.get("auth") or {}).get("cookies") or ""
-    return c if c else None
 
 
 def _p(d: dict, key: str, default: Any = None) -> Any:
@@ -203,7 +80,7 @@ def _p(d: dict, key: str, default: Any = None) -> Any:
 
 
 def _require_cookies(cookie_header: str | None, params: dict | None, op: str) -> str:
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     if not cookie_header:
         raise ValueError(
             f"{op} requires Goodreads session cookies. "
@@ -328,9 +205,9 @@ def get_person(
     params: dict | None = None,
 ) -> dict[str, Any]:
     """Scrape a full Goodreads profile page and return rich person data."""
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Profile page returned {status}")
@@ -338,7 +215,7 @@ def get_person(
     soup = BeautifulSoup(html_text, "html.parser")
 
     name_el = soup.select_one("h1.userProfileName, .userProfileName")
-    name = _clean(name_el.get_text()) if name_el else None
+    name = molt(name_el.get_text()) if name_el else None
     if name:
         name = re.sub(r"\s*\(edit profile\)", "", name).strip()
 
@@ -347,7 +224,7 @@ def get_person(
 
     # Username from title: "Joe Contini (jcontini) - Austin, TX (273 books)"
     title_el = soup.select_one("title")
-    title_text = _clean(title_el.get_text()) if title_el else ""
+    title_text = molt(title_el.get_text()) if title_el else ""
     handle = None
     hm = re.search(r"\((\w+)\)", title_text or "")
     if hm and not hm.group(1).isdigit():
@@ -356,8 +233,8 @@ def get_person(
     # Parse info box rows
     info: dict[str, str] = {}
     for t, v in zip(soup.select(".infoBoxRowTitle"), soup.select(".infoBoxRowItem")):
-        label = (_clean(t.get_text()) or "").lower()
-        value = _clean(v.get_text()) or ""
+        label = (molt(t.get_text()) or "").lower()
+        value = molt(v.get_text()) or ""
         info[label] = value
 
     # Details: "Age 37, Male, Singapore, Singapore"
@@ -380,7 +257,7 @@ def get_person(
     elif not age_m and not gender_m and details:
         location = details
 
-    birthday = _to_iso_date(info.get("birthday"))
+    birthday = parse_date(info.get("birthday"))
     website = info.get("website")
     interests = info.get("interests")
     about = info.get("about me")
@@ -391,26 +268,26 @@ def get_person(
     last_active = None
     jm = re.search(r"Joined in\s+(.+?)(?:,|$)", activity)
     if jm:
-        joined_date = _to_iso_date(jm.group(1).strip())
+        joined_date = parse_date(jm.group(1).strip())
     am = re.search(r"last active\s+(.+)", activity)
     if am:
-        last_active = _to_iso_date(am.group(1).strip())
+        last_active = parse_date(am.group(1).strip())
 
     # Stats: ratings, avg, reviews
     stats_el = soup.select_one(".profilePageUserStatsInfo")
-    stats_text = _clean(stats_el.get_text()) if stats_el else ""
+    stats_text = molt(stats_el.get_text()) if stats_el else ""
     ratings_count = None
     avg_rating = None
     reviews_count = None
     rm = re.search(r"([\d,]+)\s+ratings?", stats_text or "")
     if rm:
-        ratings_count = _parse_int(rm.group(1))
+        ratings_count = parse_int(rm.group(1))
     avm = re.search(r"\(([\d.]+)\s+avg\)", stats_text or "")
     if avm:
         avg_rating = avm.group(1)
     revm = re.search(r"([\d,]+)\s+reviews?", stats_text or "")
     if revm:
-        reviews_count = _parse_int(revm.group(1))
+        reviews_count = parse_int(revm.group(1))
 
     # Friends count from link text: "Kirill's Friends (138)"
     friends_count = None
@@ -423,7 +300,7 @@ def get_person(
     # Parse profile sections — h2 lives inside .bigBox; content is in .bigBoxBody
     sections: dict[str, Any] = {}
     for hdr in soup.select("h2.brownBackground, .bigBoxHeader"):
-        label = (_clean(hdr.get_text()) or "").lower()
+        label = (molt(hdr.get_text()) or "").lower()
         parent_box = hdr.find_parent("div", class_="bigBox")
         if parent_box:
             body = parent_box.select_one(".bigBoxBody, .bigBoxContent")
@@ -440,7 +317,7 @@ def get_person(
         if "favorite" in key and "book" in key:
             for a in body.select('a[href*="/book/show/"]'):
                 bimg = a.select_one("img")
-                btitle = bimg.get("alt") if bimg else _clean(a.get_text())
+                btitle = bimg.get("alt") if bimg else molt(a.get_text())
                 bm = re.search(r"/book/show/(\d+)", a.get("href", ""))
                 if bm and btitle:
                     cover = bimg.get("src") if bimg else None
@@ -460,16 +337,16 @@ def get_person(
                 book_link = update.select_one("a.bookTitle")
                 if not book_link:
                     continue
-                btitle = _clean(book_link.get_text())
+                btitle = molt(book_link.get_text())
                 bm = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
                 if not bm or not btitle:
                     continue
 
                 date_el = update.select_one("a.updatedTimestamp")
-                date_added = _to_iso_date(_clean(date_el.get_text())) if date_el else None
+                date_added = parse_date(molt(date_el.get_text())) if date_el else None
 
                 author_link = update.select_one("a.authorName")
-                author_name = _clean(author_link.get_text()) if author_link else None
+                author_name = molt(author_link.get_text()) if author_link else None
                 author_id = None
                 if author_link:
                     am = re.search(r"/author/show/(\d+)", author_link.get("href", ""))
@@ -493,7 +370,7 @@ def get_person(
     for key, body in sections.items():
         if "genre" in key:
             favorite_genres = [
-                _clean(a.get_text()) for a in body.select("a") if _clean(a.get_text())
+                molt(a.get_text()) for a in body.select("a") if molt(a.get_text())
             ]
 
     uid = user_id
@@ -505,10 +382,10 @@ def get_person(
         "gender": gender,
         "age": age,
         "birthday": birthday,
-        "location": _clean_sentinel(location),
-        "website": _clean_sentinel(website),
-        "about": _clean_sentinel(about),
-        "interests": _clean_sentinel(interests),
+        "location": molt(location),
+        "website": molt(website),
+        "about": molt(about),
+        "interests": molt(interests),
         "joined_date": joined_date,
         "last_active": last_active,
         "ratings_count": ratings_count,
@@ -565,7 +442,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         if uid == user_id or uid in seen:
             continue
 
-        name = _clean(user_link.get_text())
+        name = molt(user_link.get_text())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         seen.add(uid)
@@ -598,9 +475,9 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
             td_text = tds[1].get_text(separator="\n").strip()
             lines = [l.strip() for l in td_text.split("\n") if l.strip()]
             # Location is usually the last line that isn't a link text
-            link_texts = {_clean(a.get_text()) for a in tds[1].select("a")}
+            link_texts = {molt(a.get_text()) for a in tds[1].select("a")}
             for line in reversed(lines):
-                cleaned = _clean(line)
+                cleaned = molt(line)
                 if cleaned and cleaned not in link_texts and not re.match(r"^\d+\s+(books?|friends?)", cleaned):
                     location = cleaned
                     break
@@ -609,7 +486,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         currently_reading = None
         if len(tds) > 2:
             for book_link in tds[2].select('a[href*="/book/show/"]'):
-                book_text = _clean(book_link.get_text())
+                book_text = molt(book_link.get_text())
                 if book_text:
                     bm2 = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
                     bid = bm2.group(1) if bm2 else None
@@ -645,7 +522,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         uid = m.group(1)
         if uid == user_id or uid in seen:
             continue
-        name = _clean(link.get_text())
+        name = molt(link.get_text())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         seen.add(uid)
@@ -668,7 +545,7 @@ def list_friends(
     cookie_header = _require_cookies(cookie_header, params, "list_friends")
 
     if page > 0:
-        with _client(cookie_header) as client:
+        with http_client(cookies=cookie_header) as client:
             status, html_text = _fetch(client, f"{BASE}/friend/user/{user_id}?page={page}")
         if status != 200:
             raise RuntimeError(f"Friends page returned {status}")
@@ -678,7 +555,7 @@ def list_friends(
     # Auto-paginate
     all_friends: list[dict[str, Any]] = []
     seen: set[str] = set()
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         for p in range(1, MAX_PAGES + 1):
             status, html_text = _fetch(client, f"{BASE}/friend/user/{user_id}?page={p}")
             if status != 200:
@@ -708,9 +585,9 @@ def search_people(
     *,
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/search?q={quote_plus(query)}&search_type=people"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Search returned {status}")
@@ -727,7 +604,7 @@ def search_people(
         uid = m.group(1)
         if uid in seen:
             continue
-        name = _clean(link.get_text())
+        name = molt(link.get_text())
         if not name or name.lower() in ("profile", "view profile", "compare books"):
             continue
         seen.add(uid)
@@ -752,7 +629,7 @@ def resolve_email(
     """Look up Goodreads accounts by email address."""
     cookie_header = _require_cookies(cookie_header, params, "resolve_email")
 
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         # Step 1: load the find_friend page to get the CSRF token (n=)
         status, form_html = _fetch(client, f"{BASE}/friend/find_friend")
         if status != 200:
@@ -786,7 +663,7 @@ def resolve_email(
         if not m:
             continue
         uid = m.group(1)
-        name = _clean(user_link.get_text())
+        name = molt(user_link.get_text())
         if not name:
             img = row.select_one("img")
             name = img.get("alt") if img else None
@@ -824,8 +701,8 @@ def resolve_email(
             "image": photo_url,
             "url": f"{BASE}/user/show/{uid}",
             "location": location,
-            "books_count": _parse_int(books_m.group(1)) if books_m else None,
-            "friends_count": _parse_int(friends_m.group(1)) if friends_m else None,
+            "books_count": parse_int(books_m.group(1)) if books_m else None,
+            "friends_count": parse_int(friends_m.group(1)) if friends_m else None,
             "email": email,
         })
 
@@ -843,9 +720,9 @@ def list_shelves(
     *,
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Profile returned {status}")
@@ -862,13 +739,13 @@ def list_shelves(
         if shelf_id in seen:
             continue
         seen.add(shelf_id)
-        name = _clean(link.get_text())
+        name = molt(link.get_text())
         if name and name.lower() in ("view shelf", "shelf"):
             continue
         if name and re.search(r"\(\d+\)\s*$", name):
             name = re.sub(r"\s*\(\d+\)\s*$", "", name).strip()
         count_m = re.search(r"\(([\d,]+)\)", link.get_text())
-        book_count = _parse_int(count_m.group(1)) if count_m else None
+        book_count = parse_int(count_m.group(1)) if count_m else None
         shelves.append({
             "id": f"{user_id}:{shelf_id}",
             "name": name or shelf_id,
@@ -892,10 +769,10 @@ def _extract_date(row: Any, field_class: str) -> str | None:
     # Prefer span[title] which has the full date
     span = td.select_one("span[title]")
     if span:
-        return _clean(span.get("title") or span.get_text())
+        return molt(span.get("title") or span.get_text())
     # Fallback: look for non-grey text
     for span in td.select("span"):
-        text = _clean(span.get_text())
+        text = molt(span.get_text())
         if text and text != "not set":
             return text
     return None
@@ -916,7 +793,7 @@ def _extract_review_text(row: Any) -> str | None:
     td = row.select_one("td.field.review")
     if not td:
         return None
-    text = _clean(td.get_text())
+    text = molt(td.get_text())
     if not text:
         return None
     # Strip the "review" label prefix
@@ -933,7 +810,7 @@ def _extract_shelf(row: Any) -> str | None:
     td = row.select_one("td.field.shelves")
     if not td:
         return None
-    text = _clean(td.get_text())
+    text = molt(td.get_text())
     if not text:
         return None
     text = re.sub(r"^shelves?\s*", "", text)
@@ -958,10 +835,10 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
             continue
 
         title_el = row.select_one("td.field.title a, .title a, a.bookTitle")
-        title = _clean(title_el.get("title") or (title_el.get_text() if title_el else None))
+        title = molt(title_el.get("title") or (title_el.get_text() if title_el else None))
 
         author_el = row.select_one("td.field.author a, .author a, a.authorName")
-        author_raw = _clean(author_el.get_text() if author_el else None)
+        author_raw = molt(author_el.get_text() if author_el else None)
         author = _flip_name(author_raw) if author_raw else None
         author_id = None
         author_url = None
@@ -1038,7 +915,7 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
                 "isbn13": isbn13,
                 "user_rating": rating,
                 "average_rating": avg_rating,
-                "pages": _parse_int(num_pages),
+                "pages": parse_int(num_pages),
                 "datePublished": date_pub,
                 "date_added": date_added,
                 "date_read": date_read,
@@ -1099,7 +976,7 @@ def list_books(
     """List a user's books. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_books")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf={shelf}&sort={sort}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=False)
 
 
@@ -1114,7 +991,7 @@ def list_reviews(
     """List a user's reviews. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_reviews")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf=all&sort={sort}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=True)
 
 
@@ -1129,7 +1006,7 @@ def list_shelf_books(
     """List books on a specific shelf. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_shelf_books")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf={shelf_name}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=False)
 
 
@@ -1146,7 +1023,7 @@ def list_groups(
     """List the authenticated user's groups."""
     cookie_header = _require_cookies(cookie_header, params, "list_groups")
     url = f"{BASE}/group?tab=my_groups"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Groups page returned {status}")
@@ -1175,7 +1052,7 @@ def list_groups(
         for line in lines[1:]:
             mm = re.match(r"([\d,]+)\s+members?", line)
             if mm:
-                members = _parse_int(mm.group(1))
+                members = parse_int(mm.group(1))
             if line.startswith("Active"):
                 last_active = line
 
@@ -1209,7 +1086,7 @@ def _parse_follow_page(
 
     for link in soup.select('a[href*="/user/show/"], a[href*="/author/show/"]'):
         href = link.get("href", "")
-        name = _clean(link.get_text())
+        name = molt(link.get_text())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         m = re.search(r"/(user|author)/show/(\d+)", href)
@@ -1250,9 +1127,9 @@ def list_following(
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
     """List accounts (users + authors) the user is following."""
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/following"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Following page returned {status}")
@@ -1276,9 +1153,9 @@ def list_followers(
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
     """List accounts following the user."""
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/followers"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Followers page returned {status}")
@@ -1307,9 +1184,9 @@ def list_quotes(
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
     """List a user's liked/saved quotes."""
-    cookie_header = cookie_header or (params and _cookie(params))
+    cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/quotes/list/{user_id}"
-    with _client(cookie_header) as client:
+    with http_client(cookies=cookie_header) as client:
         status, html_text = _fetch(client, url)
     if status != 200:
         raise RuntimeError(f"Quotes page returned {status}")
@@ -1343,7 +1220,7 @@ def list_quotes(
         text = re.sub(r'^[\s\u201c\u201d"]+|[\s\u201c\u201d"]+$', "", text)
 
         author_el = qt.select_one(".authorOrTitle")
-        author_name = _clean(author_el.get_text()) if author_el else None
+        author_name = molt(author_el.get_text()) if author_el else None
         if author_name:
             author_name = author_name.rstrip(",")
 
@@ -1363,7 +1240,7 @@ def list_quotes(
         if not title_el and parent:
             title_el = parent.select_one('a[href*="/book/show/"]')
         if title_el:
-            book_title = _clean(title_el.get_text())
+            book_title = molt(title_el.get_text())
             bm = re.search(r"/book/show/(\d+)", title_el.get("href", ""))
             if bm:
                 book_id = bm.group(1)
