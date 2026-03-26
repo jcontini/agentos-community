@@ -1,8 +1,12 @@
+# A web page. Base type for search result. Also used for browser history
+# and as a generic container when reading arbitrary URLs.
+#
+# Sources: Brave Browser, Firefox (history); Exa, Firecrawl, Curl (web reading)
 webpage:
   fields:
-    visit_count:       integer
-    last_visit_unix:   integer
-    content_type:      string
+    visit_count:       integer   # browser history visit count
+    last_visit_unix:   integer   # browser history last visit timestamp
+    content_type:      string    # MIME type (e.g. text/html, text/markdown)
   display:
     title: name
     subtitle: url

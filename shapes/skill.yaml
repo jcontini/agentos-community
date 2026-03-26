@@ -1,17 +1,21 @@
+# A connected service/integration in agentOS. Each skill provides tools
+# and adapts external data into graph entities.
+#
+# Sources: agentOS engine (auto-registered from skill YAML files)
 skill:
   fields:
-    skill_id:          string
+    skill_id:          string    # unique identifier (e.g. "gmail", "github")
     description:       text
-    color:             string
-    status:            string
-    error:             text
-    website:           url
-    privacy_url:       url
-    terms_url:         url
+    color:             string    # hex color for UI display
+    status:            string    # connected, disconnected, error
+    error:             text      # error message if status is "error"
+  relations:
+    website:           website   # the service's homepage
+    privacy_policy:    webpage   # privacy policy page
+    terms_of_service:  webpage   # terms of service page
   display:
     title: name
     subtitle: description
     columns:
       - name:            Skill
       - status:          Status
-      - website:         Website

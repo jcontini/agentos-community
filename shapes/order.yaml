@@ -1,16 +1,18 @@
+# A purchase order. Contains products and tracks delivery.
+#
+# Sources: Amazon
 order:
   fields:
-    total:             string
-    total_amount:      number
+    total:             string    # formatted total (e.g. "$42.99")
+    total_amount:      number    # numeric total for math
     currency:          string
-    item_count:        integer
     status:            string
     delivery_date:     datetime
     summary:           string
   relations:
     contains:          product[]
     shipping_address:  place
-    tracking:          webpage
+    tracking:          webpage   # carrier tracking page
   display:
     title: name
     date: datePublished
@@ -18,5 +20,4 @@ order:
       - name:            Order
       - status:          Status
       - total:           Total
-      - item_count:      Items
       - delivery_date:   Delivery

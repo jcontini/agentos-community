@@ -1,11 +1,18 @@
+# A published website (not a single page — see webpage for that).
+# Websites are created/managed by the here.now publishing skill.
+#
+# Sources: here.now
 website:
   fields:
-    status:            string
-    version_id:        string
-    expires_at:        datetime
-    anonymous:         boolean
-    claim_token:       string
+    status:            string    # active, pending
+    version_id:        string    # current deployment version
+    expires_at:        datetime  # when an anonymous site auto-expires
+    anonymous:         boolean   # true if published without an account
+    claim_token:       string    # token to claim an anonymous site
     claim_url:         url
+  relations:
+    domain:            domain
+    owned_by:          organization
   display:
     title: name
     subtitle: url

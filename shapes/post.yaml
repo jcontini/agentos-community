@@ -1,17 +1,21 @@
+# A social media post — a Reddit submission, HN story, or similar.
+# Reviews extend post via `also`. Engagement metrics are namespaced (engagement.*).
+#
+# Sources: Reddit, Hacker News
 post:
   fields:
-    external_url:      url
-    post_type:         string
-    parent_id:         string
-    replies:           json
-    engagement.score:  integer
+    external_url:      url       # linked URL (for link posts, not self-posts)
+    post_type:         string    # story, comment, job, poll, etc.
+    parent_id:         string    # parent post/comment ID for threaded replies
+    replies:           json      # inline reply tree
+    engagement.score:  integer   # upvotes/points
     engagement.comment_count: integer
     engagement.likes:  integer
   relations:
-    posted_by:         account
-    publish:           community
+    posted_by:         account   # who posted it
+    publish:           community # subreddit or group it was posted to
     replies_to:        post
-    embed:             video
+    embed:             video     # embedded video (if any)
   display:
     title: name
     subtitle: author

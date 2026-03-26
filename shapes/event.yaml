@@ -1,8 +1,11 @@
+# A product analytics event — a single user action tracked by PostHog.
+#
+# Sources: PostHog
 event:
   fields:
-    distinct_id:       string
-    properties:        json
-    current_url:       url
+    distinct_id:       string    # PostHog user identifier
+    properties:        json      # arbitrary event properties
+    current_url:       url       # page URL where the event fired
   relations:
     person:            person
   display:

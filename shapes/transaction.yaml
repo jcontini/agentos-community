@@ -1,16 +1,20 @@
+# A financial transaction — credit card charge, bank transfer, etc.
+#
+# Sources: Chase, Copilot Money
 transaction:
   fields:
-    amount:            number
+    amount:            number    # positive = credit, negative = debit
     currency:          string
-    balance:           number
-    category:          string
-    posting_date:      datetime
+    balance:           number    # account balance after this transaction
+    category:          string    # spending category (e.g. "food", "travel")
+    posting_date:      datetime  # when the bank posted it (vs. datePublished = transaction date)
     pending:           boolean
     recurring:         boolean
     notes:             string
-    type:              string
+    type:              string    # debit, credit, transfer, etc.
     details:           json
-    account_id:        string
+  relations:
+    account:           account   # the financial account this posted to
   display:
     title: name
     subtitle: category

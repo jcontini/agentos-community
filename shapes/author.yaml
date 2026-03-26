@@ -1,12 +1,16 @@
+# A book author on Goodreads. Separate from person — this is a Goodreads-specific
+# profile with ratings and follower counts.
+#
+# Sources: Goodreads
 author:
   fields:
     location:          string
-    average_rating:    number
+    average_rating:    number    # Goodreads average across all works
     works_count:       integer
     birth_date:        string
     website:           url
-    twitter:           string
-    member_since:      datetime
+    twitter:           string    # Twitter/X handle
+    member_since:      datetime  # Goodreads join date
     followers_count:   integer
   relations:
     books:             book[]

@@ -1,0 +1,19 @@
+# A consumer brand. Extracted from product listings.
+#
+# Sources: Amazon
+brand:
+  fields:
+    tagline:           string
+    founded:           datetime
+    country:           string
+  relations:
+    owned_by:          organization
+    website:           website
+  display:
+    title: name
+    subtitle: tagline
+    image: image
+    columns:
+      - name:            Brand
+      - country:         Country
+      - founded:         Founded

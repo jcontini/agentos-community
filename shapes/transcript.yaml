@@ -1,11 +1,14 @@
+# A text transcript of audio/video content. Linked from meetings and videos.
+#
+# Sources: YouTube (auto-captions), Granola (meeting recordings)
 transcript:
   fields:
-    language:          string
-    source_type:       string
-    content_role:      string
+    language:          string    # ISO 639-1 (e.g. "en", "es")
+    source_type:       string    # meeting, video, podcast, etc.
+    content_role:      string    # transcript, summary, notes
     duration_ms:       integer
     segment_count:     integer
-    segments:          json
+    segments:          json      # timestamped text segments
   display:
     title: name
     description: content

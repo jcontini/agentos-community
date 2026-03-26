@@ -1,12 +1,15 @@
+# A content channel — typically a YouTube channel. Videos are uploaded to channels.
+#
+# Sources: YouTube
 channel:
   fields:
     subscriber_count:  integer
-    platform:          string
-    banner:            url
+    banner:            url       # channel banner/header image
+  relations:
+    platform:          product
   display:
     title: name
     image: image
     columns:
       - name:            Channel
       - subscriber_count: Subscribers
-      - platform:        Platform

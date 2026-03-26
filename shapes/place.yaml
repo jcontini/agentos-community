@@ -1,17 +1,39 @@
+# A physical location — address, building, city, or point of interest.
+# Used for meeting locations, shipping addresses, headquarters, airports, etc.
+#
+# Sources: Apple Calendar, Amazon (shipping), Mapbox (geocoding)
 place:
   fields:
+    # Formatted strings (pre-computed, avoid client-side formatting)
+    full_address:      string
+    place_formatted:   string    # short display form (e.g. "Brooklyn, NY")
+
+    # Address hierarchy (Mapbox-aligned)
+    street_number:     string
     street:            string
+    neighborhood:      string
+    locality:          string    # sub-city area (e.g. borough, village)
     city:              string
-    region:            string
+    district:          string    # county or administrative area
+    region:            string    # state or province
     postal_code:       string
     country:           string
-    country_code:      string
+    country_code:      string    # ISO 3166-1 alpha-2 (e.g. US, GB)
+
+    # Geospatial
     latitude:          number
     longitude:         number
-    place_type:        string
+    accuracy:          string    # geocoding confidence: rooftop, parcel, interpolated
+
+    # Classification
+    feature_type:      string    # Mapbox type: address, poi, place, region, etc.
+
+    # External identifiers
+    mapbox_id:         string
+    wikidata_id:       string
   display:
     title: name
-    subtitle: city
+    subtitle: full_address
     columns:
       - name:            Place
       - city:            City

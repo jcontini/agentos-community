@@ -1,9 +1,11 @@
+# A web search result. Results are also webpages, so they carry URL/title/content.
+#
+# Sources: Brave Search, Exa
 result:
+  also: [webpage]     # a search result is also a webpage
   fields:
-    indexed_at:        datetime
+    indexed_at:        datetime  # when the search engine last crawled this page
     result_type:       string
-    score:             number
-    similarity:        number
   display:
     title: name
     subtitle: url

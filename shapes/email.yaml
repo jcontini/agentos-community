@@ -1,35 +1,41 @@
+# An email message. Emails are also messages — querying by "message"
+# returns emails alongside WhatsApp, iMessage, etc.
+#
+# Sources: Gmail, Mimestream
+# RFC headers (message_id, in_reply_to, references) enable threading.
+# Domain relations auto-extracted from sender/recipient addresses.
 email:
-  also: [message]
+  also: [message]     # an email is also a message
   fields:
-    subject:           string
-    message_id:        string
-    in_reply_to:       string
+    subject:           string    # email subject line
+    message_id:        string    # RFC 2822 Message-ID header
+    in_reply_to:       string    # RFC 2822 In-Reply-To header
     is_unread:         boolean
     is_starred:        boolean
     is_draft:          boolean
-    is_sent:           boolean
+    is_sent:           boolean   # true if sent by the user
     is_trash:          boolean
     is_spam:           boolean
     has_attachments:   boolean
-    label_ids:         string[]
-    account_email:     string
-    size_estimate:     integer
-    references:        string
-    reply_to:          string
-    delivered_to:      string
-    attachments:       json
-    to_raw:            string
-    cc_raw:            string
-    bcc_raw:           string
-    body_html:         text
+    label_ids:         string[]  # Gmail label IDs
+    account_email:     string    # which account received this
+    size_estimate:     integer   # bytes
+    references:        string    # RFC 2822 References header chain
+    reply_to:          string    # Reply-To header
+    delivered_to:      string    # Delivered-To header
+    attachments:       json      # attachment metadata array
+    to_raw:            string    # raw To header (unparsed)
+    cc_raw:            string    # raw Cc header (unparsed)
+    bcc_raw:           string    # raw Bcc header (unparsed)
+    body_html:         text      # HTML body (can be large)
   relations:
-    from:              account
-    to:                account[]
-    cc:                account[]
-    bcc:               account[]
-    domain:            domain
-    to_domain:         domain[]
-    cc_domain:         domain[]
+    from:              account   # sender
+    to:                account[] # recipients
+    cc:                account[] # cc recipients
+    bcc:               account[] # bcc recipients
+    domain:            domain    # sender's email domain
+    to_domain:         domain[]  # recipient domains
+    cc_domain:         domain[]  # cc domains
   display:
     title: subject
     subtitle: author

@@ -1,10 +1,9 @@
+# A video playlist. Playlists are lists that contain videos instead of products.
+#
+# Sources: YouTube
 playlist:
-  fields:
-    item_count:        integer
-    is_public:         boolean
-    platform:          string
+  also: [list]        # a playlist is also a list
   relations:
-    belongs_to:        account
     contains:          video[]
   display:
     title: name
@@ -12,5 +11,3 @@ playlist:
     image: image
     columns:
       - name:            Playlist
-      - item_count:      Items
-      - platform:        Platform

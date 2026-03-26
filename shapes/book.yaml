@@ -1,32 +1,36 @@
+# A book. Books are also products, so they inherit price/brand/rating fields.
+# User-specific fields (user_rating, date_read, shelf) come from the authenticated user's library.
+#
+# Sources: Goodreads
 book:
-  also: [product]
+  also: [product]     # a book is also a product
   fields:
-    isbn:              string
-    isbn13:            string
+    isbn:              string    # 10-digit ISBN
+    isbn13:            string    # 13-digit ISBN
     pages:             integer
     genres:            string[]
     series:            string
     publisher:         string
-    format:            string
+    format:            string    # hardcover, paperback, ebook, audiobook
     language:          string
-    original_title:    string
+    original_title:    string    # title in original language if translated
     average_rating:    number
     ratings_count:     integer
     review_count:      integer
     currently_reading_count: integer
     to_read_count:     integer
-    places:            string[]
-    characters:        string[]
+    places:            string[]  # settings/locations in the book
+    characters:        string[]  # named characters
     awards_won:        string[]
-    work_url:          url
-    user_rating:       number
-    date_read:         datetime
-    date_started:      datetime
-    date_added:        datetime
-    shelf:             string
+    work_url:          url       # Goodreads canonical work URL
+    user_rating:       number    # authenticated user's rating
+    date_read:         datetime  # when the user finished it
+    date_started:      datetime  # when the user started it
+    date_added:        datetime  # when the user added it to a shelf
+    shelf:             string    # user's shelf (read, to-read, currently-reading)
   relations:
     written_by:        author
-    contributors:      author[]
+    contributors:      author[]  # editors, translators, illustrators
   display:
     title: name
     subtitle: author

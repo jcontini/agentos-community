@@ -1,10 +1,14 @@
+# A single message in a conversation. Base type — email extends this via `also`.
+# Querying by "message" returns emails alongside iMessages, WhatsApp messages, etc.
+#
+# Sources: iMessage, WhatsApp; extended by email (Gmail, Mimestream)
 message:
   fields:
     conversation_id:   string
-    is_outgoing:       boolean
-    platform:          string
+    is_outgoing:       boolean   # true if sent by the user
   relations:
-    from:              account
+    platform:          product
+    from:              account   # sender
     in_conversation:   conversation
     replies_to:        message
   display:
@@ -16,5 +20,4 @@ message:
       - name:            Name
       - author:          From
       - datePublished:   Date
-      - platform:        Platform
       - is_outgoing:     Sent

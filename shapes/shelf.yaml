@@ -1,10 +1,14 @@
+# A Goodreads bookshelf. Shelves are lists that contain books instead of generic products.
+#
+# Sources: Goodreads
 shelf:
+  also: [list]        # a shelf is also a list
   fields:
-    book_count:        integer
-    is_exclusive:      boolean
+    is_exclusive:      boolean   # true = a book can only be on one exclusive shelf (read, to-read, currently-reading)
+  relations:
+    contains:          book[]
   display:
     title: name
     description: text
     columns:
       - name:            Shelf
-      - book_count:      Books

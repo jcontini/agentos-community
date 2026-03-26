@@ -1,18 +1,21 @@
+# A specific flight leg. Part of an offer (which may have multiple legs/stops).
+#
+# Sources: SerpAPI (Google Flights)
 flight:
   fields:
-    flight_number:     string
+    flight_number:     string    # e.g. UA 1234
     departure_time:    datetime
     arrival_time:      datetime
     duration_minutes:  integer
-    cabin_class:       string
+    cabin_class:       string    # economy, premium_economy, business, first
     stops:             integer
-    carbon_emissions:  json
+    carbon_emissions:  json      # CO2 estimate from Google Flights
   relations:
     airline:           airline
     departs_from:      airport
     arrives_at:        airport
     aircraft:          aircraft
-    layovers:          airport[]
+    layovers:          airport[] # intermediate stops
   display:
     title: name
     subtitle: airline

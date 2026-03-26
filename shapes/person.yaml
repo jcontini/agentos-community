@@ -1,5 +1,9 @@
+# A real human. People are actors — they can own accounts, hold roles, attend meetings.
+# Resolved from contacts, message senders, meeting attendees, etc.
+#
+# Sources: Apple Contacts, WhatsApp, PostHog, iMessage (inferred from handles)
 person:
-  also: [actor]
+  also: [actor]       # a person is also an actor
   fields:
     first_name:        string
     last_name:         string
@@ -10,8 +14,8 @@ person:
     gender:            string
     about:             text
   relations:
-    accounts:          account[]
-    roles:             role[]
+    accounts:          account[] # platform identities this person owns
+    roles:             role[]    # positions at organizations
     location:          place
     website:           website
   display:

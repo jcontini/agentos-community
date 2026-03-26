@@ -1,16 +1,18 @@
+# A work item — issue, ticket, or to-do. Supports hierarchy (parent/children)
+# and dependency tracking (blocked_by/blocks).
+#
+# Sources: Linear, Todoist, GitHub
 task:
   fields:
-    priority:          integer
+    priority:          integer   # 1 = highest (normalized across sources)
     state:             string
-    remote_id:         string
-    repository:        string
     labels:            string[]
-    posting_date:      datetime
     started_at:        datetime
-    target_date:       datetime
+    target_date:       datetime  # due date
   relations:
     assigned_to:       person
     project:           project
+    repository:        repository
     parent:            task
     children:          task[]
     blocked_by:        task[]

@@ -1,3 +1,6 @@
+# A project that groups tasks. Tasks belong to projects.
+#
+# Sources: Linear, Todoist
 project:
   fields:
     state:             string

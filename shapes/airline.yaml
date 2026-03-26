@@ -1,11 +1,14 @@
+# A commercial airline. Created from flight search results.
+#
+# Sources: SerpAPI (flight search)
 airline:
-  also: [organization]
+  also: [organization]  # an airline is also an organization
   fields:
-    iata_code:         string
-    icao_code:         string
-    callsign:          string
+    iata_code:         string    # 2-letter code (e.g. UA, DL, AA)
+    icao_code:         string    # 3-letter code (e.g. UAL, DAL, AAL)
+    callsign:          string    # radio callsign (e.g. "UNITED", "DELTA")
     country:           string
-    alliance:          string
+    alliance:          string    # e.g. Star Alliance, oneworld, SkyTeam
   display:
     title: name
     subtitle: iata_code

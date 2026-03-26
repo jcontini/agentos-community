@@ -1,16 +1,19 @@
+# A generic collection of items. Base type for shelf (books) and playlist (videos).
+#
+# Sources: Goodreads (via shelf), YouTube (via playlist)
 list:
   fields:
-    item_count:      integer
-    privacy:         string
-    list_type:       string
-    is_default:      boolean
+    privacy:           string
+    list_type:         string
+    is_default:        boolean   # platform-created list (e.g. "Watch Later")
+    is_public:         boolean
   relations:
-    contains:        product[]
+    platform:          product
+    belongs_to:        account   # who owns this list
+    contains:          product[]
   display:
     title: name
     date: datePublished
     columns:
       - name:            Name
-      - item_count:      Items
-      - privacy:         Privacy
       - list_type:       Type

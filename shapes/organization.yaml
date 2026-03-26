@@ -1,5 +1,9 @@
+# A company, nonprofit, or other organization. Organizations are actors — they
+# can be attributed as "who" in the graph alongside people and agents.
+#
+# Sources: extracted from various skills (email domains, product manufacturers, etc.)
 organization:
-  also: [actor]
+  also: [actor]       # an organization is also an actor
   fields:
     industry:          string
     employee_count:    integer

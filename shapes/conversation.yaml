@@ -1,15 +1,15 @@
+# A message thread — an iMessage chat, WhatsApp group, email thread, etc.
+# Contains messages and links to participants.
+#
+# Sources: iMessage, WhatsApp, Gmail
 conversation:
   fields:
-    participant_count: integer
-    message_count:     integer
     is_group:          boolean
     is_archived:       boolean
     unread_count:      integer
-    platform:          string
-    has_unread:        boolean
-    has_attachments:   boolean
-    account_email:     string
+    account_email:     string    # which account this conversation belongs to
   relations:
+    platform:          product
     participant:       account[]
     message:           message[]
   display:
@@ -20,5 +20,4 @@ conversation:
       - name:            Name
       - participant_count: Participants
       - datePublished:   Last Activity
-      - platform:        Platform
       - unread_count:    Unread

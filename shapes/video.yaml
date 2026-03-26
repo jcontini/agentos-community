@@ -1,16 +1,18 @@
+# A video. Currently YouTube-only. Related to channels, transcripts, and playlists.
+#
+# Sources: YouTube
 video:
-  also: [post]
   fields:
     duration_ms:       integer
-    resolution:        string
+    resolution:        string    # e.g. "1080p", "4K"
     view_count:        integer
     like_count:        integer
     comment_count:     integer
   relations:
-    posted_by:         account
-    upload:            channel
+    posted_by:         account   # uploader's account
+    upload:            channel   # channel this was uploaded to
     transcribe:        transcript
-    embed:             post
+    embed:             post      # social media post embedding this video
     add_to:            playlist
   display:
     title: name

@@ -1,12 +1,15 @@
+# An aircraft type (not an individual plane). Linked from flight search results.
+#
+# Sources: SerpAPI (flight search)
 aircraft:
-  also: [product]
+  also: [product]     # an aircraft is also a product
   fields:
     model:             string
     variant:           string
     seat_capacity:     integer
     range_km:          integer
-    iata_code:         string
-    icao_code:         string
+    iata_code:         string    # 3-letter type code (e.g. 738, 77W)
+    icao_code:         string    # 4-letter type code (e.g. B738, B77W)
   relations:
     manufacturer:      organization
   display:

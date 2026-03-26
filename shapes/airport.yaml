@@ -1,11 +1,14 @@
+# An airport. Created from flight search results and linked to flights.
+#
+# Sources: SerpAPI (flight search)
 airport:
   fields:
-    iata_code:         string
-    icao_code:         string
+    iata_code:         string    # 3-letter code (e.g. LAX, JFK, SFO)
+    icao_code:         string    # 4-letter code (e.g. KLAX, KJFK, KSFO)
     city:              string
     country:           string
-    country_code:      string
-    timezone:          string
+    country_code:      string    # ISO 3166-1 alpha-2 (e.g. US, GB)
+    timezone:          string    # IANA timezone (e.g. America/Los_Angeles)
     elevation_ft:      integer
     terminal_count:    integer
   relations:

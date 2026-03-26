@@ -1,10 +1,13 @@
+# A DNS record for a domain. One domain has many records (A, CNAME, MX, TXT, etc.).
+#
+# Sources: Gandi, Porkbun
 dns_record:
   fields:
     domain:            string
-    record_name:       string
-    record_type:       string
-    ttl:               integer
-    values:            string[]
+    record_name:       string    # subdomain part (e.g. "www", "@" for apex)
+    record_type:       string    # A, AAAA, CNAME, MX, TXT, NS, etc.
+    ttl:               integer   # time-to-live in seconds
+    values:            string[]  # one or more record values
   display:
     title: name
     subtitle: record_type

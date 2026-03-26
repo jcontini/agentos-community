@@ -1,7 +1,10 @@
+# A registered domain name. Also auto-created from email sender/recipient addresses.
+#
+# Sources: Gandi, Porkbun (registered domains); Gmail (extracted from addresses)
 domain:
   fields:
     status:            string
-    registrar:         string
+    registrar:         string    # gandi, porkbun, etc.
     expires_at:        datetime
     auto_renew:        boolean
     nameservers:       string[]

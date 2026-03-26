@@ -163,6 +163,24 @@ Physical locations should be a `place` shape with structured fields (name, stree
 
 Any collection (playlist, shelf, list, board) should have a `belongs_to: account` relation. Collections are owned.
 
+### 10. Use ISO standards for standardized values
+
+When a field represents something with an international standard, use the standard code:
+
+- **Human languages** — ISO 639-1 codes (`en`, `es`, `ja`, `pt-BR`). Applies to transcript.language, webpage.language, content language fields. NOT programming languages (those use conventional names like `Python`, `Rust`).
+- **Countries** — ISO 3166-1 alpha-2 codes (`US`, `GB`, `JP`). Use `country_code` field.
+- **Currencies** — ISO 4217 codes (`USD`, `EUR`, `JPY`). Use `currency` field.
+- **Timezones** — IANA timezone names (`America/New_York`, `Europe/London`).
+
+Don't enforce via enum (too many values). Document the convention and let `agentos test` flag non-compliant values.
+
+### 11. Booleans describe state, relations describe lineage
+
+`is_fork: boolean` tells you nothing. `forked_from: repository` tells you the lineage. If a boolean implies a relationship to another entity, model the relationship instead.
+
+**Bad:** `is_fork: boolean` (from what?)
+**Good:** `forked_from: repository` (the source is traversable)
+
 ---
 
 ## Review Checklist
@@ -179,3 +197,5 @@ After writing or editing a shape, ask yourself:
 - [ ] **Collections owned?** Do lists/playlists/shelves have a `belongs_to` relation?
 - [ ] **Roles, not fields?** Are time-bounded relationships (jobs, education, membership) modeled as role relations, not person fields?
 - [ ] **Display makes sense?** Are the right fields in title/subtitle/columns for this shape?
+- [ ] **ISO standards?** Are languages (ISO 639-1), countries (ISO 3166-1), currencies (ISO 4217) using standard codes?
+- [ ] **Booleans or relations?** Does any boolean imply a relationship? (`is_fork` → `forked_from`)

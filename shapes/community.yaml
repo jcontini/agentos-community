@@ -1,10 +1,14 @@
+# An online community — a subreddit, Facebook group, or similar.
+#
+# Sources: Reddit, Facebook
 community:
   fields:
     member_count:      integer
     subscriber_count:  integer
-    privacy:           string
-    platform:          string
-    allow_crypto:      boolean
+    privacy:           string    # public, private, closed
+    allow_crypto:      boolean   # subreddit-specific: allows cryptocurrency discussion
+  relations:
+    platform:          product
   display:
     title: name
     subtitle: text
@@ -13,5 +17,4 @@ community:
       - name:            Community
       - member_count:    Members
       - subscriber_count: Subscribers
-      - platform:        Platform
       - privacy:         Privacy

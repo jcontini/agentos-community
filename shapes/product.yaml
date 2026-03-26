@@ -1,18 +1,24 @@
+# A purchasable item. Base type for book and aircraft.
+# Amazon-specific fields (prime, sponsored) are present because Amazon is the primary source.
+#
+# Sources: Amazon
 product:
   fields:
-    price:             string
-    price_amount:      number
+    price:             string    # formatted price (e.g. "$29.99")
+    price_amount:      number    # numeric price for math
     currency:          string
     rating:            number
     ratings_count:     integer
     review_count:      integer
-    brand:             string
     categories:        string[]
     availability:      string
-    prime:             boolean
-    sponsored:         boolean
+    prime:             boolean   # Amazon Prime eligible
+    sponsored:         boolean   # paid placement
     images:            json
     quantity:          integer
+  relations:
+    brand:             brand
+    manufacturer:      organization
   display:
     title: name
     subtitle: author

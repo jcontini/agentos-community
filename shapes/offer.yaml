@@ -1,14 +1,18 @@
+# A purchasable offer — typically a flight itinerary with a price.
+# An offer wraps one or more flights into a bookable unit.
+#
+# Sources: SerpAPI (Google Flights)
 offer:
   fields:
     price:             number
-    currency:          string
+    currency:          string    # ISO 4217 (e.g. USD, EUR)
     offer_type:        string
     availability:      string
     valid_from:        datetime
     valid_until:       datetime
-    booking_token:     string
+    booking_token:     string    # opaque token for completing a booking
   relations:
-    for:               product
+    for:               product   # what this offer is selling
     offered_by:        organization
   display:
     title: name
