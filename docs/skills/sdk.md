@@ -1,12 +1,12 @@
 # Python SDK
 
-The agentOS Python SDK gives skills two functions: `molt` and `surf`.
+The agentOS SDK in three imports:
 
 ```python
-from agentos import molt, surf
+from agentos import molt, surf, shape
 ```
 
-That's the whole SDK. `molt` cleans and parses scraped data. `surf` makes HTTP requests that get past bot detection. Both are designed to work identically across future TypeScript, Go, and Rust SDKs.
+`molt` cleans and parses scraped data. `surf` makes HTTP requests that get past bot detection. `shape` gives you 60 typed entity classes. All three are designed to work identically across future TypeScript, Go, and Rust SDKs.
 
 ---
 
@@ -148,6 +148,40 @@ with surf(cookies=header, profile="navigate", headers={"Host": "www.amazon.com"}
 
 ---
 
+## `shape` — typed entity schemas
+
+60 entity types auto-generated from shape YAML definitions. One namespace, all types.
+
+```python
+from agentos import shape
+
+book: shape.Book = {
+    "id": "123",
+    "name": "The Brothers Karamazov",
+    "author": "Dostoevsky",
+    "datePublished": "1880",
+}
+
+person: shape.Person = {
+    "id": "456",
+    "name": "Joe",
+    "url": "https://goodreads.com/user/show/456",
+}
+
+post: shape.Post = {
+    "id": "789",
+    "name": "Show HN: agentOS",
+    "author": "jcontini",
+    "datePublished": "2026-03-26",
+}
+```
+
+Every shape has well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`) plus shape-specific fields and relations. Shapes are defined in `shapes/*.yaml` and generated at build time.
+
+Available shapes include: Account, Article, Author, Book, Community, Conversation, Domain, Email, Event, File, Flight, Meeting, Message, Note, Order, Person, Place, Playlist, Post, Product, Repository, Review, Role, Task, Transaction, Video, and more.
+
+---
+
 ## Cross-language API
 
 The SDK is designed so the same concepts translate directly:
@@ -156,15 +190,15 @@ The SDK is designed so the same concepts translate directly:
 |--------|-----------|-----|
 | `molt(s)` | `molt(s)` | `sdk.Molt(s)` |
 | `molt(s, int)` | `molt(s, 'int')` | `sdk.Molt(s, sdk.Int)` |
-| `molt(s, 'date')` | `molt(s, 'date')` | `sdk.Molt(s, sdk.Date)` |
 | `surf(opts)` | `surf(opts)` | `sdk.Surf(opts)` |
+| `shape.Book` | `shape.Book` | `sdk.Shape.Book` |
 
 ---
 
 ## Quick reference
 
 ```python
-from agentos import molt, surf, get_cookies
+from agentos import molt, surf, shape, get_cookies
 
 # --- molt: clean + parse ---
 molt(s)                          # clean string
@@ -180,4 +214,9 @@ surf(profile="navigate")         # full anti-bot headers
 surf(skip_cookies={"csd-key"})   # strip trigger cookies
 surf(http2=False)                # for Vercel endpoints
 get_cookies(params)              # extract cookies from runtime params
+
+# --- shape: typed entities ---
+shape.Book                       # TypedDict with book fields
+shape.Person                     # TypedDict with person fields
+shape.Account                    # TypedDict with account fields
 ```
