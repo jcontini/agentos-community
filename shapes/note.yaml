@@ -1,0 +1,24 @@
+# Private text content, primarily for the author. Journal entries, PKM notes,
+# fleeting ideas, drafts. Notes have no engagement metrics, no platform, no
+# audience — they're yours.
+#
+# A note can reference other notes (Zettelkasten-style linking) and can be
+# extracted from sources (literature notes from books, articles, videos).
+#
+# Sources: future PKM integrations (Obsidian, Apple Notes, Google Keep)
+note:
+  fields:
+    note_type:         string    # fleeting, literature, permanent, journal, draft
+    is_pinned:         boolean
+  relations:
+    created_by:        person
+    references:        note[]    # links to other notes
+    extracted_from:    webpage   # source material this note was taken from
+  display:
+    title: name
+    description: content
+    date: datePublished
+    columns:
+      - name:            Note
+      - note_type:       Type
+      - datePublished:   Date

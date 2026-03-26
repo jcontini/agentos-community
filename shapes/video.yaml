@@ -1,18 +1,19 @@
-# A video. Currently YouTube-only. Related to channels, transcripts, and playlists.
+# A video file — the media artifact, not the social context around it.
+# Engagement metrics (views, likes, comments) belong on the post that
+# contains this video, not on the video itself. A video on your hard
+# drive has no likes.
 #
-# Sources: YouTube
+# Sources: YouTube (via post), local files
 video:
+  also: [file]        # a video is also a file
   fields:
     duration_ms:       integer
     resolution:        string    # e.g. "1080p", "4K"
-    view_count:        integer
-    like_count:        integer
-    comment_count:     integer
+    frame_rate:        number    # fps
+    codec:             string    # e.g. "h264", "vp9"
   relations:
-    posted_by:         account   # uploader's account
-    upload:            channel   # channel this was uploaded to
+    channel:           channel   # channel this was uploaded to
     transcribe:        transcript
-    embed:             post      # social media post embedding this video
     add_to:            playlist
   display:
     title: name
@@ -22,6 +23,5 @@ video:
     columns:
       - name:            Title
       - author:          Channel
-      - view_count:      Views
-      - like_count:      Likes
+      - duration_ms:     Duration
       - datePublished:   Published

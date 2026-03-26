@@ -1,0 +1,18 @@
+# A notable saying with speaker attribution. The speaker is NOT necessarily
+# the author of the source where you found it — FDR said the quote, but
+# Jean Edward Smith wrote the biography you found it in.
+#
+# Sources: Goodreads (quotes)
+quote:
+  fields:
+    context:           string    # when/where it was said
+  relations:
+    spoken_by:         person    # who said it (the speaker)
+    appears_in:        book      # where you found it (the source)
+  display:
+    title: name
+    subtitle: author
+    description: context
+    columns:
+      - name:            Quote
+      - author:          Speaker

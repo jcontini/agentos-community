@@ -1,0 +1,18 @@
+# A personal extraction from a source — a passage you highlighted, annotated,
+# or saved. Different from a quote: a highlight is YOUR selection from a work.
+# A quote is a canonical attribution to a speaker.
+#
+# Sources: Goodreads (highlights), future Kindle/Readwise/Hypothesis integration
+highlight:
+  fields:
+    position:          string    # location in source (page number, timestamp, percentage)
+    color:             string    # highlight color (yellow, green, blue, etc.)
+  relations:
+    extracted_from:    book      # or article, webpage — the source work
+    created_by:        person    # who highlighted it
+  display:
+    title: name
+    description: content
+    columns:
+      - name:            Highlight
+      - position:        Position

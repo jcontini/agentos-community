@@ -174,7 +174,20 @@ When a field represents something with an international standard, use the standa
 
 Don't enforce via enum (too many values). Document the convention and let `agentos test` flag non-compliant values.
 
-### 11. Booleans describe state, relations describe lineage
+### 11. Separate content from context (NEPOMUK principle)
+
+A video is a file. The social engagement around it is a post. A transcript is text. The meeting it came from is the context. Don't mix artifact properties with social properties on the same shape.
+
+**Bad:** `video` has view_count, like_count, comment_count, posted_by (those are social context)
+**Good:** `video` is a file with duration + resolution. A `post` contains the video and carries the engagement.
+
+Ask: *"If I downloaded this to my hard drive, which fields would still make sense?"* Those are the artifact fields. Everything else is context that belongs on a wrapper entity.
+
+### 12. Comments are nested posts, not a separate shape
+
+A comment is a post that `replies_to` another post. A reply to a message is still a message. Don't create separate shapes for nested versions of the same thing — use the `replies_to` relation to express the hierarchy.
+
+### 13. Booleans describe state, relations describe lineage
 
 `is_fork: boolean` tells you nothing. `forked_from: repository` tells you the lineage. If a boolean implies a relationship to another entity, model the relationship instead.
 
@@ -197,5 +210,7 @@ After writing or editing a shape, ask yourself:
 - [ ] **Collections owned?** Do lists/playlists/shelves have a `belongs_to` relation?
 - [ ] **Roles, not fields?** Are time-bounded relationships (jobs, education, membership) modeled as role relations, not person fields?
 - [ ] **Display makes sense?** Are the right fields in title/subtitle/columns for this shape?
+- [ ] **Content vs context?** If this is a media artifact, are social metrics on a wrapper post instead?
+- [ ] **Nesting via reply_to?** Is a "sub-type" really just this shape with a parent relation?
 - [ ] **ISO standards?** Are languages (ISO 639-1), countries (ISO 3166-1), currencies (ISO 4217) using standard codes?
 - [ ] **Booleans or relations?** Does any boolean imply a relationship? (`is_fork` → `forked_from`)

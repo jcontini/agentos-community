@@ -1,0 +1,29 @@
+# A long-form published work — blog post, essay, news article, newsletter.
+# Articles are also posts, so they inherit engagement metrics, posted_by,
+# and community context. The distinction: articles have publication structure
+# (word count, sections, publisher).
+#
+# Querying by "post" returns articles too (via also).
+#
+# Sources: Exa (web articles), Firecrawl, future RSS integration
+article:
+  also: [post]        # an article is also a post
+  fields:
+    word_count:        integer
+    reading_time:      integer   # estimated minutes
+    section:           string    # e.g. "Technology", "Opinion", "Science"
+    language:          string    # ISO 639-1 (e.g. en, es, ja)
+  relations:
+    publisher:         organization
+    published_in:      website
+  display:
+    title: name
+    subtitle: author
+    description: text
+    date: datePublished
+    columns:
+      - name:            Title
+      - author:          Author
+      - section:         Section
+      - word_count:      Words
+      - datePublished:   Published

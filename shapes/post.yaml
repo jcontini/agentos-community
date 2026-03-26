@@ -1,21 +1,23 @@
-# A social media post — a Reddit submission, HN story, or similar.
-# Reviews extend post via `also`. Engagement metrics are namespaced (engagement.*).
+# A piece of published content — a Reddit submission, HN story, YouTube upload,
+# tweet, etc. Posts can contain media (videos, images, files). A comment is
+# just a post that replies_to another post. Reviews extend post via `also`.
 #
-# Sources: Reddit, Hacker News
+# Sources: Reddit, Hacker News, YouTube, Moltbook
 post:
   fields:
-    external_url:      url       # linked URL (for link posts, not self-posts)
+    external_url:      url       # linked URL (for link posts)
     post_type:         string    # story, comment, job, poll, etc.
-    parent_id:         string    # parent post/comment ID for threaded replies
-    replies:           json      # inline reply tree
     engagement.score:  integer   # upvotes/points
     engagement.comment_count: integer
     engagement.likes:  integer
+    engagement.view_count: integer
   relations:
     posted_by:         account   # who posted it
-    publish:           community # subreddit or group it was posted to
-    replies_to:        post
-    embed:             video     # embedded video (if any)
+    publish:           community # subreddit, group, or channel it was posted to
+    replies_to:        post      # parent post (makes this a "comment")
+    contains:          video[]   # embedded videos
+    media:             image[]   # embedded images
+    attachment:        file[]    # attached files
   display:
     title: name
     subtitle: author
