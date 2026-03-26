@@ -89,7 +89,7 @@ operations:
       timeout: 15
     test:
       params:
-        user_id: "4116408"
+        user_id: "26631647"
 
   search_people:
     description: Search for Goodreads users by name
