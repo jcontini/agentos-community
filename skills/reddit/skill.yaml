@@ -96,8 +96,6 @@ operations:
         sort: .params.sort
       response:
         transform: '[.data.children[] | .data]'
-    test:
-      mode: read
 
   list_posts:
     description: List posts from a subreddit
@@ -118,8 +116,7 @@ operations:
       response:
         transform: '[.data.children[] | .data]'
     test:
-      mode: read
-      fixtures:
+      params:
         subreddit: programming
         sort: hot
         limit: 3
@@ -169,8 +166,7 @@ operations:
             replies: [.[1].data.children[] | select(.kind == "t1") | .data | map_comment]
           }
     test:
-      mode: read
-      fixtures:
+      params:
         id: "1qoxwdt"
         url: ~
 
@@ -191,16 +187,6 @@ operations:
         - ".params.id"
         - ".params.comment_limit"
       timeout: 30
-    test:
-      mode: read
-      discover_from:
-        op: list_posts
-        params:
-          subreddit: programming
-          sort: hot
-          limit: 3
-        map:
-          id: id
 
   get_community:
     description: Get subreddit metadata
@@ -217,8 +203,7 @@ operations:
       response:
         root: "/data"
     test:
-      mode: read
-      fixtures:
+      params:
         subreddit: programming
 
   search_communities:
@@ -239,5 +224,3 @@ operations:
         limit: .params.limit
       response:
         root: "/data/children"
-    test:
-      mode: read

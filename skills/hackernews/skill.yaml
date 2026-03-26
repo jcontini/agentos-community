@@ -68,8 +68,7 @@ operations:
       response:
         root: "/hits"
     test:
-      mode: read
-      fixtures:
+      params:
         feed: front
         limit: 3
 
@@ -94,8 +93,6 @@ operations:
         hitsPerPage: .params.limit
       response:
         root: "/hits"
-    test:
-      mode: read
 
   get_post:
     description: Get a Hacker News story with comments
@@ -141,8 +138,7 @@ operations:
             replies: [.children[]? | map_comment]
           }
     test:
-      mode: read
-      fixtures:
+      params:
         id: "1"
         url: ~
 
@@ -164,12 +160,3 @@ operations:
         - ./comments_post.sh
         - ".params.id"
       timeout: 30
-    test:
-      mode: read
-      discover_from:
-        op: list_posts
-        params:
-          feed: front
-          limit: 3
-        map:
-          id: id

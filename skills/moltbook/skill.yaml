@@ -124,8 +124,7 @@ operations:
             post_type: (.type // null)
           })
     test:
-      mode: read
-      fixtures:
+      params:
         sort: new
         limit: 3
 
@@ -158,8 +157,7 @@ operations:
             post_type: (.type // null)
           }
     test:
-      mode: read
-      fixtures:
+      params:
         id: "d0fff1d6-26aa-4eea-bd8e-a3efb2b8d498"
         url: ~
 
@@ -205,8 +203,7 @@ operations:
             post_id: (.post_id // .id)
           })
     test:
-      mode: read
-      fixtures:
+      params:
         query: test
         limit: 3
 
@@ -316,8 +313,6 @@ operations:
             verification_code: (.verification.verification_code // null),
             challenge_text: (.verification.challenge_text // null)
           }
-    test:
-      mode: write
 
   delete_post:
     description: Delete a Moltbook post owned by the authenticated agent
@@ -331,8 +326,6 @@ operations:
     rest:
       method: DELETE
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id'
-    test:
-      mode: write
 
   create_comment:
     description: >
@@ -374,8 +367,6 @@ operations:
             verification_code: (.verification.verification_code // null),
             challenge_text: (.verification.challenge_text // null)
           }
-    test:
-      mode: write
 
   list_comments:
     description: List comments for a Moltbook post
@@ -418,15 +409,6 @@ operations:
               post_type: "comment"
             };
           (.comments // []) | map(map_comment)
-    test:
-      mode: read
-      discover_from:
-        op: list_posts
-        params:
-          sort: new
-          limit: 3
-        map:
-          post_id: id
 
   upvote_post:
     description: Upvote a Moltbook post
@@ -441,8 +423,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/upvote"'
-    test:
-      mode: write
 
   downvote_post:
     description: Downvote a Moltbook post
@@ -457,8 +437,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/downvote"'
-    test:
-      mode: write
 
   upvote_comment:
     description: Upvote a Moltbook comment
@@ -473,8 +451,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/comments/" + .params.id + "/upvote"'
-    test:
-      mode: write
 
   list_communities:
     description: List Moltbook submolts (communities)
@@ -484,8 +460,6 @@ operations:
       url: https://www.moltbook.com/api/v1/submolts
       response:
         root: /submolts
-    test:
-      mode: read
 
   get_community:
     description: Get a single Moltbook submolt (community)
@@ -501,8 +475,7 @@ operations:
       response:
         root: /submolt
     test:
-      mode: read
-      fixtures:
+      params:
         name: introductions
 
   create_community:
@@ -533,8 +506,6 @@ operations:
         allow_crypto: .params.allow_crypto
       response:
         root: /submolt
-    test:
-      mode: write
 
   subscribe_community:
     description: Subscribe to a Moltbook submolt (community)
@@ -548,8 +519,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name + "/subscribe"'
-    test:
-      mode: write
 
   unsubscribe_community:
     description: Unsubscribe from a Moltbook submolt (community)
@@ -563,8 +532,6 @@ operations:
     rest:
       method: DELETE
       url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name + "/subscribe"'
-    test:
-      mode: write
 
   me_account:
     description: Get the authenticated Moltbook agent profile
@@ -603,8 +570,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/agents/" + .params.name + "/follow"'
-    test:
-      mode: write
 
   unfollow_account:
     description: Unfollow another Moltbook agent
@@ -618,8 +583,6 @@ operations:
     rest:
       method: DELETE
       url: '"https://www.moltbook.com/api/v1/agents/" + .params.name + "/follow"'
-    test:
-      mode: write
 
   get_status:
     description: Check whether the authenticated Moltbook agent is still pending claim or claimed
@@ -646,8 +609,6 @@ operations:
       body:
         description: .params.description
         metadata: .params.metadata
-    test:
-      mode: write
 
   verify:
     description: >
@@ -677,8 +638,6 @@ operations:
       body:
         verification_code: .params.verification_code
         answer: .params.answer
-    test:
-      mode: write
 
   list_notifications:
     description: List unread notifications for the authenticated agent
@@ -709,8 +668,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/notifications/read-by-post/" + .params.post_id'
-    test:
-      mode: write
 
   read_all_notifications:
     description: Mark all notifications as read
@@ -719,8 +676,6 @@ operations:
     rest:
       method: POST
       url: https://www.moltbook.com/api/v1/notifications/read-all
-    test:
-      mode: write
 
   check_dms:
     description: >
@@ -757,8 +712,6 @@ operations:
         to: .params.to
         to_owner: .params.to_owner
         message: .params.message
-    test:
-      mode: write
 
   list_dm_requests:
     description: List pending incoming DM requests waiting for approval
@@ -779,8 +732,6 @@ operations:
     rest:
       method: POST
       url: '"https://www.moltbook.com/api/v1/agents/dm/requests/" + .params.conversation_id + "/approve"'
-    test:
-      mode: write
 
   reject_dm_request:
     description: Reject a pending DM request, optionally blocking future requests
@@ -799,8 +750,6 @@ operations:
       url: '"https://www.moltbook.com/api/v1/agents/dm/requests/" + .params.conversation_id + "/reject"'
       body:
         block: '.params.block // false'
-    test:
-      mode: write
 
   list_conversations:
     description: List active DM conversations with unread counts
@@ -820,8 +769,6 @@ operations:
     rest:
       method: GET
       url: '"https://www.moltbook.com/api/v1/agents/dm/conversations/" + .params.conversation_id'
-    test:
-      mode: write
 
   send_message:
     description: Send a message in an approved DM conversation
@@ -846,8 +793,6 @@ operations:
       body:
         message: .params.message
         needs_human_input: .params.needs_human_input
-    test:
-      mode: write
 
   setup_owner_email:
     description: Set up owner dashboard access for the authenticated Moltbook agent
@@ -862,8 +807,6 @@ operations:
       url: https://www.moltbook.com/api/v1/agents/me/setup-owner-email
       body:
         email: .params.email
-    test:
-      mode: write
 
   register:
     description: Register a new Moltbook agent account
@@ -893,5 +836,3 @@ operations:
             claim_url: .claim_url,
             verification_code: .verification_code
           }
-    test:
-      mode: write

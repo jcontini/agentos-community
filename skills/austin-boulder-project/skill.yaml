@@ -56,9 +56,6 @@ operations:
         activity_ids: .params.activity_ids
         date: .params.date
       timeout: 30
-    test:
-      mode: read
-      fixtures: {}
 
   book_class:
     description: Book a class at Austin Bouldering Project (requires stored credentials)
@@ -83,8 +80,6 @@ operations:
         booking_instance_id: .params.booking_instance_id
         num_guests: .params.num_guests
       timeout: 30
-    test:
-      mode: write
 
   cancel_booking:
     description: Cancel a class reservation at Austin Bouldering Project
@@ -108,8 +103,6 @@ operations:
         booking_instance_id: .params.booking_instance_id
         reservation_id: .params.reservation_id
       timeout: 30
-    test:
-      mode: write
 
   get_my_memberships:
     description: List active memberships for the logged-in ABP account
@@ -121,8 +114,6 @@ operations:
       args:
         credentials: .auth.key
       timeout: 30
-    test:
-      mode: read
 
   get_my_passes:
     description: List active class passes for the logged-in ABP account
@@ -134,5 +125,3 @@ operations:
       args:
         credentials: .auth.key
       timeout: 30
-    test:
-      mode: read

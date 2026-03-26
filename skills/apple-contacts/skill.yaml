@@ -164,13 +164,8 @@ operations:
       params:
         limit: '.params.limit // 1000'
     test:
-      mode: read
-      fixtures:
+      params:
         limit: 10
-      discover_from:
-        op: accounts
-        map:
-          account: id
 
   get_person:
     description: Get full contact details by ID including addresses, notes, birthday
@@ -184,14 +179,6 @@ operations:
         - ".params.id"
       working_dir: .
       timeout: 20
-    test:
-      mode: read
-      discover_from:
-        op: list_persons
-        params:
-          limit: 10
-        map:
-          id: id
 
   search_persons:
     description: Search contacts by any text within a specific account
@@ -248,14 +235,9 @@ operations:
         query: .params.query
         limit: '.params.limit // 1000'
     test:
-      mode: read
-      fixtures:
+      params:
         query: a
         limit: 10
-      discover_from:
-        op: accounts
-        map:
-          account: id
 
   accounts:
     operation: read
@@ -268,8 +250,6 @@ operations:
         - ./accounts.swift
       working_dir: .
       timeout: 20
-    test:
-      mode: read
 
   create:
     operation: create
