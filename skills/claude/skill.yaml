@@ -78,7 +78,10 @@ operations:
       Verify Claude.ai session cookies and identify the logged-in account.
       Returns the email and display name from the chat-capable organization.
     connection: web
-    returns: account
+    returns:
+      authenticated: boolean
+      identifier: string
+      display: string
     python:
       module: ./claude-api.py
       function: check_session

@@ -45,9 +45,12 @@ operations:
   check_session:
     description: >
       Verify Goodreads session cookies and identify the logged-in user.
-      Returns user ID and display name from the current_user API.
+      Returns user ID and display name from the authenticated homepage.
     connection: web
-    returns: account
+    returns:
+      authenticated: boolean
+      identifier: string
+      display: string
     python:
       module: ./web_scraper.py
       function: check_session
