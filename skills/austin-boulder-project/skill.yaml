@@ -19,16 +19,13 @@ adapters:
     id: '.id | tostring'
     name: .name
     text: .text
-    datePublished: .startDT
+    start_date: .startDT
     url: '"https://boulderingproject.portal.approach.app/schedule"'
-    endDT: .endDT
-    status: .status
-    ticketsRemaining: .ticketsRemaining
+    end_date: .endDT
+    activity_type: .activityName
     capacity: .capacity
-    locationName: .locationName
-    locationId: .locationId
-    activityName: .activityName
-    isFull: .isFull
+    spots_remaining: .ticketsRemaining
+    is_full: .isFull
 
 operations:
   get_schedule:

@@ -1,26 +1,22 @@
-# A calendar meeting — an event with calendar-specific extras like
-# recurrence rules, virtual meeting URLs, and transcripts. Querying
-# by "event" returns meetings too.
+# A calendar meeting — an event with virtual meeting details and transcripts.
+# Querying by "event" returns meetings too.
 #
 # Sources: Apple Calendar, Granola
 meeting:
-  also: [event]       # a meeting is also an event
+  also: [event]
   fields:
-    all_day:           boolean
-    recurrence:        string    # iCal RRULE (e.g. FREQ=WEEKLY;BYDAY=MO)
     calendar_link:     url
     is_virtual:        boolean
     meeting_url:       url       # Zoom/Meet/Teams link
   relations:
-    organizer:         person
     transcribe:        transcript # meeting recording transcript
   display:
     title: name
     subtitle: location
     description: text
-    date: datePublished
+    date: start_date
     columns:
       - name:            Meeting
       - location:        Location
-      - datePublished:   Start
-      - end:             End
+      - start_date:      Start
+      - end_date:        End

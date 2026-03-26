@@ -13,6 +13,7 @@ import json
 import re
 import time
 import httpx
+from agentos import surf
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -75,38 +76,6 @@ def get_region() -> str:
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
-# httpx with http2=True is required here.
-#
-# Why not requests/urllib:
-#   requests/urllib3 only advertises "http/1.1" in the TLS ALPN extension.
-#   CloudFront WAF uses JA4 fingerprinting which includes ALPN as a field.
-#   A client sending ALPN=http/1.1 is immediately flagged as a bot (~98% of
-#   real browser traffic is h2/h3). httpx with http2=True advertises
-#   "h2, http/1.1", producing a different JA4 hash that passes the WAF check.
-#
-# See docs/reverse-engineering/1-transport.md and requirements.md for full investigation notes.
-
-_BROWSER_UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
-
-# Base headers that every request carries — mirror what Chrome sends for XHR
-_BASE_HEADERS = {
-    "User-Agent": _BROWSER_UA,
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "Sec-CH-UA-Mobile": "?0",
-    "Sec-CH-UA-Platform": '"macOS"',
-    # Sec-Fetch-* for cross-origin XHR (portal -> widgets API)
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "cross-site",
-}
-
-
 _DELETE_SENTINEL = b"__DELETE__"
 
 
@@ -118,22 +87,19 @@ def _fetch(
     method: str | None = None,
 ) -> bytes:
     """
-    Fetch a URL with httpx + HTTP/2, retrying on transient errors.
+    Fetch a URL with surf (httpx + HTTP/2), retrying on transient errors.
 
-    httpx is required over requests/urllib — see comment above.
-    data=bytes → POST, method overrides the default verb.
-    Pass method="DELETE" for delete requests.
+    HTTP/2 is required — CloudFront WAF uses JA4 fingerprinting which
+    includes ALPN. h1-only clients get flagged as bots.
+    surf(profile="api") provides the browser-like Sec-CH-UA + Sec-Fetch headers.
     """
-    merged = dict(_BASE_HEADERS)
-    if headers:
-        merged.update(headers)
     if method is None:
         method = "POST" if data is not None else "GET"
     last_err = None
     for attempt in range(3):
         try:
-            with httpx.Client(http2=True, follow_redirects=True, timeout=30) as client:
-                resp = client.request(method, url, headers=merged, content=data)
+            with surf(profile="api", headers=headers) as client:
+                resp = client.request(method, url, content=data)
                 resp.raise_for_status()
                 return resp.content
         except httpx.HTTPStatusError as e:
@@ -482,7 +448,6 @@ def _booking_to_entity(b: dict) -> dict:
     event = b.get("event", {})
     activities = event.get("activitys") or []
     activity_name = activities[0].get("name", "") if activities else ""
-    location = b.get("location", {})
     spots = b.get("ticketsRemaining")
     capacity = event.get("maxCustomers")
     full = spots == 0
@@ -499,13 +464,10 @@ def _booking_to_entity(b: dict) -> dict:
         "text": " — ".join(desc_parts),
         "startDT": b["startDT"],
         "endDT": b["endDT"],
-        "status": b.get("status", "active"),
-        "ticketsRemaining": spots,
+        "activity_type": activity_name,
         "capacity": capacity,
-        "locationName": location.get("name", ""),
-        "locationId": b.get("locationId"),
-        "activityName": activity_name,
-        "isFull": full,
+        "spots_remaining": spots,
+        "is_full": full,
     }
 
 

@@ -1,0 +1,27 @@
+# A scheduled, bookable group activity — gym classes, workshops, courses.
+# Has capacity (how many can attend) and optionally tracks spots remaining.
+#
+# Not to be confused with a meeting (1:1 or small group, calendar-driven)
+# or a conference (large, multi-track). A class has an instructor, a fixed
+# capacity, and is typically part of a recurring schedule.
+#
+# Sources: Austin Boulder Project, Mindbody, future gym/studio integrations
+class:
+  also: [event]
+  fields:
+    activity_type:     string    # yoga, climbing, fitness, barre, etc.
+    capacity:          integer   # max attendees
+    spots_remaining:   integer   # current availability
+    is_full:           boolean
+  relations:
+    instructor:        person    # who teaches/leads the class
+    venue:             place     # specific room/studio within a location
+  display:
+    title: name
+    subtitle: activity_type
+    date: start_date
+    columns:
+      - name:            Class
+      - activity_type:   Activity
+      - start_date:      Start
+      - spots_remaining: Spots

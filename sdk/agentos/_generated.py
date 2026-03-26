@@ -1,7 +1,7 @@
 """Auto-generated TypedDict classes from shape YAML — do not edit.
 
-Generated from 56 shapes in shapes/.
-Regenerate with: python -m agentos.shapes
+Generated from 57 shapes.
+Regenerate with: python generate.py --lang python
 """
 
 from __future__ import annotations
@@ -267,6 +267,32 @@ class Channel(TypedDict, total=False):
     platform: Product
 
 
+class Class(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    activity_type: str
+    all_day: bool
+    capacity: int
+    end_date: str
+    event_type: str
+    is_full: bool
+    recurrence: str
+    spots_remaining: int
+    start_date: str
+    timezone: str
+    instructor: Person
+    involves: list[Person]
+    location: Place
+    organizer: Person
+    venue: Place
+
+
 class Community(TypedDict, total=False):
     id: str
     name: str
@@ -403,14 +429,15 @@ class Event(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    confidence: str
-    details: Any
+    all_day: bool
     end_date: str
-    event_date: str
     event_type: str
-    documents: list[File]
+    recurrence: str
+    start_date: str
+    timezone: str
     involves: list[Person]
     location: Place
+    organizer: Person
 
 
 class File(TypedDict, total=False):
@@ -582,15 +609,13 @@ class Meeting(TypedDict, total=False):
     content: str
     all_day: bool
     calendar_link: str
-    confidence: str
-    details: Any
     end_date: str
-    event_date: str
     event_type: str
     is_virtual: bool
     meeting_url: str
     recurrence: str
-    documents: list[File]
+    start_date: str
+    timezone: str
     involves: list[Person]
     location: Place
     organizer: Person

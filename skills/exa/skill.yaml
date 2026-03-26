@@ -194,6 +194,10 @@ operations:
       limit: { type: integer, description: "Number of results" }
       category: { type: string, description: "Category of search (e.g. company, research paper, news, tweet, github)" }
       include_text: { type: boolean, description: "Include full text of the results (default: true)" }
+    test:
+      params:
+        query: "agentOS personal AI"
+        limit: 3
     rest:
       method: POST
       url: /search
@@ -215,6 +219,9 @@ operations:
     web_url: .params.url
     params:
       url: { type: string, required: true, description: "URL to fetch" }
+    test:
+      params:
+        url: "https://exa.ai"
     rest:
       method: POST
       url: /contents

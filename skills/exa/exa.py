@@ -7,18 +7,16 @@ Auth architecture (discovered via Playwright reverse engineering):
   - Login method:     Email verification code (6-digit, NOT a magic link)
   - Session:          JWT in `next-auth.session-token` cookie (.exa.ai)
   - Protection:       Vercel Security Checkpoint on dashboard.exa.ai
-  - Transport:        httpx http2=False for dashboard API calls
-                      (Vercel checkpoint blocks httpx's h2 JA4 fingerprint;
-                      h1 passes regardless of cookies or headers)
+  - Transport:        http2=False (Vercel blocks httpx's h2 JA4 fingerprint)
 
 Login flow (fully HTTPX, no browser needed):
-  1. send_login_code(email)    [HTTPX]
+  1. send_login_code(email)
      - GET  auth.exa.ai/api/auth/csrf       → CSRF token + cookie
      - POST auth.exa.ai/api/auth/signin/email → triggers verification code email
 
   2. Agent retrieves 6-digit code from email (any provider)
 
-  3. verify_login_code(email, code)   [HTTPX]
+  3. verify_login_code(email, code)
      - POST auth.exa.ai/api/verify-otp     → {hashedOtp, rawOtp}
      - Construct token = hashedOtp:rawOtp
      - GET  auth.exa.ai/api/auth/callback/email?token=...&email=...
@@ -37,41 +35,22 @@ The dashboard UI masks it, but the API returns it in full.
 Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
-import json
 import urllib.parse
-import httpx
+from agentos import surf
 
 AUTH_BASE = "https://auth.exa.ai"
 DASHBOARD_BASE = "https://dashboard.exa.ai"
 CALLBACK_URL = "https://dashboard.exa.ai/"
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/145.0.0.0 Safari/537.36"
-    ),
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
-    "Sec-CH-UA": '"Chromium";v="145", "Google Chrome";v="145", "Not-A.Brand";v="99"',
-    "Sec-CH-UA-Mobile": "?0",
-    "Sec-CH-UA-Platform": '"macOS"',
-}
 
-
-def _get_csrf_token(client: httpx.Client) -> str:
+def _get_csrf_token(client) -> str:
     """Fetch CSRF token from NextAuth. Sets the csrf cookie on the client."""
     resp = client.get(f"{AUTH_BASE}/api/auth/csrf")
     resp.raise_for_status()
-    data = resp.json()
-    return data["csrfToken"]
+    return resp.json()["csrfToken"]
 
 
-def _send_verification_email(client: httpx.Client, csrf_token: str, email: str) -> dict:
+def _send_verification_email(client, csrf_token: str, email: str) -> dict:
     """POST to NextAuth email signin endpoint to trigger the verification code email."""
     resp = client.post(
         f"{AUTH_BASE}/api/auth/signin/email",
@@ -87,19 +66,17 @@ def _send_verification_email(client: httpx.Client, csrf_token: str, email: str) 
     return resp.json()
 
 
-def _check_session(client: httpx.Client) -> dict | None:
+def _check_session(client) -> dict | None:
     """Check the current session on the dashboard. Returns user data or None."""
     resp = client.get(f"{DASHBOARD_BASE}/api/auth/session")
     if resp.status_code != 200:
         return None
     data = resp.json()
-    if data.get("user"):
-        return data
-    return None
+    return data if data.get("user") else None
 
 
-def _serialize_cookies(client: httpx.Client) -> dict:
-    """Extract exa.ai cookies from an HTTPX client as a serializable dict."""
+def _serialize_cookies(client) -> dict:
+    """Extract exa.ai cookies from an httpx client as a serializable dict."""
     cookies = {}
     for cookie in client.cookies.jar:
         if "exa.ai" in cookie.domain:
@@ -121,16 +98,9 @@ def send_login_code(*, email: str, **params) -> dict:
     if not email:
         return {"__result__": {"error": "email is required"}}
 
-    with httpx.Client(
-        http2=False,
-        follow_redirects=True,
-        timeout=30,
-        headers=HEADERS,
-    ) as client:
+    with surf(profile="api", http2=False) as client:
         csrf_token = _get_csrf_token(client)
         _send_verification_email(client, csrf_token, email)
-
-        # Save the CSRF cookies so verify_login_code can use the same session
         auth_cookies = _serialize_cookies(client)
 
     return {
@@ -160,12 +130,7 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
     if not email or not code:
         return {"__result__": {"error": "email and code are required"}}
 
-    with httpx.Client(
-        http2=False,
-        follow_redirects=False,
-        timeout=30,
-        headers=HEADERS,
-    ) as client:
+    with surf(profile="api", http2=False) as client:
         # Establish CSRF session (needed for the callback to accept our request)
         _get_csrf_token(client)
 
@@ -200,7 +165,7 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
         )
 
         # Hit the NextAuth callback — this sets the session-token cookie
-        resp2 = client.get(callback_url, follow_redirects=True)
+        resp2 = client.get(callback_url)
         if resp2.status_code >= 400:
             return {"__result__": {"error": f"Callback failed: HTTP {resp2.status_code}"}}
 
@@ -216,14 +181,14 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
 
     # Validate session and store via __secrets__
     cookies = {"next-auth.session-token": session_token}
-    with _make_dashboard_client(cookies) as dashboard:
+    with _dashboard_client(cookies) as dashboard:
         session = _check_session(dashboard)
         if not session:
             return {"__result__": {"error": "Session token invalid after login"}}
 
     return {
         "__secrets__": [{
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "identifier": email,
             "item_type": "cookie",
             "label": "Exa Dashboard Session",
@@ -258,14 +223,14 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
     if cf_clearance:
         cookies["cf_clearance"] = cf_clearance
 
-    with _make_dashboard_client(cookies) as client:
+    with _dashboard_client(cookies) as client:
         session = _check_session(client)
         if not session:
             return {"__result__": {"error": "Session token invalid or expired"}}
 
     return {
         "__secrets__": [{
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "identifier": email,
             "item_type": "cookie",
             "label": "Exa Dashboard Session",
@@ -288,38 +253,16 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
     }
 
 
-def _parse_cookie_string(raw) -> dict:
-    """Accept cookie header string or dict and return a {name: value} dict."""
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        pairs = {}
-        for part in raw.split(";"):
-            part = part.strip()
-            if "=" in part:
-                name, _, value = part.partition("=")
-                pairs[name.strip()] = value.strip()
-        return pairs
-    return {}
-
-
-def _make_dashboard_client(cookies) -> httpx.Client:
-    """Create an httpx client for dashboard.exa.ai (Vercel-hosted).
+def _dashboard_client(cookies):
+    """Create a surf client for dashboard.exa.ai (Vercel-hosted).
 
     Uses http2=False because Vercel's Security Checkpoint blocks httpx's
-    HTTP/2 JA4 fingerprint (429 regardless of cookies/headers). HTTP/1.1
-    with a browser User-Agent passes cleanly.
+    HTTP/2 JA4 fingerprint. profile="api" adds Sec-CH-UA + Sec-Fetch headers.
     """
-    return httpx.Client(
-        http2=False,
-        follow_redirects=True,
-        timeout=30,
-        headers=HEADERS,
-        cookies=_parse_cookie_string(cookies),
-    )
+    return surf(cookies=cookies, profile="api", http2=False)
 
 
-def _require_session(client: httpx.Client) -> dict:
+def _require_session(client) -> dict:
     """Check session and raise on failure so the engine's cookie retry fires."""
     session = _check_session(client)
     if not session:
@@ -339,7 +282,7 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
-    with _make_dashboard_client(cookies) as client:
+    with _dashboard_client(cookies) as client:
         session = _require_session(client)
         email = session["user"]["email"]
 
@@ -369,7 +312,7 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     if store and enabled_keys:
         key = enabled_keys[0]
         result["__secrets__"] = [{
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "identifier": email,
             "item_type": "api_key",
             "label": f"Exa API Key ({key['name']})",
@@ -390,7 +333,7 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
     if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
-    with _make_dashboard_client(cookies) as client:
+    with _dashboard_client(cookies) as client:
         _require_session(client)
         resp = client.get(f"{DASHBOARD_BASE}/api/get-teams")
         resp.raise_for_status()
@@ -427,7 +370,7 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
     if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
-    with _make_dashboard_client(cookies) as client:
+    with _dashboard_client(cookies) as client:
         session = _require_session(client)
         email = session["user"]["email"]
 
@@ -446,7 +389,7 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
     masked = api_key[:6] + "••••" + api_key[-4:]
     return {
         "__secrets__": [{
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "identifier": email or "unknown",
             "item_type": "api_key",
             "label": f"Exa API Key ({name})",
@@ -476,7 +419,7 @@ def logout(*, cookies: dict = None, **params) -> dict:
     if not cookies:
         return {"__result__": {"status": "already_logged_out"}}
 
-    with _make_dashboard_client(cookies) as client:
+    with _dashboard_client(cookies) as client:
         csrf_token = _get_csrf_token(client)
         resp = client.post(
             f"{AUTH_BASE}/api/auth/signout",
