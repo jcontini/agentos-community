@@ -18,7 +18,7 @@ import json
 import re
 import sys
 
-from agentos import get_cookies, surf
+from agentos import get_cookies, parse_cookie, surf
 
 BASE_URL = "https://claude.ai"
 
@@ -46,15 +46,32 @@ def _client(cookie_header: str):
 
 # -- API operations ------------------------------------------------------------
 
+
 def _get_organizations(client):
     resp = client.get(f"{BASE_URL}/api/organizations")
     resp.raise_for_status()
     return resp.json()
 
 
-def _resolve_org_uuid(client, org_uuid=None):
+def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
+    """Resolve the org UUID for chat operations.
+
+    Priority: explicit org_uuid > lastActiveOrg cookie (probed) > /api/organizations.
+    The lastActiveOrg cookie can be stale, so we probe with ?limit=1 before trusting it.
+    """
     if org_uuid:
         return org_uuid
+    # Try lastActiveOrg cookie — probe with a lightweight ?limit=1 before trusting.
+    if cookie_header:
+        last_active = parse_cookie(cookie_header, "lastActiveOrg")
+        if last_active:
+            probe = client.get(
+                f"{BASE_URL}/api/organizations/{last_active}"
+                f"/chat_conversations?limit=1"
+            )
+            if probe.status_code == 200:
+                return last_active
+    # Slow path: fetch all orgs, find chat-capable one.
     orgs = _get_organizations(client)
     for org in orgs:
         if "chat" in org.get("capabilities", []):
@@ -140,7 +157,7 @@ def op_list_conversations(params: dict | None = None) -> list:
     offset = int(op.get("offset") or 0)
     org_uuid = op.get("org")
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, org_uuid)
+        org = _resolve_org_uuid(client, org_uuid, cookie_header)
         convs = _get_conversations(client, org, limit=limit, offset=offset)
     return _format_conversation_list(convs, org)
 
@@ -159,7 +176,7 @@ def op_get_conversation(params: dict | None = None) -> dict:
     if not conv_id:
         raise ValueError("id or url is required for get_conversation")
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account)
+        org = _resolve_org_uuid(client, account, cookie_header)
         conv = _get_conversation(client, org, conv_id)
     return _format_conversation(conv, org)
 
@@ -178,7 +195,7 @@ def op_search_conversations(params: dict | None = None) -> list:
     page_size = 50
 
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account)
+        org = _resolve_org_uuid(client, account, cookie_header)
         while offset < 250:
             page = _get_conversations(client, org, limit=page_size, offset=offset)
             if not page:
@@ -204,7 +221,7 @@ def op_import_conversation(params: dict | None = None) -> list:
 
     rows = []
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account)
+        org = _resolve_org_uuid(client, account, cookie_header)
         convs = _get_conversations(client, org, limit=limit, offset=offset)
         for conv_stub in convs:
             conv_uuid = conv_stub["uuid"]
@@ -245,7 +262,11 @@ def op_list_orgs(params: dict | None = None) -> list:
 # -- Session check — called by account.check with params: true -----------------
 
 def check_session(params: dict | None = None) -> dict:
-    """Verify Claude.ai session and identify the logged-in account."""
+    """Verify Claude.ai session and identify the logged-in account.
+
+    Validates operational access by resolving the chat org (which probes
+    lastActiveOrg cookie if available), then fetches identity from /api/organizations.
+    """
     params = params or {}
     cookie_header = get_cookies(params)
     if not cookie_header:
@@ -253,13 +274,17 @@ def check_session(params: dict | None = None) -> dict:
 
     try:
         with _client(cookie_header) as client:
-            resp = client.get(f"{BASE_URL}/api/organizations")
-            if resp.status_code != 200:
-                return {"authenticated": False, "status_code": resp.status_code}
-            orgs = resp.json()
+            # Validate session: resolve org (probes lastActiveOrg, falls back to /api/organizations).
+            _resolve_org_uuid(client, cookie_header=cookie_header)
+            # Session is valid — resolve identity from orgs list.
+            orgs = _get_organizations(client)
+            return _identify_from_orgs(orgs)
     except Exception:
         return {"authenticated": False}
 
+
+def _identify_from_orgs(orgs: list) -> dict:
+    """Extract identity from the org list, preferring chat-capable orgs."""
     for org in orgs:
         if "chat" in org.get("capabilities", []):
             name = org.get("name", "")
@@ -273,7 +298,6 @@ def check_session(params: dict | None = None) -> dict:
                 "identifier": email or name,
                 "display": email or name,
             }
-
     if orgs:
         name = orgs[0].get("name", "")
         return {
@@ -282,7 +306,6 @@ def check_session(params: dict | None = None) -> dict:
             "identifier": name,
             "display": name,
         }
-
     return {"authenticated": False}
 
 

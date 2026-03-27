@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import httpx
-from agentos import molt, parse_int, surf, get_cookies
+from agentos import molt, parse_int, surf, get_cookies, require_cookies
 from bs4 import BeautifulSoup, Tag
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -420,14 +420,7 @@ BASE = "https://www.amazon.com"
 _SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
 
 
-def _require_cookies(params: dict[str, Any] | None, op: str) -> str:
-    cookie_header = get_cookies(params)
-    if not cookie_header:
-        raise ValueError(
-            f"{op} requires Amazon session cookies. "
-            "Sign in at amazon.com; AgentOS provides cookies via the web connection."
-        )
-    return cookie_header
+_require_cookies = require_cookies
 
 
 def _auth_client(cookie_header: str) -> httpx.Client:

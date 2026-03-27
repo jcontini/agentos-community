@@ -580,17 +580,8 @@
               }
             },
             "check": {
-              "type": "object",
-              "description": "Session check — liveness probe and optional identity resolution. Always checks status. If identifier is present, parses the JSON response to resolve account identity. For HTML services, identity belongs in a skill-level operation.",
-              "required": ["url"],
-              "properties": {
-                "url": { "type": "string", "description": "URL to hit with extracted cookies" },
-                "method": { "type": "string", "description": "HTTP method (default: GET)" },
-                "expect_status": { "type": "integer", "description": "Expected HTTP status (default: 200)" },
-                "identifier": { "type": "string", "description": "jaq expression extracting account identifier from a JSON response" },
-                "display": { "type": "string", "description": "jaq expression for a human-friendly display name from a JSON response" }
-              },
-              "additionalProperties": false
+              "type": "string",
+              "description": "Operation name for session verification and identity resolution (e.g. check_session). The operation must return {authenticated, identifier, display}."
             }
           },
           "additionalProperties": false

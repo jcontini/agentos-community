@@ -30,10 +30,7 @@ connections:
       type: cookies
       domain: ".exa.ai"
       names: ["next-auth.session-token"]
-      check:
-        url: "https://dashboard.exa.ai/api/auth/session"
-        identifier: ".user.email"
-        display: ".user.name"
+      check: check_session
       login:
         - email_code: true
         - sso: google
@@ -68,6 +65,21 @@ adapters:
 
 operations:
   # ─── Auth & dashboard ─────────────────────────────────────────────────────
+  check_session:
+    description: Verify Exa dashboard session and identify the logged-in account.
+    connection: dashboard
+    returns:
+      authenticated: boolean
+      identifier: string
+      display: string
+    python:
+      module: ./exa.py
+      function: check_session
+      params: true
+      timeout: 15
+    test:
+      skip: true
+
   send_login_code:
     description: "Send a 6-digit verification code to the email — call verify_login_code next"
     returns:

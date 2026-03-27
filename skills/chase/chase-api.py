@@ -37,7 +37,7 @@ import json
 import sys
 import urllib.parse
 
-from agentos import get_cookies, surf
+from agentos import require_cookies, surf
 
 BASE = "https://secure.chase.com"
 
@@ -58,14 +58,6 @@ def _client(cookie_header: str):
     )
 
 
-def _require_cookies(params: dict | None, op: str) -> str:
-    cookie_header = get_cookies(params)
-    if not cookie_header:
-        raise ValueError(
-            f"{op} requires Chase session cookies. "
-            "Sign in at chase.com; AgentOS provides cookies via the web connection."
-        )
-    return cookie_header
 
 
 def check_session(params: dict | None = None) -> dict:
@@ -100,7 +92,7 @@ def check_session(params: dict | None = None) -> dict:
 
 def get_accounts(params: dict | None = None) -> list | dict:
     params = params or {}
-    cookie_header = _require_cookies(params, "list_accounts")
+    cookie_header = require_cookies(params, "list_accounts")
 
     with _client(cookie_header) as client:
         resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
@@ -156,7 +148,7 @@ def _normalize_account(t: dict) -> dict:
 
 def get_transactions(params: dict | None = None) -> list | dict:
     params = params or {}
-    cookie_header = _require_cookies(params, "list_transactions")
+    cookie_header = require_cookies(params, "list_transactions")
     op_params = params.get("params") or {}
     account_id = op_params.get("account_id", "")
     limit = int(op_params.get("limit") or 30)

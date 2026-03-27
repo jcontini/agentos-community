@@ -88,6 +88,21 @@ def _serialize_cookies(client) -> dict:
 # Operations — called by the Python executor with kwargs
 # ---------------------------------------------------------------------------
 
+def check_session(**params) -> dict:
+    """Verify Exa dashboard session and identify the logged-in account."""
+    cookies = params.get("auth", {}).get("cookies", "")
+    with _dashboard_client(cookies) as client:
+        session = _check_session(client)
+    if not session:
+        return {"__result__": {"authenticated": False, "identifier": None, "display": None}}
+    user = session.get("user", {})
+    return {"__result__": {
+        "authenticated": True,
+        "identifier": user.get("email"),
+        "display": user.get("name"),
+    }}
+
+
 def send_login_code(*, email: str, **params) -> dict:
     """Trigger a verification code email for the given address.
 

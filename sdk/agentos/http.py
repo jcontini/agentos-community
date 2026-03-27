@@ -166,7 +166,16 @@ def surf(
         profile = "json" if json_api else "default"
     base_headers = dict(_PROFILES.get(profile, _DEFAULT_HEADERS))
     if headers:
-        base_headers.update(headers)
+        # Case-insensitive merge: caller headers win over profile defaults.
+        # Without this, "Sec-CH-UA" and "Sec-Ch-Ua" coexist as separate keys,
+        # sending duplicate headers that trigger WAF detection.
+        lower_map = {k.lower(): k for k in base_headers}
+        for k, v in headers.items():
+            existing = lower_map.get(k.lower())
+            if existing and existing != k:
+                del base_headers[existing]
+            base_headers[k] = v
+            lower_map[k.lower()] = k
 
     # Build cookie jar
     cookie_jar = None
@@ -184,6 +193,24 @@ def surf(
     )
 
 
+def skill_error(message: str, **extra) -> dict:
+    """Return a structured error dict from a skill operation.
+
+    Usage: return skill_error("email is required")
+    """
+    result = {"error": message}
+    result.update(extra)
+    return {"__result__": result}
+
+
+def skill_result(**fields) -> dict:
+    """Return a structured result dict from a skill operation.
+
+    Usage: return skill_result(authenticated=True, identifier="joe@x.com")
+    """
+    return {"__result__": fields}
+
+
 def get_cookies(params: dict | None) -> str | None:
     """Extract cookie header from the runtime params dict.
 
@@ -199,3 +226,59 @@ def get_cookies(params: dict | None) -> str | None:
         return None
     cookies = auth.get("cookies") or ""
     return cookies if cookies else None
+
+
+def require_cookies(params: dict | None, op: str) -> str:
+    """Extract cookie header or raise with a helpful message.
+
+    Usage: cookie_header = require_cookies(params, "list_orders")
+    """
+    header = get_cookies(params)
+    if not header:
+        raise ValueError(f"{op} requires session cookies — sign in via the browser first")
+    return header
+
+
+def parse_cookie(cookie_header: str, name: str) -> str | None:
+    """Extract a single cookie value from a header string.
+
+    Usage: org = parse_cookie(cookie_header, "lastActiveOrg")
+    """
+    for part in cookie_header.split(";"):
+        k, _, v = part.strip().partition("=")
+        if k == name:
+            return v or None
+    return None
+
+
+def skill_secret(
+    domain: str,
+    identifier: str,
+    item_type: str,
+    value: dict,
+    *,
+    source: str | None = None,
+    label: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Build a __secrets__ entry for credential storage.
+
+    Usage:
+        return {
+            "__secrets__": [skill_secret("exa.ai", email, "cookie", cookies)],
+            "__result__": {"status": "authenticated"},
+        }
+    """
+    entry = {
+        "domain": domain,
+        "identifier": identifier,
+        "item_type": item_type,
+        "value": value,
+    }
+    if source:
+        entry["source"] = source
+    if label:
+        entry["label"] = label
+    if metadata:
+        entry["metadata"] = metadata
+    return entry
