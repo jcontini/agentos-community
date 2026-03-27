@@ -151,9 +151,8 @@ def _normalize_account(t: dict) -> dict:
 def get_transactions(params: dict | None = None) -> list | dict:
     params = params or {}
     cookie_header = require_cookies(params, "list_transactions")
-    op_params = params.get("params") or {}
-    account_id = op_params.get("account_id", "")
-    limit = int(op_params.get("limit") or 30)
+    account_id = params.get("account_id", "")
+    limit = int(params.get("limit") or 30)
 
     if not account_id:
         return {"error": "account_id is required"}

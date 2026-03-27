@@ -152,10 +152,9 @@ def _format_conversation(conv, org_uuid):
 def op_list_conversations(params: dict | None = None) -> list:
     params = params or {}
     cookie_header = get_cookies(params)
-    op = params.get("params") or {}
-    limit = int(op.get("limit") or 50)
-    offset = int(op.get("offset") or 0)
-    org_uuid = op.get("org")
+    limit = int(params.get("limit") or 50)
+    offset = int(params.get("offset") or 0)
+    org_uuid = params.get("org")
     with _client(cookie_header) as client:
         org = _resolve_org_uuid(client, org_uuid, cookie_header)
         convs = _get_conversations(client, org, limit=limit, offset=offset)
@@ -165,10 +164,9 @@ def op_list_conversations(params: dict | None = None) -> list:
 def op_get_conversation(params: dict | None = None) -> dict:
     params = params or {}
     cookie_header = get_cookies(params)
-    op = params.get("params") or {}
-    account = op.get("account")
-    conv_id = op.get("id")
-    url = op.get("url", "")
+    account = params.get("account")
+    conv_id = params.get("id")
+    url = params.get("url", "")
     if url:
         m = re.search(r"chat/([0-9a-fA-F-]{36})", url)
         if m:
@@ -184,10 +182,9 @@ def op_get_conversation(params: dict | None = None) -> dict:
 def op_search_conversations(params: dict | None = None) -> list:
     params = params or {}
     cookie_header = get_cookies(params)
-    op = params.get("params") or {}
-    query = op.get("query", "")
-    account = op.get("account")
-    limit = int(op.get("limit") or 20)
+    query = params.get("query", "")
+    account = params.get("account")
+    limit = int(params.get("limit") or 20)
 
     query_lower = query.lower()
     results = []
@@ -214,10 +211,9 @@ def op_search_conversations(params: dict | None = None) -> list:
 def op_import_conversation(params: dict | None = None) -> list:
     params = params or {}
     cookie_header = get_cookies(params)
-    op = params.get("params") or {}
-    account = op.get("account")
-    limit = int(op.get("limit") or 5)
-    offset = int(op.get("offset") or 0)
+    account = params.get("account")
+    limit = int(params.get("limit") or 5)
+    offset = int(params.get("offset") or 0)
 
     rows = []
     with _client(cookie_header) as client:
