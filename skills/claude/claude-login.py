@@ -220,7 +220,10 @@ def check_logged_in(ws_url):
 # -- Operation entrypoint — called by the python: executor with kwargs ---------
 
 def op_extract_magic_link(raw_email: str) -> dict:
-    return extract_magic_link_from_raw_email(raw_email)
+    link = extract_magic_link_from_raw_email(raw_email)
+    if link:
+        return {"magic_link": link}
+    return {"error": "No magic link found in raw email content"}
 
 
 # -- Entry point ---------------------------------------------------------------

@@ -95,7 +95,7 @@ operations:
       Requires a valid session (run login flow if needed).
     returns: conversation[]
     params:
-      account: { type: string, description: "Org UUID to use (omit to use session default). Use list_orgs to discover available orgs." }
+      org: { type: string, description: "Org UUID to use (omit to use session default). Use list_orgs to discover available orgs." }
       limit: { type: integer, default: 50, description: "Max conversations to return (max 250)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
     python:
@@ -112,7 +112,7 @@ operations:
     params:
       id: { type: string, description: "Conversation UUID — optional if url is a claude.ai/chat/… link" }
       url: { type: string, description: "Claude chat URL copied from the browser (web_read)" }
-      account: { type: string, description: "Org UUID (omit to use session default)" }
+      org: { type: string, description: "Org UUID (omit to use session default)" }
     python:
       module: ./claude-api.py
       function: op_get_conversation
@@ -128,7 +128,7 @@ operations:
     returns: conversation[]
     params:
       query: { type: string, required: true, description: "Text to search for in conversation titles" }
-      account: { type: string, description: "Org UUID (omit to use session default)" }
+      org: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 20, description: "Max results" }
     python:
       module: ./claude-api.py
@@ -145,7 +145,7 @@ operations:
       Use limit+offset to page through conversations in batches of 5-10.
     returns: message[]
     params:
-      account: { type: string, description: "Org UUID (omit to use session default)" }
+      org: { type: string, description: "Org UUID (omit to use session default)" }
       limit: { type: integer, default: 5, description: "Conversations per batch (keep ≤10 to avoid DB lock)" }
       offset: { type: integer, default: 0, description: "Pagination offset" }
     python:

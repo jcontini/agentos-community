@@ -28,15 +28,20 @@ CLAUDE_HEADERS = {
     "Sec-Fetch-Dest": "empty",
     "Sec-Fetch-Mode": "cors",
     "Sec-Fetch-Site": "same-origin",
-    "Sec-CH-UA": '"Brave";v="1.80", "Chromium";v="144", "Not-A.Brand";v="99"',
+    "Sec-CH-UA": '"Chromium";v="146", "Brave";v="146", "Not-A.Brand";v="99"',
     "Sec-CH-UA-Mobile": "?0",
     "Sec-CH-UA-Platform": '"macOS"',
 }
 
 
 def _client(cookie_header: str):
-    """httpx client configured for claude.ai (Cloudflare bypass, http2=False)."""
-    return surf(cookies=cookie_header, profile="api", headers=CLAUDE_HEADERS, http2=False)
+    """httpx client configured for claude.ai (Cloudflare bypass, http2=False).
+
+    Uses profile="json" (not "api") because CLAUDE_HEADERS already provides
+    all Sec-* headers. Using "api" would cause httpx to concatenate duplicate
+    Sec-CH-UA values from both sources — a clear WAF detection signal.
+    """
+    return surf(cookies=cookie_header, profile="json", headers=CLAUDE_HEADERS, http2=False)
 
 
 # -- API operations ------------------------------------------------------------
@@ -133,9 +138,9 @@ def op_list_conversations(params: dict | None = None) -> list:
     op = params.get("params") or {}
     limit = int(op.get("limit") or 50)
     offset = int(op.get("offset") or 0)
-    account = op.get("account")
+    org_uuid = op.get("org")
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account)
+        org = _resolve_org_uuid(client, org_uuid)
         convs = _get_conversations(client, org, limit=limit, offset=offset)
     return _format_conversation_list(convs, org)
 
