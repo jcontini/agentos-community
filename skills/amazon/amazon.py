@@ -528,8 +528,8 @@ def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """List Amazon orders from the order history page."""
     params = params or {}
     cookie_header = _require_cookies(params, "list_orders")
-    order_filter = (params.get("params") or {}).get("filter") or "last30"
-    page = int((params.get("params") or {}).get("page") or 1)
+    order_filter = params.get("filter") or "last30"
+    page = int(params.get("page") or 1)
 
     url_params: dict[str, str] = {"timeFilter": order_filter}
     if page > 1:
@@ -988,7 +988,7 @@ def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Fetch detailed info for a specific Amazon order."""
     params = params or {}
     cookie_header = _require_cookies(params, "get_order")
-    order_id = (params.get("params") or {}).get("order_id", "")
+    order_id = params.get("order_id", "")
     if not order_id:
         raise ValueError("order_id is required")
 
@@ -1220,10 +1220,10 @@ def get_list(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Get items from a specific Amazon list by list ID."""
     params = params or {}
     cookie_header = _require_cookies(params, "get_list")
-    list_id = (params.get("params") or {}).get("list_id")
+    list_id = params.get("list_id")
     if not list_id:
         raise ValueError("get_list requires a list_id parameter")
-    item_filter = (params.get("params") or {}).get("filter") or "unpurchased"
+    item_filter = params.get("filter") or "unpurchased"
 
     all_items: list[dict[str, Any]] = []
     seen: set[str] = set()
