@@ -96,6 +96,8 @@ def get_accounts(params: dict | None = None) -> list | dict:
 
     with _client(cookie_header) as client:
         resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
+        if resp.status_code in (401, 403):
+            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp.status_code}")
         if resp.status_code != 200:
             return {"error": f"HTTP {resp.status_code}"}
         data = resp.json()
@@ -169,6 +171,8 @@ def get_transactions(params: dict | None = None) -> list | dict:
 
     with _client(cookie_header) as client:
         resp = client.get(path, headers={"network-channel-group-code": "DIGITAL"})
+        if resp.status_code in (401, 403):
+            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp.status_code}")
         if resp.status_code != 200:
             return {"error": f"HTTP {resp.status_code}"}
         data = resp.json()
