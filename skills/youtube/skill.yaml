@@ -95,7 +95,7 @@ adapters:
     text: .text
     url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
     datePublished: .timestamp | todate
-    engagement.likes: .like_count
+    likes: .like_count
 
     posted_by:
       account:

@@ -7,10 +7,10 @@ post:
   fields:
     external_url:      url       # linked URL (for link posts)
     post_type:         string    # story, comment, job, poll, etc.
-    engagement.score:  integer   # upvotes/points
-    engagement.comment_count: integer
-    engagement.likes:  integer
-    engagement.view_count: integer
+    score:         integer    # upvotes/points
+    comment_count: integer
+    likes:         integer
+    view_count:    integer
   relations:
     posted_by:         account   # who posted it
     publish:           community # subreddit, group, or channel it was posted to
@@ -26,6 +26,6 @@ post:
     columns:
       - name:            Title
       - author:          Author
-      - engagement.score: Score
-      - engagement.comment_count: Comments
+      - score:         Score
+      - comment_count: Comments
       - datePublished:   Date

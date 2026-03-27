@@ -41,8 +41,8 @@ adapters:
     url: '"https://reddit.com" + .permalink'
     author: .author
     datePublished: .created_utc | todate
-    engagement.score: .score
-    engagement.comment_count: .num_comments
+    score: .score
+    comment_count: .num_comments
     replies: .replies
 
     publish:

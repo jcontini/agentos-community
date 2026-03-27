@@ -1578,22 +1578,18 @@ pub struct Post {
     pub date_published: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
-    #[serde(rename = "engagement.comment_count")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_comment_count: Option<i64>,
-    #[serde(rename = "engagement.likes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_likes: Option<i64>,
-    #[serde(rename = "engagement.score")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_score: Option<i64>,
-    #[serde(rename = "engagement.view_count")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_view_count: Option<i64>,
+    pub comment_count: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub likes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub post_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub view_count: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachment: Option<Vec<File>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1798,22 +1794,14 @@ pub struct Review {
     pub date_published: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
-    #[serde(rename = "engagement.comment_count")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_comment_count: Option<i64>,
-    #[serde(rename = "engagement.likes")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_likes: Option<i64>,
-    #[serde(rename = "engagement.score")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_score: Option<i64>,
-    #[serde(rename = "engagement.view_count")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub engagement_view_count: Option<i64>,
+    pub comment_count: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_verified: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub likes: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1821,7 +1809,11 @@ pub struct Review {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rating_max: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub view_count: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachment: Option<Vec<File>>,
     #[serde(skip_serializing_if = "Option::is_none")]

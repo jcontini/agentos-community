@@ -31,47 +31,41 @@ Confirmed endpoints (reverse-engineered 2026-03-12):
 Required cookies: AMSESSION, sessioncacheid, auth-guid, dps-pod-id,
                   x-auth-activity-info, akaalb_secure_chase_com
 Required headers: x-jpmc-csrf-token: NONE, x-jpmc-channel: id=C30
-
-Usage:
-  chase-api.py accounts --cookies "AMSESSION=...; ..."
-  chase-api.py transactions --cookies "..." --account-id 123456789 [--limit 30]
 """
 
-import argparse
 import json
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
+
+from agentos import get_cookies, surf
 
 BASE = "https://secure.chase.com"
 
-BASE_HEADERS = {
-    "accept": "application/json, text/plain, */*",
-    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+EXTRA_HEADERS = {
     "origin": BASE,
     "referer": f"{BASE}/web/auth/dashboard",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
     "x-jpmc-channel": "id=C30",
     "x-jpmc-csrf-token": "NONE",
 }
 
 
-def request(method: str, path: str, cookies: str, body: bytes = b"", extra_headers: dict | None = None) -> dict:
-    url = path if path.startswith("http") else f"{BASE}{path}"
-    req = urllib.request.Request(url, data=body or None, method=method)
-    for k, v in BASE_HEADERS.items():
-        req.add_header(k, v)
-    if extra_headers:
-        for k, v in extra_headers.items():
-            req.add_header(k, v)
-    req.add_header("cookie", cookies)
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode()[:300]
-        return {"error": f"HTTP {e.code}", "detail": detail}
+def _client(cookie_header: str):
+    """httpx client with Chase-specific headers."""
+    return surf(
+        cookies=cookie_header,
+        profile="api",
+        headers=EXTRA_HEADERS,
+    )
+
+
+def _require_cookies(params: dict | None, op: str) -> str:
+    cookie_header = get_cookies(params)
+    if not cookie_header:
+        raise ValueError(
+            f"{op} requires Chase session cookies. "
+            "Sign in at chase.com; AgentOS provides cookies via the web connection."
+        )
+    return cookie_header
 
 
 def check_session(params: dict | None = None) -> dict:
@@ -81,11 +75,12 @@ def check_session(params: dict | None = None) -> dict:
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
-    data = request("POST", "/svc/rl/accounts/l4/v1/app/data/list", cookie_header)
-    if "error" in data:
-        return {"authenticated": False, "error": data.get("error")}
+    with _client(cookie_header) as client:
+        resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
+        if resp.status_code != 200:
+            return {"authenticated": False, "error": f"HTTP {resp.status_code}"}
+        data = resp.json()
 
-    # Find account tiles
     for entry in data.get("cache", []):
         if not isinstance(entry, dict):
             continue
@@ -103,29 +98,34 @@ def check_session(params: dict | None = None) -> dict:
     return {"authenticated": False, "error": "no account tiles"}
 
 
-def get_accounts(cookies: str) -> list | dict:
-    data = request("POST", "/svc/rl/accounts/l4/v1/app/data/list", cookies)
-    if "error" in data:
-        return data
+def get_accounts(params: dict | None = None) -> list | dict:
+    params = params or {}
+    cookie_header = _require_cookies(params, "list_accounts")
+
+    with _client(cookie_header) as client:
+        resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
+        if resp.status_code != 200:
+            return {"error": f"HTTP {resp.status_code}"}
+        data = resp.json()
 
     tiles: list = []
     for entry in data.get("cache", []):
         if not isinstance(entry, dict):
             continue
         if "tiles/list" in entry.get("url", ""):
-            resp = entry.get("response", {})
-            if isinstance(resp, dict):
-                tiles = resp.get("accountTiles", [])
+            resp_body = entry.get("response", {})
+            if isinstance(resp_body, dict):
+                tiles = resp_body.get("accountTiles", [])
             break
 
     if not tiles:
         cache_urls = [e.get("url", "") for e in data.get("cache", []) if isinstance(e, dict)]
         return {"error": "No accountTiles in response", "cache_urls": cache_urls}
 
-    return [normalize_account(t) for t in tiles]
+    return [_normalize_account(t) for t in tiles]
 
 
-def normalize_account(t: dict) -> dict:
+def _normalize_account(t: dict) -> dict:
     detail = t.get("tileDetail", {})
     tile_type = t.get("accountTileType", "")
 
@@ -154,27 +154,37 @@ def normalize_account(t: dict) -> dict:
     return result
 
 
-def get_transactions(cookies: str, account_id: str, limit: int = 30) -> list | dict:
-    params = urllib.parse.urlencode({
+def get_transactions(params: dict | None = None) -> list | dict:
+    params = params or {}
+    cookie_header = _require_cookies(params, "list_transactions")
+    op_params = params.get("params") or {}
+    account_id = op_params.get("account_id", "")
+    limit = int(op_params.get("limit") or 30)
+
+    if not account_id:
+        return {"error": "account_id is required"}
+
+    query = urllib.parse.urlencode({
         "digital-account-identifier": account_id,
         "channel-entry-point-identifier": "WEB",
         "requested-record-count": limit,
         "generic-enrichment-nudge-indicator": "true",
     })
     path = (
-        "/svc/rr/accounts/secure/gateway/deposit-account/transactions"
-        "/inquiry-maintenance/etu-dda-transactions/v3/transactions"
-        f"?{params}"
+        f"{BASE}/svc/rr/accounts/secure/gateway/deposit-account/transactions"
+        f"/inquiry-maintenance/etu-dda-transactions/v3/transactions?{query}"
     )
-    data = request("GET", path, cookies, extra_headers={"network-channel-group-code": "DIGITAL"})
 
-    if "error" in data:
-        return data
+    with _client(cookie_header) as client:
+        resp = client.get(path, headers={"network-channel-group-code": "DIGITAL"})
+        if resp.status_code != 200:
+            return {"error": f"HTTP {resp.status_code}"}
+        data = resp.json()
 
-    return [normalize_transaction(t) for t in data.get("transactions", [])]
+    return [_normalize_transaction(t) for t in data.get("transactions", [])]
 
 
-def normalize_transaction(t: dict) -> dict:
+def _normalize_transaction(t: dict) -> dict:
     amount = t.get("transactionAmount", 0)
     is_credit = t.get("creditDebitCode", "DR") == "CR"
     signed_amount = amount if is_credit else -amount
@@ -192,27 +202,24 @@ def normalize_transaction(t: dict) -> dict:
     }
 
 
-def main() -> None:
+if __name__ == "__main__":
+    import argparse
     parser = argparse.ArgumentParser(description="Chase Bank API client")
     parser.add_argument("op", choices=["accounts", "transactions"])
     parser.add_argument("--cookies", required=True, help="Full cookie string from browser session")
     parser.add_argument("--account-id", help="Account ID (required for transactions)")
-    parser.add_argument("--limit", type=int, default=30, help="Number of transactions to fetch (default: 30)")
+    parser.add_argument("--limit", type=int, default=30)
     args = parser.parse_args()
 
-    result: list | dict
+    mock_params = {"auth": {"cookies": args.cookies}, "params": {}}
+    if args.account_id:
+        mock_params["params"]["account_id"] = args.account_id
+    if args.limit:
+        mock_params["params"]["limit"] = args.limit
+
     if args.op == "accounts":
-        result = get_accounts(args.cookies)
-    elif args.op == "transactions":
-        if not args.account_id:
-            result = {"error": "--account-id required for transactions"}
-        else:
-            result = get_transactions(args.cookies, args.account_id, args.limit)
+        result = get_accounts(mock_params)
     else:
-        result = {"error": f"unknown op: {args.op}"}
+        result = get_transactions(mock_params)
 
     print(json.dumps(result, indent=2))
-
-
-if __name__ == "__main__":
-    main()

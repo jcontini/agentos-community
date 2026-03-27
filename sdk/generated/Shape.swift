@@ -1136,12 +1136,12 @@ struct Post: Codable {
     var author: String?
     var datePublished: String?
     var content: String?
-    var engagementCommentCount: Int?
-    var engagementLikes: Int?
-    var engagementScore: Int?
-    var engagementViewCount: Int?
+    var commentCount: Int?
     var externalUrl: String?
+    var likes: Int?
     var postType: String?
+    var score: Int?
+    var viewCount: Int?
     var attachment: [File]?
     var contains: [Video]?
     var media: [Image]?
@@ -1150,13 +1150,11 @@ struct Post: Codable {
     var repliesTo: Post?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, text, url, image, author, datePublished, content, attachment, contains, media, publish
-        case engagementCommentCount = "engagement.comment_count"
-        case engagementLikes = "engagement.likes"
-        case engagementScore = "engagement.score"
-        case engagementViewCount = "engagement.view_count"
+        case id, name, text, url, image, author, datePublished, content, likes, score, attachment, contains, media, publish
+        case commentCount = "comment_count"
         case externalUrl = "external_url"
         case postType = "post_type"
+        case viewCount = "view_count"
         case postedBy = "posted_by"
         case repliesTo = "replies_to"
     }
@@ -1287,16 +1285,16 @@ struct Review: Codable {
     var author: String?
     var datePublished: String?
     var content: String?
-    var engagementCommentCount: Int?
-    var engagementLikes: Int?
-    var engagementScore: Int?
-    var engagementViewCount: Int?
+    var commentCount: Int?
     var externalUrl: String?
     var isVerified: Bool?
+    var likes: Int?
     var postType: String?
     var rating: Double?
     var ratingMax: Double?
+    var score: Int?
     var tags: [String]?
+    var viewCount: Int?
     var attachment: [File]?
     var contains: [Video]?
     var media: [Image]?
@@ -1306,15 +1304,13 @@ struct Review: Codable {
     var reviews: Product?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, text, url, image, author, datePublished, content, rating, tags, attachment, contains, media, publish, reviews
-        case engagementCommentCount = "engagement.comment_count"
-        case engagementLikes = "engagement.likes"
-        case engagementScore = "engagement.score"
-        case engagementViewCount = "engagement.view_count"
+        case id, name, text, url, image, author, datePublished, content, likes, rating, score, tags, attachment, contains, media, publish, reviews
+        case commentCount = "comment_count"
         case externalUrl = "external_url"
         case isVerified = "is_verified"
         case postType = "post_type"
         case ratingMax = "rating_max"
+        case viewCount = "view_count"
         case postedBy = "posted_by"
         case repliesTo = "replies_to"
     }

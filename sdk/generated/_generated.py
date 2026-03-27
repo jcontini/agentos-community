@@ -813,12 +813,12 @@ class Post(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    engagement_comment_count: int  # engagement.comment_count
-    engagement_likes: int  # engagement.likes
-    engagement_score: int  # engagement.score
-    engagement_view_count: int  # engagement.view_count
+    comment_count: int
     external_url: str
+    likes: int
     post_type: str
+    score: int
+    view_count: int
     attachment: list[File]
     contains: list[Video]
     media: list[Image]
@@ -924,16 +924,16 @@ class Review(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    engagement_comment_count: int  # engagement.comment_count
-    engagement_likes: int  # engagement.likes
-    engagement_score: int  # engagement.score
-    engagement_view_count: int  # engagement.view_count
+    comment_count: int
     external_url: str
     is_verified: bool
+    likes: int
     post_type: str
     rating: float
     rating_max: float
+    score: int
     tags: list[str]
+    view_count: int
     attachment: list[File]
     contains: list[Video]
     media: list[Image]

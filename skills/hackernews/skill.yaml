@@ -30,8 +30,8 @@ adapters:
     datePublished: .created_at
     external_url: .url
     replies: .replies
-    engagement.score: .points
-    engagement.comment_count: .num_comments
+    score: .points
+    comment_count: .num_comments
     posted_by:
       account:
         id: .author

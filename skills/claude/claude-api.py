@@ -2,9 +2,9 @@
 """
 claude-api.py — httpx-based client for the claude.ai private API
 
-Session key is injected by agentOS cookie matchmaking via --session-key.
-All API calls use httpx (NOT Playwright) — login is the only thing that
-needs a browser. Once the sessionKey is extracted, httpx handles everything.
+Session cookies are injected by agentOS cookie matchmaking via params: true.
+All API calls use surf() (NOT Playwright) — login is the only thing that
+needs a browser. Once the sessionKey cookie is extracted, surf() handles everything.
 
 Required headers (bypass Cloudflare + match expected browser client):
   Cookie: sessionKey=sk-ant-sid02-...
@@ -12,33 +12,17 @@ Required headers (bypass Cloudflare + match expected browser client):
   Sec-Fetch-Site: same-origin
   Sec-Fetch-Mode: cors
   Sec-Fetch-Dest: empty
-
-Usage:
-  python3 claude-api.py --session-key SK --op organizations
-  python3 claude-api.py --session-key SK --op conversations [--org ORG_UUID] [--limit 50]
-  python3 claude-api.py --session-key SK --op conversation --id CONV_UUID [--org ORG_UUID]
-  python3 claude-api.py --session-key SK --op search --query TEXT [--org ORG_UUID]
-  python3 claude-api.py --session-key SK --op import [--org ORG_UUID] [--limit 5] [--offset 0]
-
-Org discovery:
-  Run --op organizations to list all orgs the user has access to.
-  The org with "chat" in its capabilities is the one with web chat history.
-  If --org is omitted, auto-discovers the chat org via API.
 """
 
-import argparse
 import json
 import re
 import sys
-import httpx
-from agentos import get_cookies
+
+from agentos import get_cookies, surf
 
 BASE_URL = "https://claude.ai"
 
-# Headers that match what a real browser sends to bypass Cloudflare
-HEADERS = {
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
+CLAUDE_HEADERS = {
     "Content-Type": "application/json",
     "anthropic-client-version": "claude-ai/web@1.1.5368",
     "Sec-Fetch-Dest": "empty",
@@ -47,175 +31,67 @@ HEADERS = {
     "Sec-CH-UA": '"Brave";v="1.80", "Chromium";v="144", "Not-A.Brand";v="99"',
     "Sec-CH-UA-Mobile": "?0",
     "Sec-CH-UA-Platform": '"macOS"',
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Brave/1.80",
 }
 
 
-def make_request(path, session_key, method="GET", body=None):
-    """Make a request to the claude.ai API using httpx.
-
-    httpx is required — urllib gets Cloudflare 403'd on claude.ai.
-    """
-    url = f"{BASE_URL}{path}"
-    headers = dict(HEADERS)
-    headers["Cookie"] = f"sessionKey={session_key}"
-
-    with httpx.Client(headers=headers, follow_redirects=True) as client:
-        if method == "GET":
-            resp = client.get(url)
-        else:
-            resp = client.request(method, url, json=body)
-        resp.raise_for_status()
-        return resp.json()
+def _client(cookie_header: str):
+    """httpx client configured for claude.ai (Cloudflare bypass, http2=False)."""
+    return surf(cookies=cookie_header, profile="api", headers=CLAUDE_HEADERS, http2=False)
 
 
 # -- API operations ------------------------------------------------------------
 
-def get_organizations(session_key):
-    """List all organizations the user has access to."""
-    return make_request("/api/organizations", session_key)
+def _get_organizations(client):
+    resp = client.get(f"{BASE_URL}/api/organizations")
+    resp.raise_for_status()
+    return resp.json()
 
 
-def resolve_org_uuid(session_key, org_uuid=None):
-    """Resolve the org UUID to use.
-
-    Priority: explicit --org > auto-discover chat org from API.
-    """
+def _resolve_org_uuid(client, org_uuid=None):
     if org_uuid:
         return org_uuid
-
-    # Auto-discover: find the org with "chat" capability
-    orgs = get_organizations(session_key)
+    orgs = _get_organizations(client)
     for org in orgs:
         if "chat" in org.get("capabilities", []):
             return org["uuid"]
-
-    # Fallback to first org
     if orgs:
         return orgs[0]["uuid"]
-
     raise RuntimeError("No organizations found for this account")
 
 
-def get_conversations(session_key, org_uuid, limit=50, offset=0):
-    """
-    List conversations in an org, most recently updated first.
-    Returns list of conversation stubs (uuid, name, updated_at, etc.)
-    """
-    path = f"/api/organizations/{org_uuid}/chat_conversations"
-    path += f"?limit={limit}&offset={offset}"
-    return make_request(path, session_key)
+def _get_conversations(client, org_uuid, limit=50, offset=0):
+    path = f"/api/organizations/{org_uuid}/chat_conversations?limit={limit}&offset={offset}"
+    resp = client.get(f"{BASE_URL}{path}")
+    resp.raise_for_status()
+    return resp.json()
 
 
-def get_conversation(session_key, org_uuid, conv_uuid):
-    """
-    Get a full conversation with all messages.
-    Returns conversation dict with messages list.
-    Each message has: role (human|assistant), content (list of content blocks)
-    """
+def _get_conversation(client, org_uuid, conv_uuid):
     path = (
         f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}"
         "?tree=True&rendering_mode=messages&render_all_tools=true"
     )
-    return make_request(path, session_key)
-
-
-def import_conversations(session_key, org_uuid, limit=50, offset=0):
-    """
-    Fetch conversations (paginated) with all their messages.
-    Returns a flat list of message rows, each containing conversation metadata.
-    This is the data source for the conversation.import skill operation —
-    each row maps to a message entity on the graph, making all content FTS-indexed.
-
-    Output row shape:
-      id               str   — "{conv_uuid}_{msg_uuid}" (stable, dedup-safe)
-      conversation_id  str   — conv_uuid
-      conversation_name str  — conversation title
-      role             str   — "human" | "assistant"
-      text             str   — message text content
-      created_at       str   — ISO 8601 timestamp
-    """
-    convs = get_conversations(session_key, org_uuid, limit=limit, offset=offset)
-    rows = []
-    for conv_stub in convs:
-        conv_uuid = conv_stub["uuid"]
-        conv_name = conv_stub.get("name") or "(untitled)"
-        try:
-            conv = get_conversation(session_key, org_uuid, conv_uuid)
-        except Exception:
-            continue
-        for msg in conv.get("chat_messages", []):
-            content_blocks = msg.get("content", [])
-            text_parts = [
-                b.get("text", "") for b in content_blocks
-                if b.get("type") == "text" and b.get("text")
-            ]
-            text = "\n".join(text_parts).strip()
-            if not text:
-                continue
-            msg_uuid = msg.get("uuid", "")
-            rows.append({
-                "id": f"{conv_uuid}_{msg_uuid}",
-                "conversation_id": conv_uuid,
-                "conversation_name": conv_name,
-                "role": msg.get("sender", "human"),
-                "text": text,
-                "created_at": msg.get("created_at", conv_stub.get("created_at")),
-            })
-    return rows
-
-
-def search_conversations(session_key, org_uuid, query, limit=50):
-    """
-    Search conversations by name (title).
-    The claude.ai API has no server-side search — this fetches all convs and
-    filters locally. For content search, use get_conversation on each result.
-
-    Fetches up to 5 pages (250 conversations) to cover recent history.
-    """
-    query_lower = query.lower()
-    results = []
-    offset = 0
-    page_size = 50
-
-    while offset < 250:  # cap at 5 pages
-        page = get_conversations(session_key, org_uuid, limit=page_size, offset=offset)
-        if not page:
-            break
-        for conv in page:
-            name = (conv.get("name") or "").lower()
-            if query_lower in name:
-                results.append(conv)
-        if len(page) < page_size:
-            break
-        offset += page_size
-
-    return results[:limit]
+    resp = client.get(f"{BASE_URL}{path}")
+    resp.raise_for_status()
+    return resp.json()
 
 
 # -- Formatting helpers --------------------------------------------------------
 
-def format_conversation_list(convs, org_uuid):
-    """Format conversation list for agentOS transformer consumption."""
-    out = []
-    for c in convs:
-        out.append({
+def _format_conversation_list(convs, org_uuid):
+    return [
+        {
             "uuid": c.get("uuid"),
             "name": c.get("name") or "(untitled)",
             "updated_at": c.get("updated_at"),
             "created_at": c.get("created_at"),
             "org_uuid": org_uuid,
-        })
-    return out
+        }
+        for c in convs
+    ]
 
 
-def format_conversation(conv, org_uuid):
-    """Format a full conversation for agentOS transformer consumption.
-
-    Messages are serialized into a readable 'content' field so the
-    conversation transformer can map it — otherwise the messages array
-    gets dropped during transformation.
-    """
+def _format_conversation(conv, org_uuid):
     messages = conv.get("chat_messages", [])
     formatted_messages = []
     content_lines = []
@@ -249,33 +125,116 @@ def format_conversation(conv, org_uuid):
     }
 
 
-# -- Operation entrypoints — called by the python: executor with kwargs --------
+# -- Operation entrypoints — called by the python: executor with params: true --
 
-def op_list_conversations(session_key: str, account: str = None, limit: int = 50, offset: int = 0) -> list:
-    org = resolve_org_uuid(session_key, account or None)
-    convs = get_conversations(session_key, org, limit=int(limit or 50), offset=int(offset or 0))
-    return format_conversation_list(convs, org)
-
-
-def op_get_conversation(session_key: str, id: str, account: str = None) -> dict:
-    org = resolve_org_uuid(session_key, account or None)
-    conv = get_conversation(session_key, org, id)
-    return format_conversation(conv, org)
-
-
-def op_search_conversations(session_key: str, query: str, account: str = None, limit: int = 20) -> list:
-    org = resolve_org_uuid(session_key, account or None)
-    convs = search_conversations(session_key, org, query, limit=int(limit or 20))
-    return format_conversation_list(convs, org)
+def op_list_conversations(params: dict | None = None) -> list:
+    params = params or {}
+    cookie_header = get_cookies(params)
+    op = params.get("params") or {}
+    limit = int(op.get("limit") or 50)
+    offset = int(op.get("offset") or 0)
+    account = op.get("account")
+    with _client(cookie_header) as client:
+        org = _resolve_org_uuid(client, account)
+        convs = _get_conversations(client, org, limit=limit, offset=offset)
+    return _format_conversation_list(convs, org)
 
 
-def op_import_conversation(session_key: str, account: str = None, limit: int = 5, offset: int = 0) -> list:
-    org = resolve_org_uuid(session_key, account or None)
-    return import_conversations(session_key, org, limit=int(limit or 5), offset=int(offset or 0))
+def op_get_conversation(params: dict | None = None) -> dict:
+    params = params or {}
+    cookie_header = get_cookies(params)
+    op = params.get("params") or {}
+    account = op.get("account")
+    conv_id = op.get("id")
+    url = op.get("url", "")
+    if url:
+        m = re.search(r"chat/([0-9a-fA-F-]{36})", url)
+        if m:
+            conv_id = m.group(1)
+    if not conv_id:
+        raise ValueError("id or url is required for get_conversation")
+    with _client(cookie_header) as client:
+        org = _resolve_org_uuid(client, account)
+        conv = _get_conversation(client, org, conv_id)
+    return _format_conversation(conv, org)
 
 
-def op_list_orgs(session_key: str) -> list:
-    return get_organizations(session_key)
+def op_search_conversations(params: dict | None = None) -> list:
+    params = params or {}
+    cookie_header = get_cookies(params)
+    op = params.get("params") or {}
+    query = op.get("query", "")
+    account = op.get("account")
+    limit = int(op.get("limit") or 20)
+
+    query_lower = query.lower()
+    results = []
+    offset = 0
+    page_size = 50
+
+    with _client(cookie_header) as client:
+        org = _resolve_org_uuid(client, account)
+        while offset < 250:
+            page = _get_conversations(client, org, limit=page_size, offset=offset)
+            if not page:
+                break
+            for conv in page:
+                name = (conv.get("name") or "").lower()
+                if query_lower in name:
+                    results.append(conv)
+            if len(page) < page_size:
+                break
+            offset += page_size
+
+    return _format_conversation_list(results[:limit], org)
+
+
+def op_import_conversation(params: dict | None = None) -> list:
+    params = params or {}
+    cookie_header = get_cookies(params)
+    op = params.get("params") or {}
+    account = op.get("account")
+    limit = int(op.get("limit") or 5)
+    offset = int(op.get("offset") or 0)
+
+    rows = []
+    with _client(cookie_header) as client:
+        org = _resolve_org_uuid(client, account)
+        convs = _get_conversations(client, org, limit=limit, offset=offset)
+        for conv_stub in convs:
+            conv_uuid = conv_stub["uuid"]
+            conv_name = conv_stub.get("name") or "(untitled)"
+            try:
+                conv = _get_conversation(client, org, conv_uuid)
+            except Exception:
+                continue
+            for msg in conv.get("chat_messages", []):
+                content_blocks = msg.get("content", [])
+                text_parts = [
+                    b.get("text", "") for b in content_blocks
+                    if b.get("type") == "text" and b.get("text")
+                ]
+                text = "\n".join(text_parts).strip()
+                if not text:
+                    continue
+                msg_uuid = msg.get("uuid", "")
+                rows.append({
+                    "id": f"{conv_uuid}_{msg_uuid}",
+                    "conversation_id": conv_uuid,
+                    "conversation_name": conv_name,
+                    "role": msg.get("sender", "human"),
+                    "text": text,
+                    "created_at": msg.get("created_at", conv_stub.get("created_at")),
+                })
+
+    return rows
+
+
+def op_list_orgs(params: dict | None = None) -> list:
+    params = params or {}
+    cookie_header = get_cookies(params)
+    with _client(cookie_header) as client:
+        return _get_organizations(client)
 
 
 # -- Session check — called by account.check with params: true -----------------
@@ -287,11 +246,8 @@ def check_session(params: dict | None = None) -> dict:
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
-    headers = dict(HEADERS)
-    headers["Cookie"] = cookie_header
-
     try:
-        with httpx.Client(headers=headers, follow_redirects=True) as client:
+        with _client(cookie_header) as client:
             resp = client.get(f"{BASE_URL}/api/organizations")
             if resp.status_code != 200:
                 return {"authenticated": False, "status_code": resp.status_code}
@@ -299,11 +255,9 @@ def check_session(params: dict | None = None) -> dict:
     except Exception:
         return {"authenticated": False}
 
-    # Find the org with chat capability — that's the user's personal org
     for org in orgs:
         if "chat" in org.get("capabilities", []):
             name = org.get("name", "")
-            # Extract email from org name (e.g. "joe@example.com's Organization")
             email = ""
             m = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", name)
             if m:
@@ -315,7 +269,6 @@ def check_session(params: dict | None = None) -> dict:
                 "display": email or name,
             }
 
-    # Fallback to first org
     if orgs:
         name = orgs[0].get("name", "")
         return {
@@ -331,51 +284,43 @@ def check_session(params: dict | None = None) -> dict:
 # -- CLI entry point -----------------------------------------------------------
 
 def main():
+    import argparse
     parser = argparse.ArgumentParser(description="claude.ai API client")
     parser.add_argument("--op", required=True,
-                        choices=["organizations", "conversations", "conversation", "search", "import"],
-                        help="Operation to perform")
-    parser.add_argument("--org", help="Org UUID (default: auto-resolve from session or API)")
-    parser.add_argument("--id", help="Conversation UUID (for conversation op)")
-    parser.add_argument("--query", help="Search query (for search op)")
-    parser.add_argument("--limit", type=int, default=50, help="Max results")
-    parser.add_argument("--offset", type=int, default=0, help="Pagination offset")
-    parser.add_argument("--session-key", required=True,
-                        help="sessionKey cookie value (injected by agentOS cookie matchmaking)")
+                        choices=["organizations", "conversations", "conversation", "search", "import"])
+    parser.add_argument("--org", help="Org UUID")
+    parser.add_argument("--id", help="Conversation UUID")
+    parser.add_argument("--query", help="Search query")
+    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--offset", type=int, default=0)
+    parser.add_argument("--cookies", required=True, help="Raw cookie header")
     args = parser.parse_args()
 
-    session_key = args.session_key
+    mock_params = {
+        "auth": {"cookies": args.cookies},
+        "params": {
+            "account": args.org,
+            "id": args.id,
+            "query": args.query,
+            "limit": args.limit,
+            "offset": args.offset,
+        },
+    }
 
     if args.op == "organizations":
-        orgs = get_organizations(session_key)
-        print(json.dumps(orgs))
-        return 0
-
-    # Resolve org UUID for all other operations
-    org_uuid = resolve_org_uuid(session_key, args.org if args.org else None)
-
-    if args.op == "conversations":
-        convs = get_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)
-        print(json.dumps(format_conversation_list(convs, org_uuid)))
-
+        result = op_list_orgs(mock_params)
+    elif args.op == "conversations":
+        result = op_list_conversations(mock_params)
     elif args.op == "conversation":
-        if not args.id:
-            print(json.dumps({"error": "--id required for conversation op"}))
-            return 1
-        conv = get_conversation(session_key, org_uuid, args.id)
-        print(json.dumps(format_conversation(conv, org_uuid)))
-
+        result = op_get_conversation(mock_params)
     elif args.op == "search":
-        if not args.query:
-            print(json.dumps({"error": "--query required for search op"}))
-            return 1
-        results = search_conversations(session_key, org_uuid, args.query, limit=args.limit)
-        print(json.dumps(format_conversation_list(results, org_uuid)))
-
+        result = op_search_conversations(mock_params)
     elif args.op == "import":
-        rows = import_conversations(session_key, org_uuid, limit=args.limit, offset=args.offset)
-        print(json.dumps(rows))
+        result = op_import_conversation(mock_params)
+    else:
+        result = {"error": f"unknown op: {args.op}"}
 
+    print(json.dumps(result, indent=2))
     return 0
 
 

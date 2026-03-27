@@ -82,8 +82,7 @@ operations:
     python:
       module: ./chase-api.py
       function: get_accounts
-      args:
-        cookies: .auth.cookies
+      params: true
       timeout: 20
 
   list_transactions:
@@ -103,8 +102,5 @@ operations:
     python:
       module: ./chase-api.py
       function: get_transactions
-      args:
-        cookies: .auth.cookies
-        account_id: .params.account_id
-        limit: '.params.limit // 30'
+      params: true
       timeout: 20

@@ -8,7 +8,6 @@ terms_url: https://www.anthropic.com/terms-of-service
 
 connections:
   web:
-    domain: "claude.ai"
     auth:
       type: cookies
       domain: ".claude.ai"
@@ -102,11 +101,7 @@ operations:
     python:
       module: ./claude-api.py
       function: op_list_conversations
-      args:
-        session_key: .auth.sessionKey
-        account: .params.account
-        limit: '.params.limit // 50'
-        offset: '.params.offset // 0'
+      params: true
       timeout: 30
 
   get_conversation:
@@ -121,10 +116,7 @@ operations:
     python:
       module: ./claude-api.py
       function: op_get_conversation
-      args:
-        session_key: .auth.sessionKey
-        id: 'if (.params.url // "") != "" then (.params.url | capture("chat/(?<cid>[0-9a-fA-F-]{36})") | .cid) else .params.id end'
-        account: .params.account
+      params: true
       timeout: 30
 
   search_conversations:
@@ -141,11 +133,7 @@ operations:
     python:
       module: ./claude-api.py
       function: op_search_conversations
-      args:
-        session_key: .auth.sessionKey
-        query: .params.query
-        account: .params.account
-        limit: '.params.limit // 20'
+      params: true
       timeout: 30
 
   import_conversation:
@@ -163,11 +151,7 @@ operations:
     python:
       module: ./claude-api.py
       function: op_import_conversation
-      args:
-        session_key: .auth.sessionKey
-        account: .params.account
-        limit: '.params.limit // 5'
-        offset: '.params.offset // 0'
+      params: true
       timeout: 60
 
   list_orgs:
@@ -182,8 +166,7 @@ operations:
     python:
       module: ./claude-api.py
       function: op_list_orgs
-      args:
-        session_key: .auth.sessionKey
+      params: true
       timeout: 15
 
   extract_magic_link:

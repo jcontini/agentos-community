@@ -809,12 +809,12 @@ type Post struct {
 	Author *string `json:"author,omitempty"`
 	DatePublished *string `json:"datePublished,omitempty"`
 	Content *string `json:"content,omitempty"`
-	EngagementCommentCount *int `json:"engagement.comment_count,omitempty"`
-	EngagementLikes *int `json:"engagement.likes,omitempty"`
-	EngagementScore *int `json:"engagement.score,omitempty"`
-	EngagementViewCount *int `json:"engagement.view_count,omitempty"`
+	CommentCount *int `json:"comment_count,omitempty"`
 	ExternalURL *string `json:"external_url,omitempty"`
+	Likes *int `json:"likes,omitempty"`
 	PostType *string `json:"post_type,omitempty"`
+	Score *int `json:"score,omitempty"`
+	ViewCount *int `json:"view_count,omitempty"`
 	Attachment []File `json:"attachment,omitempty"`
 	Contains []Video `json:"contains,omitempty"`
 	Media []Image `json:"media,omitempty"`
@@ -920,16 +920,16 @@ type Review struct {
 	Author *string `json:"author,omitempty"`
 	DatePublished *string `json:"datePublished,omitempty"`
 	Content *string `json:"content,omitempty"`
-	EngagementCommentCount *int `json:"engagement.comment_count,omitempty"`
-	EngagementLikes *int `json:"engagement.likes,omitempty"`
-	EngagementScore *int `json:"engagement.score,omitempty"`
-	EngagementViewCount *int `json:"engagement.view_count,omitempty"`
+	CommentCount *int `json:"comment_count,omitempty"`
 	ExternalURL *string `json:"external_url,omitempty"`
 	IsVerified *bool `json:"is_verified,omitempty"`
+	Likes *int `json:"likes,omitempty"`
 	PostType *string `json:"post_type,omitempty"`
 	Rating *float64 `json:"rating,omitempty"`
 	RatingMax *float64 `json:"rating_max,omitempty"`
+	Score *int `json:"score,omitempty"`
 	Tags []string `json:"tags,omitempty"`
+	ViewCount *int `json:"view_count,omitempty"`
 	Attachment []File `json:"attachment,omitempty"`
 	Contains []Video `json:"contains,omitempty"`
 	Media []Image `json:"media,omitempty"`
