@@ -2,6 +2,13 @@
 
 [Introduction](intro.md)
 
+# Foundation
+
+- [Vision](vision.md)
+- [Principles](principles.md)
+- [Working With Joe](working-with-joe.md)
+- [Development Process](development-process.md)
+
 # Skill Book maintenance
 
 - [Editing This Book](editing-the-book.md)
