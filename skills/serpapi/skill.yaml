@@ -25,50 +25,6 @@ connections:
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
-  offer:
-    id: >
-        ((.flights[0].departure_airport.id) + "-" +
-         (.flights[-1].arrival_airport.id) + "-" +
-         (.flights[0].departure_airport.time | split(" ") | .[0]) + "-" +
-         (.flights[0].flight_number | gsub(" "; "-")))
-    name: >
-        ((.flights[0].departure_airport.id) + " → " +
-         (.flights[-1].arrival_airport.id) + " · " +
-         (.flights[0].airline // "Unknown") +
-         (if (.flights | length) > 1 then " +" + ((.flights | length) - 1 | tostring) + " stop" + (if ((.flights | length) - 1) > 1 then "s" else "" end) else " nonstop" end) +
-         " · $" + (.price | tostring))
-    price: .price
-    currency: '"USD"'
-    offer_type: '"flight"'
-    trip_type: .type
-    total_duration: .total_duration
-    flights: .flights
-    layovers: .layovers
-    carbon_emissions: .carbon_emissions
-    airline_logo: .airline_logo
-    extensions: .extensions
-    departure_token: .departure_token
-    booking_token: .booking_token
-    content: >
-        ((.flights[0].departure_airport.id) + " → " +
-         (.flights[-1].arrival_airport.id) + "\n" +
-         "Price: $" + (.price | tostring) + " " + (.type // "") + "\n" +
-         "Duration: " + ((.total_duration / 60 | floor | tostring) + "h " + ((.total_duration % 60) | tostring) + "m") + "\n" +
-         "Airline: " + (.flights[0].airline // "Unknown") + "\n" +
-         "Flight: " + (.flights[0].flight_number // "Unknown") + "\n" +
-         "Class: " + (.flights[0].travel_class // "Economy") + "\n" +
-         "Aircraft: " + (.flights[0].airplane // "Unknown") + "\n" +
-         (if (.flights | length) > 1 then
-           "Stops: " + ((.flights | length) - 1 | tostring) + " (" +
-           ([.layovers[]? | .name + " (" + (.duration / 60 | floor | tostring) + "h " + ((.duration % 60) | tostring) + "m)"] | join(", ")) + ")\n"
-         else "Nonstop\n" end) +
-         "Depart: " + (.flights[0].departure_airport.time // "") + " from " + (.flights[0].departure_airport.name // "") + "\n" +
-         "Arrive: " + (.flights[-1].arrival_airport.time // "") + " at " + (.flights[-1].arrival_airport.name // "") + "\n" +
-         (if .carbon_emissions then
-           "Carbon: " + ((.carbon_emissions.this_flight / 1000 | floor | tostring)) + " kg CO₂"
-         else "" end))
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,6 +33,7 @@ operations:
   search_offers:
     description: Search Google Flights for flight offers between airports
     returns: offer[]
+    connection: api
     params:
       departure_id:
         type: string
@@ -137,34 +94,14 @@ operations:
       deep_search:
         type: boolean
         description: "true for browser-identical results (slower)"
-    rest:
-      method: GET
-      url: https://serpapi.com/search
-      query:
-        engine: '"google_flights"'
-        departure_id: .params.departure_id
-        arrival_id: .params.arrival_id
-        outbound_date: .params.outbound_date
-        return_date: .params.return_date
-        type: '.params.type | if . then tostring else null end'
-        travel_class: '.params.travel_class | if . then tostring else null end'
-        adults: '.params.adults | if . then tostring else null end'
-        children: '.params.children | if . then tostring else null end'
-        stops: '.params.stops | if . then tostring else null end'
-        max_price: '.params.max_price | if . then tostring else null end'
-        sort_by: '.params.sort_by | if . then tostring else null end'
-        include_airlines: .params.include_airlines
-        exclude_airlines: .params.exclude_airlines
-        currency: .params.currency
-        hl: .params.hl
-        gl: .params.gl
-        deep_search: '.params.deep_search | if . then tostring else null end'
-      response:
-        root: /other_flights
+    python:
+      module: ./serpapi.py
+      function: search_offers
 
   list_offers:
     description: Get the best/recommended flight offers (may not always be available)
     returns: offer[]
+    connection: api
     params:
       departure_id:
         type: string
@@ -197,25 +134,14 @@ operations:
         type: string
         default: en
         description: "Language code"
-    rest:
-      method: GET
-      url: https://serpapi.com/search
-      query:
-        engine: '"google_flights"'
-        departure_id: .params.departure_id
-        arrival_id: .params.arrival_id
-        outbound_date: .params.outbound_date
-        return_date: .params.return_date
-        type: '.params.type | tostring'
-        travel_class: '.params.travel_class | tostring'
-        currency: .params.currency
-        hl: .params.hl
-      response:
-        root: /best_flights
+    python:
+      module: ./serpapi.py
+      function: list_offers
 
   get_offer:
     description: Get return flight offers using a departure token from a previous search
     returns: offer[]
+    connection: api
     params:
       departure_token:
         type: string
@@ -229,19 +155,13 @@ operations:
         type: string
         default: en
         description: "Language code"
-    rest:
-      method: GET
-      url: https://serpapi.com/search
-      query:
-        engine: '"google_flights"'
-        departure_token: .params.departure_token
-        currency: .params.currency
-        hl: .params.hl
-      response:
-        root: /other_flights
+    python:
+      module: ./serpapi.py
+      function: get_offer
 
   get_booking_options:
     description: Get booking options for selected flights using a booking token
+    connection: api
     params:
       booking_token:
         type: string
@@ -258,17 +178,13 @@ operations:
     returns:
       booking_options: array
       price: number
-    rest:
-      method: GET
-      url: https://serpapi.com/search
-      query:
-        engine: '"google_flights"'
-        booking_token: .params.booking_token
-        currency: .params.currency
-        hl: .params.hl
+    python:
+      module: ./serpapi.py
+      function: get_booking_options
 
   get_price_insights:
     description: Get price insights for a flight route (typical price range, price level, history)
+    connection: api
     params:
       departure_id:
         type: string
@@ -298,16 +214,6 @@ operations:
       price_level: string
       typical_price_range: array
       price_history: array
-    rest:
-      method: GET
-      url: https://serpapi.com/search
-      query:
-        engine: '"google_flights"'
-        departure_id: .params.departure_id
-        arrival_id: .params.arrival_id
-        outbound_date: .params.outbound_date
-        return_date: .params.return_date
-        type: '.params.type | tostring'
-        currency: .params.currency
-      response:
-        root: /price_insights
+    python:
+      module: ./serpapi.py
+      function: get_price_insights

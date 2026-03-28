@@ -474,6 +474,43 @@ def op_show_model(model: str, connection: dict | None = None) -> dict:
     }
 
 
+# ── Shape-native list/ps ─────────────────────────────────────────────────────
+
+def list_models(connection: dict | None = None, **params) -> list[dict]:
+    """List downloaded models, shape-native (id=name, datePublished, size, details)."""
+    raw = op_list_models(connection)
+    return [
+        {
+            "id": m.get("name"),
+            "datePublished": m.get("modified_at"),
+            "size": m.get("size"),
+            "digest": m.get("digest"),
+            "format": (m.get("details") or {}).get("format"),
+            "family": (m.get("details") or {}).get("family"),
+            "parameter_size": (m.get("details") or {}).get("parameter_size"),
+            "quantization_level": (m.get("details") or {}).get("quantization_level"),
+        }
+        for m in (raw or [])
+    ]
+
+
+def ps(connection: dict | None = None, **params) -> list[dict]:
+    """List currently loaded models (in GPU/unified RAM), shape-native."""
+    _ensure_api_running(connection)
+    base = _base_url(connection)
+    resp = _http_get(f"{base}/api/ps")
+    return [
+        {
+            "id": m.get("name"),
+            "size": m.get("size"),
+            "digest": m.get("digest"),
+            "expires_at": m.get("expires_at"),
+            "size_vram": m.get("size_vram"),
+        }
+        for m in (resp.get("models") or [])
+    ]
+
+
 # ── CLI entry point ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

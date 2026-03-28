@@ -93,6 +93,47 @@ _PROFILES = {
 
 
 # ---------------------------------------------------------------------------
+# Cookie writeback — tracks Set-Cookie changes for persistent jar
+# ---------------------------------------------------------------------------
+
+# Module-level registry: (initial_snapshot, client) for each surf() call.
+# Collected by _collect_cookie_writeback() after the skill function returns.
+_tracked_clients: list[tuple[dict, httpx.Client]] = []
+
+
+def _snapshot_jar(cookies: httpx.Cookies) -> dict[tuple[str, str], str]:
+    """Snapshot a cookie jar as {(name, domain): value}."""
+    result = {}
+    for cookie in cookies.jar:
+        # Normalize domain: strip leading dot for consistent matching.
+        # httpx stores "example.com" from .set() but ".example.com" from
+        # Set-Cookie headers. We normalize to dotless for diffing.
+        domain = cookie.domain.lstrip(".")
+        result[(cookie.name, domain)] = cookie.value
+    return result
+
+
+def _collect_cookie_writeback() -> list[dict] | None:
+    """Diff all tracked clients against their initial snapshots.
+
+    Returns a list of changed cookies, or None if nothing changed.
+    Clears the registry after collection.
+    """
+    changes = []
+    for initial, client in _tracked_clients:
+        current = _snapshot_jar(client.cookies)
+        for (name, domain), value in current.items():
+            if initial.get((name, domain)) != value:
+                changes.append({
+                    "name": name,
+                    "value": value,
+                    "domain": domain,
+                })
+    _tracked_clients.clear()
+    return changes if changes else None
+
+
+# ---------------------------------------------------------------------------
 # Cookie utilities
 # ---------------------------------------------------------------------------
 
@@ -184,13 +225,19 @@ def surf(
     elif isinstance(cookies, httpx.Cookies):
         cookie_jar = cookies
 
-    return httpx.Client(
+    client = httpx.Client(
         http2=http2,
         follow_redirects=True,
         timeout=timeout,
         headers=base_headers,
         cookies=cookie_jar,
     )
+
+    # Track for cookie writeback — snapshot initial state so we can diff later
+    if cookie_jar is not None:
+        _tracked_clients.append((_snapshot_jar(client.cookies), client))
+
+    return client
 
 
 def skill_error(message: str, **extra) -> dict:

@@ -7,23 +7,6 @@ website: https://www.apple.com/macos/
 
 connections: {}
 
-adapters:
-  calendar:
-    id: .id
-    name: .name
-    color: .color
-    is_subscribed: .is_readonly
-
-  meeting:
-    id: .id
-    name: .title
-    text: .description
-    datePublished: .start
-    end: .end
-    all_day: .all_day
-    location: .location
-    recurrence: .recurrence
-
 operations:
   list_calendars:
     description: List all available calendars

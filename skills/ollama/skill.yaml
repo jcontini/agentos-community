@@ -14,24 +14,6 @@ connections:
     vars:
       binary: "/opt/homebrew/bin/ollama"
 
-adapters:
-  model:
-    id: .name
-    datePublished: .modified_at
-    size: .size
-    digest: .digest
-    format: .details.format
-    family: .details.family
-    parameter_size: .details.parameter_size
-    quantization_level: .details.quantization_level
-
-  loaded_model:
-    id: .name
-    size: .size
-    digest: .digest
-    expires_at: .expires_at
-    size_vram: .size_vram
-
 operations:
 
   # ── Server management ──────────────────────────────────────────────────────
@@ -151,14 +133,14 @@ operations:
   list_models:
     description: >
       List all models downloaded on this machine with size and metadata.
-      Uses the REST executor (in-process ureq) — no subprocess, ~50ms via MCP.
     returns: model[]
     connection: api
-    rest:
-      method: GET
-      url: /api/tags
-      response:
-        root: /models
+    python:
+      module: ./ollama.py
+      function: list_models
+      args:
+        connection: .connection
+      timeout: 15
 
   list_models_cli:
     description: >
@@ -222,11 +204,12 @@ operations:
       Useful for checking what's hot and what will need to reload on next use.
     returns: loaded_model[]
     connection: api
-    rest:
-      method: GET
-      url: /api/ps
-      response:
-        root: /models
+    python:
+      module: ./ollama.py
+      function: ps
+      args:
+        connection: .connection
+      timeout: 15
 
 
   show_model:

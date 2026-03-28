@@ -15,22 +15,9 @@ connections:
     label: Publishable Key
     help_url: https://www.logo.dev/dashboard
 
-adapters:
-  image:
-    id: .path
-    url: .url
-    alt: .name
-    size: .size
-    format: '.mime_type | split("/") | .[1]'
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# OPERATIONS - URL generators (Logo.dev is a CDN, not a JSON API)
-# ═══════════════════════════════════════════════════════════════════════════════
-
 operations:
-  # Download logo to A: drive
   download_logo:
-    description: "Download company logo to A: drive. Returns image entity."
+    description: "Download company logo. Returns image entity."
     params:
       domain: { type: string, required: true, description: "Domain (e.g., shopify.com)" }
       size: { type: integer, default: 128, description: "Size in pixels (16-800)" }
@@ -41,59 +28,63 @@ operations:
       url: '"https://img.logo.dev/" + .params.domain + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
       path: '(.params.dest // ("icons/" + .params.domain + "." + (.params.format // "png")))'
 
-  # Generate a logo URL for a domain
   logo_url:
-    description: Generate CDN URL for a company logo by domain
+    description: Return CDN URL for a company logo by domain
     params:
       domain: { type: string, required: true, description: "Domain (e.g., shopify.com)" }
       size: { type: integer, default: 128, description: "Size in pixels (16-800)" }
       format: { type: string, default: "png", description: "Image format (jpg, png, webp)" }
       theme: { type: string, default: "auto", description: "Theme (auto, light, dark)" }
-    returns: void
-    rest:
-      method: GET
-      url: '"https://img.logo.dev/" + .params.domain + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png") + "&theme=" + (.params.theme // "auto")'
-      response:
-        raw: true
+    returns:
+      url: string
+    connection: api
+    python:
+      module: ./logo-dev.py
+      function: logo_url
+      params: true
+      timeout: 5
 
-  # Generate a logo URL for a stock ticker
   ticker_url:
-    description: Generate CDN URL for a company logo by stock ticker
+    description: Return CDN URL for a company logo by stock ticker
     params:
       ticker: { type: string, required: true, description: "Stock ticker (e.g., AAPL)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
-    returns: void
-    rest:
-      method: GET
-      url: '"https://img.logo.dev/ticker:" + .params.ticker + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
-      response:
-        raw: true
+    returns:
+      url: string
+    connection: api
+    python:
+      module: ./logo-dev.py
+      function: ticker_url
+      params: true
+      timeout: 5
 
-  # Generate a logo URL by company name
   name_url:
-    description: Generate CDN URL for a company logo by name
+    description: Return CDN URL for a company logo by name
     params:
       name: { type: string, required: true, description: "Company name (e.g., Shopify)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
-    returns: void
-    rest:
-      method: GET
-      url: '"https://img.logo.dev/name:" + (.params.name | @uri) + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
-      response:
-        raw: true
+    returns:
+      url: string
+    connection: api
+    python:
+      module: ./logo-dev.py
+      function: name_url
+      params: true
+      timeout: 5
 
-  # Generate a logo URL for cryptocurrency
   crypto_url:
-    description: Generate CDN URL for a cryptocurrency logo
+    description: Return CDN URL for a cryptocurrency logo
     params:
       symbol: { type: string, required: true, description: "Crypto symbol (e.g., BTC, ETH)" }
       size: { type: integer, default: 128, description: "Size in pixels" }
       format: { type: string, default: "png", description: "Image format" }
-    returns: void
-    rest:
-      method: GET
-      url: '"https://img.logo.dev/crypto:" + .params.symbol + "?token=" + .auth.key + "&size=" + ((.params.size // 128) | tostring) + "&format=" + (.params.format // "png")'
-      response:
-        raw: true
+    returns:
+      url: string
+    connection: api
+    python:
+      module: ./logo-dev.py
+      function: crypto_url
+      params: true
+      timeout: 5

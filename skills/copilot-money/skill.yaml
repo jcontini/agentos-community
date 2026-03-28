@@ -10,55 +10,6 @@ connections:
   db:
     sqlite: "~/Library/Group Containers/group.com.copilot.production/database/CopilotDB.sqlite"
 
-# ==============================================================================
-# TRANSFORMERS
-# ==============================================================================
-
-adapters:
-  account:
-    id: .id
-    name: .name
-    handle: .mask
-    platform: '"copilot-money"'
-    text: '.name + if .mask then " (••••" + .mask + ")" else "" end'
-    balance: .balance
-    limit: .limit
-    institution_id: .institution_id
-    color: .color
-
-    # Auto-create tag entities and link via tagged_with
-    # Python script emits tags like ["financial", "credit", "taxable"]
-    tags:
-      tag[]:
-        _source: '.tags'
-        name: .
-
-  transaction:
-    id: '.id | tostring'
-    name: '.merchant_name // "Unknown"'
-    text: '(.merchant_name // "Unknown") + " — $" + ((.amount // 0) | tostring)'
-    amount: .amount
-    date: .date
-    account_id: .account_id
-    category_id: .category_id
-    pending: '.pending == 1 or .pending == true'
-    recurring: '.recurring == 1 or .recurring == true'
-    notes: .notes
-    type: .type
-
-    # Tags: recurring, internal-transfer, and Copilot spending category (with emoji + color)
-    # Python script emits tags as [{name, emoji?, color?}]
-    tags:
-      tag[]:
-        _source: '.tags'
-        name: .name
-        emoji: .emoji
-        color: .color
-
-# ==============================================================================
-# OPERATIONS
-# ==============================================================================
-
 operations:
   list_accounts:
     description: List all financial accounts with balances and institution info

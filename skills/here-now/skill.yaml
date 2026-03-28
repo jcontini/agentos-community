@@ -20,19 +20,6 @@ connections:
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
-  website:
-    id: .slug
-    name: '(.viewer.title? // .slug)'
-    url: .siteUrl
-    status: 'if .status == "active" then "active" else "pending" end'
-    datePublished: .updatedAt
-    version_id: .currentVersionId
-    expires_at: '.expiresAt?'
-    anonymous: '.anonymous? // false'
-    claim_token: '.claimToken?'
-    claim_url: '.claimUrl?'
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -41,11 +28,10 @@ operations:
   list_websites:
     description: List all your published sites (requires authentication)
     returns: website[]
-    rest:
-      method: GET
-      url: /publishes
-      response:
-        root: /publishes
+    connection: api
+    python:
+      module: ./publish.py
+      function: list_websites
 
   create_website:
     description: |
@@ -123,18 +109,15 @@ operations:
   delete_website:
     description: Delete a published site (requires authentication)
     returns: void
+    connection: api
     params:
       slug:
         type: string
         required: true
         description: The site slug to delete
-    rest:
-      method: DELETE
-      url: '"https://here.now/api/v1/publish/" + .params.slug'
-      response:
-        static:
-          success: 'true'
-          id: .params.slug
+    python:
+      module: ./publish.py
+      function: delete_website
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADDITIONAL OPERATIONS
@@ -156,15 +139,10 @@ operations:
     returns:
       success: boolean
       slug: string
-    rest:
-      method: POST
-      url: '"https://here.now/api/v1/publish/" + .params.slug + "/claim"'
-      body:
-        claimToken: .params.claim_token
-      response:
-        mapping:
-          success: 'true'
-          slug: .params.slug
+    connection: api
+    python:
+      module: ./publish.py
+      function: claim_website
 
   signup:
     description: |
@@ -180,15 +158,9 @@ operations:
     returns:
       sent: boolean
       message: string
-    rest:
-      method: POST
-      url: '"https://here.now/api/auth/login"'
-      body:
-        email: .params.email
-      response:
-        mapping:
-          sent: 'true'
-          message: '"Check your inbox for a sign-in link from here.now. Click it, then copy your API key from the dashboard and add it to AgentOS credentials for this skill."'
+    python:
+      module: ./publish.py
+      function: op_signup
 
   patch_metadata:
     description: Update site title, description, or TTL without redeploying files
@@ -207,14 +179,7 @@ operations:
         description: New TTL in seconds
     returns:
       success: boolean
-    rest:
-      method: PATCH
-      url: '"https://here.now/api/v1/publish/" + .params.slug + "/metadata"'
-      body:
-        ttlSeconds: '.params.ttl?'
-        viewer:
-          title: '.params.title?'
-          description: '.params.description?'
-      response:
-        mapping:
-          success: 'true'
+    connection: api
+    python:
+      module: ./publish.py
+      function: patch_metadata

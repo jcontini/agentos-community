@@ -24,7 +24,93 @@ import sys
 import urllib.request
 import urllib.error
 
+from agentos import surf
+
 BASE_URL = "https://here.now/api/v1"
+
+
+def _map_website(w: dict) -> dict:
+    viewer = w.get("viewer") or {}
+    return {
+        "id": w.get("slug"),
+        "name": viewer.get("title") or w.get("slug"),
+        "url": w.get("siteUrl"),
+        "status": "active" if w.get("status") == "active" else "pending",
+        "datePublished": w.get("updatedAt"),
+        "version_id": w.get("currentVersionId"),
+        "expires_at": w.get("expiresAt"),
+        "anonymous": w.get("anonymous", False),
+        "claim_token": w.get("claimToken"),
+        "claim_url": w.get("claimUrl"),
+    }
+
+
+def list_websites(**params) -> list[dict]:
+    token = params.get("auth", {}).get("key", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    with surf(profile="api") as client:
+        resp = client.get(f"{BASE_URL}/publishes", headers=headers)
+        resp.raise_for_status()
+    return [_map_website(w) for w in resp.json().get("publishes", [])]
+
+
+def delete_website(*, slug: str, **params) -> dict:
+    token = params.get("auth", {}).get("key", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    with surf(profile="api") as client:
+        resp = client.delete(f"{BASE_URL}/publish/{slug}", headers=headers)
+        resp.raise_for_status()
+    return {"success": True, "id": slug}
+
+
+def claim_website(*, slug: str, claim_token: str, **params) -> dict:
+    token = params.get("auth", {}).get("key", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    with surf(profile="api") as client:
+        resp = client.post(
+            f"{BASE_URL}/publish/{slug}/claim",
+            json={"claimToken": claim_token},
+            headers=headers,
+        )
+        resp.raise_for_status()
+    return {"success": True, "slug": slug}
+
+
+def op_signup(*, email: str, **params) -> dict:
+    with surf(profile="api") as client:
+        resp = client.post("https://here.now/api/auth/login", json={"email": email})
+        resp.raise_for_status()
+    return {
+        "sent": True,
+        "message": (
+            "Check your inbox for a sign-in link from here.now. "
+            "Click it, then copy your API key from the dashboard "
+            "and add it to AgentOS credentials for this skill."
+        ),
+    }
+
+
+def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl: int = None, **params) -> dict:
+    token = params.get("auth", {}).get("key", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    body: dict = {}
+    if ttl is not None:
+        body["ttlSeconds"] = ttl
+    viewer: dict = {}
+    if title:
+        viewer["title"] = title
+    if description:
+        viewer["description"] = description
+    if viewer:
+        body["viewer"] = viewer
+    with surf(profile="api") as client:
+        resp = client.patch(
+            f"{BASE_URL}/publish/{slug}/metadata",
+            json=body,
+            headers=headers,
+        )
+        resp.raise_for_status()
+    return {"success": True}
 
 
 def make_request(url, method="GET", body=None, headers=None, content_type="application/json"):

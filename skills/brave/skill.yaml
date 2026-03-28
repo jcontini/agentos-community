@@ -24,14 +24,6 @@ connections:
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
-  result:
-    id: .url
-    name: .title
-    text: .description
-    image: .meta_url.favicon
-    indexed_at: .page_age
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -41,16 +33,11 @@ operations:
     description: Search the web using Brave's independent index
     returns: result[]
     wraps_as: search
+    connection: api
     params:
       query: { type: string, required: true, description: "Search query" }
       limit: { type: integer, description: "Number of results (max 20)" }
       freshness: { type: string, description: "Filter by date: pd (24h), pw (week), pm (month), py (year)" }
-    rest:
-      method: GET
-      url: /web/search
-      query:
-        q: ".params.query"
-        count: ".params.limit // 20"
-        freshness: ".params.freshness"
-      response:
-        root: "/web/results"
+    python:
+      module: ./brave.py
+      function: search

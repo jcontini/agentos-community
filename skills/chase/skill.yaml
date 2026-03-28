@@ -32,32 +32,6 @@ connections:
               Login confirmed. Cookie provider matchmaking can extract `.chase.com`
               cookies on the next API call. If multiple cookie providers are
               installed, ask the user which browser/provider to use.
-adapters:
-  account:
-    id: .accountId
-    name: .name
-    text: '(.type + " •••• " + .last4)'
-    account_type: .type
-    last4: .last4
-    balance: .balance
-    available: .available
-    card_type: .cardType
-
-  transaction:
-    id: '(.accountId + ":" + (.postingDate // .date) + ":" + (.description // .details.description // "transaction") + ":" + (.amount | tostring))'
-    name: .description
-    account: .accountId
-    posting_date: '.postingDate // .date'
-    amount: .amount
-    balance: .balance
-    category: '.category // .categoryDescription'
-    pending: '.pending // false'
-    details: .details
-
-# ==============================================================================
-# OPERATIONS
-# ==============================================================================
-
 operations:
   check_session:
     description: >

@@ -17,62 +17,32 @@ connections:
     label: API key and secret
     help_url: https://porkbun.com/account/api
 
-adapters:
-  domain:
-    id: .domain
-    url: '"https://" + .domain'
-    status: .status
-    registrar: '"porkbun"'
-    expires_at: .expireDate
-    auto_renew: '.autoRenew == "yes"'
-    created_at: .createDate
-
-  dns_record:
-    id: '.domain + ":" + (.id | tostring)'
-    name: 'if (.name // "") == "" then .domain else .name + "." + .domain end'
-    text: '.type + " " + .content'
-    record_id: '.id | tostring'
-    domain: .domain
-    type: .type
-    content: .content
-    ttl: '.ttl | tonumber'
-    priority: '.prio // null'
-
 operations:
   list_domains:
     description: List all domains in your Porkbun account
     returns: domain[]
-    rest:
-      method: POST
-      url: /domain/listAll
-      body:
-        apikey: '.auth.key | split(":") | .[0]'
-        secretapikey: '.auth.key | split(":") | .[1]'
-      response:
-        root: /domains
+    connection: api
+    python:
+      module: ./porkbun.py
+      function: list_domains
 
   list_dns_records:
     description: List all DNS records for a domain
     returns: dns_record[]
+    connection: api
     params:
       domain:
         type: string
         required: true
         description: Domain name, for example example.com
-    rest:
-      method: POST
-      url: '"https://api.porkbun.com/api/json/v3/dns/retrieve/" + .params.domain'
-      body:
-        apikey: '.auth.key | split(":") | .[0]'
-        secretapikey: '.auth.key | split(":") | .[1]'
-      response:
-        root: /records
-        inject:
-          domain: .params.domain
+    python:
+      module: ./porkbun.py
+      function: list_dns_records
 
   create_dns_record:
     description: Create a new DNS record for a domain
     returns: void
+    connection: api
     params:
       domain:
         type: string
@@ -96,23 +66,14 @@ operations:
       prio:
         type: integer
         description: Priority, used for MX records
-    rest:
-      method: POST
-      url: '"https://api.porkbun.com/api/json/v3/dns/create/" + .params.domain'
-      body:
-        apikey: '.auth.key | split(":") | .[0]'
-        secretapikey: '.auth.key | split(":") | .[1]'
-        name: '.params.name // ""'
-        type: .params.type
-        content: .params.content
-        ttl: '(.params.ttl // 600) | tostring'
-        prio: .params.prio
-      response:
-        raw: true
+    python:
+      module: ./porkbun.py
+      function: create_dns_record
 
   update_dns_record:
     description: Update an existing DNS record
     returns: void
+    connection: api
     params:
       domain:
         type: string
@@ -140,23 +101,14 @@ operations:
       prio:
         type: integer
         description: Priority, used for MX records
-    rest:
-      method: POST
-      url: '"https://api.porkbun.com/api/json/v3/dns/edit/" + .params.domain + "/" + .params.id'
-      body:
-        apikey: '.auth.key | split(":") | .[0]'
-        secretapikey: '.auth.key | split(":") | .[1]'
-        name: '.params.name // ""'
-        type: .params.type
-        content: .params.content
-        ttl: '(.params.ttl // 600) | tostring'
-        prio: .params.prio
-      response:
-        raw: true
+    python:
+      module: ./porkbun.py
+      function: update_dns_record
 
   delete_dns_record:
     description: Delete a DNS record from a domain
     returns: void
+    connection: api
     params:
       domain:
         type: string
@@ -166,11 +118,6 @@ operations:
         type: string
         required: true
         description: Porkbun DNS record ID
-    rest:
-      method: POST
-      url: '"https://api.porkbun.com/api/json/v3/dns/delete/" + .params.domain + "/" + .params.id'
-      body:
-        apikey: '.auth.key | split(":") | .[0]'
-        secretapikey: '.auth.key | split(":") | .[1]'
-      response:
-        raw: true
+    python:
+      module: ./porkbun.py
+      function: delete_dns_record

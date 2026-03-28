@@ -18,31 +18,6 @@ provides:
       - "github.com/*/blob/*"
       - "raw.githubusercontent.com/*"
 
-adapters:
-  task:
-    id: '.number | tostring'
-    name: .title
-    text: '.body // null'
-    url: .url
-    datePublished: .created_at
-    updated_at: .updated_at
-    completed_at: '.closed_at // null'
-    state: .state
-    repository: '.repository // null'
-    author: '.author // null'
-    labels: '.labels // []'
-
-  document:
-    id: '.sha // .path'
-    name: .name
-    url: '.url // null'
-    content: '.content // null'
-    path: .path
-    kind: '.kind // null'
-    sha: '.sha // null'
-    size: '.size // null'
-    repository: '.repository // null'
-
 operations:
   list_tasks:
     description: List issues for a repository

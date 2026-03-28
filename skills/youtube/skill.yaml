@@ -14,103 +14,18 @@ provides:
 
 connections: {}
 
-# External sources this adapter needs (for CSP)
-# Note: Specifying "ytimg.com" allows all subdomains (i.ytimg.com, i9.ytimg.com, etc.)
 sources:
   images:
-    - ytimg.com            # Video thumbnails (all CDN subdomains)
-    - ggpht.com            # Channel avatars (legacy domain)
-    - googleusercontent.com # Channel avatars (yt3.googleusercontent.com)
+    - ytimg.com
+    - ggpht.com
+    - googleusercontent.com
   frames:
-    - https://www.youtube.com          # Embedded video player
-    - https://www.youtube-nocookie.com  # Privacy-enhanced embed (better webview compat)
-
-adapters:
-  video:
-    id: .id
-    url: .webpage_url
-    name: .title
-    text: .description
-    duration_ms: (.duration // null) | if . != null then . * 1000 else null end
-    image: .thumbnail
-    datePublished: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
-    resolution: .resolution
-    view_count: .view_count
-    like_count: .like_count
-    comment_count: .comment_count
-
-    posted_by:
-      account:
-        id: .channel_id
-        platform: '"youtube"'
-        url: .channel_url
-
-    upload:
-      channel:
-        id: .channel_id
-        name: .channel
-        url: .channel_url
-        subscriber_count: .channel_follower_count
-        platform: '"youtube"'
-
-    embed:
-      post:
-        id: '(.id) + "_post"'
-        name: .title
-        content: .description
-        url: .webpage_url
-        datePublished: '.upload_date | if . and (. | length) == 8 then (.[0:4] + "-" + .[4:6] + "-" + .[6:8]) else . end'
-
-    transcribe:
-      transcript:
-        id: '(.id) + "_transcript"'
-        name: '"Transcript: " + .title'
-        content: .transcript
-        content_role: '"transcript"'
-        url: .webpage_url
-        language: .language
-        source_type: .source_type
-        duration_ms: (.duration // null) | if . != null then . * 1000 else null end
-        segments: .transcript_segments
-        segment_count: (.transcript_segments // []) | length
-
-    add_to:
-      playlist:
-        id: .playlist_id
-        name: .playlist
-        url: .playlist_url
-        platform: '"youtube"'
-
-  channel:
-    id: .id
-    name: .name
-    url: .url
-    text: .description
-    subscriber_count: .subscriber_count
-    image: .avatar
-    platform: .platform
-
-  post:
-    id: .id
-    text: .text
-    url: '"https://www.youtube.com/watch?v=" + .video_id + "&lc=" + .id'
-    datePublished: .timestamp | todate
-    likes: .like_count
-
-    posted_by:
-      account:
-        id: .author_id
-        platform: '"youtube"'
-        url: .author_url
-        image: .author_thumbnail
-
-    replies_to:
-      post:
-        id: 'if .parent == "root" then .video_id + "_post" else .parent end'
+    - https://www.youtube.com
+    - https://www.youtube-nocookie.com
 
 operations:
   search_videos:
-    description: Search YouTube videos by query (returns 10 results sorted by relevance)
+    description: Search YouTube videos by query (returns results sorted by relevance)
     returns: video[]
     web_url: "https://www.youtube.com/results?search_query=${PARAM_QUERY}"
     params:
@@ -122,28 +37,9 @@ operations:
         type: integer
         default: 50
         description: Number of results
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_LIMIT="$1"; PARAM_QUERY="$2"
-          yt-dlp --flat-playlist --dump-json "ytsearch${PARAM_LIMIT}:${PARAM_QUERY}" 2>/dev/null | jq -s '[.[] | {
-            title: .title,
-            description: .description,
-            duration: .duration,
-            thumbnail: (.thumbnails[-1].url // null),
-            channel: .channel,
-            channel_id: .channel_id,
-            channel_url: .channel_url,
-            id: .id,
-            webpage_url: ("https://www.youtube.com/watch?v=" + .id),
-            view_count: .view_count
-          }]'
-        - "--"
-        - ".params.limit"
-        - ".params.query"
-      timeout: 60
+    python:
+      module: ./youtube.py
+      function: search_videos
 
   search_recent_video:
     description: Search YouTube videos by query sorted by upload date (newest first)
@@ -158,28 +54,9 @@ operations:
         type: integer
         default: 50
         description: Number of results
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_LIMIT="$1"; PARAM_QUERY="$2"
-          yt-dlp --flat-playlist --dump-json "ytsearchdate${PARAM_LIMIT}:${PARAM_QUERY}" 2>/dev/null | jq -s '[.[] | {
-            title: .title,
-            description: .description,
-            duration: .duration,
-            thumbnail: (.thumbnails[-1].url // null),
-            channel: .channel,
-            channel_id: .channel_id,
-            channel_url: .channel_url,
-            id: .id,
-            webpage_url: ("https://www.youtube.com/watch?v=" + .id),
-            view_count: .view_count
-          }]'
-        - "--"
-        - ".params.limit"
-        - ".params.query"
-      timeout: 60
+    python:
+      module: ./youtube.py
+      function: search_recent_video
 
   list_videos:
     description: List videos from a YouTube channel or playlist
@@ -199,31 +76,9 @@ operations:
         type: integer
         default: 50
         description: Number of videos to return
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_LIMIT="$1"; PARAM_URL="$2"
-          yt-dlp --flat-playlist --dump-json --playlist-end ${PARAM_LIMIT} "${PARAM_URL}" 2>/dev/null | jq -s '[.[] | {
-            title: .title,
-            description: .description,
-            duration: .duration,
-            thumbnail: (.thumbnails[-1].url // null),
-            channel: .channel,
-            channel_id: .channel_id,
-            channel_url: .channel_url,
-            id: .id,
-            webpage_url: ("https://www.youtube.com/watch?v=" + .id),
-            view_count: .view_count,
-            playlist: (if (.playlist_id // "" | startswith("PL")) then .playlist else null end),
-            playlist_id: (if (.playlist_id // "" | startswith("PL")) then .playlist_id else null end),
-            playlist_url: (if (.playlist_id // "" | startswith("PL")) then "https://www.youtube.com/playlist?list=" + .playlist_id else null end)
-          }]'
-        - "--"
-        - ".params.limit"
-        - ".params.url"
-      timeout: 60
+    python:
+      module: ./youtube.py
+      function: list_videos
 
   get_video:
     description: Get video metadata (title, creator, thumbnail, duration)
@@ -238,23 +93,18 @@ operations:
         type: string
         required: true
         description: YouTube video URL
-    command:
-      binary: yt-dlp
-      args:
-        - "--no-update"
-        - "--dump-json"
-        - "--skip-download"
-        - ".params.url"
-      timeout: 30
+    python:
+      module: ./youtube.py
+      function: get_video
 
   transcript_video:
     description: |
       Get video transcript with optional timestamps.
-      
+
       Formats:
       - "text" (default): Plain text transcript — best for AI summarization, search, Q&A
       - "segments": Timestamped segments with start_ms/end_ms — use when the user asks about specific moments (e.g., "when do they talk about X?" or "what happens at the 5 minute mark?")
-      
+
       Always returns plain text in the transcript field. The segments format adds a transcript_segments array with timing data.
     returns: video
     web_url: .params.url
@@ -271,127 +121,9 @@ operations:
         type: string
         default: text
         description: "Transcript format: 'text' for plain text (default), 'segments' for timestamped segments"
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_FORMAT="$1"; PARAM_LANG="$2"; PARAM_URL="$3"
-          TMPDIR=$(mktemp -d)
-          trap "rm -rf $TMPDIR" EXIT
-          FORMAT="${PARAM_FORMAT}"
-
-          # Single yt-dlp call: fetch metadata + auto-captions together
-          # --write-info-json writes <id>.info.json; subtitle writes <id>.<lang>.json3
-          SOURCE_TYPE="auto_caption"
-          yt-dlp --skip-download \
-            --write-auto-subs --sub-format json3 --sub-langs "${PARAM_LANG}" \
-            --write-info-json \
-            -o "$TMPDIR/sub_%(id)s" \
-            "${PARAM_URL}" >/dev/null 2>&1
-
-          SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
-
-          # Fallback: manually uploaded subtitles (separate call, only if needed)
-          if [ -z "$SUBFILE" ]; then
-            SOURCE_TYPE="manual"
-            yt-dlp --skip-download \
-              --write-subs --sub-format json3 --sub-langs "${PARAM_LANG}" \
-              -o "$TMPDIR/sub_%(id)s" \
-              "${PARAM_URL}" >/dev/null 2>&1
-            SUBFILE=$(ls "$TMPDIR"/sub_*.json3 2>/dev/null | head -1)
-          fi
-
-          if [ -z "$SUBFILE" ]; then
-            echo '{"error": "No captions available for this video in language: ${PARAM_LANG}"}'
-            exit 0
-          fi
-
-          # Metadata written by --write-info-json alongside the subtitle file
-          METAFILE=$(ls "$TMPDIR"/sub_*.info.json 2>/dev/null | head -1)
-          if [ -z "$METAFILE" ]; then
-            # Fallback: fetch metadata separately (should not normally happen)
-            METAFILE="$TMPDIR/meta.json"
-            yt-dlp --dump-json --skip-download "${PARAM_URL}" >"$METAFILE" 2>/dev/null
-          fi
-
-          if [ "$FORMAT" = "segments" ]; then
-            # Parse JSON3 into timestamped segments + plain text
-            # Write to temp file to avoid null-byte truncation in shell variables
-            SEGFILE="$TMPDIR/segments.json"
-            jq '[
-              .events[]
-              | select(.segs != null and (.segs | length) > 0)
-              | {
-                  start_ms: .tStartMs,
-                  end_ms: (.tStartMs + .dDurationMs),
-                  text: ([.segs[].utf8 // ""] | join("") | gsub("\n"; " ") | gsub("^ +| +$"; ""))
-                }
-              | select(.text | length > 0)
-            ]' "$SUBFILE" >"$SEGFILE"
-
-            TRANSCRIPT=$(jq -r '[.[].text] | join(" ") | gsub("  +"; " ")' "$SEGFILE")
-
-            jq \
-              --arg transcript "$TRANSCRIPT" \
-              --slurpfile segments "$SEGFILE" \
-              --arg source_type "$SOURCE_TYPE" \
-              --arg language "${PARAM_LANG}" \
-              '{
-                title: .title,
-                description: .description,
-                transcript: $transcript,
-                transcript_segments: $segments[0],
-                source_type: $source_type,
-                language: $language,
-                duration: .duration,
-                thumbnail: .thumbnail,
-                channel: .channel,
-                channel_id: .channel_id,
-                channel_url: .channel_url,
-                channel_follower_count: .channel_follower_count,
-                id: .id,
-                webpage_url: .webpage_url,
-                upload_date: .upload_date,
-                resolution: .resolution
-              }' "$METAFILE"
-          else
-            # Default: plain text only (fastest for AI consumption)
-            TRANSCRIPT=$(jq -r '
-              [.events[] | select(.segs != null) | [.segs[].utf8 // ""] | join("")]
-              | join(" ")
-              | gsub("\n"; " ")
-              | gsub("  +"; " ")
-              | gsub("^ +| +$"; "")
-            ' "$SUBFILE")
-
-            jq \
-              --arg transcript "$TRANSCRIPT" \
-              --arg source_type "$SOURCE_TYPE" \
-              --arg language "${PARAM_LANG}" \
-              '{
-                title: .title,
-                description: .description,
-                transcript: $transcript,
-                source_type: $source_type,
-                language: $language,
-                duration: .duration,
-                thumbnail: .thumbnail,
-                channel: .channel,
-                channel_id: .channel_id,
-                channel_url: .channel_url,
-                channel_follower_count: .channel_follower_count,
-                id: .id,
-                webpage_url: .webpage_url,
-                upload_date: .upload_date,
-                resolution: .resolution
-              }' "$METAFILE"
-          fi
-        - "--"
-        - ".params.format"
-        - ".params.lang"
-        - ".params.url"
-      timeout: 90
+    python:
+      module: ./youtube.py
+      function: transcript_video
 
   get_channel:
     description: Get YouTube channel metadata (avatar, description, subscriber count)
@@ -405,25 +137,9 @@ operations:
         type: string
         required: true
         description: YouTube channel URL
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_URL="$1"
-          yt-dlp --dump-single-json --playlist-items 0 "${PARAM_URL}" 2>/dev/null | jq '{
-            id: .channel_id,
-            name: .channel,
-            url: .channel_url,
-            description: .description,
-            subscriber_count: .channel_follower_count,
-            avatar: ([.thumbnails[]? | select(.width == .height and .width > 0)] | sort_by(-.width) | .[0].url // null),
-            banner: ([.thumbnails[]? | select(.id == "banner_uncropped")] | .[0].url // null),
-            platform: "youtube"
-          }'
-        - "--"
-        - ".params.url"
-      timeout: 30
+    python:
+      module: ./youtube.py
+      function: get_channel
 
   get_avatar_channel:
     description: Quick fetch of just the channel avatar URL (scrapes og:image from channel page, ~1s)
@@ -433,21 +149,9 @@ operations:
         type: string
         required: true
         description: YouTube channel URL
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_URL="$1"
-          AVATAR=$(curl -sL "${PARAM_URL}" 2>/dev/null | sed -n 's/.*og:image" content="\([^"]*\)".*/\1/p' | head -1)
-          if [ -n "$AVATAR" ]; then
-            echo "{\"avatar\": \"$AVATAR\", \"url\": \"${PARAM_URL}\"}"
-          else
-            echo "{\"avatar\": null, \"url\": \"${PARAM_URL}\"}"
-          fi
-        - "--"
-        - ".params.url"
-      timeout: 10
+    python:
+      module: ./youtube.py
+      function: get_avatar_channel
 
   list_posts:
     description: |
@@ -466,17 +170,6 @@ operations:
         type: integer
         default: 50
         description: Maximum number of comments to fetch
-    command:
-      binary: bash
-      args:
-        - "-c"
-        - |
-          PARAM_LIMIT="$1"; PARAM_URL="$2"
-          yt-dlp --skip-download --write-comments --no-write-thumbnail \
-            --extractor-args "youtube:max_comments=${PARAM_LIMIT},all,all,100" \
-            --dump-json "${PARAM_URL}" 2>/dev/null | \
-            jq '[.id as $vid | .comments[]? | . + {video_id: $vid}]'
-        - "--"
-        - ".params.limit"
-        - ".params.url"
-      timeout: 120
+    python:
+      module: ./youtube.py
+      function: list_posts

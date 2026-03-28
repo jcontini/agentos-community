@@ -39,6 +39,7 @@ import urllib.parse
 from agentos import surf
 
 AUTH_BASE = "https://auth.exa.ai"
+API_BASE = "https://api.exa.ai"
 DASHBOARD_BASE = "https://dashboard.exa.ai"
 CALLBACK_URL = "https://dashboard.exa.ai/"
 
@@ -423,6 +424,61 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
             "masked_key": masked,
         },
     }
+
+
+def _map_result(r: dict) -> dict:
+    """Map Exa result to shape-native result fields."""
+    highlights = r.get("highlights") or []
+    text = r.get("text") or r.get("summary") or (highlights[0] if highlights else None)
+    return {
+        "id": r.get("url"),
+        "name": r.get("title"),
+        "text": text,
+        "url": r.get("url"),
+        "image": r.get("image") or r.get("favicon"),
+        "author": r.get("author"),
+        "datePublished": r.get("publishedDate"),
+    }
+
+
+def search(*, query: str, limit: int = 10, category: str = None, include_text: bool = True, **params) -> list[dict]:
+    """Search the web using Exa's neural/semantic search."""
+    api_key = params.get("auth", {}).get("key", "")
+    body: dict = {
+        "query": query,
+        "numResults": limit,
+        "type": "auto",
+        "contents": {"text": include_text, "summary": True},
+    }
+    if category:
+        body["category"] = category
+
+    with surf(profile="api") as client:
+        resp = client.post(
+            f"{API_BASE}/search",
+            json=body,
+            headers={"x-api-key": api_key},
+        )
+        resp.raise_for_status()
+
+    return [_map_result(r) for r in resp.json().get("results", [])]
+
+
+def read_webpage(*, url: str, **params) -> dict:
+    """Extract full content from a URL using Exa."""
+    api_key = params.get("auth", {}).get("key", "")
+    with surf(profile="api") as client:
+        resp = client.post(
+            f"{API_BASE}/contents",
+            json={"urls": [url], "text": True},
+            headers={"x-api-key": api_key},
+        )
+        resp.raise_for_status()
+
+    results = resp.json().get("results", [])
+    if not results:
+        return {"id": url, "url": url, "error": "No content found"}
+    return _map_result(results[0])
 
 
 def logout(*, cookies: dict = None, **params) -> dict:

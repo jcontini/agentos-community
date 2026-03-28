@@ -16,27 +16,16 @@ connections:
     label: API Key
     help_url: https://console.anthropic.com/settings/keys
 
-adapters:
-  model:
-    id: .id
-    name: .display_name
-    datePublished: .created_at
-    provider: '"anthropic"'
-    model_type: '"llm"'
-
 operations:
   list_models:
     description: List available Claude models from Anthropic
     returns: model[]
-    rest:
-      method: GET
-      url: /models
-      query:
-        limit: '"1000"'
-      headers:
-        anthropic-version: '"2023-06-01"'
-      response:
-        root: /data
+    connection: api
+    python:
+      module: ./anthropic-api.py
+      function: list_models
+      params: true
+      timeout: 30
 
   chat:
     description: Send a chat completion request to Claude (Anthropic Messages API)
@@ -76,22 +65,9 @@ operations:
       system:
         type: string
         description: "Optional system prompt"
-    rest:
-      method: POST
-      url: /messages
-      headers:
-        anthropic-version: '"2023-06-01"'
-      body:
-        model: .params.model
-        messages: 'def to_anthropic_msg: if .role == "assistant" and .tool_calls then {role: "assistant", content: ([if .content then {type: "text", text: .content} else empty end] + [.tool_calls[] | {type: "tool_use", id: .id, name: .name, input: .input}])} elif .role == "tool" then {role: "user", content: [{type: "tool_result", tool_use_id: .tool_call_id, content: .content}]} else . end; [.params.messages[] | to_anthropic_msg]'
-        tools: .params.tools
-        max_tokens: '.params.max_tokens // 4096'
-        temperature: '.params.temperature // 0'
-        system: .params.system
-      response:
-        transform: '{content: (.content[0].text // null), tool_calls: [.content[] | select(.type == "tool_use") | {id: .id, name: .name, input: .input}], stop_reason: .stop_reason, usage: .usage}'
-        mapping:
-          content: .content
-          tool_calls: .tool_calls
-          stop_reason: .stop_reason
-          usage: .usage
+    connection: api
+    python:
+      module: ./anthropic-api.py
+      function: chat
+      params: true
+      timeout: 120

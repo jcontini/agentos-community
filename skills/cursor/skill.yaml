@@ -6,31 +6,6 @@ website: https://cursor.com
 
 connections: {}
 
-adapters:
-  document:
-    id: .id
-    name: .title
-    datePublished: .date
-    source: .source
-    searches: .searches
-    urls_fetched: .urls_fetched
-    conversation_steps: .conversation_steps
-    duration_ms: .duration_ms
-    agent_id: .agent_id
-    workspace: .workspace
-    blob_key: .blob_key
-    content: .content
-
-  session:
-    id: .id
-    name: .name
-    text: .last_message
-    datePublished: .last_message_at
-    client: '"cursor"'
-    workspace: .workspace
-    message_count: .message_count
-    content: .transcript
-
 operations:
 
   # ── Session history ──────────────────────────────────────────────────────────

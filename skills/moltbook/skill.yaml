@@ -24,235 +24,73 @@ connections:
     help_url: https://www.moltbook.com/skill.md
     optional: true
 
-adapters:
-  post:
-    id: .id
-    name: 'if .title then .title else "Post " + .id end'
-    text: '.content // null'
-    url: .url
-    author: '.author_name // null'
-    datePublished: '.created_at // null'
-    community: '.community // null'
-    score: '.score // null'
-    comment_count: '.comment_count // null'
-    external_url: '.external_url // null'
-    post_type: '.post_type // null'
-    posted_by:
-      account:
-        id: .author_name
-        platform: '"moltbook"'
-        url: '"https://www.moltbook.com/u/" + .author_name'
-    publish:
-      community:
-        id: .community
-        url: '"https://www.moltbook.com/m/" + .community'
-        platform: '"moltbook"'
-
-  community:
-    id: .name
-    name: '.display_name // .name'
-    text: '.description // null'
-    url: '"https://www.moltbook.com/m/" + .name'
-    subscriber_count: '.subscriber_count // null'
-    allow_crypto: '.allow_crypto // null'
-
-  account:
-    id: .name
-    text: '.description // null'
-    url: '"https://www.moltbook.com/u/" + .name'
-    image: '((.owner // {}).x_avatar // null)'
-    karma: '.karma // null'
-    follower_count: '.follower_count // null'
-    following_count: '.following_count // null'
-    posts_count: '.posts_count // null'
-    comments_count: '.comments_count // null'
-    is_claimed: '.is_claimed // null'
-    is_active: '.is_active // null'
-    last_active: '.last_active // null'
-
-  result:
-    id: .id
-    name: 'if .title then .title else "Search Result " + .id end'
-    text: '.content // null'
-    url: .url
-    author: '.author_name // null'
-    datePublished: '.created_at // null'
-    result_type: '.result_type // null'
-    community: '.community // null'
-    score: '.score // null'
-    similarity: '.similarity // null'
-    post_id: '.post_id // null'
-
 operations:
   list_posts:
     description: List Moltbook posts from the global feed or a specific submolt
     returns: post[]
+    connection: api
     params:
-      sort:
-        type: string
-        description: hot, new, top, or rising
-      limit:
-        type: integer
-        description: Maximum number of posts to return
-      cursor:
-        type: string
-        description: Pagination cursor from a previous response
-      submolt:
-        type: string
-        description: Optional submolt filter
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/posts
-      query:
-        sort: '.params.sort // "hot"'
-        limit: '(.params.limit // 25 | tostring)'
-        cursor: .params.cursor
-        submolt: .params.submolt
-      response:
-        transform: |
-          (.posts // []) | map({
-            id: .id,
-            title: .title,
-            content: .content,
-            url: ("https://www.moltbook.com/post/" + .id),
-            external_url: .url,
-            author_name: ((.author // {}).name // null),
-            community: ((.submolt // {}).name // null),
-            created_at: .created_at,
-            score: ((.upvotes // 0) - (.downvotes // 0)),
-            comment_count: .comment_count,
-            post_type: (.type // null)
-          })
+      sort: { type: string, description: "hot, new, top, or rising" }
+      limit: { type: integer, description: "Maximum number of posts to return" }
+      cursor: { type: string, description: "Pagination cursor from a previous response" }
+      submolt: { type: string, description: "Optional submolt filter" }
     test:
-      params:
-        sort: new
-        limit: 3
+      params: { sort: new, limit: 3 }
+    python:
+      module: ./moltbook.py
+      function: list_posts
 
   get_post:
     description: Get a single Moltbook post with its current metadata
     returns: post
+    web_url: .params.url
+    connection: api
     params:
-      id:
-        type: string
-        description: Moltbook post id — optional if url is set
-      url:
-        type: string
-        description: Link to the post (web_read), e.g. https://www.moltbook.com/post/abc
-    rest:
-      method: GET
-      url: '"https://www.moltbook.com/api/v1/posts/" + (if (.params.url // "") != "" then (.params.url | capture("/post/(?<pid>[^/?#]+)") | .pid) else .params.id end)'
-      response:
-        transform: |
-          (.post // {}) | {
-            id: .id,
-            title: .title,
-            content: .content,
-            url: ("https://www.moltbook.com/post/" + .id),
-            external_url: .url,
-            author_name: ((.author // {}).name // null),
-            community: ((.submolt // {}).name // null),
-            created_at: .created_at,
-            score: ((.upvotes // 0) - (.downvotes // 0)),
-            comment_count: .comment_count,
-            post_type: (.type // null)
-          }
+      id: { type: string, description: "Moltbook post id — optional if url is set" }
+      url: { type: string, description: "Link to the post (web_read), e.g. https://www.moltbook.com/post/abc" }
     test:
       params:
         id: "d0fff1d6-26aa-4eea-bd8e-a3efb2b8d498"
         url: ~
+    python:
+      module: ./moltbook.py
+      function: get_post
 
   search_posts:
     description: Search Moltbook posts and comments semantically
     returns: result[]
+    connection: api
     params:
-      query:
-        type: string
-        required: true
-        description: Search query
-      type:
-        type: string
-        description: posts, comments, or all
-      limit:
-        type: integer
-        description: Maximum number of results to return
-      cursor:
-        type: string
-        description: Pagination cursor from a previous response
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/search
-      query:
-        q: .params.query
-        type: '.params.type // "all"'
-        limit: '(.params.limit // 20 | tostring)'
-        cursor: .params.cursor
-      response:
-        transform: |
-          (.results // []) | map({
-            id: .id,
-            title: .title,
-            content: .content,
-            url: ("https://www.moltbook.com/post/" + (.post_id // .id)),
-            external_url: .url,
-            author_name: ((.author // {}).name // null),
-            community: ((.submolt // {}).name // null),
-            created_at: .created_at,
-            score: ((.upvotes // 0) - (.downvotes // 0)),
-            similarity: .similarity,
-            result_type: .type,
-            post_id: (.post_id // .id)
-          })
+      query: { type: string, required: true, description: "Search query" }
+      type: { type: string, description: "posts, comments, or all" }
+      limit: { type: integer, description: "Maximum number of results to return" }
+      cursor: { type: string, description: "Pagination cursor from a previous response" }
     test:
-      params:
-        query: test
-        limit: 3
+      params: { query: test, limit: 3 }
+    python:
+      module: ./moltbook.py
+      function: search_posts
 
   get_feed:
     description: Get the authenticated agent's personalized Moltbook feed
     returns: post[]
+    connection: api
     params:
-      sort:
-        type: string
-        description: hot, new, or top
-      limit:
-        type: integer
-        description: Maximum number of posts to return
-      cursor:
-        type: string
-        description: Pagination cursor from a previous response
-      filter:
-        type: string
-        description: all or following
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/feed
-      query:
-        sort: '.params.sort // "hot"'
-        limit: '(.params.limit // 25 | tostring)'
-        cursor: .params.cursor
-        filter: '.params.filter // "all"'
-      response:
-        transform: |
-          (.posts // []) | map({
-            id: .id,
-            title: .title,
-            content: .content,
-            url: ("https://www.moltbook.com/post/" + .id),
-            external_url: .url,
-            author_name: ((.author // {}).name // null),
-            community: ((.submolt // {}).name // null),
-            created_at: .created_at,
-            score: ((.upvotes // 0) - (.downvotes // 0)),
-            comment_count: .comment_count,
-            post_type: (.type // null)
-          })
+      sort: { type: string, description: "hot, new, or top" }
+      limit: { type: integer, description: "Maximum number of posts to return" }
+      cursor: { type: string, description: "Pagination cursor from a previous response" }
+      filter: { type: string, description: "all or following" }
+    python:
+      module: ./moltbook.py
+      function: get_feed
 
   get_home:
     description: Get the authenticated agent's Moltbook home dashboard
     returns: object
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/home
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: get_home
 
   create_post:
     description: >
@@ -266,66 +104,28 @@ operations:
       verification_required: boolean
       verification_code: string
       challenge_text: string
+    connection: api
     params:
-      submolt_name:
-        type: string
-        description: Submolt name
-      submolt:
-        type: string
-        description: Alias for submolt_name
-      title:
-        type: string
-        required: true
-        description: Post title
-      content:
-        type: string
-        description: Body text for a text post
-      url:
-        type: string
-        description: URL for a link post
-      type:
-        type: string
-        description: text, link, or image
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/posts
-      body:
-        submolt_name: '(.params.submolt_name // .params.submolt)'
-        title: .params.title
-        content: .params.content
-        url: .params.url
-        type: .params.type
-      response:
-        transform: |
-          (.post // {}) | {
-            id: .id,
-            title: .title,
-            content: .content,
-            url: ("https://www.moltbook.com/post/" + .id),
-            external_url: .url,
-            author_name: ((.author // {}).name // null),
-            community: ((.submolt // {}).name // null),
-            created_at: .created_at,
-            score: ((.upvotes // 0) - (.downvotes // 0)),
-            comment_count: .comment_count,
-            post_type: (.type // null),
-            verification_required: (.verification_required // false),
-            verification_code: (.verification.verification_code // null),
-            challenge_text: (.verification.challenge_text // null)
-          }
+      submolt_name: { type: string, description: "Submolt name" }
+      submolt: { type: string, description: "Alias for submolt_name" }
+      title: { type: string, required: true, description: "Post title" }
+      content: { type: string, description: "Body text for a text post" }
+      url: { type: string, description: "URL for a link post" }
+      type: { type: string, description: "text, link, or image" }
+    python:
+      module: ./moltbook.py
+      function: create_post
 
   delete_post:
     description: Delete a Moltbook post owned by the authenticated agent
     returns:
       success: boolean
+    connection: api
     params:
-      id:
-        type: string
-        required: true
-        description: Moltbook post id
-    rest:
-      method: DELETE
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.id'
+      id: { type: string, required: true, description: "Moltbook post id" }
+    python:
+      module: ./moltbook.py
+      function: delete_post
 
   create_comment:
     description: >
@@ -339,276 +139,180 @@ operations:
       verification_required: boolean
       verification_code: string
       challenge_text: string
+    connection: api
     params:
-      post_id:
-        type: string
-        required: true
-        description: Moltbook post id
-      content:
-        type: string
-        required: true
-        description: Comment text
-      parent_id:
-        type: string
-        description: Parent comment id for replies
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.post_id + "/comments"'
-      body:
-        content: .params.content
-        parent_id: .params.parent_id
-      response:
-        transform: |
-          {
-            id: .comment.id,
-            post_id: .comment.post_id,
-            content: .comment.content,
-            verification_required: (.verification_required // false),
-            verification_code: (.verification.verification_code // null),
-            challenge_text: (.verification.challenge_text // null)
-          }
+      post_id: { type: string, required: true, description: "Moltbook post id" }
+      content: { type: string, required: true, description: "Comment text" }
+      parent_id: { type: string, description: "Parent comment id for replies" }
+    python:
+      module: ./moltbook.py
+      function: create_comment
 
   list_comments:
     description: List comments for a Moltbook post
     returns: post[]
+    connection: api
     params:
-      post_id:
-        type: string
-        required: true
-        description: Moltbook post id
-      sort:
-        type: string
-        description: best, new, or old
-      limit:
-        type: integer
-        description: Maximum number of top-level comments to return
-      cursor:
-        type: string
-        description: Pagination cursor from a previous response
-    rest:
-      method: GET
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.post_id + "/comments"'
-      query:
-        sort: '.params.sort // "best"'
-        limit: '(.params.limit // 35 | tostring)'
-        cursor: .params.cursor
-      response:
-        transform: |
-          def map_comment:
-            {
-              id: .id,
-              title: null,
-              content: .content,
-              url: ("https://www.moltbook.com/post/" + (.post_id // .params.post_id)),
-              external_url: null,
-              author_name: ((.author // {}).name // null),
-              community: null,
-              created_at: .created_at,
-              score: ((.upvotes // 0) - (.downvotes // 0)),
-              comment_count: (((.replies // []) | length) // 0),
-              post_type: "comment"
-            };
-          (.comments // []) | map(map_comment)
+      post_id: { type: string, required: true, description: "Moltbook post id" }
+      sort: { type: string, description: "best, new, or old" }
+      limit: { type: integer, description: "Maximum number of top-level comments to return" }
+      cursor: { type: string, description: "Pagination cursor from a previous response" }
+    python:
+      module: ./moltbook.py
+      function: list_comments
 
   upvote_post:
     description: Upvote a Moltbook post
     returns:
       success: boolean
       message: string
+    connection: api
     params:
-      id:
-        type: string
-        required: true
-        description: Moltbook post id
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/upvote"'
+      id: { type: string, required: true, description: "Moltbook post id" }
+    python:
+      module: ./moltbook.py
+      function: upvote_post
 
   downvote_post:
     description: Downvote a Moltbook post
     returns:
       success: boolean
       message: string
+    connection: api
     params:
-      id:
-        type: string
-        required: true
-        description: Moltbook post id
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/posts/" + .params.id + "/downvote"'
+      id: { type: string, required: true, description: "Moltbook post id" }
+    python:
+      module: ./moltbook.py
+      function: downvote_post
 
   upvote_comment:
     description: Upvote a Moltbook comment
     returns:
       success: boolean
       message: string
+    connection: api
     params:
-      id:
-        type: string
-        required: true
-        description: Moltbook comment id
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/comments/" + .params.id + "/upvote"'
+      id: { type: string, required: true, description: "Moltbook comment id" }
+    python:
+      module: ./moltbook.py
+      function: upvote_comment
 
   list_communities:
     description: List Moltbook submolts (communities)
     returns: community[]
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/submolts
-      response:
-        root: /submolts
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: list_communities
 
   get_community:
     description: Get a single Moltbook submolt (community)
     returns: community
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Submolt name
-    rest:
-      method: GET
-      url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name'
-      response:
-        root: /submolt
+      name: { type: string, required: true, description: "Submolt name" }
     test:
       params:
         name: introductions
+    python:
+      module: ./moltbook.py
+      function: get_community
 
   create_community:
     description: Create a new Moltbook submolt (community)
     returns: community
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: URL-safe submolt name
-      display_name:
-        type: string
-        required: true
-        description: Human-readable community name
-      description:
-        type: string
-        description: Community description
-      allow_crypto:
-        type: boolean
-        description: Whether crypto content is allowed
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/submolts
-      body:
-        name: .params.name
-        display_name: .params.display_name
-        description: .params.description
-        allow_crypto: .params.allow_crypto
-      response:
-        root: /submolt
+      name: { type: string, required: true, description: "URL-safe submolt name" }
+      display_name: { type: string, required: true, description: "Human-readable community name" }
+      description: { type: string, description: "Community description" }
+      allow_crypto: { type: boolean, description: "Whether crypto content is allowed" }
+    python:
+      module: ./moltbook.py
+      function: create_community
 
   subscribe_community:
     description: Subscribe to a Moltbook submolt (community)
     returns:
       success: boolean
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Submolt name
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name + "/subscribe"'
+      name: { type: string, required: true, description: "Submolt name" }
+    python:
+      module: ./moltbook.py
+      function: subscribe_community
 
   unsubscribe_community:
     description: Unsubscribe from a Moltbook submolt (community)
     returns:
       success: boolean
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Submolt name
-    rest:
-      method: DELETE
-      url: '"https://www.moltbook.com/api/v1/submolts/" + .params.name + "/subscribe"'
+      name: { type: string, required: true, description: "Submolt name" }
+    python:
+      module: ./moltbook.py
+      function: unsubscribe_community
 
   me_account:
     description: Get the authenticated Moltbook agent profile
     returns: account
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/me
-      response:
-        root: /agent
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: me_account
 
   get_account:
     description: Get another Moltbook agent profile by name
     returns: account
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Moltbook agent name
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/profile
-      query:
-        name: .params.name
-      response:
-        root: /agent
+      name: { type: string, required: true, description: "Moltbook agent name" }
+    python:
+      module: ./moltbook.py
+      function: get_account
 
   follow_account:
     description: Follow another Moltbook agent
     returns:
       success: boolean
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Moltbook agent name
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/agents/" + .params.name + "/follow"'
+      name: { type: string, required: true, description: "Moltbook agent name" }
+    python:
+      module: ./moltbook.py
+      function: follow_account
 
   unfollow_account:
     description: Unfollow another Moltbook agent
     returns:
       success: boolean
+    connection: api
     params:
-      name:
-        type: string
-        required: true
-        description: Moltbook agent name
-    rest:
-      method: DELETE
-      url: '"https://www.moltbook.com/api/v1/agents/" + .params.name + "/follow"'
+      name: { type: string, required: true, description: "Moltbook agent name" }
+    python:
+      module: ./moltbook.py
+      function: unfollow_account
 
   get_status:
     description: Check whether the authenticated Moltbook agent is still pending claim or claimed
     returns:
       status: string
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/status
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: get_status
 
   update_account:
     description: Update the authenticated Moltbook agent's description or metadata
     returns:
       success: boolean
+    connection: api
     params:
-      description:
-        type: string
-        description: New agent description
-      metadata:
-        type: object
-        description: Arbitrary metadata object
-    rest:
-      method: PATCH
-      url: https://www.moltbook.com/api/v1/agents/me
-      body:
-        description: .params.description
-        metadata: .params.metadata
+      description: { type: string, description: "New agent description" }
+      metadata: { type: object, description: "Arbitrary metadata object" }
+    python:
+      module: ./moltbook.py
+      function: update_account
 
   verify:
     description: >
@@ -623,68 +327,54 @@ operations:
       message: string
       content_type: string
       content_id: string
+    connection: api
     params:
-      verification_code:
-        type: string
-        required: true
-        description: The verification_code from the create_post or create_comment response
-      answer:
-        type: string
-        required: true
-        description: Your numeric answer to the math challenge, with 2 decimal places e.g. "15.00"
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/verify
-      body:
-        verification_code: .params.verification_code
-        answer: .params.answer
+      verification_code: { type: string, required: true, description: "The verification_code from the create_post or create_comment response" }
+      answer: { type: string, required: true, description: 'Your numeric answer to the math challenge, with 2 decimal places e.g. "15.00"' }
+    python:
+      module: ./moltbook.py
+      function: verify
 
   list_notifications:
     description: List unread notifications for the authenticated agent
     returns: object
+    connection: api
     params:
-      limit:
-        type: integer
-        description: Maximum number of notifications to return
-      cursor:
-        type: string
-        description: Pagination cursor from a previous response
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/notifications
-      query:
-        limit: '(.params.limit // 25 | tostring)'
-        cursor: .params.cursor
+      limit: { type: integer, description: "Maximum number of notifications to return" }
+      cursor: { type: string, description: "Pagination cursor from a previous response" }
+    python:
+      module: ./moltbook.py
+      function: list_notifications
 
   read_notifications_by_post:
     description: Mark all notifications for a specific post as read
     returns:
       success: boolean
+    connection: api
     params:
-      post_id:
-        type: string
-        required: true
-        description: Moltbook post id
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/notifications/read-by-post/" + .params.post_id'
+      post_id: { type: string, required: true, description: "Moltbook post id" }
+    python:
+      module: ./moltbook.py
+      function: read_notifications_by_post
 
   read_all_notifications:
     description: Mark all notifications as read
     returns:
       success: boolean
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/notifications/read-all
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: read_all_notifications
 
   check_dms:
     description: >
       Quick poll for DM activity — pending requests and unread messages. Add to heartbeat
       routine. Returns has_activity, pending request count, and unread message previews.
     returns: object
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/dm/check
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: check_dms
 
   send_dm_request:
     description: >
@@ -694,119 +384,87 @@ operations:
       success: boolean
       message: string
       conversation_id: string
+    connection: api
     params:
-      to:
-        type: string
-        description: Bot name to send a request to
-      to_owner:
-        type: string
-        description: Owner's X handle (with or without @)
-      message:
-        type: string
-        required: true
-        description: Why you want to chat (10-1000 chars)
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/agents/dm/request
-      body:
-        to: .params.to
-        to_owner: .params.to_owner
-        message: .params.message
+      to: { type: string, description: "Bot name to send a request to" }
+      to_owner: { type: string, description: "Owner's X handle (with or without @)" }
+      message: { type: string, required: true, description: "Why you want to chat (10-1000 chars)" }
+    python:
+      module: ./moltbook.py
+      function: send_dm_request
 
   list_dm_requests:
     description: List pending incoming DM requests waiting for approval
     returns: object
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/dm/requests
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: list_dm_requests
 
   approve_dm_request:
     description: Approve a pending DM request, opening the conversation
     returns:
       success: boolean
+    connection: api
     params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation id from the pending request
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/agents/dm/requests/" + .params.conversation_id + "/approve"'
+      conversation_id: { type: string, required: true, description: "Conversation id from the pending request" }
+    python:
+      module: ./moltbook.py
+      function: approve_dm_request
 
   reject_dm_request:
     description: Reject a pending DM request, optionally blocking future requests
     returns:
       success: boolean
+    connection: api
     params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation id from the pending request
-      block:
-        type: boolean
-        description: If true, prevent future requests from this agent
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/agents/dm/requests/" + .params.conversation_id + "/reject"'
-      body:
-        block: '.params.block // false'
+      conversation_id: { type: string, required: true, description: "Conversation id from the pending request" }
+      block: { type: boolean, description: "If true, prevent future requests from this agent" }
+    python:
+      module: ./moltbook.py
+      function: reject_dm_request
 
   list_conversations:
     description: List active DM conversations with unread counts
     returns: object
-    rest:
-      method: GET
-      url: https://www.moltbook.com/api/v1/agents/dm/conversations
+    connection: api
+    python:
+      module: ./moltbook.py
+      function: list_conversations
 
   get_conversation:
     description: Read all messages in a DM conversation and mark them as read
     returns: object
+    connection: api
     params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation id
-    rest:
-      method: GET
-      url: '"https://www.moltbook.com/api/v1/agents/dm/conversations/" + .params.conversation_id'
+      conversation_id: { type: string, required: true, description: "Conversation id" }
+    python:
+      module: ./moltbook.py
+      function: get_conversation
 
   send_message:
     description: Send a message in an approved DM conversation
     returns:
       success: boolean
       message_id: string
+    connection: api
     params:
-      conversation_id:
-        type: string
-        required: true
-        description: Conversation id
-      message:
-        type: string
-        required: true
-        description: Message text
-      needs_human_input:
-        type: boolean
-        description: Flag that the other agent should escalate this to their human
-    rest:
-      method: POST
-      url: '"https://www.moltbook.com/api/v1/agents/dm/conversations/" + .params.conversation_id + "/send"'
-      body:
-        message: .params.message
-        needs_human_input: .params.needs_human_input
+      conversation_id: { type: string, required: true, description: "Conversation id" }
+      message: { type: string, required: true, description: "Message text" }
+      needs_human_input: { type: boolean, description: "Flag that the other agent should escalate this to their human" }
+    python:
+      module: ./moltbook.py
+      function: send_message
 
   setup_owner_email:
     description: Set up owner dashboard access for the authenticated Moltbook agent
     returns: object
+    connection: api
     params:
-      email:
-        type: string
-        required: true
-        description: Human owner's email address
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/agents/me/setup-owner-email
-      body:
-        email: .params.email
+      email: { type: string, required: true, description: "Human owner's email address" }
+    python:
+      module: ./moltbook.py
+      function: setup_owner_email
 
   register:
     description: Register a new Moltbook agent account
@@ -815,24 +473,8 @@ operations:
       claim_url: string
       verification_code: string
     params:
-      name:
-        type: string
-        required: true
-        description: Agent name
-      description:
-        type: string
-        required: true
-        description: What the agent does
-    rest:
-      method: POST
-      url: https://www.moltbook.com/api/v1/agents/register
-      body:
-        name: .params.name
-        description: .params.description
-      response:
-        transform: |
-          (.agent // {}) | {
-            api_key: .api_key,
-            claim_url: .claim_url,
-            verification_code: .verification_code
-          }
+      name: { type: string, required: true, description: "Agent name" }
+      description: { type: string, required: true, description: "What the agent does" }
+    python:
+      module: ./moltbook.py
+      function: register

@@ -23,16 +23,6 @@ connections:
 # ADAPTERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
-  webpage:
-    id: '.metadata.sourceURL // .metadata.url // .url'
-    name: '.metadata.title // .metadata.ogTitle // .title'
-    text: '.markdown // .metadata.description'
-    image: '.metadata.ogImage // .metadata.image // .metadata["og:image"]'
-    author: '.metadata.author // .metadata["article:author"]'
-    datePublished: '.metadata.publishedTime // .metadata.publishedDate // .metadata["article:published_time"]'
-    content_type: '"text/markdown"'
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -41,20 +31,12 @@ operations:
   read_webpage:
     description: Read a URL with browser rendering (handles JS-heavy sites)
     returns: webpage
+    connection: api
     web_url: .params.url
     params:
       url: { type: string, required: true, description: "URL to read" }
       wait_for_js: { type: integer, default: 0, description: "Milliseconds to wait for JS (0=fast, 1000+=for SPAs)" }
       timeout: { type: integer, default: 30000, description: "Request timeout in ms" }
-    rest:
-      method: POST
-      url: /scrape
-      body:
-        url: .params.url
-        formats:
-          - '"markdown"'
-        onlyMainContent: true
-        waitFor: .params.wait_for_js
-        timeout: .params.timeout
-      response:
-        root: "/data"
+    python:
+      module: ./firecrawl.py
+      function: read_webpage

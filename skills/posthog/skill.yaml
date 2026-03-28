@@ -20,29 +20,6 @@ connections:
 # TRANSFORMERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-adapters:
-  person:
-    id: .uuid
-    name: '(.properties.name // .properties.email // .distinct_ids[0] // "Unknown")'
-    email: .properties.email
-    datePublished: .created_at
-    distinct_ids: .distinct_ids
-    last_seen_at: .last_seen_at
-    browser: .properties."$browser"
-    os: .properties."$os"
-    initial_referrer: .properties."$initial_referrer"
-    initial_utm_source: .properties."$initial_utm_source"
-
-  event:
-    id: .id
-    name: .event
-    datePublished: .timestamp
-    text: '(.properties | keys | join(", "))'
-    distinct_id: .distinct_id
-    properties: .properties
-    current_url: .properties."$current_url"
-    person: .person
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -51,76 +28,63 @@ operations:
   list_persons:
     description: List persons in a project
     returns: person[]
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       search: { type: string, description: "Search by email or name" }
       limit: { type: integer }
       offset: { type: integer }
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/persons/"'
-      query:
-        search: .params.search
-        limit: '.params.limit | if . then tostring else null end'
-        offset: '.params.offset | if . then tostring else null end'
-      response:
-        root: /results
+    python:
+      module: ./posthog.py
+      function: list_persons
 
   get_person:
     description: Get a person by UUID
     returns: person
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       id: { type: string, required: true, description: "Person UUID" }
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/persons/" + .params.id + "/"'
+    python:
+      module: ./posthog.py
+      function: get_person
 
   search_persons:
     description: Search persons by email or name
     returns: person[]
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       query: { type: string, required: true, description: "Email or name to search for" }
       limit: { type: integer }
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/persons/"'
-      query:
-        search: .params.query
-        limit: '.params.limit | if . then tostring else null end'
-      response:
-        root: /results
+    python:
+      module: ./posthog.py
+      function: search_persons
 
   list_events:
     description: List recent events (deprecated API — use query utility for complex queries)
     returns: event[]
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       event: { type: string, description: "Filter by event name" }
       limit: { type: integer }
       after: { type: string, description: "ISO datetime — only events after this time" }
       before: { type: string, description: "ISO datetime — only events before this time" }
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/events/"'
-      query:
-        event: .params.event
-        limit: '.params.limit | if . then tostring else null end'
-        after: .params.after
-        before: .params.before
-      response:
-        root: /results
+    python:
+      module: ./posthog.py
+      function: list_events
 
   get_event:
     description: Get a single event by ID
     returns: event
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       id: { type: string, required: true, description: "Event ID" }
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/events/" + .params.id + "/"'
+    python:
+      module: ./posthog.py
+      function: get_event
 
   get_projects:
     description: List all projects the authenticated user has access to
@@ -129,14 +93,14 @@ operations:
       uuid: string
       name: string
       api_token: string
-    rest:
-      method: GET
-      url: https://us.posthog.com/api/projects/
-      response:
-        root: /results
+    connection: api
+    python:
+      module: ./posthog.py
+      function: get_projects
 
   query:
     description: Run a HogQL query against the events table (recommended over events API)
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       hogql: { type: string, required: true, description: "HogQL query string" }
@@ -144,14 +108,13 @@ operations:
       columns: array
       results: array
       types: array
-    rest:
-      method: POST
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/query/"'
-      body:
-        query: { kind: '"HogQLQuery"', query: .params.hogql }
+    python:
+      module: ./posthog.py
+      function: query
 
   get_event_definitions:
     description: List all event names defined in a project
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       limit: { type: integer }
@@ -160,16 +123,13 @@ operations:
       name: string
       volume_30_day: integer
       query_usage_30_day: integer
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/event_definitions/"'
-      query:
-        limit: '.params.limit | if . then tostring else null end'
-      response:
-        root: /results
+    python:
+      module: ./posthog.py
+      function: get_event_definitions
 
   list_recordings:
     description: List session recordings for a project
+    connection: api
     params:
       project_id: { type: string, required: true, description: "PostHog project ID" }
       limit: { type: integer }
@@ -185,11 +145,6 @@ operations:
       keypress_count: integer
       start_url: string
       viewed: boolean
-    rest:
-      method: GET
-      url: '"https://us.posthog.com/api/projects/" + .params.project_id + "/session_recordings/"'
-      query:
-        limit: '.params.limit | if . then tostring else null end'
-        offset: '.params.offset | if . then tostring else null end'
-      response:
-        root: /results
+    python:
+      module: ./posthog.py
+      function: list_recordings

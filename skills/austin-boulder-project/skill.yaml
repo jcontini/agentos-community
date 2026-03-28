@@ -14,19 +14,6 @@ connections:
     help_url: https://boulderingproject.portal.approach.app/login
     optional: true
 
-adapters:
-  class:
-    id: '.id | tostring'
-    name: .name
-    text: .text
-    start_date: .startDT
-    url: '"https://boulderingproject.portal.approach.app/schedule"'
-    end_date: .endDT
-    activity_type: .activityName
-    capacity: .capacity
-    spots_remaining: .ticketsRemaining
-    is_full: .isFull
-
 operations:
   get_schedule:
     description: Get today's class schedule at Austin Bouldering Project — no login needed

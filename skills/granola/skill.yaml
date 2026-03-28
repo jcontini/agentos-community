@@ -23,44 +23,6 @@ connections:
     vars:
       cache_file: "~/Library/Application Support/Granola/cache-v6.json"
 
-adapters:
-  meeting:
-    id: .id
-    name: .title
-    text: .summary_text
-    url: .granola_url
-    datePublished: .start
-    end: .end
-    location: .location
-    calendar_link: .calendar_link
-    creation_source: .creation_source
-    valid_meeting: .valid_meeting
-    organizer_email: .organizer_email
-    organizer_name: .organizer_name
-    attendees: .attendees
-
-    transcribe:
-      transcript:
-        id: '(.id) + "_transcript"'
-        name: '"Transcript: " + .title'
-        content: .transcript_text
-        content_role: '"transcript"'
-        language: '"en"'
-        source_type: '"realtime_asr"'
-        segment_count: .segment_count
-        duration_ms: .duration_ms
-
-  conversation:
-    id: .id
-    name: .title
-    text: 'if .messages then (.messages | map(.text) | join("\n\n")) else "" end'
-    url: .notes_url
-    # Last activity (same idea as imessage/claude conversation adapters)
-    datePublished: .updated_at
-    created_at: .created_at
-    document_id: .document_id
-    message_count: 'if .messages then (.messages | length) else null end'
-
 operations:
   list_meetings:
     description: List recent meetings with metadata and attendees

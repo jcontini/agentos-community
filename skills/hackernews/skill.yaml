@@ -16,36 +16,6 @@ provides:
   - tool: web_search
     via: search_posts
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-adapters:
-  post:
-    id: .objectID
-    name: .title
-    text: .text
-    url: '"https://news.ycombinator.com/item?id=" + .objectID'
-    author: .author
-    datePublished: .created_at
-    external_url: .url
-    replies: .replies
-    score: .points
-    comment_count: .num_comments
-    posted_by:
-      account:
-        id: .author
-        name: .author
-        url: '"https://news.ycombinator.com/user?id=" + .author'
-    parent_id:
-      ref: post
-      value: .parent_id
-      rel: replies_to
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# OPERATIONS
-# ═══════════════════════════════════════════════════════════════════════════════
-
 operations:
   list_posts:
     description: List Hacker News stories by feed type
@@ -59,14 +29,9 @@ operations:
       limit:
         type: integer
         description: "Number of stories (max 100)"
-    rest:
-      method: GET
-      url: '"https://hn.algolia.com/api/v1/" + (if .params.feed == "new" then "search_by_date" else "search" end)'
-      query:
-        tags: '.params.feed | if . == "new" then "story" elif . == "ask" then "ask_hn" elif . == "show" then "show_hn" else "front_page" end'
-        hitsPerPage: .params.limit
-      response:
-        root: "/hits"
+    python:
+      module: ./hackernews.py
+      function: list_posts
     test:
       params:
         feed: front
@@ -84,15 +49,9 @@ operations:
       limit:
         type: integer
         description: "Number of results (max 100)"
-    rest:
-      method: GET
-      url: https://hn.algolia.com/api/v1/search
-      query:
-        query: .params.query
-        tags: '"story"'
-        hitsPerPage: .params.limit
-      response:
-        root: "/hits"
+    python:
+      module: ./hackernews.py
+      function: search_posts
 
   get_post:
     description: Get a Hacker News story with comments
@@ -105,37 +64,9 @@ operations:
       url:
         type: string
         description: "HN item URL with id= in the query (web_read)"
-    rest:
-      method: GET
-      url: '"https://hn.algolia.com/api/v1/items/" + (if (.params.url // "") != "" then (.params.url | capture("[?&]id=(?<pid>[0-9]+)") | .pid) else .params.id end)'
-      response:
-        transform: |
-          def map_comment:
-            {
-              id: (.id | tostring),
-              content: .text,
-              posted_by: {
-                account: {
-                  id: .author,
-                  name: .author,
-                  handle: .author,
-                  url: ("https://news.ycombinator.com/user?id=" + .author)
-                }
-              },
-              published_at: .created_at,
-              replies: [.children[]? | map_comment]
-            };
-          {
-            objectID: (.id | tostring),
-            title: .title,
-            text: .text,
-            url: .url,
-            author: .author,
-            points: .points,
-            num_comments: (.children | length),
-            created_at: .created_at,
-            replies: [.children[]? | map_comment]
-          }
+    python:
+      module: ./hackernews.py
+      function: get_post
     test:
       params:
         id: "1"
@@ -153,9 +84,6 @@ operations:
         type: string
         required: true
         description: "Story ID"
-    command:
-      binary: bash
-      args:
-        - ./comments_post.sh
-        - ".params.id"
-      timeout: 30
+    python:
+      module: ./hackernews.py
+      function: comments_post

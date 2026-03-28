@@ -35,31 +35,6 @@ connections:
         - email_code: true
         - sso: google
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-adapters:
-  # Search results — index records, not full webpages
-  result:
-    # --- Canonical fields (rendered in previews / markdown) ---
-    id: .url
-    name: .title
-    text: '.text // .summary // (if .highlights then .highlights[0] else null end)'
-    image: '.image // .favicon'
-    author: .author
-    datePublished: .publishedDate
-
-  # Full webpage content (for read operations)
-  webpage:
-    # --- Canonical fields (rendered in previews / markdown) ---
-    id: .url
-    name: .title
-    text: .text
-    image: '.image // .favicon'
-    author: .author
-    datePublished: .publishedDate
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -210,19 +185,9 @@ operations:
       params:
         query: "agentOS personal AI"
         limit: 3
-    rest:
-      method: POST
-      url: /search
-      body:
-        query: .params.query
-        numResults: .params.limit
-        type: '"auto"'
-        category: .params.category
-        contents:
-          text: 'if .params.include_text != null then .params.include_text else true end'
-          summary: true
-      response:
-        root: "/results"
+    python:
+      module: ./exa.py
+      function: search
 
   read_webpage:
     description: Extract full content from a URL
@@ -234,13 +199,6 @@ operations:
     test:
       params:
         url: "https://exa.ai"
-    rest:
-      method: POST
-      url: /contents
-      body:
-        urls:
-          - .params.url
-        text: true
-      response:
-        root: "/results/0"
-        # Uses adapters.webpage (default) — has .text for content
+    python:
+      module: ./exa.py
+      function: read_webpage

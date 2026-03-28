@@ -16,69 +16,45 @@ connections:
     label: Personal Access Token
     help_url: https://admin.gandi.net/organizations/account/pat
 
-adapters:
-  domain:
-    id: .fqdn
-    url: '"https://" + .fqdn'
-    status: .status
-    registrar: '"gandi"'
-    expires_at: .dates.registry_ends_at
-    auto_renew: .autorenew
-    nameservers: .nameserver.current
-
-  dns_record:
-    id: '.domain + ":" + .rrset_name + ":" + .rrset_type'
-    name: 'if (.rrset_name // "") == "" or .rrset_name == "@" then .domain else .rrset_name + "." + .domain end'
-    text: '.rrset_type + " " + ((.rrset_values // []) | join(", "))'
-    domain: .domain
-    record_name: .rrset_name
-    record_type: .rrset_type
-    ttl: .rrset_ttl
-    values: .rrset_values
-
 operations:
   list_domains:
     description: List all domains in your Gandi account
     returns: domain[]
-    rest:
-      method: GET
-      url: /domain/domains
-      response:
-        raw: true
+    connection: api
+    python:
+      module: ./gandi.py
+      function: list_domains
 
   get_domain:
     description: Get details for a single domain
     returns: domain
+    connection: api
     params:
       domain:
         type: string
         required: true
         description: Domain name, for example example.com
-    rest:
-      method: GET
-      url: '"https://api.gandi.net/v5/domain/domains/" + .params.domain'
-      response:
-        raw: true
+    python:
+      module: ./gandi.py
+      function: get_domain
 
   list_dns_records:
     description: List DNS records for a domain
     returns: dns_record[]
+    connection: api
     params:
       domain:
         type: string
         required: true
         description: Domain name
-    rest:
-      method: GET
-      url: '"https://api.gandi.net/v5/livedns/domains/" + .params.domain + "/records"'
-      response:
-        raw: true
-        inject:
-          domain: .params.domain
+    python:
+      module: ./gandi.py
+      function: list_dns_records
 
   get_dns_record:
     description: Get one DNS record by name and type
     returns: dns_record
+    connection: api
     params:
       domain:
         type: string
@@ -92,17 +68,14 @@ operations:
         type: string
         required: true
         description: Record type such as A, AAAA, CNAME, MX, or TXT
-    rest:
-      method: GET
-      url: '"https://api.gandi.net/v5/livedns/domains/" + .params.domain + "/records/" + .params.name + "/" + .params.type'
-      response:
-        raw: true
-        inject:
-          domain: .params.domain
+    python:
+      module: ./gandi.py
+      function: get_dns_record
 
   upsert_dns_record:
     description: Create or replace a DNS record
     returns: void
+    connection: api
     params:
       domain:
         type: string
@@ -124,18 +97,14 @@ operations:
         type: integer
         default: 3600
         description: TTL in seconds
-    rest:
-      method: PUT
-      url: '"https://api.gandi.net/v5/livedns/domains/" + .params.domain + "/records/" + .params.name + "/" + .params.type'
-      body:
-        rrset_ttl: '(.params.ttl // 3600)'
-        rrset_values: .params.values
-      response:
-        raw: true
+    python:
+      module: ./gandi.py
+      function: upsert_dns_record
 
   delete_dns_record:
     description: Delete a DNS record
     returns: void
+    connection: api
     params:
       domain:
         type: string
@@ -149,8 +118,6 @@ operations:
         type: string
         required: true
         description: Record type
-    rest:
-      method: DELETE
-      url: '"https://api.gandi.net/v5/livedns/domains/" + .params.domain + "/records/" + .params.name + "/" + .params.type'
-      response:
-        raw: true
+    python:
+      module: ./gandi.py
+      function: delete_dns_record

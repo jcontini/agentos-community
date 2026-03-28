@@ -47,26 +47,6 @@ provides:
       - "claude.ai/chat/*"
       - "www.claude.ai/chat/*"
 
-adapters:
-  conversation:
-    id: .uuid
-    name: .name
-    content: .content
-    datePublished: .updated_at
-    created_at: .created_at
-    org_uuid: .org_uuid
-    message_count: .message_count
-
-  message:
-    id: .id
-    name: .conversation_name
-    text: .text
-    url: '"https://claude.ai/chat/" + .conversation_id'
-    author: .role
-    datePublished: .created_at
-    is_outgoing: '.role == "human"'
-    conversation_id: .conversation_id
-
 # ==============================================================================
 # OPERATIONS
 # ==============================================================================
