@@ -29,12 +29,9 @@ operations:
       wait_until:
         type: string
         description: "Wait condition: load (default), domcontentloaded, networkidle. Avoid networkidle for SPAs."
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts goto"]
-      working_dir: .
-      stdin: '.params | {url: .url, wait_until: (.wait_until // "load")}'
-      timeout: 45
+    python:
+      module: ./playwright_ops.py
+      function: goto
 
   read_webpage:
     description: Extract text or HTML content from the current page or a CSS selector. Useful for reading `script#__NEXT_DATA__` or specific app containers before falling back to screenshots.
@@ -49,12 +46,9 @@ operations:
       format:
         type: string
         description: "Output format: text or html (default: text)"
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts extract"]
-      working_dir: .
-      stdin: '.params | {selector: (.selector // "body"), format: (.format // "text")}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: read_webpage
 
   start:
     description: "Launch or connect to a persistent Chromium browser. If already running, returns immediately. Mode: 'headed' (default) shows a visible window, 'headless' runs invisibly."
@@ -69,22 +63,16 @@ operations:
       status: string
       port: integer
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts start"]
-      working_dir: .
-      stdin: '.params | {mode: (.mode // "headed"), port: (.port // 9222)}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: start
 
   stop:
     description: Kill the persistent browser process
     returns: void
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts stop"]
-      working_dir: .
-      stdin: '.params | {port: (.port // 9222)}'
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: stop
 
   status:
     description: Check if the browser is running and get current URL
@@ -92,12 +80,9 @@ operations:
       running: boolean
       port: integer
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts status"]
-      working_dir: .
-      stdin: '.params | {port: (.port // 9222)}'
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: status
 
   screenshot:
     description: Capture a screenshot of the full page or a specific element
@@ -113,12 +98,9 @@ operations:
         description: Capture full scrollable page (default for no selector)
     returns:
       path: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts screenshot"]
-      working_dir: .
-      stdin: '.params | {selector: .selector, path: (.path // "/tmp/screenshot.png"), full_page: (.full_page // false)}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: screenshot
 
   click:
     description: Click an element by CSS selector
@@ -130,12 +112,9 @@ operations:
     returns:
       selector: string
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts click"]
-      working_dir: .
-      stdin: '.params | {selector: .selector}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: click
 
   dblclick:
     description: Double-click an element by CSS selector. Use this to open apps on the desktop (icons require double-click, not single click).
@@ -147,12 +126,9 @@ operations:
     returns:
       selector: string
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts dblclick"]
-      working_dir: .
-      stdin: '.params | {selector: .selector}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: dblclick
 
   fill:
     description: Fill an input field with a value (clears existing content first)
@@ -168,12 +144,9 @@ operations:
     returns:
       selector: string
       value: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts fill"]
-      working_dir: .
-      stdin: '.params | {selector: .selector, value: .value}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: fill
 
   select:
     description: Select an option from a dropdown
@@ -189,12 +162,9 @@ operations:
     returns:
       selector: string
       value: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts select"]
-      working_dir: .
-      stdin: '.params | {selector: .selector, value: .value}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: select
 
   type:
     description: Type text character by character (for inputs that need real keystrokes, not just value setting)
@@ -210,12 +180,9 @@ operations:
     returns:
       selector: string
       text: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts type"]
-      working_dir: .
-      stdin: '.params | {selector: .selector, text: .text}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: type
 
   evaluate:
     description: Execute arbitrary JavaScript in the page context and return the result. Useful for dumping `window.__NEXT_DATA__`, Apollo caches, route state, or framework globals.
@@ -226,23 +193,18 @@ operations:
         description: JavaScript code to execute
     returns:
       result: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts evaluate"]
-      working_dir: .
-      stdin: '.params | {script: .script}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: evaluate
 
   url:
     description: Get the current page URL and title
     returns:
       url: string
       title: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts url"]
-      working_dir: .
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: url
 
   inspect:
     description: "Fast DOM snapshot — returns structured tree of tags, attributes, and text. Use this instead of screenshot to understand page structure."
@@ -254,12 +216,9 @@ operations:
       url: string
       title: string
       snapshot: object
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts inspect"]
-      working_dir: .
-      stdin: '.params | {selector: (.selector // "body")}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: inspect
 
   errors:
     description: Reload the current page and capture any console errors
@@ -267,11 +226,9 @@ operations:
       errors: array
       count: integer
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts errors"]
-      working_dir: .
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: errors
 
   wait:
     description: Wait for a CSS selector to appear or a timeout to elapse
@@ -284,23 +241,18 @@ operations:
         description: "Max wait in milliseconds (default: 10000)"
     returns:
       status: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts wait"]
-      working_dir: .
-      stdin: '.params | {selector: .selector, timeout: (.timeout // 10000)}'
-      timeout: 60
+    python:
+      module: ./playwright_ops.py
+      function: wait
 
   tabs:
     description: List all open browser tabs
     returns:
       tabs: array
       count: integer
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts tabs"]
-      working_dir: .
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: tabs
 
   new_tab:
     description: Open a new browser tab, optionally navigating to a URL
@@ -311,21 +263,16 @@ operations:
     returns:
       url: string
       title: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts new_tab"]
-      working_dir: .
-      stdin: '.params | {url: .url}'
-      timeout: 30
+    python:
+      module: ./playwright_ops.py
+      function: new_tab
 
   close_tab:
     description: Close the current browser tab
     returns: void
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts close_tab 2>/dev/null"]
-      working_dir: .
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: close_tab
 
   cookie_get:
     description: |
@@ -347,12 +294,9 @@ operations:
       cookies: array
       count: integer
       url: string
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts cookies"]
-      working_dir: .
-      stdin: '.params | {domain: .domain, names: .names}'
-      timeout: 15
+    python:
+      module: ./playwright_ops.py
+      function: cookie_get
 
   clear_cookies:
     description: |
@@ -367,12 +311,9 @@ operations:
       cleared_domain: string
       cleared_count: integer
       kept_count: integer
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts clear_cookies"]
-      working_dir: .
-      stdin: '.params | {domain: .domain}'
-      timeout: 10
+    python:
+      module: ./playwright_ops.py
+      function: clear_cookies
 
   capture_network:
     description: |
@@ -414,12 +355,9 @@ operations:
       title: string
       captured: array
       count: integer
-    command:
-      binary: bash
-      args: ["-l", "-c", "npx tsx ./scripts/browser.ts network_capture"]
-      working_dir: .
-      stdin: '.params | {url: .url, pattern: (.pattern // "**"), wait: (.wait // 5000), cookies: (.cookies // []), capture_body: (.capture_body // true)}'
-      timeout: 60
+    python:
+      module: ./playwright_ops.py
+      function: capture_network
 
   run_flow:
     description: |

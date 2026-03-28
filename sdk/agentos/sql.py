@@ -12,18 +12,23 @@ for logging, path validation, and future permission controls.
 from agentos._bridge import dispatch
 
 
-def query(sql_str, db, params=None):
+def query(sql_str, db, params=None, attach=None):
     """Execute a read-only SQL query.
 
     Args:
         sql_str: SQL query with :param bind syntax.
         db: Path to SQLite database (tilde-expanded by engine).
         params: Optional bind parameters dict.
+        attach: Optional dict of {alias: path} for cross-database JOINs.
+                E.g. {"contacts": "~/path/to/other.sqlite"}
 
     Returns:
         List of row dicts, one per result row.
     """
-    return dispatch("__sql_query__", {"sql": sql_str, "db": db, "params": params or {}})
+    payload = {"sql": sql_str, "db": db, "params": params or {}}
+    if attach:
+        payload["attach"] = attach
+    return dispatch("__sql_query__", payload)
 
 
 def execute(sql_str, db, params=None):

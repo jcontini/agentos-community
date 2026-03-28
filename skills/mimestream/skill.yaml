@@ -106,105 +106,18 @@ operations:
       mailbox: { type: string, description: "Filter by mailbox: inbox, sent, drafts, trash, spam, flagged" }
       is_unread: { type: boolean, description: "Filter to unread only" }
       limit: { type: integer }
-    sql:
-      query: |
-        SELECT
-          m.Z_PK as id,
-          m.ZSUBJECT as subject,
-          m.ZSNIPPET as snippet,
-          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
-          datetime(m.ZDATESENT + 978307200, 'unixepoch') as date_sent,
-          m.ZISUNREAD as is_unread,
-          m.ZISFLAGGED as is_flagged,
-          m.ZISDRAFT as is_draft,
-          m.ZISSENT as is_sent,
-          m.ZISTRASHED as is_trash,
-          m.ZISSPAM as is_spam,
-          m.ZHASATTACHMENT as has_attachments,
-          t.Z_PK as thread_id,
-          a.ZNAME as account_email,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
-            ELSE NULL
-          END as from_name,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
-            ELSE trim(m.ZFROMHEADER)
-          END as from_email
-        FROM ZMESSAGE m
-        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
-        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
-        WHERE m.ZISTRASHED = 0
-          AND m.ZISSPAM = 0
-          AND (:account IS NULL OR a.ZNAME = :account)
-          AND (:is_unread IS NULL OR m.ZISUNREAD = :is_unread)
-          AND (:mailbox IS NULL OR (
-            (:mailbox = 'inbox' AND m.ZISININBOX = 1) OR
-            (:mailbox = 'sent' AND m.ZISSENT = 1) OR
-            (:mailbox = 'drafts' AND m.ZISDRAFT = 1) OR
-            (:mailbox = 'trash' AND m.ZISTRASHED = 1) OR
-            (:mailbox = 'spam' AND m.ZISSPAM = 1) OR
-            (:mailbox = 'flagged' AND m.ZISFLAGGED = 1)
-          ))
-        ORDER BY m.ZDATERECEIVED DESC
-        LIMIT :limit
-      params:
-        account: .params.account
-        is_unread: 'if .params.is_unread == true then 1 elif .params.is_unread == false then 0 else null end'
-        mailbox: .params.mailbox
-        limit: '.params.limit // 1000'
+    python:
+      module: ./mimestream.py
+      function: op_list_emails
 
   get_email:
     description: Get a specific email with full body content and headers
     returns: email
     params:
       id: { type: string, required: true }
-    sql:
-      query: |
-        SELECT
-          m.Z_PK as id,
-          m.ZSUBJECT as subject,
-          m.ZSNIPPET as snippet,
-          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
-          datetime(m.ZDATESENT + 978307200, 'unixepoch') as date_sent,
-          m.ZISUNREAD as is_unread,
-          m.ZISFLAGGED as is_flagged,
-          m.ZISDRAFT as is_draft,
-          m.ZISSENT as is_sent,
-          m.ZISTRASHED as is_trash,
-          m.ZISSPAM as is_spam,
-          m.ZHASATTACHMENT as has_attachments,
-          m.ZSIZEESTIMATE as size_estimate,
-          t.Z_PK as thread_id,
-          a.ZNAME as account_email,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
-            ELSE NULL
-          END as from_name,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
-            ELSE trim(m.ZFROMHEADER)
-          END as from_email,
-          c.ZTO as to_raw,
-          c.ZCC as cc_raw,
-          c.ZBCC as bcc_raw,
-          c.ZBODYTEXT as body_text,
-          c.ZBODYHTML as body_html,
-          c.ZMESSAGEID as message_id,
-          c.ZINREPLYTO as in_reply_to
-        FROM ZMESSAGE m
-        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
-        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
-        LEFT JOIN ZMESSAGECONTENT c ON m.ZCONTENT = c.Z_PK
-        WHERE m.Z_PK = :id
-      params:
-        id: .params.id
-      response:
-        root: "/0"
+    python:
+      module: ./mimestream.py
+      function: op_get_email
 
   search_emails:
     description: Search emails by subject, snippet, body text, or sender
@@ -213,48 +126,9 @@ operations:
       query: { type: string, required: true }
       account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
       limit: { type: integer }
-    sql:
-      query: |
-        SELECT
-          m.Z_PK as id,
-          m.ZSUBJECT as subject,
-          m.ZSNIPPET as snippet,
-          datetime(m.ZDATERECEIVED + 978307200, 'unixepoch') as date_received,
-          m.ZISUNREAD as is_unread,
-          m.ZISFLAGGED as is_flagged,
-          m.ZHASATTACHMENT as has_attachments,
-          t.Z_PK as thread_id,
-          a.ZNAME as account_email,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(substr(m.ZFROMHEADER, 1, instr(m.ZFROMHEADER, '<') - 1), ' "')
-            ELSE NULL
-          END as from_name,
-          CASE
-            WHEN instr(m.ZFROMHEADER, '<') > 0
-            THEN trim(replace(substr(m.ZFROMHEADER, instr(m.ZFROMHEADER, '<') + 1), '>', ''))
-            ELSE trim(m.ZFROMHEADER)
-          END as from_email
-        FROM ZMESSAGE m
-        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
-        LEFT JOIN ZMESSAGETHREAD t ON m.ZTHREAD = t.Z_PK
-        LEFT JOIN ZMESSAGECONTENT c ON m.ZCONTENT = c.Z_PK
-        WHERE m.ZISTRASHED = 0
-          AND m.ZISSPAM = 0
-          AND (:account IS NULL OR a.ZNAME = :account)
-          AND (
-            m.ZSUBJECT LIKE '%' || :query || '%'
-            OR m.ZSNIPPET LIKE '%' || :query || '%'
-            OR c.ZBODYTEXT LIKE '%' || :query || '%'
-            OR m.ZFROMHEADER LIKE '%' || :query || '%'
-            OR c.ZTO LIKE '%' || :query || '%'
-          )
-        ORDER BY m.ZDATERECEIVED DESC
-        LIMIT :limit
-      params:
-        query: .params.query
-        account: .params.account
-        limit: '.params.limit // 1000'
+    python:
+      module: ./mimestream.py
+      function: op_search_emails
 
   list_conversations:
     description: List email threads with latest message info
@@ -262,49 +136,18 @@ operations:
     params:
       account: { type: string, description: "Account display name from list_accounts (e.g. 'user@example.com' or 'Adavia')" }
       limit: { type: integer }
-    sql:
-      query: |
-        SELECT
-          t.Z_PK as id,
-          a.ZNAME as account_email,
-          (SELECT ZSUBJECT FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as subject,
-          (SELECT ZSNIPPET FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as snippet,
-          (SELECT datetime(ZDATERECEIVED + 978307200, 'unixepoch') FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as date_updated,
-          (SELECT COUNT(*) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as message_count,
-          (SELECT MAX(ZISUNREAD) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as has_unread,
-          t.ZHASATTACHMENT as has_attachments
-        FROM ZMESSAGETHREAD t
-        LEFT JOIN ZACCOUNT a ON t.ZACCOUNT = a.Z_PK
-        WHERE (:account IS NULL OR a.ZNAME = :account)
-        ORDER BY date_updated DESC
-        LIMIT :limit
-      params:
-        account: .params.account
-        limit: '.params.limit // 1000'
+    python:
+      module: ./mimestream.py
+      function: op_list_conversations
 
   get_conversation:
     description: Get all messages in an email thread
     returns: conversation
     params:
       id: { type: string, required: true }
-    sql:
-      query: |
-        SELECT
-          t.Z_PK as id,
-          a.ZNAME as account_email,
-          (SELECT ZSUBJECT FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED ASC LIMIT 1) as subject,
-          (SELECT ZSNIPPET FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as snippet,
-          (SELECT datetime(ZDATERECEIVED + 978307200, 'unixepoch') FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK ORDER BY ZDATERECEIVED DESC LIMIT 1) as date_updated,
-          (SELECT COUNT(*) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as message_count,
-          (SELECT MAX(ZISUNREAD) FROM ZMESSAGE WHERE ZTHREAD = t.Z_PK) as has_unread,
-          t.ZHASATTACHMENT as has_attachments
-        FROM ZMESSAGETHREAD t
-        LEFT JOIN ZACCOUNT a ON t.ZACCOUNT = a.Z_PK
-        WHERE t.Z_PK = :id
-      params:
-        id: .params.id
-      response:
-        root: "/0"
+    python:
+      module: ./mimestream.py
+      function: op_get_conversation
 
   # BLOCKED: file entity type not yet registered (task eb14f8fa)
   # file.list:
@@ -361,16 +204,9 @@ operations:
       name: string
       email: string
       color: string
-    sql:
-      query: |
-        SELECT
-          a.Z_PK as id,
-          a.ZNAME as name,
-          i.ZADDRESS as email,
-          a.ZCOLOR as color
-        FROM ZACCOUNT a
-        LEFT JOIN ZIDENTITY i ON i.ZACCOUNT = a.Z_PK AND i.ZPRIMARY = 1
-        ORDER BY a.ZDISPLAYORDER
+    python:
+      module: ./mimestream.py
+      function: op_list_accounts
 
   credential_get:
     description: |
@@ -384,50 +220,9 @@ operations:
       refresh_token: string
       client_id: string
       token_url: string
-    steps:
-      # Step 1: Read the NSKeyedArchiver binary plist from the macOS Keychain.
-      # The `security` CLI returns the value as a hex string (-x flag).
-      # We use a command here because the keyring crate returns raw bytes
-      # (which fail UTF-8 decode), while `security -x` gives us the hex we need.
-      - id: raw
-        command:
-          binary: bash
-          args:
-            - "-c"
-            - 'security find-generic-password -s "Mimestream: $1" -a "OAuth" -w 2>/dev/null | tr -d "\n"'
-            - "--"
-            - ".params.account"
-
-      # Step 2: Decode the hex → binary plist → extract token fields by $objects index.
-      # These indices are stable across Mimestream versions (verified on both accounts).
-      - id: fields
-        plist:
-          input: ".raw"
-          extract:
-            refresh_token: 32   # Google refresh token (1//01...)
-            client_id: 13       # OAuth client ID (1064022...apps.googleusercontent.com)
-            token_url: 10       # Token endpoint (https://www.googleapis.com/oauth2/v4/token)
-
-      # Step 3: Exchange the refresh token for a live access token.
-      - id: token_response
-        rest:
-          url: ".fields.token_url"
-          method: POST
-          encoding: form
-          body:
-            grant_type: refresh_token
-            refresh_token: ".fields.refresh_token"
-            client_id: ".fields.client_id"
-
-    response:
-      transform: |
-        {
-          access_token: .token_response.access_token,
-          expires_in: .token_response.expires_in,
-          refresh_token: .fields.refresh_token,
-          client_id: .fields.client_id,
-          token_url: .fields.token_url
-        }
+    python:
+      module: ./mimestream.py
+      function: op_credential_get
 
   list_mailboxes:
     description: List mailboxes/labels for an account
@@ -440,32 +235,6 @@ operations:
       unread_count: integer
       total_count: integer
       account_email: string
-    sql:
-      query: |
-        SELECT
-          m.Z_PK as id,
-          m.ZNAME as name,
-          m.ZROLE as role,
-          m.ZUNREADMESSAGECOUNT as unread_count,
-          m.ZTOTALMESSAGECOUNT as total_count,
-          m.ZTAGBACKGROUNDCOLOR as color,
-          a.Z_PK as account_id,
-          a.ZNAME as account_email
-        FROM ZMAILBOX m
-        LEFT JOIN ZACCOUNT a ON m.ZACCOUNT = a.Z_PK
-        WHERE m.ZROLE IS NOT NULL
-          AND (:account IS NULL OR a.ZNAME = :account)
-        ORDER BY
-          a.ZDISPLAYORDER,
-          CASE m.ZROLE
-            WHEN 'INBOX' THEN 1
-            WHEN 'INBOX_PRIMARY' THEN 2
-            WHEN 'DRAFT' THEN 3
-            WHEN 'SENT' THEN 4
-            WHEN 'IMPORTANT' THEN 5
-            WHEN 'TRASH' THEN 6
-            WHEN 'SPAM' THEN 7
-            ELSE 10
-          END
-      params:
-        account: .params.account
+    python:
+      module: ./mimestream.py
+      function: op_list_mailboxes

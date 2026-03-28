@@ -49,10 +49,11 @@ operations:
         type: boolean
         default: true
         description: "Include member count (requires Chromium, slower ~2-3s)"
-    command:
-      binary: bash
+    python:
+      module: ./facebook.py
+      function: get_community
       args:
-        - ./get_community.sh
-        - 'if (.params.url // "") != "" then .params.url elif (.params.group // "") != "" then .params.group else "" end'
-        - ".params.include_members"
+        group: '.params.group // null'
+        url: '.params.url // null'
+        include_members: '.params.include_members // true'
       timeout: 35

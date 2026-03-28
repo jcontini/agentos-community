@@ -44,20 +44,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of results
-    sql:
-      query: >
-        SELECT p.url, p.title, p.visit_count,
-               CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
-        FROM moz_places p
-        WHERE p.hidden = 0
-          AND p.visit_count > 0
-          AND p.url NOT LIKE 'place:%'
-        ORDER BY p.last_visit_date DESC
-        LIMIT :limit
-      params:
-        limit: '.params.limit // 1000'
-      response:
-        root: "/"
+    python:
+      module: ./firefox.py
+      function: op_list_webpages
 
   search_webpages:
     description: Search Firefox browsing history by URL or title
@@ -71,22 +60,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of results
-    sql:
-      query: >
-        SELECT p.url, p.title, p.visit_count,
-               CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
-        FROM moz_places p
-        WHERE p.hidden = 0
-          AND p.visit_count > 0
-          AND p.url NOT LIKE 'place:%'
-          AND (p.url LIKE :query OR p.title LIKE :query)
-        ORDER BY p.last_visit_date DESC
-        LIMIT :limit
-      params:
-        query: '"%" + .params.query + "%"'
-        limit: '.params.limit // 1000'
-      response:
-        root: "/"
+    python:
+      module: ./firefox.py
+      function: op_search_webpages
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADDITIONAL OPERATIONS
@@ -106,18 +82,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of results
-    sql:
-      query: >
-        SELECT b.title AS bookmark_title, p.url, p.title,
-               CAST(b.dateAdded / 1000000 AS INTEGER) AS date_added_unix
-        FROM moz_bookmarks b
-        JOIN moz_places p ON b.fk = p.id
-        WHERE b.type = 1
-          AND p.url NOT LIKE 'place:%'
-        ORDER BY b.dateAdded DESC
-        LIMIT :limit
-      params:
-        limit: '.params.limit // 1000'
+    python:
+      module: ./firefox.py
+      function: op_list_bookmarks
 
   list_cookies:
     description: >
@@ -140,18 +107,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of cookies
-    sql:
-      query: >
-        SELECT name, value, host, path, expiry,
-               isSecure AS is_secure, isHttpOnly AS is_httponly,
-               (creationTime / 1000000) AS created
-        FROM moz_cookies
-        WHERE host LIKE :domain
-        ORDER BY name
-        LIMIT :limit
-      params:
-        domain: '"%" + .params.domain + "%"'
-        limit: '.params.limit // 1000'
+    python:
+      module: ./firefox.py
+      function: op_list_cookies
 
   cookie_get:
     description: |
@@ -175,26 +133,6 @@ operations:
       cookies: array
       count: integer
       source: string
-    steps:
-      - id: get_cookies
-        sql:
-          database: '"~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"'
-          query: >
-            SELECT name, value, host, path, expiry,
-                   isSecure AS is_secure, isHttpOnly AS is_httponly,
-                   (creationTime / 1000000) AS created
-            FROM moz_cookies
-            WHERE host LIKE :domain
-              AND (:names = '' OR instr(',' || :names || ',', ',' || name || ',') > 0)
-            ORDER BY name
-            LIMIT :limit
-          params:
-            domain: '"%" + .params.domain + "%"'
-            names: '.params.names // ""'
-            limit: '.params.limit // 1000'
-    response:
-      mapping:
-        domain: '.params.domain'
-        cookies: '.get_cookies'
-        count: '.get_cookies | length'
-        source: '"firefox"'
+    python:
+      module: ./firefox.py
+      function: op_cookie_get

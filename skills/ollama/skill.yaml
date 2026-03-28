@@ -148,11 +148,11 @@ operations:
       running or you want to verify from the CLI side.
     returns: model[]
     connection: cli
-    command:
-      binary: sh
+    python:
+      module: ./ollama.py
+      function: list_models_cli
       args:
-        - -c
-        - "ollama list --json 2>/dev/null | python3 -c \"import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('models', d)))\" 2>/dev/null || ollama list"
+        connection: '.connection'
       timeout: 15
 
   pull_model:

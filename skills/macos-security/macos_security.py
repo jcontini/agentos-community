@@ -391,6 +391,15 @@ def _account_type_note(account_type: str) -> str:
 def cmd_list_electron_apps(**kwargs) -> list[dict]:
     """
     List all apps using the Electron Safe Storage pattern.
-    (Stub — implemented via skill.yaml command step for now.)
+    Each stores a master encryption key in the Keychain that encrypts all
+    locally stored credentials, cookies, and session data.
     """
-    return []
+    dump = _dump_keychain()
+    names: set[str] = set()
+    for line in dump.splitlines():
+        if "Safe Storage" not in line:
+            continue
+        m = re.search(r'"([^"]*) Safe Storage"', line)
+        if m:
+            names.add(m.group(1))
+    return [{"name": name} for name in sorted(names)]

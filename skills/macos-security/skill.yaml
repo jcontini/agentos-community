@@ -96,13 +96,8 @@ operations:
       stored credentials, cookies, and session data.
     returns:
       name: string
-    steps:
-      - id: raw
-        command:
-          binary: bash
-          args:
-            - "-c"
-            - "security dump-keychain 2>/dev/null | grep 'Safe Storage' | grep -o '\"[^\"]*Safe Storage\"' | sort -u"
-    response:
-      transform: |
-        (.raw | split("\n") | map(select(. != "")) | map({name: (gsub("\""; "") | gsub(" Safe Storage"; ""))}))
+    python:
+      module: ./macos_security.py
+      function: cmd_list_electron_apps
+      params: true
+      timeout: 15

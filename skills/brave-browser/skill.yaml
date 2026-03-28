@@ -51,18 +51,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of results
-    sql:
-      query: >
-        SELECT url, title, visit_count,
-               CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
-        FROM urls
-        WHERE hidden = 0
-        ORDER BY last_visit_time DESC
-        LIMIT :limit
-      params:
-        limit: '.params.limit // 1000'
-      response:
-        root: "/"
+    python:
+      module: ./brave-browser.py
+      function: op_list_webpages
 
   search_webpages:
     description: Search Brave browsing history by URL or title
@@ -76,20 +67,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of results
-    sql:
-      query: >
-        SELECT url, title, visit_count,
-               CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
-        FROM urls
-        WHERE hidden = 0
-          AND (url LIKE :query OR title LIKE :query)
-        ORDER BY last_visit_time DESC
-        LIMIT :limit
-      params:
-        query: '"%" + .params.query + "%"'
-        limit: '.params.limit // 1000'
-      response:
-        root: "/"
+    python:
+      module: ./brave-browser.py
+      function: op_search_webpages
 
 # ==============================================================================
 # ADDITIONAL OPERATIONS
@@ -100,29 +80,9 @@ operations:
     returns:
       name: string
       path: string
-    command:
-      binary: bash
-      args:
-        - "-l"
-        - "-c"
-        - |
-          python3 -c "
-          import json, os, glob
-          base = os.path.expanduser('~/Library/Application Support/BraveSoftware/Brave-Browser')
-          profiles = []
-          for d in sorted(glob.glob(base + '/*/Preferences')):
-              try:
-                  with open(d) as f:
-                      import json as j
-                      prefs = j.load(f)
-                  profile_dir = os.path.dirname(d)
-                  name = prefs.get('profile', {}).get('name', os.path.basename(profile_dir))
-                  email = prefs.get('profile', {}).get('user_name', '')
-                  profiles.append({'name': name, 'email': email, 'path': profile_dir})
-              except Exception:
-                  pass
-          print(json.dumps(profiles))
-          "
+    python:
+      module: ./brave-browser.py
+      function: op_list_accounts
 
   get_cookie_key:
     description: >
@@ -132,23 +92,9 @@ operations:
       Returns the hex-encoded 16-byte key.
     returns:
       key: string
-    steps:
-      - id: get_password
-        keychain:
-          service: "Brave Safe Storage"
-          account: "Brave"
-
-      - id: derive_key
-        crypto:
-          algorithm: pbkdf2
-          password: ".get_password.value"
-          salt: "saltysalt"
-          iterations: 1003
-          key_length: 16
-
-    response:
-      mapping:
-        key: ".derive_key.value"
+    python:
+      module: ./brave-browser.py
+      function: op_get_cookie_key
 
   list_cookies:
     description: >
@@ -175,17 +121,9 @@ operations:
       limit:
         type: integer
         description: Maximum number of cookies
-    sql:
-      query: >
-        SELECT name, host_key, path, hex(encrypted_value) as encrypted_value,
-               is_secure, is_httponly, expires_utc, creation_utc
-        FROM cookies
-        WHERE host_key LIKE :domain
-        ORDER BY name
-        LIMIT :limit
-      params:
-        domain: '"%" + .params.domain + "%"'
-        limit: '.params.limit // 1000'
+    python:
+      module: ./brave-browser.py
+      function: op_list_cookies
 
   cookie_get:
     description: |

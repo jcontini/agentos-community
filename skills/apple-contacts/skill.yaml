@@ -125,44 +125,9 @@ operations:
       organization: { type: string, description: "Filter by organization" }
       sort: { type: string, default: "modified", description: "Sort by: modified (default), created, name" }
       limit: { type: integer }
-    sql:
-      database: '"~/Library/Application Support/AddressBook/Sources/" + .params.account + "/AddressBook-v22.abcddb"'
-      query: |
-        SELECT 
-          r.ZUNIQUEID as id,
-          r.ZFIRSTNAME as first_name,
-          r.ZLASTNAME as last_name,
-          r.ZMIDDLENAME as middle_name,
-          r.ZNICKNAME as nickname,
-          r.ZORGANIZATION as organization,
-          r.ZJOBTITLE as job_title,
-          r.ZDEPARTMENT as department,
-          COALESCE(r.ZFIRSTNAME || ' ' || r.ZLASTNAME, r.ZORGANIZATION, r.ZFIRSTNAME, r.ZLASTNAME) as display_name,
-          date(r.ZBIRTHDAY + 978307200, 'unixepoch') as birthday,
-          datetime(r.ZMODIFICATIONDATE + 978307200, 'unixepoch') as modified_at,
-          datetime(r.ZCREATIONDATE + 978307200, 'unixepoch') as created_at,
-          CASE WHEN r.ZTHUMBNAILIMAGEDATA IS NOT NULL THEN 1 ELSE 0 END as has_photo,
-          
-          -- JSON arrays for phones, emails, URLs, social profiles
-          (SELECT json_group_array(json_object('value', p.ZFULLNUMBER, 'label', p.ZLABEL))
-           FROM ZABCDPHONENUMBER p WHERE p.ZOWNER = r.Z_PK) as phones_json,
-          
-          (SELECT json_group_array(json_object('value', e.ZADDRESS, 'label', e.ZLABEL))
-           FROM ZABCDEMAILADDRESS e WHERE e.ZOWNER = r.Z_PK) as emails_json,
-          
-          (SELECT json_group_array(json_object('url', u.ZURL, 'label', u.ZLABEL))
-           FROM ZABCDURLADDRESS u WHERE u.ZOWNER = r.Z_PK) as urls_json,
-          
-          (SELECT json_group_array(json_object('service', sp.ZSERVICENAME, 'username', sp.ZUSERNAME))
-           FROM ZABCDSOCIALPROFILE sp WHERE sp.ZOWNER = r.Z_PK) as social_json
-          
-        FROM ZABCDRECORD r
-        WHERE (r.ZUNIQUEID LIKE '%:ABPerson' OR r.ZUNIQUEID LIKE '%:ABInfo')
-          AND (r.ZFIRSTNAME IS NOT NULL OR r.ZLASTNAME IS NOT NULL OR r.ZORGANIZATION IS NOT NULL)
-        ORDER BY r.ZMODIFICATIONDATE DESC
-        LIMIT :limit
-      params:
-        limit: '.params.limit // 1000'
+    python:
+      module: ./apple-contacts.py
+      function: op_list_persons
     test:
       params:
         limit: 10
@@ -172,13 +137,9 @@ operations:
     returns: person
     params:
       id: { type: string, required: true, description: "Contact ID (ZUNIQUEID)" }
-    command:
-      binary: swift
-      args:
-        - ./get_person.swift
-        - ".params.id"
-      working_dir: .
-      timeout: 20
+    python:
+      module: ./apple-contacts.py
+      function: op_get_person
 
   search_persons:
     description: Search contacts by any text within a specific account
@@ -187,53 +148,9 @@ operations:
       account: { type: string, required: true, description: "Account ID from accounts utility" }
       query: { type: string, required: true, description: "Search text" }
       limit: { type: integer }
-    sql:
-      database: '"~/Library/Application Support/AddressBook/Sources/" + .params.account + "/AddressBook-v22.abcddb"'
-      query: |
-        SELECT DISTINCT
-          r.ZUNIQUEID as id,
-          r.ZFIRSTNAME as first_name,
-          r.ZLASTNAME as last_name,
-          r.ZMIDDLENAME as middle_name,
-          r.ZNICKNAME as nickname,
-          r.ZORGANIZATION as organization,
-          r.ZJOBTITLE as job_title,
-          r.ZDEPARTMENT as department,
-          COALESCE(r.ZFIRSTNAME || ' ' || r.ZLASTNAME, r.ZORGANIZATION) as display_name,
-          date(r.ZBIRTHDAY + 978307200, 'unixepoch') as birthday,
-          CASE WHEN r.ZTHUMBNAILIMAGEDATA IS NOT NULL THEN 1 ELSE 0 END as has_photo,
-          
-          -- JSON arrays for accounts building
-          (SELECT json_group_array(json_object('value', p2.ZFULLNUMBER, 'label', p2.ZLABEL))
-           FROM ZABCDPHONENUMBER p2 WHERE p2.ZOWNER = r.Z_PK) as phones_json,
-          
-          (SELECT json_group_array(json_object('value', e2.ZADDRESS, 'label', e2.ZLABEL))
-           FROM ZABCDEMAILADDRESS e2 WHERE e2.ZOWNER = r.Z_PK) as emails_json,
-          
-          (SELECT json_group_array(json_object('url', u.ZURL, 'label', u.ZLABEL))
-           FROM ZABCDURLADDRESS u WHERE u.ZOWNER = r.Z_PK) as urls_json,
-          
-          (SELECT json_group_array(json_object('service', sp.ZSERVICENAME, 'username', sp.ZUSERNAME))
-           FROM ZABCDSOCIALPROFILE sp WHERE sp.ZOWNER = r.Z_PK) as social_json
-           
-        FROM ZABCDRECORD r
-        LEFT JOIN ZABCDPHONENUMBER p ON p.ZOWNER = r.Z_PK
-        LEFT JOIN ZABCDEMAILADDRESS e ON e.ZOWNER = r.Z_PK
-        WHERE (r.ZUNIQUEID LIKE '%:ABPerson' OR r.ZUNIQUEID LIKE '%:ABInfo')
-          AND (r.ZFIRSTNAME IS NOT NULL OR r.ZLASTNAME IS NOT NULL OR r.ZORGANIZATION IS NOT NULL)
-          AND (
-            r.ZFIRSTNAME LIKE '%' || :query || '%'
-            OR r.ZLASTNAME LIKE '%' || :query || '%'
-            OR r.ZORGANIZATION LIKE '%' || :query || '%'
-            OR p.ZFULLNUMBER LIKE '%' || :query || '%'
-            OR e.ZADDRESS LIKE '%' || :query || '%'
-          )
-        GROUP BY r.Z_PK
-        ORDER BY COALESCE(r.ZLASTNAME, r.ZFIRSTNAME, r.ZORGANIZATION)
-        LIMIT :limit
-      params:
-        query: .params.query
-        limit: '.params.limit // 1000'
+    python:
+      module: ./apple-contacts.py
+      function: op_search_persons
     test:
       params:
         query: a
@@ -244,12 +161,9 @@ operations:
     label: "List accounts"
     description: List available contact accounts/containers (iCloud, local, work, etc.)
     returns: object[]
-    command:
-      binary: swift
-      args:
-        - ./accounts.swift
-      working_dir: .
-      timeout: 20
+    python:
+      module: ./apple-contacts.py
+      function: op_accounts
 
   create:
     operation: create
@@ -267,13 +181,9 @@ operations:
       job_title: { type: string, description: "Job title" }
       phones: { type: array, description: "Phones [{label, value}]" }
       emails: { type: array, description: "Emails [{label, value}]" }
-    command:
-      binary: swift
-      args:
-        - ./create.swift
-      stdin: '.params | tojson'
-      working_dir: .
-      timeout: 20
+    python:
+      module: ./apple-contacts.py
+      function: op_create
 
   update:
     operation: update
@@ -288,13 +198,9 @@ operations:
       last_name: { type: string, description: "Last name" }
       organization: { type: string, description: "Organization" }
       job_title: { type: string, description: "Job title" }
-    command:
-      binary: swift
-      args:
-        - ./update.swift
-      stdin: '.params | tojson'
-      working_dir: .
-      timeout: 20
+    python:
+      module: ./apple-contacts.py
+      function: op_update
 
   delete:
     operation: delete
@@ -305,10 +211,6 @@ operations:
       name: string
     params:
       id: { type: string, required: true, description: "Contact ID" }
-    command:
-      binary: swift
-      args:
-        - ./delete.swift
-      stdin: '.params | tojson'
-      working_dir: .
-      timeout: 20
+    python:
+      module: ./apple-contacts.py
+      function: op_delete

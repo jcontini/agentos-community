@@ -494,6 +494,24 @@ def list_models(connection: dict | None = None, **params) -> list[dict]:
     ]
 
 
+def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
+    """List models via the Ollama CLI binary (for when the REST server may not be running)."""
+    raw = _list_models_via_cli(connection)
+    return [
+        {
+            "id": m.get("name"),
+            "datePublished": m.get("modified_at"),
+            "size": m.get("size"),
+            "digest": m.get("digest"),
+            "format": (m.get("details") or {}).get("format"),
+            "family": (m.get("details") or {}).get("family"),
+            "parameter_size": (m.get("details") or {}).get("parameter_size"),
+            "quantization_level": (m.get("details") or {}).get("quantization_level"),
+        }
+        for m in (raw or [])
+    ]
+
+
 def ps(connection: dict | None = None, **params) -> list[dict]:
     """List currently loaded models (in GPU/unified RAM), shape-native."""
     _ensure_api_running(connection)
