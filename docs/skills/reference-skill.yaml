@@ -1,0 +1,95 @@
+# Reference Skill YAML — annotated example for agents and skill authors.
+#
+# This is NOT a real skill. It shows the complete YAML contract
+# with the new terminology (domain, source) and all available fields.
+
+id: example-skill
+name: Example Skill
+description: A reference skill showing all available YAML fields.
+
+# Connections declare external service dependencies.
+# The engine derives the credential store `domain` from these.
+connections:
+  # Connection name — used for multi-connection routing.
+  primary:
+    # base_url: the API endpoint. Engine extracts domain from host.
+    base_url: https://api.example.com/v1
+
+    # domain: explicit credential store domain (overrides base_url host derivation).
+    # Use when the API host differs from the login domain.
+    # e.g., API is api.example.com but cookies are for example.com
+    domain: example.com
+
+    # auth: how this connection authenticates.
+    auth:
+      # type: cookies | api_key | oauth
+      type: cookies
+
+      # domain: the cookie domain to extract from browsers.
+      # For cookies, this is the domain browsers store cookies under.
+      domain: .example.com
+
+      # names: required cookie names. Provider extraction filters to these.
+      names: [session_id, csrf_token]
+
+      # account: lifecycle operations for this connection's accounts.
+      account:
+        # check: operation that verifies a session is alive + identifies the user.
+        # Called during boot probe and auth resolution.
+        # Must return: {authenticated: bool, identifier: string, display: string}
+        check: check_session
+
+        # profile: operation that returns full profile data (account_profile shape).
+        # Called via accounts({ action: "profile", skill: "example-skill" }).
+        profile: get_profile
+
+        # logout: operation that invalidates the session.
+        # Called via accounts({ action: "logout", skill: "example-skill" }).
+        logout: logout
+
+# provides: declares what auth this skill can provide to OTHER skills.
+# This makes the skill a "provider" — e.g., brave-browser provides cookies.
+provides:
+  - auth: cookies
+    # via: the operation that extracts/provides credentials.
+    via: cookie_get
+    # account_param: the parameter name for domain/account selection.
+    account_param: domain
+
+# Operations: the skill's callable functions.
+operations:
+  # Entity-returning operation (used by search/read graph tools).
+  list_items:
+    python:
+      module: example.py
+      function: list_items
+    returns: item          # shape name — must exist in shapes/*.yaml
+    description: List items from the user's account.
+
+  # Action operation (used by run tool).
+  create_item:
+    python:
+      module: example.py
+      function: create_item
+    description: Create a new item.
+
+  # Auth check operation (referenced by account.check above).
+  check_session:
+    python:
+      module: example.py
+      function: check_session
+    description: Verify session and identify user.
+
+  # Profile operation (referenced by account.profile above).
+  get_profile:
+    python:
+      module: example.py
+      function: get_profile
+    description: Get full user profile.
+
+  # Cookie provider operation (referenced by provides.via above).
+  cookie_get:
+    python:
+      module: example.py
+      function: cookie_get
+    description: Extract cookies for a domain from browser storage.
