@@ -16,7 +16,7 @@ provides:
 connections:
   api:
     base_url: "https://api.exa.ai"
-    issuer: exa.ai
+    domain: exa.ai
     auth:
       type: api_key
       header: { x-api-key: .auth.key }
@@ -25,7 +25,7 @@ connections:
 
   dashboard:
     base_url: "https://dashboard.exa.ai"
-    issuer: exa.ai
+    domain: exa.ai
     auth:
       type: cookies
       domain: ".exa.ai"
@@ -95,7 +95,7 @@ operations:
     returns:
       status: string
       identifier: string
-      issuer: string
+      domain: string
       user_id: string
       team: string
     connection: dashboard
@@ -143,7 +143,7 @@ operations:
     returns:
       status: string
       key_name: string
-      issuer: string
+      domain: string
       masked_key: string
     connection: dashboard
     params:

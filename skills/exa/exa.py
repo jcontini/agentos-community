@@ -262,7 +262,7 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
         "__result__": {
             "status": "authenticated",
             "identifier": email,
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "user_id": session["user"].get("id"),
             "team": session["user"].get("teams", [{}])[0].get("name"),
         },
@@ -420,7 +420,7 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
         "__result__": {
             "status": "created",
             "key_name": name,
-            "issuer": "exa.ai",
+            "domain": "exa.ai",
             "masked_key": masked,
         },
     }

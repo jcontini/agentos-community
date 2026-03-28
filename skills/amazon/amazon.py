@@ -1462,7 +1462,7 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
     return {
         "authenticated": True,
-        "issuer": "amazon.com",
+        "domain": "amazon.com",
         "identifier": email or customer_id or display,
         "customer_id": customer_id,
         "display": display,

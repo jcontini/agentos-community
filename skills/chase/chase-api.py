@@ -82,7 +82,7 @@ def check_session(params: dict | None = None) -> dict:
                 first = tiles[0]
                 return {
                     "authenticated": True,
-                    "issuer": "chase.com",
+                    "domain": "chase.com",
                     "identifier": first.get("accountId", ""),
                     "display": first.get("nickname", ""),
                 }

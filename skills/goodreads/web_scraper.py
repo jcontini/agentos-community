@@ -129,7 +129,7 @@ def check_session(params: dict | None = None) -> dict[str, Any]:
         if user_id:
             return {
                 "authenticated": True,
-                "issuer": "goodreads.com",
+                "domain": "goodreads.com",
                 "identifier": user_id,
                 "display": name,
             }

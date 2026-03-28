@@ -290,7 +290,7 @@ def _identify_from_orgs(orgs: list) -> dict:
                 email = m.group(0)
             return {
                 "authenticated": True,
-                "issuer": "claude.ai",
+                "domain": "claude.ai",
                 "identifier": email or name,
                 "display": email or name,
             }
@@ -298,7 +298,7 @@ def _identify_from_orgs(orgs: list) -> dict:
         name = orgs[0].get("name", "")
         return {
             "authenticated": True,
-            "issuer": "claude.ai",
+            "domain": "claude.ai",
             "identifier": name,
             "display": name,
         }
