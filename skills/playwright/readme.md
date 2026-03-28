@@ -4,6 +4,17 @@
 
 Playwright controls a persistent Chromium session via CDP (Chrome DevTools Protocol). The browser stays running between calls — cookies, sessions, and tabs persist. Each operation connects (~100ms), does one thing, and returns.
 
+## Anti-Detection
+
+Both the persistent browser and the ephemeral runner (`run_flow`) launch with stealth settings applied automatically:
+
+- `--disable-blink-features=AutomationControlled` — removes the `navigator.webdriver=true` flag
+- `navigator.webdriver` override via init script (belt-and-suspenders)
+- Realistic user-agent (Chrome 131, not `HeadlessChrome`)
+- Locale (`en-US`) and timezone (`America/New_York`) to avoid mismatch fingerprinting
+
+These cover the most common detection vectors. For sites with strict bot management (Cloudflare Bot Management, DataDome) that detect CDP-level signals like `Runtime.Enable`, use [`rebrowser-playwright`](https://github.com/rebrowser/rebrowser-patches) as a drop-in replacement. See `docs/reverse-engineering/1-transport/` for the full breakdown of detection layers.
+
 ## Do You Need This Skill?
 
 **Most web tasks do NOT need Playwright.** Before using this skill, check:

@@ -339,19 +339,28 @@ async function run(config: RunnerConfig): Promise<RunnerResult> {
         `--window-size=${viewport.width},${viewport.height + 100}`, // +100 for chrome
         '--window-position=100,100',
         '--disable-infobars',
+        '--disable-blink-features=AutomationControlled', // anti-detection: removes navigator.webdriver=true
       ],
     });
 
+    // Anti-detection context: realistic UA, locale, timezone to avoid fingerprint mismatches
     context = await browser.newContext({
       viewport,
-      userAgent: size === 'mobile' 
+      userAgent: size === 'mobile'
         ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
-        : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       isMobile: size === 'mobile',
       hasTouch: size === 'mobile',
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
     });
 
     page = await context.newPage();
+
+    // Anti-detection: override navigator.webdriver before any page JS runs
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    });
 
     // Execute steps
     for (const step of config.steps) {

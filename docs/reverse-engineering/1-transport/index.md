@@ -363,6 +363,57 @@ including 4 AppSync GraphQL calls. See `skills/goodreads/public_graph.py`
 
 ---
 
+## CDP Detection Signals — Why Playwright Gets Caught
+
+Even with the stealth settings above, Playwright is still detectable at the
+**Chrome DevTools Protocol (CDP) layer**. These signals are invisible in
+DevTools and unrelated to headers, cookies, or user-agent strings. They matter
+most during reverse engineering sessions — if a site behaves differently under
+Playwright than in your real browser, CDP leaks are likely the cause.
+
+### Runtime.Enable leak
+
+Playwright calls `Runtime.Enable` on every CDP session to receive execution
+context events. Anti-bot systems (Cloudflare, DataDome) detect this with a few
+lines of in-page JavaScript that only fire when `Runtime.Enable` is active.
+This is the single most devastating detection vector — it works regardless of
+all other stealth measures.
+
+### sourceURL leak
+
+Playwright appends `//# sourceURL=__playwright_evaluation_script__` to every
+`page.evaluate()` call. Any page script can inspect error stack traces and see
+these telltale URLs. This means your `__NEXT_DATA__` extraction, DOM inspection,
+or any other `evaluate()` call leaves a fingerprint.
+
+### Utility world name
+
+Playwright creates an isolated world named `__playwright_utility_world__` that
+is visible in Chrome's internal state and potentially to detection scripts.
+
+### What to do about it
+
+These leaks are baked into Playwright's source code — no launch flag or init
+script fixes them. Two options:
+
+1. **For most RE work:** The stealth settings above (flags, UA, viewport,
+   webdriver override) are enough. Most sites don't check CDP-level signals.
+   If a site seems to behave differently under Playwright, check for these
+   leaks before adding complexity.
+
+2. **For strict sites (Cloudflare Bot Management, DataDome):** Use
+   [`rebrowser-playwright`](https://github.com/rebrowser/rebrowser-patches)
+   as a drop-in replacement. It patches Playwright's source to eliminate
+   `Runtime.Enable` calls, randomize sourceURLs, and rename the utility
+   world. Install: `npm install rebrowser-playwright` and change your import.
+
+**This doesn't affect production skills.** Our architecture uses Playwright
+only for discovery — production calls go through `surf()` / HTTPX, which has
+zero CDP surface. The CDP leaks only matter during reverse engineering sessions
+where you're using the browser to investigate a protected site.
+
+---
+
 ## Standard `_fetch` Helper
 
 Recommended reusable pattern for skill Python modules:

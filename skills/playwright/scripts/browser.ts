@@ -152,6 +152,7 @@ async function ensureBrowser(port: number, headless: boolean): Promise<void> {
     "--disable-background-timer-throttling",
     "--disable-backgrounding-occluded-windows",
     "--disable-renderer-backgrounding",
+    "--disable-blink-features=AutomationControlled", // anti-detection: removes navigator.webdriver=true
     "--window-size=1440,900",
     "--window-position=100,100",
   ];

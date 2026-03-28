@@ -188,6 +188,12 @@ operations:
     python:
       module: ./exa.py
       function: search
+      args:
+        query: .params.query
+        limit: .params.limit
+        category: .params.category
+        include_text: .params.include_text
+        auth: .auth
 
   read_webpage:
     description: Extract full content from a URL
@@ -202,3 +208,6 @@ operations:
     python:
       module: ./exa.py
       function: read_webpage
+      args:
+        url: .params.url
+        auth: .auth
