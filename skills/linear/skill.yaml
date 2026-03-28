@@ -101,7 +101,7 @@ operations:
       state_id: { type: string, description: "Filter by workflow state ID" }
     python:
       module: ./linear.py
-      function: op_list_tasks
+      function: list_tasks
 
   get_task:
     description: Get a specific issue by ID
@@ -111,7 +111,7 @@ operations:
       url: { type: string, description: "Linear issue URL from the browser (web_read)" }
     python:
       module: ./linear.py
-      function: op_get_task
+      function: get_task
 
   create_task:
     description: Create a new issue
@@ -126,7 +126,7 @@ operations:
       due: { type: string, description: "Due date (ISO format)" }
     python:
       module: ./linear.py
-      function: op_create_task
+      function: create_task
 
   update_task:
     description: Update an existing issue
@@ -140,7 +140,7 @@ operations:
       due: { type: string, description: "New due date" }
     python:
       module: ./linear.py
-      function: op_update_task
+      function: update_task
 
   delete_task:
     description: Delete an issue
@@ -149,7 +149,7 @@ operations:
       id: { type: string, required: true, description: "Issue ID" }
     python:
       module: ./linear.py
-      function: op_delete_task
+      function: delete_task
 
   list_projects:
     description: List all projects
@@ -157,7 +157,7 @@ operations:
     web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
     python:
       module: ./linear.py
-      function: op_list_projects
+      function: list_projects
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADDITIONAL OPERATIONS
@@ -179,7 +179,7 @@ operations:
       viewer.email: string
     python:
       module: ./linear.py
-      function: op_setup
+      function: setup
 
   whoami:
     description: Get current authenticated user (for credential verification)
@@ -189,7 +189,7 @@ operations:
       email: string
     python:
       module: ./linear.py
-      function: op_whoami
+      function: whoami
 
   get_organization:
     description: Get organization info including workspace URL slug
@@ -199,7 +199,7 @@ operations:
       urlKey: string
     python:
       module: ./linear.py
-      function: op_get_organization
+      function: get_organization
 
   get_teams:
     description: List all teams (needed to create issues)
@@ -209,7 +209,7 @@ operations:
       name: string
     python:
       module: ./linear.py
-      function: op_get_teams
+      function: get_teams
 
   get_workflow_states:
     description: List workflow states for a team
@@ -222,7 +222,7 @@ operations:
       position: number
     python:
       module: ./linear.py
-      function: op_get_workflow_states
+      function: get_workflow_states
 
   get_cycles:
     description: List cycles (sprints) for a team
@@ -235,7 +235,7 @@ operations:
       endsAt: datetime
     python:
       module: ./linear.py
-      function: op_get_cycles
+      function: get_cycles
 
   get_relations:
     description: Get an issue's relationships (blocking, blocked by, related). Returns relation_id needed for remove_relation.
@@ -247,7 +247,7 @@ operations:
       related: array
     python:
       module: ./linear.py
-      function: op_get_relations
+      function: get_relations
 
   add_blocker:
     description: Add a blocking relationship (blocker_id blocks id). Returns relation ID in `id` field.
@@ -257,7 +257,7 @@ operations:
     returns: void
     python:
       module: ./linear.py
-      function: op_add_blocker
+      function: add_blocker
 
   remove_relation:
     description: Remove a relationship by its ID (get ID from add_blocker/add_related response or issue query)
@@ -266,7 +266,7 @@ operations:
     returns: void
     python:
       module: ./linear.py
-      function: op_remove_relation
+      function: remove_relation
 
   add_related:
     description: Link two issues as related. Returns relation ID in `id` field.
@@ -276,4 +276,4 @@ operations:
     returns: void
     python:
       module: ./linear.py
-      function: op_add_related
+      function: add_related

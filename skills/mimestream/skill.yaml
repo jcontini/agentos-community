@@ -108,7 +108,7 @@ operations:
       limit: { type: integer }
     python:
       module: ./mimestream.py
-      function: op_list_emails
+      function: list_emails
 
   get_email:
     description: Get a specific email with full body content and headers
@@ -117,7 +117,7 @@ operations:
       id: { type: string, required: true }
     python:
       module: ./mimestream.py
-      function: op_get_email
+      function: get_email
 
   search_emails:
     description: Search emails by subject, snippet, body text, or sender
@@ -128,7 +128,7 @@ operations:
       limit: { type: integer }
     python:
       module: ./mimestream.py
-      function: op_search_emails
+      function: search_emails
 
   list_conversations:
     description: List email threads with latest message info
@@ -138,7 +138,7 @@ operations:
       limit: { type: integer }
     python:
       module: ./mimestream.py
-      function: op_list_conversations
+      function: list_conversations
 
   get_conversation:
     description: Get all messages in an email thread
@@ -147,7 +147,7 @@ operations:
       id: { type: string, required: true }
     python:
       module: ./mimestream.py
-      function: op_get_conversation
+      function: get_conversation
 
   # BLOCKED: file entity type not yet registered (task eb14f8fa)
   # file.list:
@@ -206,7 +206,7 @@ operations:
       color: string
     python:
       module: ./mimestream.py
-      function: op_list_accounts
+      function: list_accounts
 
   credential_get:
     description: |
@@ -222,7 +222,7 @@ operations:
       token_url: string
     python:
       module: ./mimestream.py
-      function: op_credential_get
+      function: credential_get
 
   list_mailboxes:
     description: List mailboxes/labels for an account
@@ -237,4 +237,4 @@ operations:
       account_email: string
     python:
       module: ./mimestream.py
-      function: op_list_mailboxes
+      function: list_mailboxes
