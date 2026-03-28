@@ -83,4 +83,4 @@ When core changes affect the skill contract (e.g. new canonical fields, storage 
 
 ## Verification
 
-After each phase of spec work (or any commit-worthy chunk): run checks, verify MCP end-to-end, then commit. See [Testing](../operations/testing.md) for the full phase completion checklist.
+After each phase of spec work (or any commit-worthy chunk): run checks, verify MCP end-to-end, then commit.

@@ -25,7 +25,7 @@ search({ query: "sub-agent research", limit: 20 })
 
 When you're not sure whether to read a file, read it. Tool calls to read documentation are cheap — far cheaper than guessing wrong. If you're debating whether to check the vision, a spec, a skill readme, or a module's `cargo doc`, that hesitation means you should read it.
 
-This applies broadly: the [Development Process](design/development-process.md) for how we write specs, [Testing](operations/testing.md) for the verification checklist, skill readmes for adapter contracts, `///` docs for code behavior. Reading one more file is always better than making one wrong assumption.
+This applies broadly: the [Development Process](development-process.md) for how we write specs, skill readmes for adapter contracts, `///` docs for code behavior. Reading one more file is always better than making one wrong assumption.
 
 ## Tips
 
