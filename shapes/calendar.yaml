@@ -1,0 +1,16 @@
+# A calendar — container for events.
+#
+# Sources: Apple Calendar, Google Calendar
+calendar:
+  fields:
+    color:             string
+    is_primary:        boolean
+    is_readonly:       boolean
+    source:            string    # e.g., "iCloud", "Google"
+    timezone:          string
+  display:
+    title: name
+    subtitle: source
+    columns:
+      - name:            Calendar
+      - source:          Source

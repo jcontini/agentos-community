@@ -1,0 +1,15 @@
+# A tag or label — git tag, Todoist label, etc.
+#
+# Sources: git, Todoist
+tag:
+  fields:
+    color:             string
+  relations:
+    repository:        repository
+  display:
+    title: name
+    subtitle: text
+    date: datePublished
+    columns:
+      - name:            Tag
+      - datePublished:   Date

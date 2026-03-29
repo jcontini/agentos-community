@@ -208,7 +208,7 @@ def load_displays():
     return normalized
 
 
-def list_displays(params):
+def list_displays(**params):
     displays = load_displays()
     return {
         "displays": displays,
@@ -216,7 +216,7 @@ def list_displays(params):
     }
 
 
-def list_apps(params):
+def list_apps(*, limit=None, **params):
     data = run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
     apps = []
     for item in data.get("SPApplicationsDataType", []):
@@ -235,16 +235,16 @@ def list_apps(params):
         )
 
     apps.sort(key=lambda app: ((app.get("name") or "").lower(), app.get("path") or ""))
-    limit = normalize_limit(params.get("limit"))
-    if limit is not None:
-        apps = apps[:limit]
+    normalized_limit = normalize_limit(limit)
+    if normalized_limit is not None:
+        apps = apps[:normalized_limit]
     return {
         "apps": apps,
         "count": len(apps),
     }
 
 
-def list_processes(params):
+def list_processes(*, limit=None, **params):
     output = run_text_command(
         [
             "ps",
@@ -280,16 +280,16 @@ def list_processes(params):
         )
 
     processes.sort(key=lambda process: process["pid"])
-    limit = normalize_limit(params.get("limit"))
-    if limit is not None:
-        processes = processes[:limit]
+    normalized_limit = normalize_limit(limit)
+    if normalized_limit is not None:
+        processes = processes[:normalized_limit]
     return {
         "processes": processes,
         "count": len(processes),
     }
 
 
-def list_windows(params):
+def list_windows(*, limit=None, **params):
     displays = load_displays()
     cg_windows = run_swift_json(CG_WINDOWS_SWIFT)
     jxa_apps = run_jxa_json(JXA_WINDOWS_SCRIPT)
@@ -357,20 +357,18 @@ def list_windows(params):
             window["pid"] or 0,
         )
     )
-    limit = normalize_limit(params.get("limit"))
-    if limit is not None:
-        normalized = normalized[:limit]
+    normalized_limit = normalize_limit(limit)
+    if normalized_limit is not None:
+        normalized = normalized[:normalized_limit]
     return {
         "windows": normalized,
         "count": len(normalized),
     }
 
 
-def screenshot_display(params):
+def screenshot_display(*, display_id=None, display_index=None, path=None, **params):
     displays = load_displays()
     target = None
-    display_index = params.get("display_index")
-    display_id = params.get("display_id")
 
     if display_index is not None:
         target = next(
@@ -388,41 +386,38 @@ def screenshot_display(params):
     if not target:
         raise ValueError("Display not found")
 
-    path = resolve_output_path(params.get("path"), f"display-{target['display_id']}")
+    resolved_path = resolve_output_path(path, f"display-{target['display_id']}")
     subprocess.run(
-        ["screencapture", "-x", "-D", str(target["display_index"]), path],
+        ["screencapture", "-x", "-D", str(target["display_index"]), resolved_path],
         check=True,
     )
     return {
         "display_id": target["display_id"],
         "display_index": target["display_index"],
-        "path": path,
+        "path": resolved_path,
         "captured_at": iso_now(),
     }
 
 
-def screenshot_window(params):
-    if params.get("window_id") is None:
-        raise ValueError("window_id is required")
-
-    target_window_id = int(params["window_id"])
-    windows = list_windows({}).get("windows", [])
+def screenshot_window(*, window_id, path=None, **params):
+    target_window_id = int(window_id)
+    windows = list_windows().get("windows", [])
     target = next((window for window in windows if window.get("window_id") == target_window_id), None)
     if not target:
         raise ValueError("Window not found")
     if not target.get("capture_eligible"):
         raise ValueError("Window is not capture_eligible")
 
-    path = resolve_output_path(params.get("path"), f"window-{target_window_id}")
+    resolved_path = resolve_output_path(path, f"window-{target_window_id}")
     subprocess.run(
-        ["screencapture", "-x", "-l", str(target_window_id), path],
+        ["screencapture", "-x", "-l", str(target_window_id), resolved_path],
         check=True,
     )
     return {
         "window_id": target_window_id,
         "app_name": target.get("app_name"),
         "title": target.get("title"),
-        "path": path,
+        "path": resolved_path,
         "captured_at": iso_now(),
     }
 
@@ -569,6 +564,18 @@ def resolve_output_path(value, label):
     return f"/tmp/macos-control-{label}-{timestamp}.png"
 
 
+def clipboard_read(**_kwargs):
+    """Read the current macOS clipboard contents."""
+    result = subprocess.run(["pbpaste"], capture_output=True, text=True)
+    return {"text": result.stdout}
+
+
+def clipboard_write(*, text, **_kwargs):
+    """Write text to the macOS clipboard."""
+    subprocess.run(["pbcopy"], input=text, text=True, check=True)
+    return {"status": "ok", "length": len(text)}
+
+
 def iso_now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -590,7 +597,7 @@ def main():
     if operation not in handlers:
         raise ValueError(f"unknown operation: {operation}")
 
-    result = handlers[operation](params)
+    result = handlers[operation](**params)
     print(json.dumps(result, indent=2))
 
 

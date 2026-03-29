@@ -36,7 +36,6 @@ operations:
     python:
       module: ./github-cli.py
       function: list_tasks
-      params: true
       timeout: 30
 
   get_task:
@@ -55,7 +54,6 @@ operations:
     python:
       module: ./github-cli.py
       function: get_task
-      params: true
       timeout: 30
 
   create_task:
@@ -79,7 +77,6 @@ operations:
     python:
       module: ./github-cli.py
       function: create_task
-      params: true
       timeout: 30
 
   close_task:
@@ -98,7 +95,6 @@ operations:
     python:
       module: ./github-cli.py
       function: close_task
-      params: true
       timeout: 30
 
   reopen_task:
@@ -117,7 +113,6 @@ operations:
     python:
       module: ./github-cli.py
       function: reopen_task
-      params: true
       timeout: 30
 
   list_pull_requests:
@@ -137,7 +132,6 @@ operations:
     python:
       module: ./github-cli.py
       function: list_pull_requests
-      params: true
       timeout: 30
 
   create_pull_request:
@@ -166,7 +160,6 @@ operations:
     python:
       module: ./github-cli.py
       function: create_pull_request
-      params: true
       timeout: 30
 
   list_documents:
@@ -186,7 +179,6 @@ operations:
     python:
       module: ./github-cli.py
       function: list_documents
-      params: true
       timeout: 30
 
   read_document:
@@ -208,7 +200,6 @@ operations:
     python:
       module: ./github-cli.py
       function: read_document
-      params: true
       timeout: 30
 
   status:
@@ -218,5 +209,4 @@ operations:
     python:
       module: ./github-cli.py
       function: status
-      params: true
       timeout: 30

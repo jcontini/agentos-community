@@ -42,7 +42,6 @@ operations:
     python:
       module: ./chase-api.py
       function: check_session
-      params: true
       timeout: 20
     test:
       skip: true
@@ -56,7 +55,6 @@ operations:
     python:
       module: ./chase-api.py
       function: get_accounts
-      params: true
       timeout: 20
 
   list_transactions:
@@ -76,5 +74,4 @@ operations:
     python:
       module: ./chase-api.py
       function: get_transactions
-      params: true
       timeout: 20

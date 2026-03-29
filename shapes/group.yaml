@@ -1,0 +1,15 @@
+# A group or community — online group, reading group, etc.
+#
+# Sources: Goodreads
+group:
+  fields:
+    member_count:      integer
+    category:          string
+  display:
+    title: name
+    subtitle: category
+    description: text
+    columns:
+      - name:            Group
+      - member_count:    Members
+      - category:        Category

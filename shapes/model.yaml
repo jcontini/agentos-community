@@ -1,0 +1,22 @@
+# An AI model — LLM, embedding model, or other ML model.
+#
+# Sources: Ollama, OpenRouter, Anthropic API
+model:
+  fields:
+    provider:          string    # e.g., "anthropic", "openai", "meta"
+    context_length:    integer
+    max_output:        integer
+    pricing_input:     string    # e.g., "$3/1M tokens"
+    pricing_output:    string
+    modality:          string[]  # e.g., ["text", "vision"]
+    quantization:      string    # e.g., "Q4_K_M"
+    size:              string    # e.g., "7B", "70B"
+    format:            string    # e.g., "gguf"
+  display:
+    title: name
+    subtitle: provider
+    description: text
+    columns:
+      - name:            Model
+      - provider:        Provider
+      - context_length:  Context

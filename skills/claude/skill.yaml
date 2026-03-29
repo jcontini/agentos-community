@@ -64,7 +64,6 @@ operations:
     python:
       module: ./claude-api.py
       function: check_session
-      params: true
       timeout: 30
     test:
       skip: true
@@ -81,7 +80,6 @@ operations:
     python:
       module: ./claude-api.py
       function: op_list_conversations
-      params: true
       timeout: 30
 
   get_conversation:
@@ -96,7 +94,6 @@ operations:
     python:
       module: ./claude-api.py
       function: op_get_conversation
-      params: true
       timeout: 30
 
   search_conversations:
@@ -113,7 +110,6 @@ operations:
     python:
       module: ./claude-api.py
       function: op_search_conversations
-      params: true
       timeout: 30
 
   import_conversation:
@@ -131,7 +127,6 @@ operations:
     python:
       module: ./claude-api.py
       function: op_import_conversation
-      params: true
       timeout: 60
 
   list_orgs:
@@ -146,7 +141,6 @@ operations:
     python:
       module: ./claude-api.py
       function: op_list_orgs
-      params: true
       timeout: 15
 
   extract_magic_link:

@@ -100,9 +100,9 @@ def _extract_set_cookies(resp: dict) -> dict:
 # Operations — called by the Python executor with kwargs
 # ---------------------------------------------------------------------------
 
-def check_session(**params) -> dict:
+def check_session(*, auth: dict = None, **params) -> dict:
     """Verify Exa dashboard session and identify the logged-in account."""
-    cookies = params.get("auth", {}).get("cookies", "")
+    cookies = (auth or {}).get("cookies", "")
     with _dashboard_client(cookies) as client:
         session = _check_session(client)
     if not session:

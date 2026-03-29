@@ -26,7 +26,6 @@ operations:
     python:
       module: ./macos_security.py
       function: cmd_audit
-      params: true
       timeout: 30
 
   get_token:
@@ -46,7 +45,6 @@ operations:
     python:
       module: ./macos_security.py
       function: cmd_get_token
-      params: true
       timeout: 10
 
   scan_google_oauth:
@@ -67,7 +65,6 @@ operations:
     python:
       module: ./macos_security.py
       function: cmd_scan_google_oauth
-      params: true
       timeout: 60
 
   scan_macos_accounts:
@@ -86,7 +83,6 @@ operations:
     python:
       module: ./macos_security.py
       function: cmd_scan_macos_accounts
-      params: true
       timeout: 15
 
   list_electron_apps:
@@ -99,5 +95,4 @@ operations:
     python:
       module: ./macos_security.py
       function: cmd_list_electron_apps
-      params: true
       timeout: 15

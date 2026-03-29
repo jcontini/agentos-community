@@ -152,7 +152,6 @@ operations:
     python:
       module: ./amazon.py
       function: list_orders
-      params: true
       timeout: 30
     test:
       skip: true
@@ -172,7 +171,6 @@ operations:
     python:
       module: ./amazon.py
       function: get_order
-      params: true
       timeout: 30
     test:
       skip: true
@@ -186,7 +184,6 @@ operations:
     python:
       module: ./amazon.py
       function: buy_again
-      params: true
       timeout: 30
     test:
       skip: true
@@ -205,7 +202,6 @@ operations:
     python:
       module: ./amazon.py
       function: subscriptions
-      params: true
       timeout: 45
     test:
       skip: true
@@ -223,7 +219,6 @@ operations:
     python:
       module: ./amazon.py
       function: list_lists
-      params: true
       timeout: 30
     test:
       skip: true
@@ -246,7 +241,6 @@ operations:
     python:
       module: ./amazon.py
       function: get_list
-      params: true
       timeout: 60
     test:
       skip: true
@@ -264,7 +258,6 @@ operations:
     python:
       module: ./amazon.py
       function: whoami
-      params: true
       timeout: 30
     test:
       skip: true

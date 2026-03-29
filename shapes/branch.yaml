@@ -1,0 +1,19 @@
+# A git branch.
+#
+# Sources: git
+branch:
+  fields:
+    commit:            string    # HEAD commit hash
+    upstream:          string    # remote tracking branch
+    ahead:             integer
+    behind:            integer
+    is_current:        boolean
+  relations:
+    repository:        repository
+  display:
+    title: name
+    subtitle: commit
+    columns:
+      - name:            Branch
+      - commit:          HEAD
+      - upstream:        Upstream

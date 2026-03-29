@@ -93,13 +93,12 @@ def _require_cookies(cookie_header: str | None, params: dict | None, op: str) ->
 # ---------------------------------------------------------------------------
 
 
-def check_session(params: dict | None = None) -> dict[str, Any]:
+def check_session(**params) -> dict[str, Any]:
     """Verify Goodreads session and identify the logged-in user.
 
     Fetches the Goodreads homepage with cookies and extracts the logged-in
     user's ID and name from the navigation HTML.
     """
-    params = params or {}
     cookie_header = get_cookies(params)
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
@@ -136,105 +135,56 @@ def check_session(params: dict | None = None) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Entry points (called by AgentOS with params: true)
+# Entry points (called by AgentOS with auto-dispatch kwargs)
 # ---------------------------------------------------------------------------
 
 
-def run_get_person(params: dict | None = None) -> dict[str, Any]:
-    params = params or {}
-    return get_person(
-        user_id=str(_p(params, "user_id", "")),
-        params=params,
-    )
+def run_get_person(*, user_id: str = "", **params) -> dict[str, Any]:
+    return get_person(user_id=str(user_id), params=params)
 
 
-def run_search_people(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return search_people(
-        query=_p(params, "query", ""),
-        limit=int(_p(params, "limit") or 10),
-        params=params,
-    )
+def run_search_people(*, query: str = "", limit: int = 10, **params) -> list[dict[str, Any]]:
+    return search_people(query=query, limit=int(limit), params=params)
 
 
-def run_list_friends(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_friends(
-        user_id=str(_p(params, "user_id", "")),
-        page=int(_p(params, "page") or 0),
-        params=params,
-    )
+def run_list_friends(*, user_id: str = "", page: int = 0, **params) -> list[dict[str, Any]]:
+    return list_friends(user_id=str(user_id), page=int(page), params=params)
 
 
-def run_list_books(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_books(
-        user_id=str(_p(params, "user_id", "")),
-        shelf=str(_p(params, "shelf") or "all"),
-        sort=str(_p(params, "sort") or "date_added"),
-        page=int(_p(params, "page") or 0),
-        params=params,
-    )
+def run_list_books(*, user_id: str = "", shelf: str = "all", sort: str = "date_added", page: int = 0, **params) -> list[dict[str, Any]]:
+    return list_books(user_id=str(user_id), shelf=str(shelf), sort=str(sort), page=int(page), params=params)
 
 
-def run_list_reviews(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_reviews(
-        user_id=str(_p(params, "user_id", "")),
-        sort=str(_p(params, "sort") or "date"),
-        page=int(_p(params, "page") or 0),
-        params=params,
-    )
+def run_list_reviews(*, user_id: str = "", sort: str = "date", page: int = 0, **params) -> list[dict[str, Any]]:
+    return list_reviews(user_id=str(user_id), sort=str(sort), page=int(page), params=params)
 
 
-def run_list_shelves(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_shelves(user_id=str(_p(params, "user_id", "")), params=params)
+def run_list_shelves(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    return list_shelves(user_id=str(user_id), params=params)
 
 
-def run_list_shelf_books(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_shelf_books(
-        user_id=str(_p(params, "user_id", "")),
-        shelf_name=str(_p(params, "shelf_name", "")),
-        page=int(_p(params, "page") or 0),
-        params=params,
-    )
+def run_list_shelf_books(*, user_id: str = "", shelf_name: str = "", page: int = 0, **params) -> list[dict[str, Any]]:
+    return list_shelf_books(user_id=str(user_id), shelf_name=str(shelf_name), page=int(page), params=params)
 
 
-def run_resolve_email(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return resolve_email(
-        email=str(_p(params, "email", "")),
-        params=params,
-    )
+def run_resolve_email(*, email: str = "", **params) -> list[dict[str, Any]]:
+    return resolve_email(email=str(email), params=params)
 
 
-def run_list_groups(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
+def run_list_groups(**params) -> list[dict[str, Any]]:
     return list_groups(params=params)
 
 
-def run_list_following(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_following(
-        user_id=str(_p(params, "user_id", "")),
-        params=params,
-    )
+def run_list_following(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    return list_following(user_id=str(user_id), params=params)
 
 
-def run_list_followers(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_followers(
-        user_id=str(_p(params, "user_id", "")),
-        params=params,
-    )
+def run_list_followers(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    return list_followers(user_id=str(user_id), params=params)
 
 
-def run_list_quotes(params: dict | None = None) -> list[dict[str, Any]]:
-    params = params or {}
-    return list_quotes(
-        user_id=str(_p(params, "user_id", "")),
+def run_list_quotes(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    return list_quotes(user_id=str(user_id),
         params=params,
     )
 

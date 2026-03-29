@@ -38,7 +38,6 @@ operations:
     python:
       module: ./gcal.py
       function: list_calendars
-      params: true
       timeout: 15
 
   list_events:
@@ -110,7 +109,6 @@ operations:
     python:
       module: ./gcal.py
       function: create_event
-      params: true
       timeout: 15
 
   update_event:
@@ -130,7 +128,6 @@ operations:
     python:
       module: ./gcal.py
       function: update_event
-      params: true
       timeout: 15
 
   delete_event:

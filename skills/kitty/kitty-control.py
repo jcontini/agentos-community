@@ -236,52 +236,45 @@ def require_int(params: dict, name: str) -> int:
     fail(f"Param {name} must be an integer")
 
 
-def command_list_os_windows(params: dict) -> list[dict]:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_list_os_windows(*, socket=None, **params) -> list[dict]:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
     return [normalize_os_window(os_window) for os_window in kitty_ls(socket)]
 
 
-def command_list_tabs(params: dict) -> list[dict]:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_list_tabs(*, socket=None, os_window_id=None, **params) -> list[dict]:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
-    os_window_filter = params.get("os_window_id")
     results: list[dict] = []
     for os_window in kitty_ls(socket):
-        if os_window_filter is not None and os_window.get("id") != os_window_filter:
+        if os_window_id is not None and os_window.get("id") != os_window_id:
             continue
         for tab in os_window.get("tabs", []):
             results.append(normalize_tab(os_window, tab))
     return results
 
 
-def command_list_panes(params: dict) -> list[dict]:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_list_panes(*, socket=None, os_window_id=None, tab_id=None, **params) -> list[dict]:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
-    os_window_filter = params.get("os_window_id")
-    tab_filter = params.get("tab_id")
     results: list[dict] = []
     for os_window in kitty_ls(socket):
-        if os_window_filter is not None and os_window.get("id") != os_window_filter:
+        if os_window_id is not None and os_window.get("id") != os_window_id:
             continue
         for tab in os_window.get("tabs", []):
-            if tab_filter is not None and tab.get("id") != tab_filter:
+            if tab_id is not None and tab.get("id") != tab_id:
                 continue
             for window in tab.get("windows", []):
                 results.append(normalize_window(os_window, tab, window))
     return results
 
 
-def command_launch_tab(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(True)
+def command_launch_tab(*, socket=None, title=None, cwd=None, command=None, keep_focus=False, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(True)
     args = ["launch", "--type=tab"]
-    title = params.get("title")
-    cwd = params.get("cwd")
-    keep_focus = bool(params.get("keep_focus"))
-    command = params.get("command")
 
     if title:
         args.extend(["--tab-title", str(title)])
@@ -312,12 +305,12 @@ def command_launch_tab(params: dict) -> dict:
     }
 
 
-def command_focus_tab(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_focus_tab(*, socket=None, tab_id=None, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
 
-    tab_id = require_int(params, "tab_id")
+    tab_id = require_int({"tab_id": tab_id}, "tab_id")
     ls_data = kitty_ls(socket)
     tab = find_tab(ls_data, tab_id)
     if not tab:
@@ -327,12 +320,12 @@ def command_focus_tab(params: dict) -> dict:
     return {"ok": True, "socket": socket, "tab_id": tab_id}
 
 
-def command_focus_os_window(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
 
-    os_window_id = require_int(params, "os_window_id")
+    os_window_id = require_int({"os_window_id": os_window_id}, "os_window_id")
     ls_data = kitty_ls(socket)
     os_window = find_os_window(ls_data, os_window_id)
     if not os_window:
@@ -358,33 +351,30 @@ def command_focus_os_window(params: dict) -> dict:
     }
 
 
-def command_send_text(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_send_text(*, socket=None, text=None, window_id=None, tab_id=None, press_enter=False, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
 
-    text = params.get("text")
     if text is None:
         fail("Missing required param: text")
     text = str(text)
-    if params.get("press_enter"):
+    if press_enter:
         text += "\r"
 
     args = ["send-text"]
-    tab_id = params.get("tab_id")
-    window_id = params.get("window_id")
 
     if tab_id is not None and window_id is not None:
         fail("Provide either tab_id or window_id, not both")
 
     ls_data = kitty_ls(socket)
     if window_id is not None:
-        window_id = require_int(params, "window_id")
+        window_id = require_int({"window_id": window_id}, "window_id")
         if not find_window(ls_data, window_id):
             fail(f"No Kitty window found with id {window_id}")
         args.extend(["--match", f"id:{window_id}"])
     elif tab_id is not None:
-        tab_id = require_int(params, "tab_id")
+        tab_id = require_int({"tab_id": tab_id}, "tab_id")
         if not find_tab(ls_data, tab_id):
             fail(f"No Kitty tab found with id {tab_id}")
         args.extend(["--match-tab", f"id:{tab_id}"])
@@ -399,20 +389,19 @@ def command_send_text(params: dict) -> dict:
     }
 
 
-def command_get_text(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_get_text(*, socket=None, window_id=None, extent="screen", ansi=False, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
 
     args = ["get-text"]
-    extent = str(params.get("extent") or "screen")
+    extent = str(extent or "screen")
     args.extend(["--extent", extent])
-    if params.get("ansi"):
+    if ansi:
         args.append("--ansi")
 
-    window_id = params.get("window_id")
     if window_id is not None:
-        window_id = require_int(params, "window_id")
+        window_id = require_int({"window_id": window_id}, "window_id")
         if not find_window(kitty_ls(socket), window_id):
             fail(f"No Kitty window found with id {window_id}")
         args.extend(["--match", f"id:{window_id}"])
@@ -426,12 +415,12 @@ def command_get_text(params: dict) -> dict:
     }
 
 
-def command_close_tab(params: dict) -> dict:
-    socket = normalize_socket(params.get("socket")) or ensure_socket(False)
+def command_close_tab(*, socket=None, tab_id=None, **params) -> dict:
+    socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
 
-    tab_id = require_int(params, "tab_id")
+    tab_id = require_int({"tab_id": tab_id}, "tab_id")
     if not find_tab(kitty_ls(socket), tab_id):
         fail(f"No Kitty tab found with id {tab_id}")
 

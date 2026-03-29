@@ -1,0 +1,19 @@
+# A document or file — source code file, repo document, open editor tab.
+#
+# Sources: GitHub, Cursor
+document:
+  fields:
+    path:              string    # file path within repository or workspace
+    language:          string    # programming language or file type
+    size:              integer   # bytes
+    encoding:          string
+    line_count:        integer
+  relations:
+    repository:        repository
+  display:
+    title: name
+    subtitle: path
+    columns:
+      - name:            Document
+      - path:            Path
+      - language:        Language

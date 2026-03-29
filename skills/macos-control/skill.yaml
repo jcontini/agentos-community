@@ -19,7 +19,6 @@ operations:
     python:
       module: ./macos_control.py
       function: list_apps
-      params: true
       timeout: 60
 
   list_processes:
@@ -36,7 +35,6 @@ operations:
     python:
       module: ./macos_control.py
       function: list_processes
-      params: true
       timeout: 15
 
   list_displays:
@@ -49,7 +47,6 @@ operations:
     python:
       module: ./macos_control.py
       function: list_displays
-      params: true
       timeout: 15
 
   list_windows:
@@ -66,7 +63,6 @@ operations:
     python:
       module: ./macos_control.py
       function: list_windows
-      params: true
       timeout: 30
 
   screenshot_window:
@@ -88,7 +84,6 @@ operations:
     python:
       module: ./macos_control.py
       function: screenshot_window
-      params: true
       timeout: 20
 
   screenshot_display:
@@ -111,5 +106,25 @@ operations:
     python:
       module: ./macos_control.py
       function: screenshot_display
-      params: true
       timeout: 20
+
+  clipboard_read:
+    description: Read the current macOS clipboard contents
+    returns:
+      text: string
+    python:
+      module: ./macos_control.py
+      function: clipboard_read
+      timeout: 5
+
+  clipboard_write:
+    description: Write text to the macOS clipboard
+    params:
+      text: { type: string, required: true, description: "Text to copy to clipboard" }
+    returns:
+      status: string
+      length: integer
+    python:
+      module: ./macos_control.py
+      function: clipboard_write
+      timeout: 5

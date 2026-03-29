@@ -50,7 +50,6 @@ operations:
     python:
       module: ./exa.py
       function: check_session
-      params: true
       timeout: 15
     test:
       skip: true

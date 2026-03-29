@@ -54,7 +54,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: check_session
-      params: true
       timeout: 15
     test:
       skip: true
@@ -73,7 +72,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_get_profile
-      params: true
       timeout: 15
 
   get_person:
@@ -85,7 +83,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_get_person
-      params: true
       timeout: 15
     test:
       params:
@@ -101,7 +98,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_search_people
-      params: true
       timeout: 15
     test:
       skip: true
@@ -115,7 +111,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_resolve_email
-      params: true
       timeout: 15
     test:
       skip: true
@@ -130,7 +125,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_friends
-      params: true
       timeout: 60
     test:
       skip: true
@@ -151,7 +145,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_books
-      params: true
       timeout: 60
     test:
       skip: true
@@ -166,7 +159,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_get_book
-      params: true
       timeout: 30
     test:
       params:
@@ -182,7 +174,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_list_book_reviews
-      params: true
       timeout: 30
     test:
       params:
@@ -199,7 +190,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_list_similar_books
-      params: true
       timeout: 30
     test:
       params:
@@ -216,7 +206,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_list_series_books
-      params: true
       timeout: 30
     test:
       params:
@@ -233,7 +222,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_search_books
-      params: true
       timeout: 15
     test:
       params:
@@ -251,7 +239,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_get_author
-      params: true
       timeout: 30
     test:
       params:
@@ -268,7 +255,6 @@ operations:
     python:
       module: ./public_graph.py
       function: run_list_author_books
-      params: true
       timeout: 30
     test:
       params:
@@ -290,7 +276,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_reviews
-      params: true
       timeout: 60
     test:
       skip: true
@@ -308,7 +293,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_shelves
-      params: true
       timeout: 15
     test:
       skip: true
@@ -324,7 +308,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_shelf_books
-      params: true
       timeout: 60
     test:
       skip: true
@@ -340,7 +323,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_groups
-      params: true
       timeout: 30
     test:
       skip: true
@@ -354,7 +336,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_following
-      params: true
       timeout: 15
     test:
       skip: true
@@ -368,7 +349,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_followers
-      params: true
       timeout: 15
     test:
       skip: true
@@ -382,7 +362,6 @@ operations:
     python:
       module: ./web_scraper.py
       function: run_list_quotes
-      params: true
       timeout: 15
     test:
       skip: true

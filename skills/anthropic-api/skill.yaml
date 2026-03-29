@@ -24,7 +24,6 @@ operations:
     python:
       module: ./anthropic-api.py
       function: list_models
-      params: true
       timeout: 30
 
   chat:
@@ -69,5 +68,4 @@ operations:
     python:
       module: ./anthropic-api.py
       function: chat
-      params: true
       timeout: 120

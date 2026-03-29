@@ -1,0 +1,34 @@
+# A recurring or one-shot trigger that produces actions on a schedule.
+#
+# NOT an event — events are things that happen (meetings, classes, concerts).
+# A schedule is a rule that *triggers* things. "Every day at 9am" isn't an event;
+# it's a pattern that produces activity when it fires.
+#
+# AgentOS doesn't run schedules — it tracks them. The actual execution is pushed
+# to a provider skill (Claude Code, launchd, cloud scheduler, etc.), just like
+# AgentOS doesn't send email — it uses Gmail.
+#
+# Sources: Claude Code (CronCreate/CronList/CronDelete), future: launchd, cloud
+schedule:
+  fields:
+    schedule_type:     string    # cron, one_shot, interval
+    cron_expression:   string    # 5-field cron (e.g. "0 9 * * *")
+    timezone:          string    # IANA timezone for evaluation
+    prompt:            string    # what to do when it fires (natural language or skill call)
+    enabled:           boolean
+    durability:        string    # session, desktop, cloud — how resilient is it
+    provider_job_id:   string    # the provider's native ID (e.g. Claude Code's job ID)
+    last_fired_at:     datetime
+    next_fire_at:      datetime
+  relations:
+    provider:          skill     # which skill runs this (claude, launchd, etc.)
+  display:
+    title: name
+    subtitle: cron_expression
+    date: next_fire_at
+    columns:
+      - name:            Schedule
+      - cron_expression: Cron
+      - enabled:         On
+      - next_fire_at:    Next
+      - durability:      Tier

@@ -1,0 +1,16 @@
+# A currently loaded/running AI model instance.
+#
+# Sources: Ollama
+loaded_model:
+  fields:
+    size:              string    # memory footprint
+    quantization:      string
+    expires_at:        datetime
+    vram_usage:        string
+  display:
+    title: name
+    subtitle: size
+    columns:
+      - name:            Model
+      - size:            Size
+      - quantization:    Quantization

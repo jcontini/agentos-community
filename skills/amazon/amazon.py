@@ -510,12 +510,11 @@ SHIPMENT_STATUS_SEL = [
 DETAIL_STATUS_SEL = SHIPMENT_STATUS_SEL + ["h4"]
 
 
-def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
     """List Amazon orders from the order history page."""
-    params = params or {}
     cookie_header = _require_cookies(params, "list_orders")
-    order_filter = params.get("filter") or "last30"
-    page = int(params.get("page") or 1)
+    order_filter = filter or "last30"
+    page = int(page or 1)
 
     url_params: dict[str, str] = {"timeFilter": order_filter}
     if page > 1:
@@ -744,9 +743,8 @@ def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str
     return items
 
 
-def buy_again(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def buy_again(**params) -> list[dict[str, Any]]:
     """Get products Amazon recommends for repurchase."""
-    params = params or {}
     cookie_header = _require_cookies(params, "buy_again")
 
     with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
@@ -810,9 +808,8 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
     return products
 
 
-def subscriptions(params: dict[str, Any] | None = None) -> dict[str, Any]:
+def subscriptions(**params) -> dict[str, Any]:
     """List active Subscribe & Save subscriptions and upcoming deliveries."""
-    params = params or {}
     cookie_header = _require_cookies(params, "subscriptions")
 
     with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
@@ -967,11 +964,9 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
     return items
 
 
-def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
+def get_order(*, order_id, **params) -> dict[str, Any]:
     """Fetch detailed info for a specific Amazon order."""
-    params = params or {}
     cookie_header = _require_cookies(params, "get_order")
-    order_id = params.get("order_id", "")
     if not order_id:
         raise ValueError("order_id is required")
 
@@ -1135,9 +1130,8 @@ ITEM_REVIEW_COUNT_SEL = [
 MAX_LIST_PAGES = 20
 
 
-def list_lists(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def list_lists(**params) -> list[dict[str, Any]]:
     """List all of the user's Amazon lists (wishlists, shopping lists, etc.)."""
-    params = params or {}
     cookie_header = _require_cookies(params, "list_lists")
 
     with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
@@ -1197,14 +1191,12 @@ def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
     return lists
 
 
-def get_list(params: dict[str, Any] | None = None) -> dict[str, Any]:
+def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     """Get items from a specific Amazon list by list ID."""
-    params = params or {}
     cookie_header = _require_cookies(params, "get_list")
-    list_id = params.get("list_id")
     if not list_id:
         raise ValueError("get_list requires a list_id parameter")
-    item_filter = params.get("filter") or "unpurchased"
+    item_filter = filter or "unpurchased"
 
     all_items: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -1390,7 +1382,7 @@ def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
+def whoami(**params) -> dict[str, Any]:
     """Check session liveness and extract account identity.
 
     Fetches two pages:
@@ -1399,7 +1391,6 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
     The email is the canonical identifier (unique per Amazon account).
     """
-    params = params or {}
     cookie_header = _require_cookies(params, "whoami")
 
     with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:

@@ -144,26 +144,21 @@ def _format_conversation(conv, org_uuid):
     }
 
 
-# -- Operation entrypoints — called by the python: executor with params: true --
+# -- Operation entrypoints — called by the python: executor with auto-dispatch --
 
-def op_list_conversations(params: dict | None = None) -> list:
-    params = params or {}
+def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
     cookie_header = get_cookies(params)
-    limit = int(params.get("limit") or 50)
-    offset = int(params.get("offset") or 0)
-    org_uuid = params.get("org")
+    limit = int(limit)
+    offset = int(offset)
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, org_uuid, cookie_header)
-        convs = _get_conversations(client, org, limit=limit, offset=offset)
-    return _format_conversation_list(convs, org)
+        resolved_org = _resolve_org_uuid(client, org, cookie_header)
+        convs = _get_conversations(client, resolved_org, limit=limit, offset=offset)
+    return _format_conversation_list(convs, resolved_org)
 
 
-def op_get_conversation(params: dict | None = None) -> dict:
-    params = params or {}
+def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
     cookie_header = get_cookies(params)
-    account = params.get("account")
-    conv_id = params.get("id")
-    url = params.get("url", "")
+    conv_id = id
     if url:
         m = re.search(r"chat/([0-9a-fA-F-]{36})", url)
         if m:
@@ -171,17 +166,14 @@ def op_get_conversation(params: dict | None = None) -> dict:
     if not conv_id:
         raise ValueError("id or url is required for get_conversation")
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account, cookie_header)
-        conv = _get_conversation(client, org, conv_id)
-    return _format_conversation(conv, org)
+        resolved_org = _resolve_org_uuid(client, org, cookie_header)
+        conv = _get_conversation(client, resolved_org, conv_id)
+    return _format_conversation(conv, resolved_org)
 
 
-def op_search_conversations(params: dict | None = None) -> list:
-    params = params or {}
+def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
     cookie_header = get_cookies(params)
-    query = params.get("query", "")
-    account = params.get("account")
-    limit = int(params.get("limit") or 20)
+    limit = int(limit)
 
     query_lower = query.lower()
     results = []
@@ -189,9 +181,9 @@ def op_search_conversations(params: dict | None = None) -> list:
     page_size = 50
 
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account, cookie_header)
+        resolved_org = _resolve_org_uuid(client, org, cookie_header)
         while offset < 250:
-            page = _get_conversations(client, org, limit=page_size, offset=offset)
+            page = _get_conversations(client, resolved_org, limit=page_size, offset=offset)
             if not page:
                 break
             for conv in page:
@@ -202,25 +194,23 @@ def op_search_conversations(params: dict | None = None) -> list:
                 break
             offset += page_size
 
-    return _format_conversation_list(results[:limit], org)
+    return _format_conversation_list(results[:limit], resolved_org)
 
 
-def op_import_conversation(params: dict | None = None) -> list:
-    params = params or {}
+def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
     cookie_header = get_cookies(params)
-    account = params.get("account")
-    limit = int(params.get("limit") or 5)
-    offset = int(params.get("offset") or 0)
+    limit = int(limit)
+    offset = int(offset)
 
     rows = []
     with _client(cookie_header) as client:
-        org = _resolve_org_uuid(client, account, cookie_header)
-        convs = _get_conversations(client, org, limit=limit, offset=offset)
+        resolved_org = _resolve_org_uuid(client, org, cookie_header)
+        convs = _get_conversations(client, resolved_org, limit=limit, offset=offset)
         for conv_stub in convs:
             conv_uuid = conv_stub["uuid"]
             conv_name = conv_stub.get("name") or "(untitled)"
             try:
-                conv = _get_conversation(client, org, conv_uuid)
+                conv = _get_conversation(client, resolved_org, conv_uuid)
             except Exception:
                 continue
             for msg in conv.get("chat_messages", []):
@@ -245,22 +235,20 @@ def op_import_conversation(params: dict | None = None) -> list:
     return rows
 
 
-def op_list_orgs(params: dict | None = None) -> list:
-    params = params or {}
+def op_list_orgs(**params) -> list:
     cookie_header = get_cookies(params)
     with _client(cookie_header) as client:
         return _get_organizations(client)
 
 
-# -- Session check — called by account.check with params: true -----------------
+# -- Session check — called by account.check with auto-dispatch ----------------
 
-def check_session(params: dict | None = None) -> dict:
+def check_session(**params) -> dict:
     """Verify Claude.ai session and identify the logged-in account.
 
     Validates operational access by resolving the chat org (which probes
     lastActiveOrg cookie if available), then fetches identity from /api/organizations.
     """
-    params = params or {}
     cookie_header = get_cookies(params)
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
@@ -319,25 +307,18 @@ def main():
 
     mock_params = {
         "auth": {"cookies": args.cookies},
-        "params": {
-            "account": args.org,
-            "id": args.id,
-            "query": args.query,
-            "limit": args.limit,
-            "offset": args.offset,
-        },
     }
 
     if args.op == "organizations":
-        result = op_list_orgs(mock_params)
+        result = op_list_orgs(**mock_params)
     elif args.op == "conversations":
-        result = op_list_conversations(mock_params)
+        result = op_list_conversations(org=args.org, limit=args.limit, offset=args.offset, **mock_params)
     elif args.op == "conversation":
-        result = op_get_conversation(mock_params)
+        result = op_get_conversation(id=args.id, org=args.org, **mock_params)
     elif args.op == "search":
-        result = op_search_conversations(mock_params)
+        result = op_search_conversations(query=args.query, org=args.org, limit=args.limit, **mock_params)
     elif args.op == "import":
-        result = op_import_conversation(mock_params)
+        result = op_import_conversation(org=args.org, limit=args.limit, offset=args.offset, **mock_params)
     else:
         result = {"error": f"unknown op: {args.op}"}
 

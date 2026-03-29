@@ -41,7 +41,6 @@ operations:
     python:
       module: ./logo-dev.py
       function: logo_url
-      params: true
       timeout: 5
 
   ticker_url:
@@ -56,7 +55,6 @@ operations:
     python:
       module: ./logo-dev.py
       function: ticker_url
-      params: true
       timeout: 5
 
   name_url:
@@ -71,7 +69,6 @@ operations:
     python:
       module: ./logo-dev.py
       function: name_url
-      params: true
       timeout: 5
 
   crypto_url:
@@ -86,5 +83,4 @@ operations:
     python:
       module: ./logo-dev.py
       function: crypto_url
-      params: true
       timeout: 5

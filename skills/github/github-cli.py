@@ -29,10 +29,8 @@ def run_gh(args):
     return proc.stdout
 
 
-def list_tasks(params):
-    repo = params["repo"]
-    state = params.get("state", "open")
-    limit = str(params.get("limit", 30))
+def list_tasks(*, repo, state="open", limit=30, **params):
+    limit = str(limit)
     output = run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
     data = json.loads(output)
     result = []
@@ -89,11 +87,9 @@ def _task_shape(item: dict, repo: str) -> dict:
     }
 
 
-def get_task(params):
-    repo = params.get("repo")
-    number = params.get("number")
-    if params.get("url"):
-        parsed = _parse_issue_or_pr_url(params["url"])
+def get_task(*, repo=None, number=None, url=None, **params):
+    if url:
+        parsed = _parse_issue_or_pr_url(url)
         if not parsed:
             fail("Could not parse owner/repo and number from GitHub issue or PR URL")
         repo, number = parsed
@@ -123,32 +119,25 @@ def get_task(params):
     return _task_shape(item, repo)
 
 
-def create_task(params):
-    repo = params["repo"]
-    title = params["title"]
-    body = params.get("body", "")
+def create_task(*, repo, title, body="", **params):
     url = run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
     return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
-def close_task(params):
-    repo = params["repo"]
-    number = str(params["number"])
+def close_task(*, repo, number, **params):
+    number = str(number)
     run_gh(["issue", "close", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
-def reopen_task(params):
-    repo = params["repo"]
-    number = str(params["number"])
+def reopen_task(*, repo, number, **params):
+    number = str(number)
     run_gh(["issue", "reopen", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
-def list_pull_requests(params):
-    repo = params["repo"]
-    state = params.get("state", "open")
-    limit = str(params.get("limit", 30))
+def list_pull_requests(*, repo, state="open", limit=30, **params):
+    limit = str(limit)
     output = run_gh(
         [
             "pr",
@@ -166,38 +155,37 @@ def list_pull_requests(params):
     return json.loads(output)
 
 
-def create_pull_request(params):
-    repo = params["repo"]
+def create_pull_request(*, repo, title, head, body="", base=None, **params):
     args = [
         "pr",
         "create",
         "--repo",
         repo,
         "--title",
-        params["title"],
+        title,
         "--body",
-        params.get("body", ""),
+        body,
         "--head",
-        params["head"],
+        head,
     ]
-    if params.get("base"):
-        args.extend(["--base", params["base"]])
+    if base:
+        args.extend(["--base", base])
     url = run_gh(args).strip()
     return {"url": url}
 
 
-def contents_endpoint(params):
-    endpoint = f"repos/{params['repo']}/contents"
-    path_part = params.get("path", "").strip("/")
+def contents_endpoint(repo, path=None, ref=None):
+    endpoint = f"repos/{repo}/contents"
+    path_part = (path or "").strip("/")
     if path_part:
       endpoint = f"{endpoint}/{path_part}"
-    if params.get("ref"):
-      endpoint = f"{endpoint}?ref={params['ref']}"
+    if ref:
+      endpoint = f"{endpoint}?ref={ref}"
     return endpoint
 
 
-def list_documents(params):
-    endpoint = contents_endpoint(params)
+def list_documents(*, repo, path=None, ref=None, **params):
+    endpoint = contents_endpoint(repo, path, ref)
     output = run_gh(["api", endpoint])
     data = json.loads(output)
     items = data if isinstance(data, list) else [data]
@@ -211,7 +199,7 @@ def list_documents(params):
                 "url": item.get("html_url"),
                 "size": item.get("size"),
                 "kind": item.get("type"),
-                "repository": params["repo"],
+                "repository": repo,
             }
         )
     return result
@@ -238,19 +226,15 @@ def _parse_blob_or_raw_url(url: str) -> tuple[str, str, str] | None:
     return None
 
 
-def read_document(params):
-    repo = params.get("repo")
-    path = params.get("path")
-    ref = params.get("ref")
-    if params.get("url"):
-        parsed = _parse_blob_or_raw_url(params["url"])
+def read_document(*, repo=None, path=None, ref=None, url=None, **params):
+    if url:
+        parsed = _parse_blob_or_raw_url(url)
         if not parsed:
             fail("Could not parse GitHub blob or raw.githubusercontent.com URL")
         repo, path, ref = parsed
     if not repo or not path:
         fail("repo and path are required (or pass url)")
-    params = {**params, "repo": repo, "path": path, "ref": ref}
-    endpoint = contents_endpoint(params)
+    endpoint = contents_endpoint(repo, path, ref)
     output = run_gh(["api", endpoint])
     data = json.loads(output)
     content = data.get("content")
@@ -263,12 +247,12 @@ def read_document(params):
         "url": data.get("html_url"),
         "size": data.get("size"),
         "kind": data.get("type"),
-        "repository": params["repo"],
+        "repository": repo,
         "content": content,
     }
 
 
-def status(params=None):
+def status(**params):
     output = run_gh(["status"])
     return {"output": output}
 
@@ -277,7 +261,8 @@ def main():
     if len(sys.argv) < 2:
         fail("Missing operation")
     operation = sys.argv[1]
-    params = (read_payload().get("params") or {})
+    payload = read_payload()
+    params = (payload.get("params") or {})
     operations = {
         "list_tasks": list_tasks,
         "get_task": get_task,
@@ -293,7 +278,7 @@ def main():
     handler = operations.get(operation)
     if not handler:
         fail(f"Unknown operation: {operation}")
-    print(json.dumps(handler(params)))
+    print(json.dumps(handler(**params)))
 
 
 if __name__ == "__main__":

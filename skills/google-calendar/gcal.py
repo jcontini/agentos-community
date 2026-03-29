@@ -115,7 +115,7 @@ def _extract_event_id_from_url(url):
 # ==============================================================================
 
 
-def list_calendars(**params):
+def list_calendars(*, account=None, **params):
     """List all calendars the user can see."""
     headers = _auth_header(params)
     resp = http.get(f"{BASE_URL}/users/me/calendarList", headers=headers, profile="api")

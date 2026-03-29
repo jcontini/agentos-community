@@ -60,9 +60,8 @@ def _client(cookie_header: str):
 
 
 
-def check_session(params: dict | None = None) -> dict:
+def check_session(**params) -> dict:
     """Verify Chase session and identify the account holder."""
-    params = params or {}
     cookie_header = (params.get("auth") or {}).get("cookies", "")
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
@@ -90,8 +89,7 @@ def check_session(params: dict | None = None) -> dict:
     return {"authenticated": False, "error": "no account tiles"}
 
 
-def get_accounts(params: dict | None = None) -> list | dict:
-    params = params or {}
+def get_accounts(**params) -> list | dict:
     cookie_header = require_cookies(params, "list_accounts")
 
     with _client(cookie_header) as client:
@@ -148,14 +146,9 @@ def _normalize_account(t: dict) -> dict:
     return result
 
 
-def get_transactions(params: dict | None = None) -> list | dict:
-    params = params or {}
+def get_transactions(*, account_id, limit=30, **params) -> list | dict:
     cookie_header = require_cookies(params, "list_transactions")
-    account_id = params.get("account_id", "")
-    limit = int(params.get("limit") or 30)
-
-    if not account_id:
-        return {"error": "account_id is required"}
+    limit = int(limit)
 
     query = urllib.parse.urlencode({
         "digital-account-identifier": account_id,
@@ -206,15 +199,11 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=30)
     args = parser.parse_args()
 
-    mock_params = {"auth": {"cookies": args.cookies}, "params": {}}
-    if args.account_id:
-        mock_params["params"]["account_id"] = args.account_id
-    if args.limit:
-        mock_params["params"]["limit"] = args.limit
+    auth = {"cookies": args.cookies}
 
     if args.op == "accounts":
-        result = get_accounts(mock_params)
+        result = get_accounts(auth=auth)
     else:
-        result = get_transactions(mock_params)
+        result = get_transactions(account_id=args.account_id, limit=args.limit, auth=auth)
 
     print(json.dumps(result, indent=2))

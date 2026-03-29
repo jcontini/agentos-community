@@ -56,7 +56,6 @@ operations:
     python:
       module: ./todoist.py
       function: list_all_tasks
-      params: true
       timeout: 30
 
   filter_task:
@@ -99,7 +98,6 @@ operations:
     python:
       module: ./todoist.py
       function: create_task
-      params: true
       timeout: 30
 
   update_task:
@@ -117,7 +115,6 @@ operations:
     python:
       module: ./todoist.py
       function: update_task
-      params: true
       timeout: 30
 
   complete_task:
@@ -161,7 +158,6 @@ operations:
     python:
       module: ./todoist.py
       function: list_projects
-      params: true
       timeout: 30
 
   list_tags:
@@ -172,7 +168,6 @@ operations:
     python:
       module: ./todoist.py
       function: list_tags
-      params: true
       timeout: 30
 
   move_task:
@@ -187,5 +182,4 @@ operations:
     python:
       module: ./todoist.py
       function: move_task
-      params: true
       timeout: 30
