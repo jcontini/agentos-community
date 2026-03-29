@@ -34,10 +34,6 @@ operations:
     python:
       module: ./granola.py
       function: op_list_meetings
-      args:
-        limit: '.params.limit // 20'
-        page: '.params.page // 0'
-        connection: '.connection'
       timeout: 30
 
   get_meeting:
@@ -50,9 +46,6 @@ operations:
     python:
       module: ./granola.py
       function: op_get_meeting
-      args:
-        id: 'if (.params.url // "") != "" then (.params.url | capture("/docs/(?<gid>[0-9a-fA-F-]{36})") | .gid) else .params.id end'
-        connection: '.connection'
       timeout: 60
 
   list_conversations:
@@ -64,9 +57,6 @@ operations:
     python:
       module: ./granola.py
       function: op_list_conversations
-      args:
-        document_id: .params.document_id
-        connection: '.connection'
       timeout: 30
 
   get_conversation:
@@ -78,7 +68,4 @@ operations:
     python:
       module: ./granola.py
       function: op_get_conversation
-      args:
-        thread_id: .params.thread_id
-        connection: '.connection'
       timeout: 30

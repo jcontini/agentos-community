@@ -125,7 +125,7 @@ def _ensure_api_running(connection: dict | None, cli_connection: dict | None = N
 
 # ── Status ────────────────────────────────────────────────────────────────────
 
-def op_status(connection: dict | None = None) -> dict:
+def op_status(connection: dict | None = None, **kwargs) -> dict:
     """Check if Ollama is running; start it if not. Returns running state + version."""
     binary = _binary(connection)
     base = DEFAULT_BASE_URL
@@ -188,6 +188,7 @@ def op_chat(
     temperature: float = 0,
     thinking: bool = False,
     connection: dict | None = None,
+    **kwargs,
 ) -> dict:
     conn_name = _connection_name(connection)
 
@@ -295,6 +296,7 @@ def op_generate(
     max_tokens: int = 4096,
     temperature: float = 0,
     connection: dict | None = None,
+    **kwargs,
 ) -> dict:
     _ensure_api_running(connection)
     base = _base_url(connection)
@@ -377,7 +379,7 @@ def _parse_list_text(text: str) -> list:
 
 # ── Pull model ────────────────────────────────────────────────────────────────
 
-def op_pull_model(model: str, connection: dict | None = None) -> dict:
+def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     conn_name = _connection_name(connection)
     if conn_name == "api":
         return _pull_via_api(model, connection)
@@ -416,7 +418,7 @@ def _pull_via_api(model: str, connection: dict | None) -> dict:
 
 # ── Delete model ──────────────────────────────────────────────────────────────
 
-def op_delete_model(model: str, connection: dict | None = None) -> dict:
+def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     conn_name = _connection_name(connection)
     if conn_name == "cli":
         return _delete_via_cli(model, connection)
@@ -447,7 +449,7 @@ def _delete_via_cli(model: str, connection: dict | None) -> dict:
 
 # ── Show model ────────────────────────────────────────────────────────────────
 
-def op_show_model(model: str, connection: dict | None = None) -> dict:
+def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     _ensure_api_running(connection)
     base = _base_url(connection)
     resp = _http_post(f"{base}/api/show", {"name": model}, timeout=15)

@@ -266,6 +266,15 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
         return _map_event(resp.json())
 
 
+def search_events(*, calendar_id="primary", days=30, past=False,
+                   query=None, limit=25, **params):
+    """Search events — thin wrapper over list_events with search-oriented defaults."""
+    return list_events(
+        calendar_id=calendar_id, days=days, past=past,
+        query=query, limit=limit, **params,
+    )
+
+
 def delete_event(*, id, calendar_id="primary", **params):
     """Delete a calendar event."""
     headers = _auth_header(params)

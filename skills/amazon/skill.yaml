@@ -62,11 +62,6 @@ operations:
     python:
       module: ./amazon.py
       function: search_suggestions
-      args:
-        query: .params.query
-        department: .params.department
-        personalized: '.params.personalized // false'
-        marketplace: .params.marketplace
       timeout: 15
     test:
       params:
@@ -102,11 +97,6 @@ operations:
     python:
       module: ./amazon.py
       function: search_products
-      args:
-        query: .params.query
-        department: .params.department
-        page: '.params.page // 1'
-        marketplace: .params.marketplace
       timeout: 30
     test:
       params:
@@ -134,9 +124,6 @@ operations:
     python:
       module: ./amazon.py
       function: get_product
-      args:
-        asin: .params.asin
-        marketplace: .params.marketplace
       timeout: 30
     test:
       params:

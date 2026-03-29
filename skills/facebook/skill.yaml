@@ -52,8 +52,4 @@ operations:
     python:
       module: ./facebook.py
       function: get_community
-      args:
-        group: '.params.group // null'
-        url: '.params.url // null'
-        include_members: '.params.include_members // true'
       timeout: 35

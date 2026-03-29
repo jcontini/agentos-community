@@ -131,7 +131,7 @@ operations:
     python:
       module: ./gmail.py
       function: send_email
-      params: true
+
       timeout: 30
 
   reply_email:
@@ -152,7 +152,7 @@ operations:
     python:
       module: ./gmail.py
       function: reply_email
-      params: true
+
       timeout: 30
 
   forward_email:
@@ -171,7 +171,7 @@ operations:
     python:
       module: ./gmail.py
       function: forward_email
-      params: true
+
       timeout: 30
 
   # --- Modifying ---
@@ -188,7 +188,7 @@ operations:
     python:
       module: ./gmail.py
       function: modify_email
-      params: true
+
       timeout: 30
 
   trash_email:
@@ -227,7 +227,7 @@ operations:
     python:
       module: ./gmail.py
       function: batch_modify_email
-      params: true
+
       timeout: 30
 
   batch_delete_email:
@@ -291,7 +291,7 @@ operations:
     python:
       module: ./gmail.py
       function: create_draft
-      params: true
+
       timeout: 30
 
   update_draft:
@@ -311,7 +311,7 @@ operations:
     python:
       module: ./gmail.py
       function: update_draft
-      params: true
+
       timeout: 30
 
   send_draft:
@@ -356,7 +356,7 @@ operations:
     python:
       module: ./gmail.py
       function: get_profile
-      params: true
+
       timeout: 15
 
   list_labels:
@@ -371,7 +371,7 @@ operations:
     python:
       module: ./gmail.py
       function: list_labels
-      params: true
+
       timeout: 15
 
   get_attachment:
@@ -421,7 +421,7 @@ operations:
     python:
       module: ./gmail.py
       function: get_history
-      params: true
+
       timeout: 30
 
   get_vacation:
@@ -436,7 +436,7 @@ operations:
     python:
       module: ./gmail.py
       function: get_vacation
-      params: true
+
       timeout: 15
 
   set_vacation:
@@ -458,7 +458,7 @@ operations:
     python:
       module: ./gmail.py
       function: set_vacation
-      params: true
+
       timeout: 15
 
   create_label:
@@ -476,7 +476,7 @@ operations:
     python:
       module: ./gmail.py
       function: create_label
-      params: true
+
       timeout: 15
 
   update_label:
@@ -494,7 +494,7 @@ operations:
     python:
       module: ./gmail.py
       function: update_label
-      params: true
+
       timeout: 15
 
   delete_label:
@@ -522,7 +522,7 @@ operations:
     python:
       module: ./gmail.py
       function: list_filters
-      params: true
+
       timeout: 15
 
   create_filter:
@@ -543,7 +543,7 @@ operations:
     python:
       module: ./gmail.py
       function: create_filter
-      params: true
+
       timeout: 15
 
   delete_filter:
@@ -572,5 +572,5 @@ operations:
     python:
       module: ./gmail.py
       function: list_send_as
-      params: true
+
       timeout: 15

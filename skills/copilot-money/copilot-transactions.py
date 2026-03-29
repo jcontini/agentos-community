@@ -31,7 +31,7 @@ def load_categories():
         return {}
 
 
-def fetch_transactions(account_id=None, limit=100, query=None):
+def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     categories = load_categories()
 
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)

@@ -67,8 +67,6 @@ operations:
     python:
       module: ./exa.py
       function: send_login_code
-      args:
-        email: .params.email
       timeout: 30
 
   verify_login_code:
@@ -85,9 +83,6 @@ operations:
     python:
       module: ./exa.py
       function: verify_login_code
-      args:
-        email: .params.email
-        code: .params.code
       timeout: 30
 
   store_session_cookies:
@@ -106,10 +101,6 @@ operations:
     python:
       module: ./exa.py
       function: store_session_cookies
-      args:
-        email: .params.email
-        session_token: .params.session_token
-        cf_clearance: .params.cf_clearance
       timeout: 30
 
   get_api_keys:
@@ -121,8 +112,6 @@ operations:
     python:
       module: ./exa.py
       function: get_api_keys
-      args:
-        cookies: .auth.cookies
       timeout: 30
 
   get_teams:
@@ -134,8 +123,6 @@ operations:
     python:
       module: ./exa.py
       function: get_teams
-      args:
-        cookies: .auth.cookies
       timeout: 30
 
   create_api_key:
@@ -151,9 +138,6 @@ operations:
     python:
       module: ./exa.py
       function: create_api_key
-      args:
-        cookies: .auth.cookies
-        name: .params.name
       timeout: 30
 
   logout:
@@ -165,8 +149,6 @@ operations:
     python:
       module: ./exa.py
       function: logout
-      args:
-        cookies: .auth.cookies
       timeout: 30
 
   # ─── Search & content ─────────────────────────────────────────────────────
@@ -188,12 +170,6 @@ operations:
     python:
       module: ./exa.py
       function: search
-      args:
-        query: .params.query
-        limit: .params.limit
-        category: .params.category
-        include_text: .params.include_text
-        auth: .auth
 
   read_webpage:
     description: Extract full content from a URL
@@ -208,6 +184,3 @@ operations:
     python:
       module: ./exa.py
       function: read_webpage
-      args:
-        url: .params.url
-        auth: .auth

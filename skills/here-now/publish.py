@@ -239,9 +239,10 @@ def op_create_website(
     title=None,
     description=None,
     ttl=None,
-    token=None,
+    **params,
 ):
     """Entry point for python: executor. Create a new publish."""
+    token = params.get("auth", {}).get("key", "")
     return do_publish(
         content=content,
         filename=filename,
@@ -259,9 +260,10 @@ def op_update_website(
     filename="index.html",
     content_type="text/html; charset=utf-8",
     title=None,
-    token=None,
+    **params,
 ):
     """Entry point for python: executor. Update an existing publish."""
+    token = params.get("auth", {}).get("key", "")
     return do_publish(
         content=content,
         filename=filename,

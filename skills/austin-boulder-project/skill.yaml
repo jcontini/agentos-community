@@ -35,10 +35,6 @@ operations:
     python:
       module: ./abp.py
       function: op_get_schedule
-      args:
-        location_id: .params.location_id
-        activity_ids: .params.activity_ids
-        date: .params.date
       timeout: 30
 
   book_class:
@@ -59,10 +55,6 @@ operations:
     python:
       module: ./abp.py
       function: op_book_class
-      args:
-        credentials: .auth.key
-        booking_instance_id: .params.booking_instance_id
-        num_guests: .params.num_guests
       timeout: 30
 
   cancel_booking:
@@ -82,10 +74,6 @@ operations:
     python:
       module: ./abp.py
       function: op_cancel_booking
-      args:
-        credentials: .auth.key
-        booking_instance_id: .params.booking_instance_id
-        reservation_id: .params.reservation_id
       timeout: 30
 
   get_my_memberships:
@@ -95,8 +83,6 @@ operations:
     python:
       module: ./abp.py
       function: op_get_my_memberships
-      args:
-        credentials: .auth.key
       timeout: 30
 
   get_my_passes:
@@ -106,6 +92,4 @@ operations:
     python:
       module: ./abp.py
       function: op_get_my_passes
-      args:
-        credentials: .auth.key
       timeout: 30

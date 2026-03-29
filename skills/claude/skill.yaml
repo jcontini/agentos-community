@@ -164,6 +164,4 @@ operations:
     python:
       module: ./claude-login.py
       function: op_extract_magic_link
-      args:
-        raw_email: .params.raw_email
       timeout: 10

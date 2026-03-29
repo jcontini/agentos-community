@@ -37,8 +37,6 @@ operations:
     python:
       module: ./cursor.py
       function: op_backfill_session
-      args:
-        workspace: .params.workspace
       timeout: 300
 
   get_session:
@@ -52,8 +50,6 @@ operations:
     python:
       module: ./cursor.py
       function: op_get_session
-      args:
-        id: .params.id
       timeout: 30
 
   # ── Research extraction ──────────────────────────────────────────────────────
@@ -96,9 +92,6 @@ operations:
     python:
       module: ./cursor.py
       function: install_mcp
-      args:
-        binary_path: .params.binary_path
-        client: '.params.client // "cursor"'
       timeout: 15
 
   uninstall_mcp:
@@ -116,6 +109,4 @@ operations:
     python:
       module: ./cursor.py
       function: uninstall_mcp
-      args:
-        client: '.params.client // "cursor"'
       timeout: 15

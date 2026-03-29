@@ -64,14 +64,6 @@ operations:
     python:
       module: ./publish.py
       function: op_create_website
-      args:
-        content: .params.content
-        filename: '.params.filename // "index.html"'
-        content_type: '.params.content_type // "text/html; charset=utf-8"'
-        title: .params.title
-        description: .params.description
-        ttl: .params.ttl
-        token: .auth.key
       timeout: 60
 
   update_website:
@@ -97,13 +89,6 @@ operations:
     python:
       module: ./publish.py
       function: op_update_website
-      args:
-        slug: .params.slug
-        content: .params.content
-        filename: '.params.filename // "index.html"'
-        content_type: '.params.content_type // "text/html; charset=utf-8"'
-        title: .params.title
-        token: .auth.key
       timeout: 60
 
   delete_website:

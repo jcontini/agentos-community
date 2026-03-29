@@ -154,9 +154,4 @@ operations:
     python:
       module: ./get-cookie.py
       function: op_cookie_get
-      args:
-        domain: .params.domain
-        names: .params.names
-        host: .params.host
-        profile: .params.profile
       timeout: 15

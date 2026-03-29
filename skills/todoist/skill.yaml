@@ -41,8 +41,6 @@ operations:
     python:
       module: ./todoist.py
       function: list_tasks
-      args:
-        query: '.params.query // "today | overdue | #Inbox"'
       timeout: 30
 
   list_all_tasks:
@@ -71,8 +69,6 @@ operations:
     python:
       module: ./todoist.py
       function: filter_task
-      args:
-        filter: .params.filter
       timeout: 30
 
   get_task:
@@ -86,9 +82,6 @@ operations:
     python:
       module: ./todoist.py
       function: get_task
-      args:
-        id: .params.id
-        url: .params.url
       timeout: 30
 
   create_task:
@@ -136,8 +129,6 @@ operations:
     python:
       module: ./todoist.py
       function: complete_task
-      args:
-        id: .params.id
       timeout: 30
 
   reopen_task:
@@ -149,8 +140,6 @@ operations:
     python:
       module: ./todoist.py
       function: reopen_task
-      args:
-        id: .params.id
       timeout: 30
 
   delete_task:
@@ -162,8 +151,6 @@ operations:
     python:
       module: ./todoist.py
       function: delete_task
-      args:
-        id: .params.id
       timeout: 30
 
   list_projects:

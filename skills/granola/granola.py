@@ -425,7 +425,7 @@ def _connection_mode(con: object | None) -> str:
     return "api"
 
 
-def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None) -> list:
+def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None, **_kwargs) -> list:
     """Entry point for python: executor. `connection` is injected by AgentOS (api vs cache)."""
     mode = _connection_mode(connection)
     if mode == "cache":
@@ -436,13 +436,24 @@ def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = N
     die(f"Unknown connection {mode!r}")
 
 
-def op_get_meeting(id: str, connection: dict | None = None) -> dict:
-    """API only — local cache does not include full transcripts."""
+def op_get_meeting(id: str = None, url: str = None, connection: dict | None = None, **_kwargs) -> dict:
+    """API only — local cache does not include full transcripts.
+
+    Accepts either a direct `id` (UUID) or a Granola `url`
+    (e.g. https://app.granola.ai/docs/<uuid>). If both are given, `url` wins.
+    """
+    doc_id = id
+    if url:
+        m = re.search(r"/docs/([0-9a-fA-F-]{36})", url)
+        if m:
+            doc_id = m.group(1)
+    if not doc_id:
+        die("Either id or url is required for get_meeting")
     token = get_token(connection)
-    return cmd_get(token, id, connection)
+    return cmd_get(token, doc_id, connection)
 
 
-def op_list_conversations(document_id: str, connection: dict | None = None) -> list:
+def op_list_conversations(document_id: str, connection: dict | None = None, **_kwargs) -> list:
     mode = _connection_mode(connection)
     if mode == "cache":
         return cmd_list_conversations_from_cache(document_id, connection)
@@ -452,7 +463,7 @@ def op_list_conversations(document_id: str, connection: dict | None = None) -> l
     die(f"Unknown connection {mode!r}")
 
 
-def op_get_conversation(thread_id: str, connection: dict | None = None) -> dict:
+def op_get_conversation(thread_id: str, connection: dict | None = None, **_kwargs) -> dict:
     mode = _connection_mode(connection)
     if mode == "cache":
         return cmd_get_conversation_from_cache(thread_id, connection)

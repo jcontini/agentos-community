@@ -57,14 +57,6 @@ operations:
     python:
       module: ./gcal.py
       function: list_events
-      args:
-        calendar_id: '.params.calendar_id // "primary"'
-        days: '.params.days // 7'
-        past: '.params.past // false'
-        query: '.params.query'
-        limit: '.params.limit // 50'
-        page_token: '.params.page_token'
-        exclude_all_day: '.params.exclude_all_day // false'
       timeout: 30
 
   get_event:
@@ -79,10 +71,6 @@ operations:
     python:
       module: ./gcal.py
       function: get_event
-      args:
-        id: .params.id
-        url: .params.url
-        calendar_id: '.params.calendar_id // "primary"'
       timeout: 15
 
   search_events:
@@ -98,13 +86,7 @@ operations:
       limit: { type: integer, description: "Max results (default: 25)" }
     python:
       module: ./gcal.py
-      function: list_events
-      args:
-        calendar_id: '.params.calendar_id // "primary"'
-        days: '.params.days // 30'
-        past: '.params.past // false'
-        query: '.params.query'
-        limit: '.params.limit // 25'
+      function: search_events
       timeout: 30
 
   # --- Writing ---
@@ -162,7 +144,4 @@ operations:
     python:
       module: ./gcal.py
       function: delete_event
-      args:
-        id: .params.id
-        calendar_id: '.params.calendar_id // "primary"'
       timeout: 15

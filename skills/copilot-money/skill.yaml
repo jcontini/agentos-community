@@ -27,9 +27,6 @@ operations:
     python:
       module: ./copilot-transactions.py
       function: fetch_transactions
-      args:
-        account_id: .params.account_id
-        limit: '.params.limit // 100'
 
   search_transactions:
     description: Search transactions by merchant name or notes, with category tags (emoji + color)
@@ -40,6 +37,3 @@ operations:
     python:
       module: ./copilot-transactions.py
       function: fetch_transactions
-      args:
-        query: .params.query
-        limit: '.params.limit // 100'

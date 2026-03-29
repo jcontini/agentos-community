@@ -32,8 +32,6 @@ operations:
     python:
       module: ./ollama.py
       function: op_status
-      args:
-        connection: '.connection'
       timeout: 30
 
   # ── Inference ──────────────────────────────────────────────────────────────
@@ -81,15 +79,6 @@ operations:
     python:
       module: ./ollama.py
       function: op_chat
-      args:
-        model: .params.model
-        messages: .params.messages
-        tools: '.params.tools // []'
-        system: '.params.system // null'
-        max_tokens: '.params.max_tokens // 4096'
-        temperature: '.params.temperature // 0'
-        thinking: '.params.thinking // false'
-        connection: '.connection'
       timeout: 300
 
   generate:
@@ -119,13 +108,6 @@ operations:
     python:
       module: ./ollama.py
       function: op_generate
-      args:
-        model: .params.model
-        prompt: .params.prompt
-        system: '.params.system // null'
-        max_tokens: '.params.max_tokens // 4096'
-        temperature: '.params.temperature // 0'
-        connection: '.connection'
       timeout: 300
 
   # ── Model management ───────────────────────────────────────────────────────
@@ -138,8 +120,6 @@ operations:
     python:
       module: ./ollama.py
       function: list_models
-      args:
-        connection: .connection
       timeout: 15
 
   list_models_cli:
@@ -151,8 +131,6 @@ operations:
     python:
       module: ./ollama.py
       function: list_models_cli
-      args:
-        connection: '.connection'
       timeout: 15
 
   pull_model:
@@ -173,9 +151,6 @@ operations:
     python:
       module: ./ollama.py
       function: op_pull_model
-      args:
-        model: .params.model
-        connection: '.connection'
       timeout: 600
 
   delete_model:
@@ -193,9 +168,6 @@ operations:
     python:
       module: ./ollama.py
       function: op_delete_model
-      args:
-        model: .params.model
-        connection: '.connection'
       timeout: 30
 
   ps:
@@ -207,8 +179,6 @@ operations:
     python:
       module: ./ollama.py
       function: ps
-      args:
-        connection: .connection
       timeout: 15
 
 
@@ -234,7 +204,4 @@ operations:
     python:
       module: ./ollama.py
       function: op_show_model
-      args:
-        model: .params.model
-        connection: '.connection'
       timeout: 15

@@ -35,6 +35,4 @@ operations:
     python:
       module: ./curl.py
       function: read_webpage
-      args:
-        url: .params.url
       timeout: 35

@@ -491,6 +491,7 @@ def op_get_schedule(
     location_id: int = AUSTIN_SPRINGDALE["id"],
     activity_ids: str = None,
     date: str = None,
+    **params,
 ) -> list[dict]:
     """Get today's class schedule as entity-shaped dicts."""
     if isinstance(activity_ids, str):
@@ -508,34 +509,38 @@ def op_get_schedule(
 
 
 def op_book_class(
-    credentials: str,
     booking_instance_id: int,
     num_guests: int = 0,
+    **params,
 ) -> dict:
     """Book a class using stored credentials."""
+    credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
     result = book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
     return {"ok": True, "message": "Booked successfully", "result": result}
 
 
 def op_cancel_booking(
-    credentials: str,
     booking_instance_id: int,
     reservation_id: int,
+    **params,
 ) -> dict:
     """Cancel a class reservation."""
+    credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
     result = cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
     return {"ok": True, "message": "Cancelled successfully", "result": result}
 
 
-def op_get_my_memberships(credentials: str) -> list[dict]:
+def op_get_my_memberships(**params) -> list[dict]:
     """List active memberships for the logged-in account."""
+    credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
     return get_my_memberships(id_token)
 
 
-def op_get_my_passes(credentials: str) -> list[dict]:
+def op_get_my_passes(**params) -> list[dict]:
     """List active class passes for the logged-in account."""
+    credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
     return get_my_passes(id_token)

@@ -296,6 +296,8 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     so exa.search works immediately after.
     """
     if not cookies:
+        cookies = params.get("auth", {}).get("cookies")
+    if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
     with _dashboard_client(cookies) as client:
@@ -347,6 +349,8 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
 def get_teams(*, cookies: dict = None, **params) -> dict:
     """Get team info including rate limits, credits, and usage from the dashboard."""
     if not cookies:
+        cookies = params.get("auth", {}).get("cookies")
+    if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
     with _dashboard_client(cookies) as client:
@@ -383,6 +387,8 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
 
 def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> dict:
     """Create a new API key on the Exa dashboard and store it via __secrets__."""
+    if not cookies:
+        cookies = params.get("auth", {}).get("cookies")
     if not cookies:
         return {"__result__": {"error": "No dashboard cookies — run send_login_code + store_session_cookies first"}}
 
@@ -487,6 +493,8 @@ def logout(*, cookies: dict = None, **params) -> dict:
     Hits NextAuth's signout endpoint to invalidate the server-side session,
     then returns a signal to clear the stored credentials.
     """
+    if not cookies:
+        cookies = params.get("auth", {}).get("cookies")
     if not cookies:
         return {"__result__": {"status": "already_logged_out"}}
 
