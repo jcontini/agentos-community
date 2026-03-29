@@ -72,6 +72,8 @@ def client(
     skip_cookies: list[str] | None = None,
     timeout: float = 30.0,
     http2: bool = True,
+    retry: int = 0,
+    retry_delay: float = 2.0,
 ) -> HttpSession:
     """Create an HTTP session with cookie jar tracking.
 
