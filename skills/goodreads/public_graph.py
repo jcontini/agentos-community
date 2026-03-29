@@ -7,7 +7,7 @@ import sys
 import time
 from typing import Any
 
-from agentos import http, shell, molt, clean_html, parse_int, iso_from_ms
+from agentos import http, molt, clean_html, parse_int, iso_from_ms
 
 
 USER_AGENT = "Mozilla/5.0 (compatible; AgentOS/1.0)"
@@ -172,70 +172,6 @@ def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
     return None
 
 
-def discover_via_browser(page_url: str) -> dict[str, Any] | None:
-    """Fallback: launch a stealth headless browser and capture AppSync traffic."""
-    script = r"""
-const { chromium } = require("playwright");
-(async () => {
-  const targetUrl = process.argv[1];
-  const pattern = /appsync-api.*\.amazonaws\.com\/graphql/;
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--disable-blink-features=AutomationControlled"],
-  });
-  const context = await browser.newContext({
-    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    viewport: { width: 1440, height: 900 },
-    locale: "en-US",
-    timezoneId: "America/New_York",
-  });
-  const page = await context.newPage();
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "webdriver", { get: () => false });
-  });
-  const captured = [];
-  page.on("request", (req) => {
-    if (!pattern.test(req.url())) return;
-    captured.push({ url: req.url(), headers: req.headers() });
-  });
-  try {
-    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-  } catch {}
-  await page.waitForTimeout(15000);
-  await browser.close();
-  console.log(JSON.stringify(captured));
-})().catch((e) => {
-  console.error(e && e.stack ? e.stack : String(e));
-  process.exit(1);
-});
-""".strip()
-
-    try:
-        result = shell.run("node", ["-e", script, page_url], timeout=90)
-    except Exception:
-        return None
-
-    if result["exit_code"] != 0 or not result["stdout"].strip():
-        return None
-
-    try:
-        captured = json.loads(result["stdout"])
-    except json.JSONDecodeError:
-        return None
-
-    if not isinstance(captured, list) or not captured:
-        return None
-
-    first = captured[0] or {}
-    headers = first.get("headers") or {}
-    api_key = headers.get("x-api-key") or headers.get("X-Api-Key") or ""
-    endpoint = first.get("url")
-    if not endpoint or not api_key:
-        return None
-
-    return _make_runtime(endpoint, api_key, "browser_network_capture")
-
-
 def discover_runtime(
     *,
     html_text: str | None = None,
@@ -266,12 +202,8 @@ def discover_runtime(
             runtime = discover_from_bundle(html_text)
             if runtime:
                 return runtime, False
-        except (HTTPError, URLError, OSError):
+        except Exception:
             pass
-
-        runtime = discover_via_browser(page_url)
-        if runtime:
-            return runtime, False
 
     return _make_runtime(
         FALLBACK_GRAPHQL_ENDPOINT,
