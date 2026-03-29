@@ -52,7 +52,7 @@ operations:
       identifier: string
       display: string
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: check_session
       timeout: 15
     test:
@@ -81,7 +81,7 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID (e.g., '27117656')" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_get_person
       timeout: 15
     test:
@@ -96,7 +96,7 @@ operations:
       query: { type: string, required: true, description: "Name to search" }
       limit: { type: integer, default: 10, description: "Max results (default 10)" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_search_people
       timeout: 15
     test:
@@ -109,7 +109,7 @@ operations:
     params:
       email: { type: string, required: true, description: "Email address to search for" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_resolve_email
       timeout: 15
     test:
@@ -123,7 +123,7 @@ operations:
       user_id: { type: string, required: true, description: "User ID" }
       page: { type: integer, default: 0, description: "Page number (0 = all pages, 30 per page)" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_friends
       timeout: 60
     test:
@@ -143,7 +143,7 @@ operations:
       sort: { type: string, default: "date_added", description: "Sort by: date_added, rating, title, author" }
       page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_books
       timeout: 60
     test:
@@ -274,7 +274,7 @@ operations:
       sort: { type: string, default: "date", description: "Sort by: date, rating, title" }
       page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_reviews
       timeout: 60
     test:
@@ -291,7 +291,7 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_shelves
       timeout: 15
     test:
@@ -306,7 +306,7 @@ operations:
       shelf_name: { type: string, required: true, description: "Shelf name (e.g., 'read', 'currently-reading', 'to-read')" }
       page: { type: integer, default: 0, description: "Page number (0 = all pages, 25 per page)" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_shelf_books
       timeout: 60
     test:
@@ -321,7 +321,7 @@ operations:
     returns: group[]
     connection: web
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_groups
       timeout: 30
     test:
@@ -334,7 +334,7 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_following
       timeout: 15
     test:
@@ -347,7 +347,7 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_followers
       timeout: 15
     test:
@@ -360,7 +360,7 @@ operations:
     params:
       user_id: { type: string, required: true, description: "User ID" }
     python:
-      module: ./web_scraper.py
+      module: ./goodreads_web.py
       function: run_list_quotes
       timeout: 15
     test:

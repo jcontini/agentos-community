@@ -26,7 +26,8 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from agentos import molt, parse_int, http, get_cookies, require_cookies
-from bs4 import BeautifulSoup, Tag
+from lxml import html as lhtml
+from lxml.html import HtmlElement
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MARKETPLACE & DEPARTMENT REGISTRIES
@@ -235,41 +236,41 @@ def search_products(
 
 
 def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
-    soup = _soup(body)
+    soup = _parse(body)
     products: list[dict[str, Any]] = []
 
-    for card in soup.select('div[data-asin][data-component-type="s-search-result"]'):
+    for card in soup.cssselect('div[data-asin][data-component-type="s-search-result"]'):
         asin = card.get("data-asin", "")
         if not asin or not re.match(r'^[A-Z0-9]{10}$', asin):
             continue
 
         # Title: h2 aria-label or h2 > span text
-        h2 = card.select_one("h2")
+        h2 = (card.cssselect("h2") or [None])[0]
         title = None
-        if h2:
+        if h2 is not None:
             title = h2.get("aria-label") or _text(h2)
         title = molt(title)
         if not title:
             continue
 
         # Price
-        price_el = card.select_one(".a-price .a-offscreen")
+        price_el = (card.cssselect(".a-price .a-offscreen") or [None])[0]
         price = _text(price_el)
 
         # Rating
-        rating_el = card.select_one(".a-icon-alt")
+        rating_el = (card.cssselect(".a-icon-alt") or [None])[0]
         rating = _parse_rating(_text(rating_el))
 
         # Rating count
-        count_el = card.select_one("[class*='s-underline-text']")
+        count_el = (card.cssselect("[class*='s-underline-text']") or [None])[0]
         ratings_count = parse_int(_text(count_el))
 
         # Image
-        img_el = card.select_one("img.s-image")
-        image = img_el.get("src") if img_el else None
+        img_el = (card.cssselect("img.s-image") or [None])[0]
+        image = img_el.get("src") if img_el is not None else None
 
-        prime = bool(card.select_one('[aria-label="Amazon Prime"]')) or bool(card.select_one(".s-prime"))
-        sponsored = bool(card.select_one(".AdHolder"))
+        prime = bool(card.cssselect('[aria-label="Amazon Prime"]')) or bool(card.cssselect(".s-prime"))
+        sponsored = bool(card.cssselect(".AdHolder"))
 
         products.append({
             "asin": asin,
@@ -317,40 +318,40 @@ def get_product(
 
 
 def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
-    soup = _soup(body)
+    soup = _parse(body)
 
-    title = molt(_text(soup.select_one("#productTitle")))
+    title = molt(_text((soup.cssselect("#productTitle") or [None])[0]))
 
     # Price: core price display → any offscreen price
-    price_el = soup.select_one("#corePrice_feature_div .a-offscreen, #corePriceDisplay_desktop_feature_div .a-offscreen")
+    price_el = (soup.cssselect("#corePrice_feature_div .a-offscreen, #corePriceDisplay_desktop_feature_div .a-offscreen") or [None])[0]
     if not price_el:
-        price_el = soup.select_one(".a-offscreen")
+        price_el = (soup.cssselect(".a-offscreen") or [None])[0]
     price = _text(price_el)
 
-    rating = _parse_rating(_text(soup.select_one("#acrPopover .a-icon-alt")))
-    ratings_count = parse_int(_text(soup.select_one("#acrCustomerReviewText")))
+    rating = _parse_rating(_text((soup.cssselect("#acrPopover .a-icon-alt") or [None])[0]))
+    ratings_count = parse_int(_text((soup.cssselect("#acrCustomerReviewText") or [None])[0]))
 
-    brand_el = soup.select_one("#bylineInfo")
+    brand_el = (soup.cssselect("#bylineInfo") or [None])[0]
     brand = molt(_text(brand_el))
     if brand:
         brand = re.sub(r"^Visit the\s+", "", brand, flags=re.I)
         brand = re.sub(r"\s+Store$", "", brand, flags=re.I)
         brand = re.sub(r"^Brand:\s*", "", brand, flags=re.I)
 
-    avail_el = soup.select_one("#availability span")
+    avail_el = (soup.cssselect("#availability span") or [None])[0]
     availability = molt(_text(avail_el))
 
-    img_el = soup.select_one("#landingImage")
-    main_image = img_el.get("src") if img_el else None
+    img_el = (soup.cssselect("#landingImage") or [None])[0]
+    main_image = img_el.get("src") if img_el is not None else None
 
-    desc_el = soup.select_one("#productDescription")
+    desc_el = (soup.cssselect("#productDescription") or [None])[0]
     description = molt(_text(desc_el))
     if not description:
-        bullets_el = soup.select_one("#feature-bullets")
+        bullets_el = (soup.cssselect("#feature-bullets") or [None])[0]
         description = molt(_text(bullets_el))
 
     # Breadcrumb categories
-    categories = [molt(_text(a)) for a in soup.select("#wayfinding-breadcrumbs_feature_div a") if molt(_text(a))]
+    categories = [molt(_text(a)) for a in soup.cssselect("#wayfinding-breadcrumbs_feature_div a") if molt(_text(a))]
 
     # Images from ImageBlockATF — extract the JSON array after 'initial':
     images: list[str] = []
@@ -397,7 +398,7 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ORDER HISTORY — authenticated HTML scraping with BeautifulSoup
+# ORDER HISTORY — authenticated HTML scraping with lxml
 # ═══════════════════════════════════════════════════════════════════════════════
 
 BASE = "https://www.amazon.com"
@@ -422,30 +423,30 @@ def _is_login_redirect(resp: dict, body: str) -> bool:
     return "ap_email" in body[:3000] or "signIn" in body[:3000]
 
 
-def _soup(body: str) -> BeautifulSoup:
-    return BeautifulSoup(body, "html.parser")
+def _parse(body: str) -> HtmlElement:
+    return lhtml.fromstring(body)
 
 
-def _select(tag: Tag | BeautifulSoup, selectors: list[str]) -> list[Tag]:
+def _select(tag: HtmlElement, selectors: list[str]) -> list[HtmlElement]:
     for sel in selectors:
-        result = tag.select(sel)
+        result = tag.cssselect(sel)
         if result:
             return result
     return []
 
 
-def _select_one(tag: Tag | BeautifulSoup, selectors: list[str]) -> Tag | None:
+def _select_one(tag: HtmlElement, selectors: list[str]) -> HtmlElement | None:
     for sel in selectors:
-        result = tag.select_one(sel)
+        result = tag.cssselect(sel)
         if result:
-            return result
+            return result[0]
     return None
 
 
-def _text(tag: Tag | None) -> str | None:
+def _text(tag: HtmlElement | None) -> str | None:
     if tag is None:
         return None
-    t = tag.get_text(strip=True)
+    t = tag.text_content().strip()
     return t if t else None
 
 
@@ -454,9 +455,12 @@ def _text(tag: Tag | None) -> str | None:
 ORDER_CARD_SEL = ["div.order-card", "div.order"]
 ORDER_ID_SEL = [
     "[data-component='orderId']",
-    ".order-date-invoice-item :is(bdi, span)[dir='ltr']",
-    ".yohtmlc-order-id :is(bdi, span)[dir='ltr']",
-    ":is(bdi, span)[dir='ltr']",
+    ".order-date-invoice-item bdi[dir='ltr']",
+    ".order-date-invoice-item span[dir='ltr']",
+    ".yohtmlc-order-id bdi[dir='ltr']",
+    ".yohtmlc-order-id span[dir='ltr']",
+    "bdi[dir='ltr']",
+    "span[dir='ltr']",
 ]
 ORDER_DATE_SEL = [
     "[data-component='orderDate']",
@@ -470,7 +474,7 @@ ORDER_TOTAL_SEL = [
 ]
 ITEM_SEL = [
     "[data-component='purchasedItems'] .a-fixed-left-grid",
-    "div:has(> div.yohtmlc-item)",
+    "div.yohtmlc-item",
     ".item-box",
 ]
 ITEM_TITLE_SEL = [
@@ -532,17 +536,17 @@ def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
 def _parse_order_history(
     body: str, *, page: int = 1, order_filter: str = "last30",
 ) -> dict[str, Any]:
-    soup = _soup(body)
+    soup = _parse(body)
     orders: list[dict[str, Any]] = []
 
     total_orders = None
-    num_el = soup.select_one(".num-orders")
-    if num_el:
+    num_el = (soup.cssselect(".num-orders") or [None])[0]
+    if num_el is not None:
         m = re.search(r"(\d+)", _text(num_el) or "")
         if m:
             total_orders = int(m.group(1))
 
-    has_next = bool(soup.select("ul.a-pagination li.a-last a"))
+    has_next = bool(soup.cssselect("ul.a-pagination li.a-last a"))
 
     order_cards = _select(soup, ORDER_CARD_SEL)
 
@@ -556,7 +560,7 @@ def _parse_order_history(
 
         order_date = None
         total = None
-        for li in card.select("li.order-header__header-list-item"):
+        for li in card.cssselect("li.order-header__header-list-item"):
             li_text = _text(li) or ""
             if "Order placed" in li_text:
                 order_date = re.sub(r"^.*?Order [Pp]laced\s*", "", li_text).strip()
@@ -620,24 +624,25 @@ def _parse_order_history(
     }
 
 
-def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str, Any]]:
+def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     seen_asins: set[str] = set()
 
     if detail_page:
-        for title_el in card.select("[data-component='itemTitle']"):
+        for title_el in card.cssselect("[data-component='itemTitle']"):
             title = molt(_text(title_el))
 
             container = title_el
             for _ in range(10):
-                container = container.parent
-                if not container or not hasattr(container, "get"):
+                container = container.getparent()
+                if container is None or not hasattr(container, "get"):
                     break
-                if "a-fixed-left-grid" in (container.get("class") or []):
+                if "a-fixed-left-grid" in (container.get("class") or "").split():
                     break
 
+            ctx = container if container is not None else title_el.getparent()
             asin = None
-            for a in (container or title_el.parent).select("a[href]"):
+            for a in ctx.cssselect("a[href]"):
                 m = re.search(r"/dp/([A-Z0-9]{10})", a.get("href", ""))
                 if m:
                     asin = m.group(1)
@@ -647,15 +652,15 @@ def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str
                 continue
             seen_asins.add(asin)
 
-            price_tag = _select_one(container or title_el.parent, ITEM_PRICE_SEL)
+            price_tag = _select_one(ctx, ITEM_PRICE_SEL)
             price = _text(price_tag)
 
-            qty_tag = _select_one(container or title_el.parent, ITEM_QTY_SEL)
+            qty_tag = _select_one(ctx, ITEM_QTY_SEL)
             qty_text = _text(qty_tag)
             quantity = int(qty_text) if qty_text and qty_text.isdigit() else 1
 
-            img_tag = (container or title_el.parent).select_one("img")
-            image_url = img_tag.get("src") if img_tag else None
+            img_tag = (ctx.cssselect("img") or [None])[0]
+            image_url = img_tag.get("src") if img_tag is not None else None
 
             items.append({
                 "asin": asin,
@@ -701,19 +706,19 @@ def _parse_order_items(card: Tag, *, detail_page: bool = False) -> list[dict[str
     if not items:
         asin_titles: dict[str, str | None] = {}
         asin_images: dict[str, str | None] = {}
-        for a in card.select("a[href]"):
+        for a in card.cssselect("a[href]"):
             href = a.get("href", "")
             m = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", str(href))
             if not m:
                 continue
             asin = m.group(1)
-            text = a.get_text(strip=True)
+            text = a.text_content().strip()
             if text and asin not in asin_titles:
                 asin_titles[asin] = text
             elif asin not in asin_titles:
                 asin_titles.setdefault(asin, None)
-            img = a.select_one("img")
-            if img and asin not in asin_images:
+            img = (a.cssselect("img") or [None])[0]
+            if img is not None and asin not in asin_images:
                 asin_images[asin] = str(img.get("src", ""))
 
         for asin, title in asin_titles.items():
@@ -754,18 +759,18 @@ def buy_again(**params) -> list[dict[str, Any]]:
 
 
 def _parse_buy_again(body: str) -> list[dict[str, Any]]:
-    soup = _soup(body)
+    soup = _parse(body)
     products: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for el in soup.select("[data-asin]"):
+    for el in soup.cssselect("[data-asin]"):
         asin = el.get("data-asin", "")
         if not asin or not re.match(r"^[A-Z0-9]{10}$", asin) or asin in seen:
             continue
 
         title_el = (
-            el.select_one("span.a-truncate-full")
-            or el.select_one("[data-component='title']")
+            (el.cssselect("span.a-truncate-full") or [None])[0]
+            or (el.cssselect("[data-component='title']") or [None])[0]
         )
         title = molt(_text(title_el))
         if not title:
@@ -773,15 +778,15 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
 
         seen.add(asin)
 
-        price_el = el.select_one(".a-price .a-offscreen")
+        price_el = (el.cssselect(".a-price .a-offscreen") or [None])[0]
         price = _text(price_el)
 
-        img = el.select_one("img")
-        image_url = str(img.get("src", "")) if img else None
+        img = (el.cssselect("img") or [None])[0]
+        image_url = str(img.get("src", "")) if img is not None else None
 
-        prime = bool(el.select_one("i.a-icon-prime"))
+        prime = bool(el.cssselect("i.a-icon-prime"))
 
-        badge_el = el.select_one(".a-badge-text")
+        badge_el = (el.cssselect(".a-badge-text") or [None])[0]
         badge = _text(badge_el)
 
         products.append({
@@ -815,10 +820,10 @@ def subscriptions(**params) -> dict[str, Any]:
                 "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
             )
 
-        mgmt_soup = _soup(mgmt_resp["body"])
+        mgmt_soup = _parse(mgmt_resp["body"])
 
         ship_id = None
-        for tab in mgmt_soup.select("[role='tab']"):
+        for tab in mgmt_soup.cssselect("[role='tab']"):
             href = tab.get("href", "")
             m = re.search(r"shipId=([^&]+)", href)
             if m:
@@ -826,10 +831,10 @@ def subscriptions(**params) -> dict[str, Any]:
                 break
 
         deliveries: list[dict[str, Any]] = []
-        for card in mgmt_soup.select(".delivery-card"):
-            date_el = card.select_one("h2")
-            date_text = _text(date_el) if date_el else None
-            full_text = card.get_text(" ", strip=True)
+        for card in mgmt_soup.cssselect(".delivery-card"):
+            date_el = (card.cssselect("h2") or [None])[0]
+            date_text = _text(date_el) if date_el is not None else None
+            full_text = " ".join(card.text_content().split())
 
             edit_deadline = None
             m = re.search(r"Last day to edit.*?:\s*(\S.*?)(?:\s*You|$)", full_text)
@@ -849,8 +854,8 @@ def subscriptions(**params) -> dict[str, Any]:
                 })
 
         savings = None
-        savings_el = mgmt_soup.select_one("h1")
-        if savings_el:
+        savings_el = (mgmt_soup.cssselect("h1") or [None])[0]
+        if savings_el is not None:
             m = re.search(r"\$([\d,.]+)", _text(savings_el) or "")
             if m:
                 savings = f"${m.group(1)}"
@@ -882,21 +887,21 @@ def subscriptions(**params) -> dict[str, Any]:
 
 
 def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
-    soup = _soup(body)
+    soup = _parse(body)
     items: list[dict[str, Any]] = []
 
-    for el in soup.select("[data-subscription-id]"):
+    for el in soup.cssselect("[data-subscription-id]"):
         sub_id = el.get("data-subscription-id", "")
 
-        title_el = el.select_one("span.a-truncate-full")
+        title_el = (el.cssselect("span.a-truncate-full") or [None])[0]
         title = molt(_text(title_el))
         if not title:
             continue
 
         # Image: use data-a-hires or data-src (src is a placeholder pixel)
-        img = el.select_one("img.sns-product-image, img")
+        img = (el.cssselect("img.sns-product-image, img") or [None])[0]
         image_url = None
-        if img:
+        if img is not None:
             image_url = (
                 img.get("data-a-hires")
                 or img.get("data-src")
@@ -907,7 +912,7 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
 
         # Next delivery date
         next_delivery = None
-        for div in el.select("div, span"):
+        for div in el.cssselect("div, span"):
             text = _text(div) or ""
             m = re.search(
                 r"Next delivery by\s*(.+)",
@@ -917,7 +922,7 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
                 next_delivery = m.group(1).strip()
                 break
         if not next_delivery:
-            for span in el.select("span, div"):
+            for span in el.cssselect("span, div"):
                 text = _text(span) or ""
                 if re.match(r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2}", text) and len(text) < 30:
                     next_delivery = text
@@ -925,20 +930,20 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
 
         # Frequency (e.g., "1 unit every 3 months")
         frequency = None
-        for a in el.select("a.consumption-pattern-ingress-text, span.a-declarative a"):
+        for a in el.cssselect("a.consumption-pattern-ingress-text, span.a-declarative a"):
             text = _text(a) or ""
             if re.search(r"every\s+\d+", text, re.I):
                 frequency = text
                 break
         if not frequency:
-            for span in el.select("span, div"):
+            for span in el.cssselect("span, div"):
                 text = _text(span) or ""
                 if re.search(r"\d+\s+unit.*every", text, re.I):
                     frequency = text
                     break
 
         # Price (sometimes shown)
-        price_el = el.select_one(".a-price .a-offscreen")
+        price_el = (el.cssselect(".a-price .a-offscreen") or [None])[0]
         price = _text(price_el)
 
         items.append({
@@ -977,7 +982,7 @@ def get_order(*, order_id, **params) -> dict[str, Any]:
 
 
 def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
-    soup = _soup(body)
+    soup = _parse(body)
 
     container = _select_one(soup, ["div#orderDetails", "div#ordersContainer"]) or soup
 
@@ -992,7 +997,7 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
     status = None
     for sel_list in [SHIPMENT_STATUS_SEL, ["h4"]]:
         for sel in sel_list:
-            for el in container.select(sel):
+            for el in container.cssselect(sel):
                 text = _text(el) or ""
                 if re.search(r"Deliver|Arriving|Shipped|Return|Cancel", text, re.I):
                     status = re.sub(r"(Delivered|Arriving)", r"\1 ", text).strip()
@@ -1019,8 +1024,8 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
     ])
     if addr_tag:
         parts = []
-        for li in addr_tag.select("li .a-list-item"):
-            text = li.get_text(separator=", ", strip=True)
+        for li in addr_tag.cssselect("li .a-list-item"):
+            text = ", ".join(t.strip() for t in li.itertext() if t.strip())
             if text:
                 parts.append(text)
         if parts:
@@ -1030,19 +1035,19 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
             shipping_address = re.sub(r"^Ship\s*to\s*", "", raw_addr).strip()
 
     # Tracking link
-    track_tag = container.select_one("a[href*='track']")
+    track_tag = (container.cssselect("a[href*='track']") or [None])[0]
     tracking_url = None
-    if track_tag:
+    if track_tag is not None:
         href = track_tag.get("href", "")
         tracking_url = href if href.startswith("http") else f"{BASE}{href}"
 
     # Order summary from #od-subtotals
     summary: dict[str, str | None] = {}
-    subtotals = container.select_one("#od-subtotals")
-    if subtotals:
-        for row in subtotals.select(".a-row"):
-            label_el = row.select_one(".a-column.a-span7")
-            value_el = row.select_one(".a-column.a-span5")
+    subtotals = (container.cssselect("#od-subtotals") or [None])[0]
+    if subtotals is not None:
+        for row in subtotals.cssselect(".a-row"):
+            label_el = (row.cssselect(".a-column.a-span7") or [None])[0]
+            value_el = (row.cssselect(".a-column.a-span5") or [None])[0]
             if label_el and value_el:
                 label = (_text(label_el) or "").rstrip(":").strip()
                 value = _text(value_el)
@@ -1141,11 +1146,11 @@ def list_lists(**params) -> list[dict[str, Any]]:
 
 
 def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
-    soup = _soup(body)
+    soup = _parse(body)
     lists: list[dict[str, Any]] = []
 
     for entry in _select(soup, LIST_NAV_SEL):
-        link = entry.select_one("a[id^='wl-list-link-']")
+        link = (entry.cssselect("a[id^='wl-list-link-']") or [None])[0]
         if not link:
             continue
 
@@ -1153,14 +1158,14 @@ def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
         if not link_id:
             continue
 
-        title_el = entry.select_one("span[id^='wl-list-entry-title-']")
+        title_el = (entry.cssselect("span[id^='wl-list-entry-title-']") or [None])[0]
         name = _text(title_el) or "Untitled List"
 
-        privacy_el = entry.select_one(".wl-list-entry-privacy span")
+        privacy_el = (entry.cssselect(".wl-list-entry-privacy span") or [None])[0]
         privacy = _text(privacy_el)
 
-        is_default = bool(entry.select_one("#list-default-collaborator-label"))
-        is_selected = "selected" in (entry.get("class") or [])
+        is_default = bool(entry.cssselect("#list-default-collaborator-label"))
+        is_selected = "selected" in (entry.get("class") or "").split()
 
         list_type = None
         href = link.get("href", "")
@@ -1209,12 +1214,12 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
                 "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
             )
 
-        soup = _soup(body)
+        soup = _parse(body)
 
-        name_el = soup.select_one("#profile-list-name")
+        name_el = (soup.cssselect("#profile-list-name") or [None])[0]
         list_name = _text(name_el) or "Wish List"
 
-        privacy_el = soup.select_one("#listPrivacy")
+        privacy_el = (soup.cssselect("#listPrivacy") or [None])[0]
         list_privacy = _text(privacy_el)
 
         remember_state = _extract_a_state(soup, "rememberState")
@@ -1247,7 +1252,7 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
                 break
 
             ajax_body = ajax_resp["body"]
-            ajax_soup = _soup(ajax_body)
+            ajax_soup = _parse(ajax_body)
 
             page_items = _parse_list_items(ajax_soup)
             if not page_items:
@@ -1275,18 +1280,18 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     }
 
 
-def _extract_a_state(soup: BeautifulSoup, key: str) -> dict[str, Any] | None:
-    for script in soup.select('script[type="a-state"]'):
+def _extract_a_state(soup: HtmlElement, key: str) -> dict[str, Any] | None:
+    for script in soup.cssselect('script[type="a-state"]'):
         try:
             state_meta = json.loads(script.get("data-a-state", "{}"))
             if state_meta.get("key") == key:
-                return json.loads(script.string or "{}")
+                return json.loads(script.text or "{}")
         except (json.JSONDecodeError, TypeError):
             continue
     return None
 
 
-def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
+def _parse_list_items(soup: HtmlElement) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
 
     for li in _select(soup, LIST_ITEM_SEL):
@@ -1322,7 +1327,7 @@ def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
         price_el = _select_one(li, ITEM_PRICE_SEL)
         price = _text(price_el)
 
-        byline_el = li.select_one(f"span[id^='item-byline-']")
+        byline_el = (li.cssselect("span[id^='item-byline-']") or [None])[0]
         byline = _text(byline_el)
 
         rating_el = _select_one(li, ITEM_RATING_SEL)
@@ -1335,18 +1340,18 @@ def _parse_list_items(soup: BeautifulSoup) -> list[dict[str, Any]]:
             clean = re.sub(r"[^\d]", "", review_text)
             review_count = int(clean) if clean else None
 
-        img_el = li.select_one(f"#itemImage_{item_id} img") or li.select_one("img[alt]")
-        image_url = str(img_el.get("src", "")) if img_el else None
+        img_el = (li.cssselect(f"#itemImage_{item_id} img") or li.cssselect("img[alt]") or [None])[0]
+        image_url = str(img_el.get("src", "")) if img_el is not None else None
 
-        date_el = li.select_one(f"span[id^='itemAddedDate_']")
+        date_el = (li.cssselect("span[id^='itemAddedDate_']") or [None])[0]
         date_added = _text(date_el)
         if date_added:
             date_added = re.sub(r"^Item added\s*", "", date_added).strip()
 
-        priority_el = li.select_one(f"span[id^='itemPriorityLabel_']")
+        priority_el = (li.cssselect("span[id^='itemPriorityLabel_']") or [None])[0]
         priority = _text(priority_el)
 
-        comment_el = li.select_one(f"span[id^='itemComment_']")
+        comment_el = (li.cssselect("span[id^='itemComment_']") or [None])[0]
         comment = _text(comment_el)
 
         items.append({

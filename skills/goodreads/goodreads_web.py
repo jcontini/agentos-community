@@ -2,7 +2,7 @@
 """
 Authenticated Goodreads web scraping — friends, books, shelves, reviews, search people.
 
-Uses http.client + BeautifulSoup. Requires cookies via connection: web; AgentOS provides them.
+Uses http.client + lxml for HTML parsing. Requires cookies via connection: web; AgentOS provides them.
 Separate from public_graph.py which handles public GraphQL/Apollo data.
 """
 
@@ -11,7 +11,8 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from agentos import molt, parse_int, parse_date, http, get_cookies
-from bs4 import BeautifulSoup
+from lxml import html as lhtml
+from lxml.html import HtmlElement
 
 BASE = "https://www.goodreads.com"
 MAX_PAGES = 20
@@ -23,6 +24,24 @@ PER_PAGE_BOOKS = 25
 # ---------------------------------------------------------------------------
 
 
+def _parse(html_text: str) -> HtmlElement:
+    """Parse HTML string into an lxml document."""
+    return lhtml.fromstring(html_text)
+
+
+def _first(el: HtmlElement, selector: str) -> HtmlElement | None:
+    """CSS select returning first match or None."""
+    matches = el.cssselect(selector)
+    return matches[0] if matches else None
+
+
+def _text(el: HtmlElement | None) -> str:
+    """Extract stripped text from an element, or empty string if None."""
+    if el is None:
+        return ""
+    return (el.text_content() or "").strip()
+
+
 def _fetch(client, url: str) -> tuple[int, str]:
     resp = client.get(url)
     return resp["status"], resp["body"]
@@ -30,15 +49,15 @@ def _fetch(client, url: str) -> tuple[int, str]:
 
 def _has_next(html_text: str) -> bool:
     """Check if there's a 'next' pagination link."""
-    soup = BeautifulSoup(html_text, "html.parser")
-    return bool(soup.select_one('.next_page, [rel="next"]'))
+    doc = _parse(html_text)
+    return bool(doc.cssselect('.next_page, [rel="next"]'))
 
 
 def _require_login(html_text: str) -> None:
-    soup = BeautifulSoup(html_text[:4000], "html.parser")
-    title_el = soup.select_one("title")
+    doc = _parse(html_text[:4000])
+    title_el = _first(doc, "title")
     if title_el:
-        title_text = title_el.get_text()
+        title_text = _text(title_el)
         if "Sign Up" in title_text or "Sign in" in title_text:
             raise RuntimeError("Page requires login — cookies invalid or expired")
 
@@ -66,7 +85,7 @@ def _field_value(row: Any, field_class: str) -> str | None:
     if not td:
         return None
     val_el = td.select_one(".value")
-    text = molt((val_el or td).get_text())
+    text = molt((val_el or td).text_content())
     if text and text.lower() in ("not set", "unknown"):
         return None
     return text
@@ -217,19 +236,19 @@ def get_person(
     if status != 200:
         raise RuntimeError(f"Profile page returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    doc = _parse(html_text)
 
-    name_el = soup.select_one("h1.userProfileName, .userProfileName")
-    name = molt(name_el.get_text()) if name_el else None
+    name_el = _first(doc,"h1.userProfileName, .userProfileName")
+    name = molt(name_el.text_content()) if name_el else None
     if name:
         name = re.sub(r"\s*\(edit profile\)", "", name).strip()
 
-    img_el = soup.select_one(".leftAlignedProfilePicture img, .profilePicture img, .userProfileImage")
+    img_el = _first(doc,".leftAlignedProfilePicture img, .profilePicture img, .userProfileImage")
     photo_url = img_el.get("src") if img_el else None
 
     # Username from title: "Joe Contini (jcontini) - Austin, TX (273 books)"
-    title_el = soup.select_one("title")
-    title_text = molt(title_el.get_text()) if title_el else ""
+    title_el = _first(doc,"title")
+    title_text = molt(title_el.text_content()) if title_el else ""
     handle = None
     hm = re.search(r"\((\w+)\)", title_text or "")
     if hm and not hm.group(1).isdigit():
@@ -237,9 +256,9 @@ def get_person(
 
     # Parse info box rows
     info: dict[str, str] = {}
-    for t, v in zip(soup.select(".infoBoxRowTitle"), soup.select(".infoBoxRowItem")):
-        label = (molt(t.get_text()) or "").lower()
-        value = molt(v.get_text()) or ""
+    for t, v in zip(doc.cssselect(".infoBoxRowTitle"), doc.cssselect(".infoBoxRowItem")):
+        label = (molt(t.text_content()) or "").lower()
+        value = molt(v.text_content()) or ""
         info[label] = value
 
     # Details: "Age 37, Male, Singapore, Singapore"
@@ -279,8 +298,8 @@ def get_person(
         last_active = parse_date(am.group(1).strip())
 
     # Stats: ratings, avg, reviews
-    stats_el = soup.select_one(".profilePageUserStatsInfo")
-    stats_text = molt(stats_el.get_text()) if stats_el else ""
+    stats_el = _first(doc,".profilePageUserStatsInfo")
+    stats_text = molt(stats_el.text_content()) if stats_el else ""
     ratings_count = None
     avg_rating = None
     reviews_count = None
@@ -296,16 +315,16 @@ def get_person(
 
     # Friends count from link text: "Kirill's Friends (138)"
     friends_count = None
-    for a in soup.select("a[href*='/friend/user/']"):
-        fm = re.search(r"\((\d+)\)", a.get_text())
+    for a in doc.cssselect("a[href*='/friend/user/']"):
+        fm = re.search(r"\((\d+)\)", a.text_content())
         if fm:
             friends_count = int(fm.group(1))
             break
 
     # Parse profile sections — h2 lives inside .bigBox; content is in .bigBoxBody
     sections: dict[str, Any] = {}
-    for hdr in soup.select("h2.brownBackground, .bigBoxHeader"):
-        label = (molt(hdr.get_text()) or "").lower()
+    for hdr in doc.cssselect("h2.brownBackground, .bigBoxHeader"):
+        label = (molt(hdr.text_content()) or "").lower()
         parent_box = hdr.find_parent("div", class_="bigBox")
         if parent_box:
             body = parent_box.select_one(".bigBoxBody, .bigBoxContent")
@@ -322,7 +341,7 @@ def get_person(
         if "favorite" in key and "book" in key:
             for a in body.select('a[href*="/book/show/"]'):
                 bimg = a.select_one("img")
-                btitle = bimg.get("alt") if bimg else molt(a.get_text())
+                btitle = bimg.get("alt") if bimg else molt(a.text_content())
                 bm = re.search(r"/book/show/(\d+)", a.get("href", ""))
                 if bm and btitle:
                     cover = bimg.get("src") if bimg else None
@@ -338,20 +357,20 @@ def get_person(
     currently_reading: list[dict[str, Any]] = []
     for key, body in sections.items():
         if "currently reading" in key:
-            for update in body.select(".Updates"):
+            for update in body.cssselect(".Updates"):
                 book_link = update.select_one("a.bookTitle")
                 if not book_link:
                     continue
-                btitle = molt(book_link.get_text())
+                btitle = molt(book_link.text_content())
                 bm = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
                 if not bm or not btitle:
                     continue
 
                 date_el = update.select_one("a.updatedTimestamp")
-                date_added = parse_date(molt(date_el.get_text())) if date_el else None
+                date_added = parse_date(molt(date_el.text_content())) if date_el else None
 
                 author_link = update.select_one("a.authorName")
-                author_name = molt(author_link.get_text()) if author_link else None
+                author_name = molt(author_link.text_content()) if author_link else None
                 author_id = None
                 if author_link:
                     am = re.search(r"/author/show/(\d+)", author_link.get("href", ""))
@@ -375,7 +394,7 @@ def get_person(
     for key, body in sections.items():
         if "genre" in key:
             favorite_genres = [
-                molt(a.get_text()) for a in body.select("a") if molt(a.get_text())
+                molt(a.text_content()) for a in body.cssselect("a") if molt(a.text_content())
             ]
 
     uid = user_id
@@ -419,16 +438,16 @@ def get_person(
 # ---------------------------------------------------------------------------
 
 
-def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any]]:
+def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
     """Parse a single page of friends from the #friendTable, extracting rich data."""
     friends: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    table = soup.select_one("#friendTable")
-    rows = table.select("tr") if table else []
+    table = _first(doc,"#friendTable")
+    rows = table.cssselect("tr") if table else []
 
     for row in rows:
-        tds = row.select("td")
+        tds = row.cssselect("td")
         if len(tds) < 2:
             continue
 
@@ -447,7 +466,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         if uid == user_id or uid in seen:
             continue
 
-        name = molt(user_link.get_text())
+        name = molt(user_link.text_content())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         seen.add(uid)
@@ -465,22 +484,22 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
 
         books_link = tds[1].select_one('a[href*="/review/list/"]') if len(tds) > 1 else None
         if books_link:
-            bm = re.search(r"(\d+)", books_link.get_text())
+            bm = re.search(r"(\d+)", books_link.text_content())
             if bm:
                 books_count = int(bm.group(1))
 
         friends_link = tds[1].select_one('a[href*="/friend/"]') if len(tds) > 1 else None
         if friends_link:
-            fm = re.search(r"(\d+)", friends_link.get_text())
+            fm = re.search(r"(\d+)", friends_link.text_content())
             if fm:
                 friends_count = int(fm.group(1))
 
         # Location: text after the last <a> and before end of td[1]
         if len(tds) > 1:
-            td_text = tds[1].get_text(separator="\n").strip()
+            td_text = tds[1].text_content().strip()
             lines = [l.strip() for l in td_text.split("\n") if l.strip()]
             # Location is usually the last line that isn't a link text
-            link_texts = {molt(a.get_text()) for a in tds[1].select("a")}
+            link_texts = {molt(a.text_content()) for a in tds[1].cssselect("a")}
             for line in reversed(lines):
                 cleaned = molt(line)
                 if cleaned and cleaned not in link_texts and not re.match(r"^\d+\s+(books?|friends?)", cleaned):
@@ -491,7 +510,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         currently_reading = None
         if len(tds) > 2:
             for book_link in tds[2].select('a[href*="/book/show/"]'):
-                book_text = molt(book_link.get_text())
+                book_text = molt(book_link.text_content())
                 if book_text:
                     bm2 = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
                     bid = bm2.group(1) if bm2 else None
@@ -519,7 +538,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         return friends
 
     # Fallback: plain link scan if table structure changed
-    for link in soup.select('a[href*="/user/show/"]'):
+    for link in doc.cssselect('a[href*="/user/show/"]'):
         href = link.get("href", "")
         m = re.search(r"/user/show/(\d+)", href)
         if not m:
@@ -527,7 +546,7 @@ def _parse_friends_page(soup: BeautifulSoup, user_id: str) -> list[dict[str, Any
         uid = m.group(1)
         if uid == user_id or uid in seen:
             continue
-        name = molt(link.get_text())
+        name = molt(link.text_content())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         seen.add(uid)
@@ -555,7 +574,7 @@ def list_friends(
         if status != 200:
             raise RuntimeError(f"Friends page returned {status}")
         _require_login(html_text)
-        return _parse_friends_page(BeautifulSoup(html_text, "html.parser"), user_id)
+        return _parse_friends_page(_parse(html_text), user_id)
 
     # Auto-paginate
     all_friends: list[dict[str, Any]] = []
@@ -567,7 +586,7 @@ def list_friends(
                 break
             if p == 1:
                 _require_login(html_text)
-            page_friends = _parse_friends_page(BeautifulSoup(html_text, "html.parser"), user_id)
+            page_friends = _parse_friends_page(_parse(html_text), user_id)
             for f in page_friends:
                 if f["id"] not in seen:
                     seen.add(f["id"])
@@ -597,11 +616,11 @@ def search_people(
     if status != 200:
         raise RuntimeError(f"Search returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    doc = _parse(html_text)
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for link in soup.select('a[href*="/user/show/"]'):
+    for link in doc.cssselect('a[href*="/user/show/"]'):
         href = link.get("href", "")
         m = re.search(r"/user/show/(\d+)(?:-[^/]*)?", href)
         if not m:
@@ -609,7 +628,7 @@ def search_people(
         uid = m.group(1)
         if uid in seen:
             continue
-        name = molt(link.get_text())
+        name = molt(link.text_content())
         if not name or name.lower() in ("profile", "view profile", "compare books"):
             continue
         seen.add(uid)
@@ -640,8 +659,8 @@ def resolve_email(
         if status != 200:
             raise RuntimeError(f"Find friend page returned {status}")
 
-        form_soup = BeautifulSoup(form_html, "html.parser")
-        n_input = form_soup.select_one('input[name="n"]')
+        form_doc = _parse(form_html)
+        n_input = _first(form_doc, 'input[name="n"]')
         n_token = n_input.get("value", "") if n_input else ""
 
         # Step 2: submit the search (cookie jar carries Set-Cookie from step 1)
@@ -653,13 +672,13 @@ def resolve_email(
         if status2 != 200:
             raise RuntimeError(f"Friend search returned {status2}")
 
-    soup = BeautifulSoup(results_html, "html.parser")
-    table = soup.select_one("table.tableList")
+    doc = _parse(results_html)
+    table = _first(doc,"table.tableList")
     if not table:
         return []
 
     people: list[dict[str, Any]] = []
-    for row in table.select("tr"):
+    for row in table.cssselect("tr"):
         user_link = row.select_one('a[href*="/user/show/"]')
         if not user_link:
             continue
@@ -668,7 +687,7 @@ def resolve_email(
         if not m:
             continue
         uid = m.group(1)
-        name = molt(user_link.get_text())
+        name = molt(user_link.text_content())
         if not name:
             img = row.select_one("img")
             name = img.get("alt") if img else None
@@ -678,14 +697,14 @@ def resolve_email(
         img = row.select_one("img[src*='/users/']")
         photo_url = img.get("src") if img else None
 
-        row_text = row.get_text()
+        row_text = row.text_content()
         books_m = re.search(r"([\d,]+)\s+books?", row_text)
         friends_m = re.search(r"([\d,]+)\s+friends?", row_text)
 
         # Location: text after the stats line, before action buttons
         location = None
-        for td in row.select("td"):
-            lines = [l.strip() for l in td.get_text(separator="\n").split("\n") if l.strip()]
+        for td in row.cssselect("td"):
+            lines = [l.strip() for l in td.text_content().split("\n") if l.strip()]
             for line in lines:
                 if (
                     line != name
@@ -732,10 +751,10 @@ def list_shelves(
     if status != 200:
         raise RuntimeError(f"Profile returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    doc = _parse(html_text)
     seen: set[str] = set()
     shelves: list[dict[str, Any]] = []
-    for link in soup.select('a[href*="shelf="], a.actionLinkLite.userShowPageShelfListItem'):
+    for link in doc.cssselect('a[href*="shelf="], a.actionLinkLite.userShowPageShelfListItem'):
         href = link.get("href", "")
         m = re.search(r"/review/list/\d+\?[^\"]*shelf=([^&\s\"']+)", href)
         if not m:
@@ -744,12 +763,12 @@ def list_shelves(
         if shelf_id in seen:
             continue
         seen.add(shelf_id)
-        name = molt(link.get_text())
+        name = molt(link.text_content())
         if name and name.lower() in ("view shelf", "shelf"):
             continue
         if name and re.search(r"\(\d+\)\s*$", name):
             name = re.sub(r"\s*\(\d+\)\s*$", "", name).strip()
-        count_m = re.search(r"\(([\d,]+)\)", link.get_text())
+        count_m = re.search(r"\(([\d,]+)\)", link.text_content())
         book_count = parse_int(count_m.group(1)) if count_m else None
         shelves.append({
             "id": f"{user_id}:{shelf_id}",
@@ -774,10 +793,10 @@ def _extract_date(row: Any, field_class: str) -> str | None:
     # Prefer span[title] which has the full date
     span = td.select_one("span[title]")
     if span:
-        return molt(span.get("title") or span.get_text())
+        return molt(span.get("title") or span.text_content())
     # Fallback: look for non-grey text
-    for span in td.select("span"):
-        text = molt(span.get_text())
+    for span in td.cssselect("span"):
+        text = molt(span.text_content())
         if text and text != "not set":
             return text
     return None
@@ -798,7 +817,7 @@ def _extract_review_text(row: Any) -> str | None:
     td = row.select_one("td.field.review")
     if not td:
         return None
-    text = molt(td.get_text())
+    text = molt(td.text_content())
     if not text:
         return None
     # Strip the "review" label prefix
@@ -815,7 +834,7 @@ def _extract_shelf(row: Any) -> str | None:
     td = row.select_one("td.field.shelves")
     if not td:
         return None
-    text = molt(td.get_text())
+    text = molt(td.text_content())
     if not text:
         return None
     text = re.sub(r"^shelves?\s*", "", text)
@@ -823,9 +842,9 @@ def _extract_shelf(row: Any) -> str | None:
     return text if text else None
 
 
-def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict[str, Any]]:
+def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[str, Any]]:
     """Parse tr.bookalike rows into book or review dicts."""
-    rows = soup.select("tr.bookalike")
+    rows = doc.cssselect("tr.bookalike")
     items: list[dict[str, Any]] = []
 
     for row in rows:
@@ -840,10 +859,10 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
             continue
 
         title_el = row.select_one("td.field.title a, .title a, a.bookTitle")
-        title = molt(title_el.get("title") or (title_el.get_text() if title_el else None))
+        title = molt(title_el.get("title") or (title_el.text_content() if title_el else None))
 
         author_el = row.select_one("td.field.author a, .author a, a.authorName")
-        author_raw = molt(author_el.get_text() if author_el else None)
+        author_raw = molt(author_el.text_content() if author_el else None)
         author = _flip_name(author_raw) if author_raw else None
         author_id = None
         author_url = None
@@ -946,7 +965,7 @@ def _fetch_book_pages(
         if status != 200:
             raise RuntimeError(f"Page returned {status}")
         _require_login(html_text)
-        return _parse_book_rows(BeautifulSoup(html_text, "html.parser"), as_reviews)
+        return _parse_book_rows(_parse(html_text), as_reviews)
 
     # Auto-paginate
     all_items: list[dict[str, Any]] = []
@@ -957,7 +976,7 @@ def _fetch_book_pages(
             break
         if p == 1:
             _require_login(html_text)
-        items = _parse_book_rows(BeautifulSoup(html_text, "html.parser"), as_reviews)
+        items = _parse_book_rows(_parse(html_text), as_reviews)
         for item in items:
             key = item.get("id", "")
             if key and key not in seen_ids:
@@ -1033,11 +1052,11 @@ def list_groups(
     if status != 200:
         raise RuntimeError(f"Groups page returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    doc = _parse(html_text)
     groups: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for wrapper in soup.select(".groupListItemWrapper"):
+    for wrapper in doc.cssselect(".groupListItemWrapper"):
         link = wrapper.select_one('a[href*="/group/show/"]')
         if not link:
             continue
@@ -1050,7 +1069,7 @@ def list_groups(
             continue
         seen.add(gid)
 
-        lines = [l.strip() for l in wrapper.get_text(separator="\n").split("\n") if l.strip()]
+        lines = [l.strip() for l in wrapper.text_content().split("\n") if l.strip()]
         name = lines[0] if lines else None
         members = None
         last_active = None
@@ -1082,16 +1101,16 @@ def list_groups(
 
 
 def _parse_follow_page(
-    soup: BeautifulSoup, owner_id: str
+    doc: HtmlElement, owner_id: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Parse a followers/following page, returning (users, authors) separately."""
     users: list[dict[str, Any]] = []
     authors: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    for link in soup.select('a[href*="/user/show/"], a[href*="/author/show/"]'):
+    for link in doc.cssselect('a[href*="/user/show/"], a[href*="/author/show/"]'):
         href = link.get("href", "")
-        name = molt(link.get_text())
+        name = molt(link.text_content())
         if not name or name.lower() in ("profile", "view profile"):
             continue
         m = re.search(r"/(user|author)/show/(\d+)", href)
@@ -1139,8 +1158,8 @@ def list_following(
     if status != 200:
         raise RuntimeError(f"Following page returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
-    users, authors = _parse_follow_page(soup, user_id)
+    doc = _parse(html_text)
+    users, authors = _parse_follow_page(doc, user_id)
     results: list[dict[str, Any]] = []
     for u in users:
         u["type"] = "user"
@@ -1165,8 +1184,8 @@ def list_followers(
     if status != 200:
         raise RuntimeError(f"Followers page returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
-    users, authors = _parse_follow_page(soup, user_id)
+    doc = _parse(html_text)
+    users, authors = _parse_follow_page(doc, user_id)
     results: list[dict[str, Any]] = []
     for u in users:
         u["type"] = "user"
@@ -1196,10 +1215,10 @@ def list_quotes(
     if status != 200:
         raise RuntimeError(f"Quotes page returned {status}")
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    doc = _parse(html_text)
     quotes: list[dict[str, Any]] = []
 
-    for qt in soup.select(".quoteText"):
+    for qt in doc.cssselect(".quoteText"):
         # Extract quote text (before the ― author attribution)
         text_parts = []
         for child in qt.children:
@@ -1209,11 +1228,11 @@ def list_quotes(
                 elif child.name == "span" and "authorOrTitle" in (child.get("class") or []):
                     break
                 elif child.name == "b":
-                    text_parts.append(child.get_text())
-                elif child.get_text(strip=True) == "\u2015":
+                    text_parts.append(child.text_content())
+                elif child.text_content().strip() == "\u2015":
                     break
                 else:
-                    text_parts.append(child.get_text())
+                    text_parts.append(child.text_content())
             else:
                 s = str(child)
                 if "\u2015" in s:
@@ -1225,7 +1244,7 @@ def list_quotes(
         text = re.sub(r'^[\s\u201c\u201d"]+|[\s\u201c\u201d"]+$', "", text)
 
         author_el = qt.select_one(".authorOrTitle")
-        author_name = molt(author_el.get_text()) if author_el else None
+        author_name = molt(author_el.text_content()) if author_el else None
         if author_name:
             author_name = author_name.rstrip(",")
 
@@ -1245,7 +1264,7 @@ def list_quotes(
         if not title_el and parent:
             title_el = parent.select_one('a[href*="/book/show/"]')
         if title_el:
-            book_title = molt(title_el.get_text())
+            book_title = molt(title_el.text_content())
             bm = re.search(r"/book/show/(\d+)", title_el.get("href", ""))
             if bm:
                 book_id = bm.group(1)

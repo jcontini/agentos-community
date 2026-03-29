@@ -3,7 +3,7 @@
 import re
 import shutil
 
-from bs4 import BeautifulSoup
+from lxml import html as lhtml
 from agentos import http, shell
 
 
@@ -32,21 +32,21 @@ def get_community(
         return {"error": "Failed to fetch group page. Group may be private or not found."}
 
     # Extract metadata from meta tags via CSS selectors
-    soup = BeautifulSoup(html, "html.parser")
+    doc = lhtml.fromstring(html)
 
     group_id = ""
     m = re.search(r"fb://group/(\d+)", html)
     if m:
         group_id = m.group(1)
 
-    og_title = soup.select_one('meta[property="og:title"]')
-    title = re.sub(r"\s*\|\s*Facebook$", "", og_title.get("content", "")) if og_title else ""
+    og_title = doc.cssselect('meta[property="og:title"]')
+    title = re.sub(r"\s*\|\s*Facebook$", "", og_title[0].get("content", "")) if og_title else ""
 
-    og_desc = soup.select_one('meta[property="og:description"]')
-    description = og_desc.get("content", "") if og_desc else ""
+    og_desc = doc.cssselect('meta[property="og:description"]')
+    description = og_desc[0].get("content", "") if og_desc else ""
 
-    og_img = soup.select_one('meta[property="og:image"]')
-    og_image = og_img.get("content", "") if og_img else ""
+    og_img = doc.cssselect('meta[property="og:image"]')
+    og_image = og_img[0].get("content", "") if og_img else ""
 
     # Member count via headless Chromium (optional, slower)
     member_count_raw = ""

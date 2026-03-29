@@ -1,6 +1,6 @@
 """Curl skill — simple URL fetching via HTTP GET."""
 
-from bs4 import BeautifulSoup
+from lxml import html
 from agentos import http
 
 
@@ -13,10 +13,11 @@ def read_webpage(*, url: str, **params) -> dict:
     content_type = content_type.split(";")[0].strip()
 
     title = ""
-    if content_type.startswith("text/html"):
-        soup = BeautifulSoup(content[:4000], "html.parser")
-        if soup.title:
-            title = soup.title.get_text(strip=True)
+    if content_type.startswith("text/html") and content:
+        doc = html.fromstring(content[:4000])
+        title_el = doc.cssselect("title")
+        if title_el:
+            title = title_el[0].text_content().strip()
 
     return {
         "url": url,
