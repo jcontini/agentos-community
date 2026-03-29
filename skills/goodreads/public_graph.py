@@ -3,14 +3,11 @@
 import html
 import json
 import re
-import subprocess
 import sys
 import time
-import urllib.request
 from typing import Any
-from urllib.error import HTTPError, URLError
 
-from agentos import molt, clean_html, parse_int, iso_from_ms
+from agentos import http, shell, molt, clean_html, parse_int, iso_from_ms
 
 
 USER_AGENT = "Mozilla/5.0 (compatible; AgentOS/1.0)"
@@ -27,41 +24,39 @@ APP_BUNDLE_RE = re.compile(r'/_next/static/chunks/pages/_app-[a-f0-9]+\.js')
 
 def fetch_html(url: str) -> str:
     headers = {
-        "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
     }
-    return fetch_url(url, headers=headers).decode("utf-8", errors="replace")
+    return fetch_url(url, headers=headers)
 
 
 def fetch_url(
     url: str,
     *,
     headers: dict[str, str] | None = None,
-    data: bytes | None = None,
+    data: str | None = None,
     method: str | None = None,
-) -> bytes:
+) -> str:
     last_error = None
-    request_headers = headers or {}
     request_method = method or ("POST" if data is not None else "GET")
+    dispatch = {"GET": http.get, "POST": http.post, "PUT": http.put, "DELETE": http.delete}
+    fn = dispatch.get(request_method, http.get)
+
     for attempt in range(4):
-        request = urllib.request.Request(
-            url,
-            data=data,
-            headers=request_headers,
-            method=request_method,
-        )
+        kwargs = {"headers": headers or {}, "profile": "navigate", "timeout": 30}
+        if data is not None:
+            kwargs["data"] = data
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return response.read()
-        except HTTPError as error:
-            last_error = error
-            if error.code not in {429, 500, 502, 503, 504} or attempt == 3:
-                raise
-        except URLError as error:
-            last_error = error
+            resp = fn(url, **kwargs)
+            if resp.get("ok"):
+                return resp.get("body", "")
+            status = resp.get("status", 0)
+            last_error = RuntimeError(f"HTTP {status}")
+            if status not in {429, 500, 502, 503, 504} or attempt == 3:
+                raise last_error
+        except RuntimeError:
             if attempt == 3:
                 raise
         time.sleep(1.5 * (attempt + 1))
@@ -151,9 +146,9 @@ def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
     try:
         bundle_js = fetch_url(
             f"{BASE_URL}{bundle_match.group()}",
-            headers={"User-Agent": USER_AGENT, "Accept": "*/*"},
-        ).decode("utf-8", errors="replace")
-    except (HTTPError, URLError, OSError):
+            headers={"Accept": "*/*"},
+        )
+    except Exception:
         return None
 
     configs: list[tuple[str, str, str]] = []
@@ -216,21 +211,15 @@ const { chromium } = require("playwright");
 """.strip()
 
     try:
-        result = subprocess.run(
-            ["node", "-e", script, page_url],
-            capture_output=True,
-            text=True,
-            timeout=90,
-            check=False,
-        )
-    except (subprocess.SubprocessError, OSError):
+        result = shell.run("node", ["-e", script, page_url], timeout=90)
+    except Exception:
         return None
 
-    if result.returncode != 0 or not result.stdout.strip():
+    if result["exit_code"] != 0 or not result["stdout"].strip():
         return None
 
     try:
-        captured = json.loads(result.stdout)
+        captured = json.loads(result["stdout"])
     except json.JSONDecodeError:
         return None
 
@@ -317,14 +306,14 @@ def graphql_request(
     headers = dict(runtime["headers"])
     if extra_headers:
         headers.update(extra_headers)
-    payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
+    payload = json.dumps({"query": query, "variables": variables})
     body = fetch_url(
         runtime["graphql_endpoint"],
         headers=headers,
         data=payload,
         method="POST",
     )
-    parsed = json.loads(body.decode("utf-8", errors="replace"))
+    parsed = json.loads(body)
     errors = parsed.get("errors") or []
     if errors:
         messages = "; ".join(error.get("message", "Unknown GraphQL error") for error in errors)

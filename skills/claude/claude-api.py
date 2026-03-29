@@ -14,6 +14,7 @@ Required headers (bypass Cloudflare + match expected browser client):
   Sec-Fetch-Dest: empty
 """
 
+import base64
 import json
 import re
 import sys
@@ -324,6 +325,41 @@ def main():
 
     print(json.dumps(result, indent=2))
     return 0
+
+
+
+# -- Magic link extraction — pure string parsing, no browser needed ------------
+
+def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
+    """Extract the claude.ai magic link from a raw RFC 2822 email (base64url-encoded)."""
+    raw_bytes = base64.urlsafe_b64decode(raw_b64 + "==")
+    raw_str = raw_bytes.decode("utf-8", errors="replace")
+
+    cleaned = re.sub(r'=\r?\n', '', raw_str)
+    qp_pattern = r'href=3D"(https://claude\.ai/magic-link#[^"\s]+)'
+    match = re.search(qp_pattern, cleaned, re.IGNORECASE)
+    if match:
+        url = match.group(1)
+        return url.replace('=3D', '=').replace('=3d', '=')
+
+    import quopri
+    for part in raw_str.split('--'):
+        if 'content-transfer-encoding: quoted-printable' in part.lower():
+            try:
+                body = quopri.decodestring(part.encode('utf-8', errors='replace')).decode('utf-8', errors='replace')
+                m = re.search(r'href="(https://claude\.ai/magic-link#[^"]+)"', body, re.IGNORECASE)
+                if m:
+                    return m.group(1)
+            except Exception:
+                pass
+    return None
+
+
+def op_extract_magic_link(raw_email: str) -> dict:
+    link = _extract_magic_link_from_raw_email(raw_email)
+    if link:
+        return {"magic_link": link}
+    return {"error": "No magic link found in raw email content"}
 
 
 if __name__ == "__main__":

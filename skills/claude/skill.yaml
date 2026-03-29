@@ -156,6 +156,6 @@ operations:
     returns:
       magic_link: string
     python:
-      module: ./claude-login.py
+      module: ./claude-api.py
       function: op_extract_magic_link
       timeout: 10
