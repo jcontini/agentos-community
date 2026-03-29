@@ -9,7 +9,7 @@ Auth architecture (discovered via Playwright reverse engineering):
   - Protection:       Vercel Security Checkpoint on dashboard.exa.ai
   - Transport:        http2=False (Vercel blocks httpx's h2 JA4 fingerprint)
 
-Login flow (fully HTTPX, no browser needed):
+Login flow (fully HTTP via engine, no browser needed):
   1. send_login_code(email)
      - GET  auth.exa.ai/api/auth/csrf       → CSRF token + cookie
      - POST auth.exa.ai/api/auth/signin/email → triggers verification code email
@@ -36,7 +36,7 @@ Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
 import urllib.parse
-from agentos import http, surf
+from agentos import http
 
 AUTH_BASE = "https://auth.exa.ai"
 API_BASE = "https://api.exa.ai"
@@ -47,8 +47,9 @@ CALLBACK_URL = "https://dashboard.exa.ai/"
 def _get_csrf_token(client) -> str:
     """Fetch CSRF token from NextAuth. Sets the csrf cookie on the client."""
     resp = client.get(f"{AUTH_BASE}/api/auth/csrf")
-    resp.raise_for_status()
-    return resp.json()["csrfToken"]
+    if not resp["ok"]:
+        raise RuntimeError(f"CSRF fetch failed: HTTP {resp['status']}")
+    return resp["json"]["csrfToken"]
 
 
 def _send_verification_email(client, csrf_token: str, email: str) -> dict:
@@ -63,8 +64,9 @@ def _send_verification_email(client, csrf_token: str, email: str) -> dict:
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    resp.raise_for_status()
-    return resp.json()
+    if not resp["ok"]:
+        raise RuntimeError(f"Signin email failed: HTTP {resp['status']}")
+    return resp["json"]
 
 
 def _check_session(client) -> dict | None:
@@ -76,12 +78,21 @@ def _check_session(client) -> dict | None:
     return data if data and data.get("user") else None
 
 
-def _serialize_cookies(client) -> dict:
-    """Extract exa.ai cookies from an httpx client as a serializable dict."""
+def _extract_set_cookies(resp: dict) -> dict:
+    """Extract Set-Cookie values from a response header dict."""
     cookies = {}
-    for cookie in client.cookies.jar:
-        if "exa.ai" in cookie.domain:
-            cookies[cookie.name] = cookie.value
+    raw = resp.get("headers", {}).get("set-cookie", "")
+    if not raw:
+        return cookies
+    # set-cookie header may be comma-separated (multiple cookies)
+    for part in raw.split(", "):
+        # Each cookie is "name=value; Path=...; ..."
+        if "=" in part.split(";")[0]:
+            nv = part.split(";")[0]
+            name, _, value = nv.partition("=")
+            name = name.strip()
+            if name:
+                cookies[name] = value.strip()
     return cookies
 
 
@@ -114,10 +125,9 @@ def send_login_code(*, email: str, **params) -> dict:
     if not email:
         return {"__result__": {"error": "email is required"}}
 
-    with surf(profile="api", http2=False) as client:
+    with http.client(profile="api", http2=False) as client:
         csrf_token = _get_csrf_token(client)
         _send_verification_email(client, csrf_token, email)
-        auth_cookies = _serialize_cookies(client)
 
     return {
         "__result__": {
@@ -129,13 +139,12 @@ def send_login_code(*, email: str, **params) -> dict:
                 "2. Extract the 6-digit code\n"
                 "3. Call exa.verify_login_code with the email and code"
             ),
-            "_auth_cookies": auth_cookies,
         }
     }
 
 
 def verify_login_code(*, email: str, code: str, **params) -> dict:
-    """Verify the 6-digit code and complete login — fully HTTPX, no browser needed.
+    """Verify the 6-digit code and complete login — no browser needed.
 
     Flow:
       1. POST /api/verify-otp with {email, otp} → {hashedOtp, rawOtp}
@@ -146,7 +155,9 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
     if not email or not code:
         return {"__result__": {"error": "email and code are required"}}
 
-    with surf(profile="api", http2=False) as client:
+    session_token = None
+
+    with http.client(profile="api", http2=False) as client:
         # Establish CSRF session (needed for the callback to accept our request)
         _get_csrf_token(client)
 
@@ -155,15 +166,13 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
             f"{AUTH_BASE}/api/verify-otp",
             json={"email": email.lower(), "otp": code},
         )
-        if resp.status_code != 200:
+        if resp["status"] != 200:
             error_msg = "Invalid or expired verification code"
-            try:
-                error_msg = resp.json().get("error", error_msg)
-            except Exception:
-                pass
+            if resp.get("json"):
+                error_msg = resp["json"].get("error", error_msg)
             return {"__result__": {"error": error_msg}}
 
-        data = resp.json()
+        data = resp["json"]
         hashed_otp = data.get("hashedOtp", "")
         raw_otp = data.get("rawOtp", "")
 
@@ -182,15 +191,12 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
 
         # Hit the NextAuth callback — this sets the session-token cookie
         resp2 = client.get(callback_url)
-        if resp2.status_code >= 400:
-            return {"__result__": {"error": f"Callback failed: HTTP {resp2.status_code}"}}
+        if resp2["status"] >= 400:
+            return {"__result__": {"error": f"Callback failed: HTTP {resp2['status']}"}}
 
-    # Extract the session token
-    session_token = None
-    for cookie in client.cookies.jar:
-        if cookie.name == "next-auth.session-token":
-            session_token = cookie.value
-            break
+        # Extract session token from Set-Cookie header
+        set_cookies = _extract_set_cookies(resp2)
+        session_token = set_cookies.get("next-auth.session-token")
 
     if not session_token:
         return {"__result__": {"error": "Login succeeded but no session token received"}}

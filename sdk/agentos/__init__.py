@@ -14,12 +14,9 @@ from agentos.text import molt
 from agentos import http
 from agentos import shapes as shape
 
-# --- Deprecated: surf (use http.get/http.client instead) ---
-from agentos.http import surf
-
-# --- HTTP helpers (still useful) ---
+# --- HTTP helpers ---
 from agentos.http import (
-    get_cookies, require_cookies, parse_cookie, parse_cookies,
+    get_cookies, require_cookies, parse_cookie,
     skill_error, skill_result, skill_secret,
 )
 
@@ -36,12 +33,10 @@ from agentos.dates import parse_date, iso_from_ms, iso_from_seconds
 __all__ = [
     # Core modules
     "http", "molt", "shape",
-    # Deprecated
-    "surf",
     # Engine-dispatched modules
     "sql", "crypto", "oauth",
     # HTTP helpers
-    "get_cookies", "require_cookies", "parse_cookie", "parse_cookies",
+    "get_cookies", "require_cookies", "parse_cookie",
     # Skill result helpers
     "skill_error", "skill_result", "skill_secret",
     # Text (fine-grained)
