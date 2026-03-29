@@ -3,12 +3,22 @@ get-cookie.py — Extract and decrypt cookies from Brave Browser on macOS.
 
 Brave is Chromium-based: same cookie encryption as Chrome, different Keychain entry.
 
-All I/O routes through the engine via SDK modules:
-  - agentos.macos.keychain → Keychain master password
-  - agentos.crypto → PBKDF2 key derivation + AES decryption
-  - agentos.sql → Cookie database queries
+All I/O routes through the engine via SDK modules — no direct imports of
+subprocess, sqlite3, or cryptography. This is important because the Python
+sandbox blocks those imports. Every skill, including infrastructure skills
+like cookie providers, must use SDK modules for I/O:
 
-No subprocess, no sqlite3, no cryptography imports.
+  keychain.read()   → engine __keychain_read__ → macOS Keychain
+  crypto.pbkdf2()   → engine __crypto_pbkdf2__ → PBKDF2-HMAC-SHA1
+  crypto.aes_decrypt() → engine __crypto_aes__ → AES-128-CBC
+  sql.query()       → engine __sql_query__     → SQLite read
+
+Chromium cookie encryption (v10):
+  1. Master password stored in macOS Keychain ("Brave Safe Storage" / "Brave")
+  2. Key derived via PBKDF2-HMAC-SHA1(password, "saltysalt", 1003 iterations, 16 bytes)
+  3. Cookie values AES-128-CBC encrypted, IV = 16 space bytes (0x20)
+  4. First 3 bytes are "v10" prefix, first 32 bytes of decrypted output are
+     garbled (CBC IV mismatch artifact), real value starts at byte 32
 """
 
 import os

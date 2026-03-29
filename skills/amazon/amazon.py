@@ -5,6 +5,17 @@ Amazon skill — search, products, order history, and account identity.
 Uses Amazon's public completion.amazon.com API for keyword suggestions and
 http.client for HTML page parsing. Order history and account operations
 use session cookies from a browser cookie provider. No API keys required.
+
+Transport notes (see docs/reverse-engineering/1-transport/):
+- profile="navigate" — full client hints (Device-Memory, Rtt, etc.) required
+  by Amazon's Lightsaber bot detection. Without these, auth pages redirect to login.
+- skip_cookies=["csd-key", "csm-hit", "aws-waf-token"] — csd-key triggers Siege
+  client-side encryption. Stripping it forces plain HTML responses.
+- Session warming: visit homepage before order/account pages. Amazon flags direct
+  deep-links from new sessions as bot traffic.
+- Accept-Encoding: the engine handles brotli/gzip decompression automatically via
+  reqwest feature flags. Amazon compresses large pages (~168KB order history) with
+  brotli — without decompression, parsers find zero order cards in binary garbage.
 """
 
 import json

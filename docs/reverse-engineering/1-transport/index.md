@@ -149,7 +149,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate, br",  # client must handle decompression
     "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
     "Sec-CH-UA-Mobile": "?0",
     "Sec-CH-UA-Platform": '"macOS"',
@@ -187,7 +187,7 @@ AUTH_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ...",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,...",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Encoding": "gzip, deflate, br, zstd",  # MUST match client decompression capability
     "Cache-Control": "max-age=0",
     # --- Network quality hints ---
     "Device-Memory": "8",
@@ -280,6 +280,34 @@ containers where data should be, check for client-side decryption:
 3. Try stripping cookies one at a time to find which one triggers encryption
 
 Reference: `skills/amazon/amazon.py` `SKIP_COOKIES`.
+
+---
+
+## Response Decompression — You Must Handle What You Advertise
+
+When you send `Accept-Encoding: gzip, deflate, br, zstd` (as all browser-like profiles do), the server will compress its response. **Your HTTP client must decompress it.** If it doesn't, you get raw binary garbage instead of HTML — and every parser returns zero results.
+
+This is a silent failure. The HTTP status is 200, the headers look normal, and `Content-Length` is reasonable. But `resp.text` is garbled bytes. It looks like client-side encryption (see above), but the cause is much simpler: the response is compressed and you're not decompressing it.
+
+### How `agentos.http` handles it
+
+The Rust HTTP engine uses reqwest with `gzip`, `brotli`, `deflate`, and `zstd` feature flags enabled. Decompression is automatic and transparent — `resp["body"]` is always plaintext.
+
+### Why this matters
+
+**Brotli** (RFC 7932) is a compression algorithm designed by Google for the web. It compresses 20-26% better than gzip on HTML/CSS/JS. Every modern browser supports it, and servers aggressively use it for large pages. Amazon's order history page, for example, returns ~168KB of brotli-compressed HTML. Without decompression, you get 168KB of binary noise and zero order cards.
+
+**The trap:** small pages (homepages, API endpoints) may not be compressed or may use gzip which some clients handle by default. Large pages (order history, dashboards, search results) almost always use brotli. So your skill works on simple endpoints and silently fails on the important ones.
+
+### Diagnostic
+
+If your response body contains non-UTF-8 bytes, starts with garbled characters, or contains no recognizable HTML despite a 200 status:
+
+1. Check the response `Content-Encoding` header — if it says `br`, `gzip`, or `zstd`, the body is compressed
+2. Verify your HTTP client has decompression enabled
+3. In agentOS: `agentos.http` handles this automatically. If you're using raw `urllib.request`, it does NOT decompress brotli
+
+Reference: `Cargo.toml` reqwest features — `gzip`, `brotli`, `deflate`, `zstd`.
 
 ---
 
@@ -431,7 +459,7 @@ _BASE_HEADERS = {
     "User-Agent": _BROWSER_UA,
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate, br",  # client must handle decompression
     "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
     "Sec-CH-UA-Mobile": "?0",
     "Sec-CH-UA-Platform": '"macOS"',
