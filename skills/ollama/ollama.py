@@ -12,12 +12,11 @@ inference operations prefer api but auto-start the server via cli if needed.
 
 import json
 import shutil
-import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
+
+from agentos import http, shell
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_BINARY = "/opt/homebrew/bin/ollama"
@@ -52,33 +51,22 @@ def _connection_name(connection: dict | None) -> str:
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 def _http_get(url: str, timeout: int = 10) -> dict:
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+    resp = http.get(url, profile="api", timeout=timeout)
+    if not resp.get("ok"):
+        raise RuntimeError(f"HTTP GET {url} failed: {resp.get('status', 0)}")
+    return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
 def _http_post(url: str, body: dict, timeout: int = 300) -> dict:
-    data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+    resp = http.post(url, json=body, profile="api", timeout=timeout)
+    if not resp.get("ok"):
+        raise RuntimeError(f"HTTP POST {url} failed: {resp.get('status', 0)}")
+    return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
 def _http_delete(url: str, body: dict, timeout: int = 30) -> int:
-    data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="DELETE",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.status
+    resp = http.delete(url, json=body, profile="api", timeout=timeout)
+    return resp.get("status", 0)
 
 
 # ── Server management ─────────────────────────────────────────────────────────
@@ -94,19 +82,16 @@ def _api_running(base_url: str = DEFAULT_BASE_URL) -> bool:
 def _start_server(binary: str) -> bool:
     """Start `ollama serve` in background. Polls up to 8s for readiness."""
     try:
-        subprocess.Popen(
-            [binary, "serve"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        for _ in range(16):
-            time.sleep(0.5)
-            if _api_running():
-                return True
-        return False
+        # shell.run is synchronous, so we use it to invoke `ollama serve` via
+        # a background shell command. The serve process detaches itself.
+        shell.run(binary, ["serve"], timeout=2)
     except Exception:
-        return False
+        pass  # timeout is expected — ollama serve runs forever
+    for _ in range(16):
+        time.sleep(0.5)
+        if _api_running():
+            return True
+    return False
 
 
 def _ensure_api_running(connection: dict | None, cli_connection: dict | None = None) -> None:
@@ -268,18 +253,12 @@ def _chat_via_cli(
         parts.append(f"{role}: {content}")
 
     prompt = "\n\n".join(parts)
-    result = subprocess.run(
-        [binary, "run", model, "--nowordwrap"],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"ollama run failed: {result.stderr.strip()}")
+    result = shell.run(binary, ["run", model, "--nowordwrap"], input=prompt, timeout=300)
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"ollama run failed: {result['stderr'].strip()}")
 
     return {
-        "content": result.stdout.strip(),
+        "content": result["stdout"].strip(),
         "thinking": None,
         "tool_calls": [],
         "stop_reason": "end_turn",
@@ -338,27 +317,17 @@ def op_list_models(connection: dict | None = None) -> list:
 
 def _list_models_via_cli(connection: dict | None) -> list:
     binary = _binary(connection)
-    result = subprocess.run(
-        [binary, "list", "--json"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if result.returncode == 0 and result.stdout.strip():
+    result = shell.run(binary, ["list", "--json"], timeout=15)
+    if result["exit_code"] == 0 and result["stdout"].strip():
         try:
-            data = json.loads(result.stdout)
+            data = json.loads(result["stdout"])
             return data.get("models", [])
         except Exception:
             pass
 
     # Fallback: parse text table output
-    result2 = subprocess.run(
-        [binary, "list"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    return _parse_list_text(result2.stdout)
+    result2 = shell.run(binary, ["list"], timeout=15)
+    return _parse_list_text(result2["stdout"])
 
 
 def _parse_list_text(text: str) -> list:
@@ -388,14 +357,9 @@ def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
 
 def _pull_via_cli(model: str, connection: dict | None) -> dict:
     binary = _binary(connection)
-    result = subprocess.run(
-        [binary, "pull", model],
-        capture_output=True,
-        text=True,
-        timeout=600,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"ollama pull failed: {result.stderr.strip()}")
+    result = shell.run(binary, ["pull", model], timeout=600)
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"ollama pull failed: {result['stderr'].strip()}")
     return {
         "status": "success",
         "model": model,
@@ -425,25 +389,19 @@ def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dic
 
     _ensure_api_running(connection)
     base = _base_url(connection)
-    try:
-        _http_delete(f"{base}/api/delete", {"name": model}, timeout=30)
-        return {"status": "success", "model": model, "message": f"Deleted {model}"}
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            raise RuntimeError(f"Model {model!r} not found")
-        raise
+    status = _http_delete(f"{base}/api/delete", {"name": model}, timeout=30)
+    if status == 404:
+        raise RuntimeError(f"Model {model!r} not found")
+    if status >= 400:
+        raise RuntimeError(f"Delete failed with status {status}")
+    return {"status": "success", "model": model, "message": f"Deleted {model}"}
 
 
 def _delete_via_cli(model: str, connection: dict | None) -> dict:
     binary = _binary(connection)
-    result = subprocess.run(
-        [binary, "rm", model],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"ollama rm failed: {result.stderr.strip()}")
+    result = shell.run(binary, ["rm", model], timeout=30)
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"ollama rm failed: {result['stderr'].strip()}")
     return {"status": "success", "model": model, "message": f"Deleted {model}"}
 
 
