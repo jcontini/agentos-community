@@ -3,6 +3,7 @@
 import re
 import shutil
 
+from bs4 import BeautifulSoup
 from agentos import http, shell
 
 
@@ -30,26 +31,22 @@ def get_community(
     if not html:
         return {"error": "Failed to fetch group page. Group may be private or not found."}
 
-    # Extract metadata from meta tags
+    # Extract metadata from meta tags via CSS selectors
+    soup = BeautifulSoup(html, "html.parser")
+
     group_id = ""
     m = re.search(r"fb://group/(\d+)", html)
     if m:
         group_id = m.group(1)
 
-    title = ""
-    m = re.search(r'<meta[^>]*property="og:title"[^>]*content="([^"]+)"', html)
-    if m:
-        title = re.sub(r"\s*\|\s*Facebook$", "", m.group(1))
+    og_title = soup.select_one('meta[property="og:title"]')
+    title = re.sub(r"\s*\|\s*Facebook$", "", og_title.get("content", "")) if og_title else ""
 
-    description = ""
-    m = re.search(r'<meta[^>]*property="og:description"[^>]*content="([^"]+)"', html)
-    if m:
-        description = m.group(1)
+    og_desc = soup.select_one('meta[property="og:description"]')
+    description = og_desc.get("content", "") if og_desc else ""
 
-    og_image = ""
-    m = re.search(r'<meta[^>]*property="og:image"[^>]*content="([^"]+)"', html)
-    if m:
-        og_image = m.group(1)
+    og_img = soup.select_one('meta[property="og:image"]')
+    og_image = og_img.get("content", "") if og_img else ""
 
     # Member count via headless Chromium (optional, slower)
     member_count_raw = ""

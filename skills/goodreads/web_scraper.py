@@ -30,15 +30,16 @@ def _fetch(client, url: str) -> tuple[int, str]:
 
 def _has_next(html_text: str) -> bool:
     """Check if there's a 'next' pagination link."""
-    return bool(re.search(r'class="next_page"', html_text) or
-                re.search(r'rel="next"', html_text))
+    soup = BeautifulSoup(html_text, "html.parser")
+    return bool(soup.select_one('.next_page, [rel="next"]'))
 
 
 def _require_login(html_text: str) -> None:
-    snippet = html_text[:2000]
-    if "Sign in" in snippet or "Sign Up" in snippet:
-        title = re.search(r"<title>(.*?)</title>", html_text, re.S)
-        if title and ("Sign Up" in title.group(1) or "Sign in" in title.group(1)):
+    soup = BeautifulSoup(html_text[:4000], "html.parser")
+    title_el = soup.select_one("title")
+    if title_el:
+        title_text = title_el.get_text()
+        if "Sign Up" in title_text or "Sign in" in title_text:
             raise RuntimeError("Page requires login — cookies invalid or expired")
 
 

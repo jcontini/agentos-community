@@ -235,48 +235,41 @@ def search_products(
 
 
 def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
+    soup = _soup(body)
     products: list[dict[str, Any]] = []
 
-    # data-asin appears before data-component-type in Amazon's HTML
-    pattern = re.compile(
-        r'data-asin="([A-Z0-9]{10})"[^>]*?'
-        r'data-component-type="s-search-result"',
-    )
+    for card in soup.select('div[data-asin][data-component-type="s-search-result"]'):
+        asin = card.get("data-asin", "")
+        if not asin or not re.match(r'^[A-Z0-9]{10}$', asin):
+            continue
 
-    matches = list(pattern.finditer(body))
-    for i, m in enumerate(matches):
-        asin = m.group(1)
-        start = body.rfind("<div", max(0, m.start() - 300), m.start())
-        if start == -1:
-            start = m.start()
-        end = matches[i + 1].start() if i + 1 < len(matches) else min(start + 6000, len(body))
-        block = body[start:end]
-
-        # h2 has aria-label with full title; span inside has the same text
-        title_m = re.search(r'<h2[^>]*aria-label="([^"]+)"', block)
-        if not title_m:
-            title_m = re.search(r"<h2[^>]*>.*?<span[^>]*>(.*?)</span>", block, re.S)
-        title = molt(title_m.group(1)) if title_m else None
+        # Title: h2 aria-label or h2 > span text
+        h2 = card.select_one("h2")
+        title = None
+        if h2:
+            title = h2.get("aria-label") or _text(h2)
+        title = molt(title)
         if not title:
             continue
 
-        price_m = re.search(
-            r'<span class="a-price"[^>]*>.*?<span class="a-offscreen">(.*?)</span>',
-            block, re.S,
-        )
-        price = price_m.group(1).strip() if price_m else None
+        # Price
+        price_el = card.select_one(".a-price .a-offscreen")
+        price = _text(price_el)
 
-        rating_m = re.search(r'<span class="a-icon-alt">(.*?)</span>', block)
-        rating = _parse_rating(rating_m.group(1) if rating_m else None)
+        # Rating
+        rating_el = card.select_one(".a-icon-alt")
+        rating = _parse_rating(_text(rating_el))
 
-        count_m = re.search(r'<span[^>]*class="[^"]*s-underline-text[^"]*"[^>]*>(.*?)</span>', block)
-        ratings_count = parse_int(count_m.group(1) if count_m else None)
+        # Rating count
+        count_el = card.select_one("[class*='s-underline-text']")
+        ratings_count = parse_int(_text(count_el))
 
-        img_m = re.search(r'<img[^>]+class="s-image"[^>]+src="([^"]+)"', block)
-        image = img_m.group(1) if img_m else None
+        # Image
+        img_el = card.select_one("img.s-image")
+        image = img_el.get("src") if img_el else None
 
-        prime = 'aria-label="Amazon Prime"' in block or "s-prime" in block
-        sponsored = "AdHolder" in block
+        prime = bool(card.select_one('[aria-label="Amazon Prime"]')) or bool(card.select_one(".s-prime"))
+        sponsored = bool(card.select_one(".AdHolder"))
 
         products.append({
             "asin": asin,
@@ -324,54 +317,40 @@ def get_product(
 
 
 def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
-    title = molt(_extract(r'<span id="productTitle"[^>]*>(.*?)</span>', body))
+    soup = _soup(body)
 
-    price = _extract(
-        r'(?:id="corePrice_feature_div"|id="corePriceDisplay_desktop_feature_div").*?'
-        r'<span class="a-offscreen">(.*?)</span>',
-        body,
-    )
-    if not price:
-        price = _extract(r'<span class="a-offscreen">(\$[\d,.]+)</span>', body)
+    title = molt(_text(soup.select_one("#productTitle")))
 
-    rating = _parse_rating(_extract(
-        r'id="acrPopover".*?<span class="a-icon-alt">(.*?)</span>', body,
-    ))
+    # Price: core price display → any offscreen price
+    price_el = soup.select_one("#corePrice_feature_div .a-offscreen, #corePriceDisplay_desktop_feature_div .a-offscreen")
+    if not price_el:
+        price_el = soup.select_one(".a-offscreen")
+    price = _text(price_el)
 
-    ratings_count = parse_int(_extract(
-        r'id="acrCustomerReviewText"[^>]*>(.*?)</span>', body,
-    ))
+    rating = _parse_rating(_text(soup.select_one("#acrPopover .a-icon-alt")))
+    ratings_count = parse_int(_text(soup.select_one("#acrCustomerReviewText")))
 
-    brand_raw = molt(_extract(r'<a id="bylineInfo"[^>]*>(.*?)</a>', body))
-    brand = brand_raw
+    brand_el = soup.select_one("#bylineInfo")
+    brand = molt(_text(brand_el))
     if brand:
         brand = re.sub(r"^Visit the\s+", "", brand, flags=re.I)
         brand = re.sub(r"\s+Store$", "", brand, flags=re.I)
         brand = re.sub(r"^Brand:\s*", "", brand, flags=re.I)
 
-    availability = molt(_extract(
-        r'id="availability".*?<span[^>]*>(.*?)</span>', body,
-    ))
+    avail_el = soup.select_one("#availability span")
+    availability = molt(_text(avail_el))
 
-    main_image = _extract(r'id="landingImage"[^>]+src="([^"]+)"', body)
+    img_el = soup.select_one("#landingImage")
+    main_image = img_el.get("src") if img_el else None
 
-    description = molt(_extract(
-        r'id="productDescription"[^>]*>(.*?)</div>', body,
-    ))
+    desc_el = soup.select_one("#productDescription")
+    description = molt(_text(desc_el))
     if not description:
-        description = molt(_extract(
-            r'id="feature-bullets"[^>]*>(.*?)</div>', body,
-        ))
+        bullets_el = soup.select_one("#feature-bullets")
+        description = molt(_text(bullets_el))
 
     # Breadcrumb categories
-    crumb_section = body[:body.find('id="productTitle"')] if 'id="productTitle"' in body else body[:8000]
-    cats_raw = re.findall(
-        r'id="wayfinding-breadcrumbs_feature_div".*?</ul>',
-        crumb_section, re.S,
-    )
-    categories: list[str] = []
-    if cats_raw:
-        categories = [c for c in (molt(c) for c in re.findall(r"<a[^>]*>(.*?)</a>", cats_raw[0], re.S)) if c]
+    categories = [molt(_text(a)) for a in soup.select("#wayfinding-breadcrumbs_feature_div a") if molt(_text(a))]
 
     # Images from ImageBlockATF — extract the JSON array after 'initial':
     images: list[str] = []
