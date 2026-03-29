@@ -21,8 +21,6 @@ import argparse
 import json
 import os
 import sys
-import urllib.request
-import urllib.error
 
 from agentos import http
 
@@ -104,34 +102,31 @@ def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl
 
 def make_request(url, method="GET", body=None, headers=None, content_type="application/json"):
     headers = headers or {}
-    if body is not None and "Content-Type" not in headers:
+    kwargs = {"headers": headers, "profile": "api"}
+
+    if body is not None and isinstance(body, (dict, list)):
+        kwargs["json"] = body
+    elif body is not None:
+        # Raw bytes/string — pass as data with explicit content-type
+        if isinstance(body, bytes):
+            body = body.decode("utf-8", errors="replace")
+        kwargs["data"] = body
         headers["Content-Type"] = content_type
 
-    data = None
-    if body is not None:
-        if isinstance(body, (dict, list)):
-            data = json.dumps(body).encode("utf-8")
-        elif isinstance(body, str):
-            data = body.encode("utf-8")
-        else:
-            data = body
+    dispatch = {"GET": http.get, "POST": http.post, "PUT": http.put, "DELETE": http.delete, "PATCH": http.patch}
+    fn = dispatch.get(method, http.get)
+    resp = fn(url, **kwargs)
 
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req) as resp:
-            raw = resp.read()
-            try:
-                return json.loads(raw)
-            except Exception:
-                return raw.decode("utf-8")
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8")
+    if not resp.get("ok"):
+        err_body = resp.get("body", "")
         try:
-            err = json.loads(body)
+            err = json.loads(err_body)
         except Exception:
-            err = {"error": body}
-        print(json.dumps({"success": False, "error": str(e), "detail": err}), file=sys.stderr)
+            err = {"error": err_body}
+        print(json.dumps({"success": False, "error": f"HTTP {resp.get('status', 0)}", "detail": err}), file=sys.stderr)
         sys.exit(1)
+
+    return resp.get("json") if resp.get("json") is not None else resp.get("body", "")
 
 
 def do_publish(

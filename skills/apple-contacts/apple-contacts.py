@@ -7,9 +7,8 @@ scripts that use the Contacts framework for full API access.
 
 import json
 import os
-import subprocess
 
-from agentos import sql
+from agentos import shell, sql
 
 SKILL_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,23 +20,17 @@ def _db_path(account):
 
 def _swift(script, args=None, stdin_data=None):
     """Run a Swift script and return parsed JSON output."""
-    cmd = ["swift", os.path.join(SKILL_DIR, script)]
+    swift_args = [os.path.join(SKILL_DIR, script)]
     if args:
-        cmd.extend(args)
-    result = subprocess.run(
-        cmd,
-        input=stdin_data,
-        capture_output=True,
-        text=True,
-        timeout=20,
-    )
-    if result.returncode != 0:
-        error = result.stderr.strip() or result.stdout.strip()
+        swift_args.extend(args)
+    result = shell.run("swift", swift_args, input=stdin_data, timeout=20)
+    if result["exit_code"] != 0:
+        error = result["stderr"].strip() or result["stdout"].strip()
         try:
             return json.loads(error)
         except (json.JSONDecodeError, TypeError):
-            return {"error": error or f"Swift script failed with exit code {result.returncode}"}
-    return json.loads(result.stdout)
+            return {"error": error or f"Swift script failed with exit code {result['exit_code']}"}
+    return json.loads(result["stdout"])
 
 
 # ==============================================================================

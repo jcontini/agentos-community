@@ -8,9 +8,8 @@ forward-compatibility with engine-injected context.
 """
 
 import json
-import subprocess
 
-from agentos import sql
+from agentos import shell, sql
 
 DB_PATH = "~/Library/Messages/chat.db"
 
@@ -168,12 +167,7 @@ def op_search_messages(*, query, limit=200, **params):
 
 def op_send_message(*, to, text, service="iMessage", **params):
     """Send an iMessage or SMS to a phone number or email."""
-    result = subprocess.run(
-        ["imsg", "send", "--to", to, "--text", text, "--service", service, "--json"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"imsg send failed: {result.stderr.strip()}")
-    return json.loads(result.stdout) if result.stdout.strip() else None
+    result = shell.run("imsg", ["send", "--to", to, "--text", text, "--service", service, "--json"], timeout=15)
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"imsg send failed: {result['stderr'].strip()}")
+    return json.loads(result["stdout"]) if result["stdout"].strip() else None

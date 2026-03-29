@@ -8,9 +8,9 @@ No network calls. Requires macOS.
 import json
 import os
 import re
-import sqlite3
-import subprocess
 from pathlib import Path
+
+from agentos import shell, sql
 
 
 # ── App discovery ──────────────────────────────────────────────────────────────
@@ -39,13 +39,10 @@ def _find_all_apps() -> list[Path]:
 def _read_plist_json(plist_path: Path) -> dict | None:
     """Parse an Info.plist file to a dict via plutil."""
     try:
-        proc = subprocess.run(
-            ["plutil", "-convert", "json", str(plist_path), "-o", "-"],
-            capture_output=True, text=True, timeout=5
-        )
-        if proc.returncode != 0:
+        result = shell.run("plutil", ["-convert", "json", str(plist_path), "-o", "-"], timeout=5)
+        if result["exit_code"] != 0:
             return None
-        return json.loads(proc.stdout)
+        return json.loads(result["stdout"])
     except Exception:
         return None
 
@@ -54,11 +51,8 @@ def _read_plist_json(plist_path: Path) -> dict | None:
 
 def _security(*args) -> str:
     """Run a `security` CLI command, return stdout."""
-    result = subprocess.run(
-        ["security"] + list(args),
-        capture_output=True, text=True
-    )
-    return result.stdout.strip()
+    result = shell.run("security", list(args))
+    return result["stdout"].strip()
 
 
 def _dump_keychain() -> str:
@@ -298,23 +292,20 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
         return [{"error": "No Accounts DB found in ~/Library/Accounts/", "note": "Grant Full Disk Access to enable"}]
 
     results = []
-    try:
-        conn = sqlite3.connect(f"file:{accounts_db}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+    db = str(accounts_db)
 
-        # Get table names to handle schema variations across macOS versions
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = {row[0] for row in cursor.fetchall()}
+    try:
+        # Check schema
+        tables_rows = sql.query("SELECT name FROM sqlite_master WHERE type='table'", db=db)
+        tables = {r["name"] for r in tables_rows}
 
         if "ZACCOUNT" not in tables:
-            conn.close()
             return [{"error": "Unexpected DB schema — ZACCOUNT table not found"}]
 
         has_type_table = "ZACCOUNTTYPE" in tables
 
         if has_type_table:
-            cursor.execute("""
+            rows = sql.query("""
                 SELECT
                     a.ZUSERNAME   AS username,
                     a.ZIDENTIFIER AS identifier,
@@ -322,17 +313,15 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
                 FROM ZACCOUNT a
                 LEFT JOIN ZACCOUNTTYPE t ON a.ZACCOUNTTYPE = t.Z_PK
                 ORDER BY t.ZIDENTIFIER, a.ZUSERNAME
-            """)
+            """, db=db)
         else:
-            cursor.execute("""
+            rows = sql.query("""
                 SELECT ZUSERNAME AS username, ZIDENTIFIER AS identifier, NULL AS account_type
                 FROM ZACCOUNT
                 ORDER BY ZUSERNAME
-            """)
+            """, db=db)
 
         # Only show top-level provider accounts (Google, Exchange, etc.)
-        # CalDAV/CardDAV/IMAP/SMTP are child accounts created by macOS under
-        # the parent Google/Exchange account — showing them is noise.
         _SHOW_TYPES = {
             "com.apple.account.Google",
             "com.apple.account.Exchange",
@@ -341,32 +330,28 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
             "com.apple.account.LinkedIn",
         }
 
-        for row in cursor.fetchall():
-            account_type = row["account_type"] or ""
+        for row in rows:
+            account_type = row.get("account_type") or ""
             if account_type not in _SHOW_TYPES:
                 continue
-            # Skip rows where username is just a UUID (no real identity)
-            username = row["username"] or row["identifier"]
+            username = row.get("username") or row.get("identifier") or ""
             if re.match(r'^[0-9A-F]{8}-', username):
                 continue
             results.append({
                 "username": username,
                 "account_type": account_type or "unknown",
-                "identifier": row["identifier"],
+                "identifier": row.get("identifier"),
                 "note": _account_type_note(account_type),
             })
 
-        conn.close()
-
-    except sqlite3.OperationalError as e:
-        if "unable to open" in str(e) or "permission" in str(e).lower():
+    except Exception as e:
+        err_msg = str(e)
+        if "unable to open" in err_msg or "permission" in err_msg.lower():
             return [{
                 "error": "Permission denied reading Accounts5.sqlite",
                 "note": "Grant Full Disk Access to Terminal or Claude in System Settings → Privacy",
             }]
-        return [{"error": str(e)}]
-    except Exception as e:
-        return [{"error": str(e)}]
+        return [{"error": err_msg}]
 
     return results
 

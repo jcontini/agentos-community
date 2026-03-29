@@ -8,9 +8,10 @@ No auth needed — local files only.
 
 import json
 import os
-import sqlite3
 import sys
 import argparse
+
+from agentos import sql
 
 WIDGET_DIR = os.path.expanduser(
     "~/Library/Group Containers/group.com.copilot.production/widget-data"
@@ -33,9 +34,6 @@ def load_categories():
 
 def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     categories = load_categories()
-
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
 
     base_sql = """
         SELECT
@@ -72,12 +70,10 @@ def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     base_sql += " ORDER BY t.date DESC LIMIT :limit"
     params["limit"] = limit
 
-    rows = conn.execute(base_sql, params).fetchall()
-    conn.close()
+    rows = sql.query(base_sql, db=DB_PATH, params=params)
 
     results = []
-    for row in rows:
-        r = dict(row)
+    for r in rows:
 
         # Enrich with category info from widget JSON
         cat_id = r.get("category_id")

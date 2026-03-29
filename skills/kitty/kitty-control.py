@@ -2,11 +2,12 @@
 
 import json
 import os
-import subprocess
 import sys
 import time
 from glob import glob
 from pathlib import Path
+
+from agentos import shell
 
 
 KITTY_BINARY = "/Applications/kitty.app/Contents/MacOS/kitty"
@@ -72,23 +73,13 @@ def ensure_socket(start_if_missing: bool = False, wait_secs: float = 8.0) -> str
     if not Path(KITTY_BINARY).exists():
         fail(f"Kitty not found at {KITTY_BINARY}")
 
-    launch_attempts = [
-        ["open", "-a", "kitty"],
-        [KITTY_BINARY],
-    ]
-    for command in launch_attempts:
-        try:
-            subprocess.Popen(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            break
-        except OSError:
-            continue
-    else:
-        fail("Failed to start Kitty")
+    # Launch kitty — `open -a` returns immediately on macOS
+    result = shell.run("open", ["-a", "kitty"])
+    if result["exit_code"] != 0:
+        # Fallback: try binary directly
+        result = shell.run(KITTY_BINARY, [])
+        if result["exit_code"] != 0:
+            fail("Failed to start Kitty")
 
     deadline = time.time() + wait_secs
     while time.time() < deadline:
@@ -104,12 +95,11 @@ def ensure_socket(start_if_missing: bool = False, wait_secs: float = 8.0) -> str
 
 
 def kitty_command(socket: str, *args: str) -> str:
-    command = [KITTY_BINARY, "@", "--to", socket, *args]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout).strip() or "Kitty command failed"
+    result = shell.run(KITTY_BINARY, ["@", "--to", socket, *args])
+    if result["exit_code"] != 0:
+        message = (result["stderr"] or result["stdout"]).strip() or "Kitty command failed"
         fail(message)
-    return result.stdout.strip()
+    return result["stdout"].strip()
 
 
 def kitty_ls(socket: str) -> list[dict]:

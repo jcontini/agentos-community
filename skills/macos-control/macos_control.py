@@ -3,10 +3,11 @@
 import json
 import math
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from agentos import shell
 
 
 APP_SYSTEM_PROFILER_SWIFT = r"""
@@ -120,25 +121,18 @@ def read_params() -> dict:
 
 
 def run_json_command(args, input_text=None):
-    completed = subprocess.run(
-        args,
-        input=input_text,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    stdout = completed.stdout.strip()
+    result = shell.run(args[0], args[1:], input=input_text)
+    if result["exit_code"] != 0:
+        raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
+    stdout = result["stdout"].strip()
     return json.loads(stdout) if stdout else None
 
 
 def run_text_command(args):
-    completed = subprocess.run(
-        args,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return completed.stdout
+    result = shell.run(args[0], args[1:])
+    if result["exit_code"] != 0:
+        raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
+    return result["stdout"]
 
 
 def run_swift_json(script: str):
@@ -387,10 +381,9 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
         raise ValueError("Display not found")
 
     resolved_path = resolve_output_path(path, f"display-{target['display_id']}")
-    subprocess.run(
-        ["screencapture", "-x", "-D", str(target["display_index"]), resolved_path],
-        check=True,
-    )
+    result = shell.run("screencapture", ["-x", "-D", str(target["display_index"]), resolved_path])
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
     return {
         "display_id": target["display_id"],
         "display_index": target["display_index"],
@@ -409,10 +402,9 @@ def screenshot_window(*, window_id, path=None, **params):
         raise ValueError("Window is not capture_eligible")
 
     resolved_path = resolve_output_path(path, f"window-{target_window_id}")
-    subprocess.run(
-        ["screencapture", "-x", "-l", str(target_window_id), resolved_path],
-        check=True,
-    )
+    result = shell.run("screencapture", ["-x", "-l", str(target_window_id), resolved_path])
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
     return {
         "window_id": target_window_id,
         "app_name": target.get("app_name"),
@@ -566,13 +558,15 @@ def resolve_output_path(value, label):
 
 def clipboard_read(**_kwargs):
     """Read the current macOS clipboard contents."""
-    result = subprocess.run(["pbpaste"], capture_output=True, text=True)
-    return {"text": result.stdout}
+    result = shell.run("pbpaste", [])
+    return {"text": result["stdout"]}
 
 
 def clipboard_write(*, text, **_kwargs):
     """Write text to the macOS clipboard."""
-    subprocess.run(["pbcopy"], input=text, text=True, check=True)
+    result = shell.run("pbcopy", [], input=text)
+    if result["exit_code"] != 0:
+        raise RuntimeError(f"pbcopy failed: {result['stderr'].strip()}")
     return {"status": "ok", "length": len(text)}
 
 

@@ -22,14 +22,13 @@ Web: https://notes.granola.ai/t/{thread_id}
 Local cache: ~/Library/Application Support/Granola/cache-v6.json — same entity shape, works offline.
 """
 
-import gzip
 import json
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+from agentos import http
 
 DEFAULT_API_BASE = "https://api.granola.ai"
 DEFAULT_AUTH_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "supabase.json"
@@ -79,29 +78,15 @@ def get_token(con: dict | None = None) -> str:
 
 def api_post(token: str, endpoint: str, body: dict, con: dict | None = None) -> object:
     url = f"{_api_base(con)}{endpoint}"
-    req = Request(
-        url,
-        data=json.dumps(body).encode(),
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept-Encoding": "gzip",
-            "User-Agent": "AgentOS/1.0",
-        },
-        method="POST",
-    )
-    try:
-        with urlopen(req, timeout=30) as resp:
-            raw = resp.read()
-            if resp.headers.get("Content-Encoding") == "gzip":
-                raw = gzip.decompress(raw)
-            return json.loads(raw)
-    except HTTPError as e:
-        if e.code == 401:
+    resp = http.post(url, json=body, headers={
+        "Authorization": f"Bearer {token}",
+    }, profile="api")
+    if not resp.get("ok"):
+        status = resp.get("status", 0)
+        if status == 401:
             die("Granola token expired. Open Granola to refresh it.")
-        die(f"Granola API error {e.code}: {e.reason}")
-    except URLError as e:
-        die(f"Network error: {e.reason}")
+        die(f"Granola API error {status}: {resp.get('body', '')[:200]}")
+    return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
 def die(msg: str) -> None:

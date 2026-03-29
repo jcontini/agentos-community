@@ -2,9 +2,8 @@
 
 import re
 import shutil
-import subprocess
 
-from agentos import http
+from agentos import http, shell
 
 
 def get_community(
@@ -60,13 +59,8 @@ def get_community(
         chromium = _find_chromium()
         if chromium:
             try:
-                result = subprocess.run(
-                    [chromium, "--headless", "--dump-dom", group_url],
-                    capture_output=True,
-                    text=True,
-                    timeout=20,
-                )
-                dom = result.stdout
+                result = shell.run(chromium, ["--headless", "--dump-dom", group_url], timeout=20)
+                dom = result["stdout"]
                 if dom:
                     mc = re.search(r"([\d,.]+K?)\s*members?", dom)
                     if mc:
