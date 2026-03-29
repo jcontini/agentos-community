@@ -4,11 +4,11 @@ import glob
 import json
 import os
 import re
-import sqlite3
-import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from agentos import shell, sql
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -143,16 +143,14 @@ def _workspace_path_to_slug(path):
 
 def _read_composer_metadata(db_path):
     try:
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-        cursor = conn.execute(
-            "SELECT value FROM ItemTable WHERE key = 'composer.composerData'"
+        rows = sql.query(
+            "SELECT value FROM ItemTable WHERE key = 'composer.composerData'",
+            db=db_path,
         )
-        row = cursor.fetchone()
-        conn.close()
-        if not row:
+        if not rows:
             return []
-        return json.loads(row[0]).get("allComposers", [])
-    except (sqlite3.Error, json.JSONDecodeError, IOError):
+        return json.loads(rows[0]["value"]).get("allComposers", [])
+    except (json.JSONDecodeError, Exception):
         return []
 
 
@@ -215,27 +213,24 @@ def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
     if not to_process or not os.path.isfile(GLOBAL_STATE_DB):
         return conversations
 
-    try:
-        conn = sqlite3.connect(f"file:{GLOBAL_STATE_DB}?mode=ro", uri=True)
-    except sqlite3.Error:
-        return conversations
-
     for cid, ws_slug, composer in to_process:
         try:
             prefix = f"bubbleId:{cid}:"
-            cursor = conn.execute(
-                "SELECT value FROM cursorDiskKV WHERE key >= ? AND key < ?",
-                (prefix, prefix[:-1] + chr(ord(":") + 1)),
+            end_prefix = prefix[:-1] + chr(ord(":") + 1)
+            rows = sql.query(
+                "SELECT value FROM cursorDiskKV WHERE key >= :start AND key < :end",
+                db=GLOBAL_STATE_DB,
+                params={"start": prefix, "end": end_prefix},
             )
-            rows = cursor.fetchall()
-        except sqlite3.Error:
+        except Exception:
             continue
 
         if not rows:
             continue
 
         raw_messages = []
-        for (blob_json,) in rows:
+        for row in rows:
+            blob_json = row.get("value")
             if not isinstance(blob_json, str):
                 continue
             try:
@@ -272,7 +267,6 @@ def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
 
         conversations[cid] = conv
 
-    conn.close()
     return conversations
 
 
@@ -293,19 +287,19 @@ def _get_session_by_id(conv_id):
                 if not os.path.isfile(GLOBAL_STATE_DB):
                     return None
                 try:
-                    conn = sqlite3.connect(f"file:{GLOBAL_STATE_DB}?mode=ro", uri=True)
                     prefix = f"bubbleId:{conv_id}:"
-                    cursor = conn.execute(
-                        "SELECT value FROM cursorDiskKV WHERE key >= ? AND key < ?",
-                        (prefix, prefix[:-1] + chr(ord(":") + 1)),
+                    end_prefix = prefix[:-1] + chr(ord(":") + 1)
+                    rows = sql.query(
+                        "SELECT value FROM cursorDiskKV WHERE key >= :start AND key < :end",
+                        db=GLOBAL_STATE_DB,
+                        params={"start": prefix, "end": end_prefix},
                     )
-                    rows = cursor.fetchall()
-                    conn.close()
-                except sqlite3.Error:
+                except Exception:
                     return None
 
                 raw_messages = []
-                for (blob_json,) in rows:
+                for row in rows:
+                    blob_json = row.get("value")
                     if not isinstance(blob_json, str):
                         continue
                     try:
@@ -333,10 +327,9 @@ def _get_session_by_id(conv_id):
 # ── Research extraction ────────────────────────────────────────────────────────
 
 
-def _open_db(path):
-    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _sql_query(query_str, db_path, params=None):
+    """Wrapper around sql.query for cursor DBs."""
+    return sql.query(query_str, db=db_path, params=params or {})
 
 
 def _parse_task_blob(blob_value):
@@ -430,21 +423,20 @@ def _build_conversation_index():
         if not os.path.exists(db_path):
             continue
         try:
-            conn = _open_db(db_path)
-            cur = conn.cursor()
-            cur.execute("SELECT value FROM ItemTable WHERE key = 'composer.composerData'")
-            row = cur.fetchone()
-            conn.close()
-            if not row:
+            rows = _sql_query(
+                "SELECT value FROM ItemTable WHERE key = 'composer.composerData'",
+                db_path,
+            )
+            if not rows:
                 continue
-            for c in json.loads(row[0]).get("allComposers", []):
+            for c in json.loads(rows[0]["value"]).get("allComposers", []):
                 cid = c.get("composerId", "")
                 convos[cid] = {
                     "name": c.get("name", ""),
                     "workspace": folder,
                     "created_at": c.get("createdAt", 0),
                 }
-        except (sqlite3.Error, json.JSONDecodeError):
+        except (json.JSONDecodeError, Exception):
             pass
     return convos
 
@@ -475,18 +467,13 @@ def _find_agentos_binary():
         try:
             with open(pid_file) as f:
                 pid = int(f.read().strip())
-            result = subprocess.run(
-                ["lsof", "-p", str(pid), "-a", "-d", "txt", "-F", "n"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            for line in result.stdout.splitlines():
+            result = shell.run("lsof", ["-p", str(pid), "-a", "-d", "txt", "-F", "n"], timeout=5)
+            for line in result["stdout"].splitlines():
                 if line.startswith("n") and "agentos" in line.lower():
                     path = line[1:]
                     if os.path.isfile(path) and os.access(path, os.X_OK):
                         return path
-        except (ValueError, subprocess.TimeoutExpired, OSError):
+        except (ValueError, OSError):
             pass
 
     # 2. Existing Cursor mcp.json
@@ -502,9 +489,9 @@ def _find_agentos_binary():
             pass
 
     # 3. PATH
-    result = subprocess.run(["which", "agentos"], capture_output=True, text=True)
-    if result.returncode == 0:
-        path = result.stdout.strip()
+    result = shell.run("which", ["agentos"])
+    if result["exit_code"] == 0:
+        path = result["stdout"].strip()
         if os.path.isfile(path):
             return path
 
@@ -652,14 +639,12 @@ def op_pull_document():
     if not os.path.isfile(GLOBAL_STATE_DB):
         return []
 
-    conn = _open_db(GLOBAL_STATE_DB)
-    cur = conn.cursor()
-    cur.execute(
+    blobs = _sql_query(
         "SELECT key, value FROM cursorDiskKV "
         "WHERE key LIKE 'agentKv:blob:%' "
-        "AND CAST(value AS TEXT) LIKE '%\"toolName\":\"Task\"%'"
+        "AND CAST(value AS TEXT) LIKE '%\"toolName\":\"Task\"%'",
+        GLOBAL_STATE_DB,
     )
-    blobs = cur.fetchall()
 
     convos = _build_conversation_index()
 
@@ -713,5 +698,4 @@ def op_pull_document():
             }
         )
 
-    conn.close()
     return items
