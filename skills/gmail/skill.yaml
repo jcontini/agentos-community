@@ -44,11 +44,6 @@ operations:
     python:
       module: ./gmail.py
       function: list_emails
-      args:
-        query: '.params.query // ""'
-        limit: '.params.limit // 20'
-        label_ids: '.params.label_ids'
-        page_token: '.params.page_token'
       timeout: 120
 
   list_email_stubs:
@@ -64,11 +59,6 @@ operations:
     python:
       module: ./gmail.py
       function: list_email_stubs
-      args:
-        query: '.params.query // ""'
-        limit: '.params.limit // 20'
-        label_ids: '.params.label_ids'
-        page_token: '.params.page_token'
       timeout: 60
 
   get_email:
@@ -82,9 +72,6 @@ operations:
     python:
       module: ./gmail.py
       function: get_email
-      args:
-        id: .params.id
-        url: .params.url
       timeout: 30
 
   search_emails:
@@ -98,9 +85,6 @@ operations:
     python:
       module: ./gmail.py
       function: search_emails
-      args:
-        query: '.params.query'
-        limit: '.params.limit // 20'
       timeout: 120
 
   list_conversations:
@@ -116,11 +100,6 @@ operations:
     python:
       module: ./gmail.py
       function: list_conversations
-      args:
-        query: '.params.query // ""'
-        limit: '.params.limit // 20'
-        label_ids: '.params.label_ids'
-        page_token: '.params.page_token'
       timeout: 60
 
   get_conversation:
@@ -133,8 +112,6 @@ operations:
     python:
       module: ./gmail.py
       function: get_conversation
-      args:
-        id: .params.id
       timeout: 30
 
   # --- Sending ---
@@ -224,8 +201,6 @@ operations:
     python:
       module: ./gmail.py
       function: trash_email
-      args:
-        id: .params.id
       timeout: 30
 
   untrash_email:
@@ -238,8 +213,6 @@ operations:
     python:
       module: ./gmail.py
       function: untrash_email
-      args:
-        id: .params.id
       timeout: 30
 
   batch_modify_email:
@@ -267,8 +240,6 @@ operations:
     python:
       module: ./gmail.py
       function: batch_delete_email
-      args:
-        ids: .params.ids
       timeout: 30
 
   # --- Drafts ---
@@ -287,10 +258,6 @@ operations:
     python:
       module: ./gmail.py
       function: list_drafts
-      args:
-        query: '.params.query // ""'
-        limit: '.params.limit // 20'
-        page_token: '.params.page_token'
       timeout: 30
 
   get_draft:
@@ -305,8 +272,6 @@ operations:
     python:
       module: ./gmail.py
       function: get_draft
-      args:
-        id: .params.id
       timeout: 30
 
   create_draft:
@@ -361,8 +326,6 @@ operations:
     python:
       module: ./gmail.py
       function: send_draft
-      args:
-        id: .params.id
       timeout: 30
 
   delete_draft:
@@ -376,8 +339,6 @@ operations:
     python:
       module: ./gmail.py
       function: delete_draft
-      args:
-        id: .params.id
       timeout: 30
 
   # --- Account ---
@@ -426,9 +387,6 @@ operations:
     python:
       module: ./gmail.py
       function: get_attachment
-      args:
-        message_id: .params.message_id
-        attachment_id: .params.attachment_id
       timeout: 30
 
   get_raw:
@@ -444,8 +402,6 @@ operations:
     python:
       module: ./gmail.py
       function: get_raw
-      args:
-        id: .params.id
       timeout: 30
 
   get_history:
@@ -552,8 +508,6 @@ operations:
     python:
       module: ./gmail.py
       function: delete_label
-      args:
-        id: .params.id
       timeout: 15
 
   list_filters:
@@ -603,8 +557,6 @@ operations:
     python:
       module: ./gmail.py
       function: delete_filter
-      args:
-        id: .params.id
       timeout: 15
 
   list_send_as:

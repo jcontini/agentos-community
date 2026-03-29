@@ -1,7 +1,7 @@
 """Gmail skill — all operations implemented via surf() HTTP calls.
 
 All public functions take **params. Auth token lives in
-params["auth"]["token"] for the gmail connection.
+params["auth"]["access_token"], injected by the engine from OAuth resolution.
 """
 
 import base64
@@ -21,7 +21,12 @@ BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
 def _auth_header(params):
-    token = params.get("auth", {}).get("token", "")
+    auth = params.get("auth", {})
+    # Engine injects "bearer" (full header) and "access_token" (raw token)
+    bearer = auth.get("bearer")
+    if bearer:
+        return {"Authorization": bearer}
+    token = auth.get("access_token", "")
     return {"Authorization": f"Bearer {token}"}
 
 

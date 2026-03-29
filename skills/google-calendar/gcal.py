@@ -1,6 +1,6 @@
 """Google Calendar skill — all operations via surf() HTTP calls.
 
-Auth token lives in params["auth"]["token"], injected by the runtime
+Auth token lives in params["auth"]["access_token"], injected by the engine
 from the Mimestream OAuth provider (googleapis.com / calendar.events scope).
 """
 
@@ -20,7 +20,11 @@ BASE_URL = "https://www.googleapis.com/calendar/v3"
 
 
 def _auth_header(params):
-    token = params.get("auth", {}).get("token", "")
+    auth = params.get("auth", {})
+    bearer = auth.get("bearer")
+    if bearer:
+        return {"Authorization": bearer}
+    token = auth.get("access_token", "")
     return {"Authorization": f"Bearer {token}"}
 
 
