@@ -24,6 +24,7 @@ from agentos.http import (
 from agentos import sql
 from agentos import crypto
 from agentos import oauth
+from agentos import shell
 
 # --- Fine-grained (available when you need specific control) ---
 from agentos.text import clean_text, clean_html, clean_sentinel, strip_tags
@@ -34,7 +35,7 @@ __all__ = [
     # Core modules
     "http", "molt", "shape",
     # Engine-dispatched modules
-    "sql", "crypto", "oauth",
+    "sql", "crypto", "oauth", "shell",
     # HTTP helpers
     "get_cookies", "require_cookies", "parse_cookie",
     # Skill result helpers

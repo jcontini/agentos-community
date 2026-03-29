@@ -2,21 +2,15 @@
 
 import json
 import re
-import subprocess
+from agentos import shell
 
 
 def _git(*args, cwd=None):
     """Run a git command and return stdout. Raises on timeout or nonzero exit."""
-    result = subprocess.run(
-        ["git"] + list(args),
-        capture_output=True,
-        text=True,
-        timeout=30,
-        cwd=cwd,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or f"git exited {result.returncode}")
-    return result.stdout
+    result = shell.run("git", list(args), cwd=cwd, timeout=30)
+    if result["exit_code"] != 0:
+        raise RuntimeError(result["stderr"].strip() or f"git exited {result['exit_code']}")
+    return result["stdout"]
 
 
 def _parse_shortstat(text):

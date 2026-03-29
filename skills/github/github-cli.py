@@ -2,8 +2,8 @@
 import base64
 import json
 import re
-import subprocess
 import sys
+from agentos import shell
 
 
 def fail(message, code=1):
@@ -19,14 +19,10 @@ def read_payload():
 
 
 def run_gh(args):
-    proc = subprocess.run(
-        ["gh", *args],
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        fail(proc.stderr.strip() or proc.stdout.strip() or "gh command failed", proc.returncode)
-    return proc.stdout
+    result = shell.run("gh", list(args))
+    if result["exit_code"] != 0:
+        fail(result["stderr"].strip() or result["stdout"].strip() or "gh command failed", result["exit_code"])
+    return result["stdout"]
 
 
 def list_tasks(*, repo, state="open", limit=30, **params):
