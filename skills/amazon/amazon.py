@@ -3,7 +3,7 @@
 Amazon skill — search, products, order history, and account identity.
 
 Uses Amazon's public completion.amazon.com API for keyword suggestions and
-httpx with HTTP/2 for HTML page parsing. Order history and account operations
+http.client for HTML page parsing. Order history and account operations
 use session cookies from a browser cookie provider. No API keys required.
 """
 
@@ -14,8 +14,7 @@ import time
 from typing import Any
 from urllib.parse import quote_plus
 
-import httpx
-from agentos import molt, parse_int, surf, get_cookies, require_cookies
+from agentos import molt, parse_int, http, get_cookies, require_cookies
 from bs4 import BeautifulSoup, Tag
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -160,10 +159,8 @@ def search_suggestions(
 
     url = f"https://completion.amazon.{tld}/api/2017/suggestions"
 
-    with surf() as client:
-        resp = client.get(url, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    resp = http.get(url, params=params)
+    data = resp["json"]
 
     suggestions = [
         {
@@ -207,16 +204,15 @@ def search_products(
     if alias != "aps":
         search_params["i"] = alias
 
-    with surf() as client:
-        client.get(base, headers={"Accept": "text/html"})
+    with http.client() as c:
+        c.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
-        resp = client.get(
+        resp = c.get(
             f"{base}/s",
             params=search_params,
             headers={"Accept": "text/html,application/xhtml+xml"},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_captcha(body):
         raise RuntimeError(
@@ -301,15 +297,14 @@ def get_product(
     tld = mp["tld"]
     base = f"https://www.amazon.{tld}"
 
-    with surf() as client:
-        client.get(base, headers={"Accept": "text/html"})
+    with http.client() as c:
+        c.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
-        resp = client.get(
+        resp = c.get(
             f"{base}/dp/{asin}",
             headers={"Accept": "text/html,application/xhtml+xml"},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_captcha(body):
         raise RuntimeError("Amazon returned a CAPTCHA or block page.")
@@ -417,29 +412,20 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
 
 BASE = "https://www.amazon.com"
 
-_SKIP_COOKIES = {"csd-key", "csm-hit", "aws-waf-token"}
+_SKIP_COOKIES = ["csd-key", "csm-hit", "aws-waf-token"]
 
 
 _require_cookies = require_cookies
 
 
-def _auth_client(cookie_header: str) -> httpx.Client:
-    return surf(
-        cookies=cookie_header,
-        profile="navigate",
-        skip_cookies=_SKIP_COOKIES,
-        headers={"Host": "www.amazon.com"},
-    )
-
-
-def _warm_session(client: httpx.Client) -> None:
+def _warm_session(client) -> None:
     """Visit homepage first to provision session cookies and avoid bot detection on sensitive pages."""
     client.get(BASE, headers={"Sec-Fetch-Site": "none"})
     time.sleep(1.0)
 
 
-def _is_login_redirect(resp: httpx.Response, body: str) -> bool:
-    if "ap/signin" in str(resp.url):
+def _is_login_redirect(resp: dict, body: str) -> bool:
+    if "ap/signin" in str(resp["url"]):
         return True
     if "form[name='signIn']" in body[:5000]:
         return True
@@ -535,16 +521,15 @@ def list_orders(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     if page > 1:
         url_params["startIndex"] = str((page - 1) * 10)
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
 
-        resp = client.get(
+        resp = c.get(
             f"{BASE}/your-orders/orders",
             params=url_params,
             headers={"Referer": f"{BASE}/gp/homepage.html"},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_login_redirect(resp, body):
         raise RuntimeError(
@@ -764,14 +749,13 @@ def buy_again(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     params = params or {}
     cookie_header = _require_cookies(params, "buy_again")
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
-        resp = client.get(
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
+        resp = c.get(
             f"{BASE}/gp/buyagain",
             headers={"Referer": f"{BASE}/your-orders/orders"},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_login_redirect(resp, body):
         raise RuntimeError(
@@ -831,21 +815,20 @@ def subscriptions(params: dict[str, Any] | None = None) -> dict[str, Any]:
     params = params or {}
     cookie_header = _require_cookies(params, "subscriptions")
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
 
-        mgmt_resp = client.get(
+        mgmt_resp = c.get(
             f"{BASE}/gp/subscribe-and-save/manager/viewsubscriptions",
             headers={"Referer": f"{BASE}/your-orders/orders"},
         )
-        mgmt_resp.raise_for_status()
 
-        if _is_login_redirect(mgmt_resp, mgmt_resp.text):
+        if _is_login_redirect(mgmt_resp, mgmt_resp["body"]):
             raise RuntimeError(
                 "SESSION_EXPIRED: Amazon redirected to login — session cookies are expired or invalid."
             )
 
-        mgmt_soup = _soup(mgmt_resp.text)
+        mgmt_soup = _soup(mgmt_resp["body"])
 
         ship_id = None
         for tab in mgmt_soup.select("[role='tab']"):
@@ -887,7 +870,7 @@ def subscriptions(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
         items: list[dict[str, Any]] = []
         if ship_id:
-            ajax_resp = client.get(
+            ajax_resp = c.get(
                 f"{BASE}/auto-deliveries/ajax/subscriptionList",
                 params={
                     "deviceType": "desktop",
@@ -900,8 +883,8 @@ def subscriptions(params: dict[str, Any] | None = None) -> dict[str, Any]:
                     "Accept": "text/html, */*",
                 },
             )
-            if ajax_resp.status_code == 200:
-                items = _parse_subscriptions(ajax_resp.text)
+            if ajax_resp["status"] == 200:
+                items = _parse_subscriptions(ajax_resp["body"])
 
     return {
         "total_savings": savings,
@@ -992,16 +975,15 @@ def get_order(params: dict[str, Any] | None = None) -> dict[str, Any]:
     if not order_id:
         raise ValueError("order_id is required")
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
 
-        resp = client.get(
+        resp = c.get(
             f"{BASE}/gp/your-account/order-details",
             params={"orderID": order_id},
             headers={"Referer": f"{BASE}/your-orders/orders"},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_login_redirect(resp, body):
         raise RuntimeError("SESSION_EXPIRED: Amazon redirected to login — session cookies expired.")
@@ -1158,14 +1140,13 @@ def list_lists(params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     params = params or {}
     cookie_header = _require_cookies(params, "list_lists")
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
-        resp = client.get(
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
+        resp = c.get(
             f"{BASE}/hz/wishlist/ls",
             headers={"Referer": BASE},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
     if _is_login_redirect(resp, body):
         raise RuntimeError(
@@ -1231,16 +1212,15 @@ def get_list(params: dict[str, Any] | None = None) -> dict[str, Any]:
     list_privacy = None
     list_type = None
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
 
-        resp = client.get(
+        resp = c.get(
             f"{BASE}/hz/wishlist/ls/{list_id}",
             params={"filter": item_filter, "sort": "date-added", "viewType": "list"},
             headers={"Referer": BASE},
         )
-        resp.raise_for_status()
-        body = resp.text
+        body = resp["body"]
 
         if _is_login_redirect(resp, body):
             raise RuntimeError(
@@ -1274,17 +1254,17 @@ def get_list(params: dict[str, Any] | None = None) -> dict[str, Any]:
                 break
 
             time.sleep(1.0)
-            ajax_resp = client.get(
+            ajax_resp = c.get(
                 f"{BASE}{show_more}" if show_more.startswith("/") else show_more,
                 headers={
                     "X-Requested-With": "XMLHttpRequest",
                     "Referer": f"{BASE}/hz/wishlist/ls/{list_id}",
                 },
             )
-            if ajax_resp.status_code != 200:
+            if ajax_resp["status"] != 200:
                 break
 
-            ajax_body = ajax_resp.text
+            ajax_body = ajax_resp["body"]
             ajax_soup = _soup(ajax_body)
 
             page_items = _parse_list_items(ajax_soup)
@@ -1422,17 +1402,17 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
     params = params or {}
     cookie_header = _require_cookies(params, "whoami")
 
-    with _auth_client(cookie_header) as client:
-        _warm_session(client)
-        resp = client.get(f"{BASE}/gp/css/homepage.html")
+    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+        _warm_session(c)
+        resp = c.get(f"{BASE}/gp/css/homepage.html")
 
-        if resp.status_code != 200:
-            return {"authenticated": False, "status_code": resp.status_code}
+        if resp["status"] != 200:
+            return {"authenticated": False, "status_code": resp["status"]}
 
-        body = resp.text
+        body = resp["body"]
 
-        if "ap/signin" in str(resp.url):
-            return {"authenticated": False, "redirect": str(resp.url)}
+        if "ap/signin" in str(resp["url"]):
+            return {"authenticated": False, "redirect": str(resp["url"])}
 
         name_match = re.search(
             r'nav-link-accountList-nav-line-1[^>]*>Hello,\s*([^<]+)<', body
@@ -1454,9 +1434,9 @@ def whoami(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
         # Fetch Login & Security page to get the account email.
         email = None
-        manage_resp = client.get(f"{BASE}/ax/account/manage")
-        if manage_resp.status_code == 200 and "ap/signin" not in str(manage_resp.url):
-            email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", manage_resp.text)
+        manage_resp = c.get(f"{BASE}/ax/account/manage")
+        if manage_resp["status"] == 200 and "ap/signin" not in str(manage_resp["url"]):
+            email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", manage_resp["body"])
             if email_match:
                 email = email_match.group(0)
 

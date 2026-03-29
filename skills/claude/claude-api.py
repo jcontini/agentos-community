@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-claude-api.py — httpx-based client for the claude.ai private API
+claude-api.py — claude.ai private API client
 
-Session cookies are injected by agentOS cookie matchmaking via params: true.
-All API calls use surf() (NOT Playwright) — login is the only thing that
-needs a browser. Once the sessionKey cookie is extracted, surf() handles everything.
+Session cookies are injected by agentOS cookie matchmaking.
+All API calls use http.client() (NOT Playwright) — login is the only thing that
+needs a browser. Once the sessionKey cookie is extracted, http handles everything.
 
 Required headers (bypass Cloudflare + match expected browser client):
   Cookie: sessionKey=sk-ant-sid02-...
@@ -18,7 +18,7 @@ import json
 import re
 import sys
 
-from agentos import get_cookies, parse_cookie, surf
+from agentos import http, get_cookies, parse_cookie
 
 BASE_URL = "https://claude.ai"
 
@@ -35,13 +35,13 @@ CLAUDE_HEADERS = {
 
 
 def _client(cookie_header: str):
-    """httpx client configured for claude.ai (Cloudflare bypass, http2=False).
+    """HTTP session configured for claude.ai (Cloudflare bypass, http2=False).
 
     Uses profile="json" (not "api") because CLAUDE_HEADERS already provides
-    all Sec-* headers. Using "api" would cause httpx to concatenate duplicate
-    Sec-CH-UA values from both sources — a clear WAF detection signal.
+    all Sec-* headers. Using "api" would cause duplicate Sec-CH-UA values
+    from both sources — a clear WAF detection signal.
     """
-    return surf(cookies=cookie_header, profile="json", headers=CLAUDE_HEADERS, http2=False)
+    return http.client(cookies=cookie_header, profile="json", headers=CLAUDE_HEADERS, http2=False)
 
 
 # -- API operations ------------------------------------------------------------
@@ -49,8 +49,7 @@ def _client(cookie_header: str):
 
 def _get_organizations(client):
     resp = client.get(f"{BASE_URL}/api/organizations")
-    resp.raise_for_status()
-    return resp.json()
+    return resp["json"]
 
 
 def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
@@ -69,7 +68,7 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
                 f"{BASE_URL}/api/organizations/{last_active}"
                 f"/chat_conversations?limit=1"
             )
-            if probe.status_code == 200:
+            if probe["status"] == 200:
                 return last_active
     # Slow path: fetch all orgs, find chat-capable one.
     orgs = _get_organizations(client)
@@ -84,8 +83,7 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
 def _get_conversations(client, org_uuid, limit=50, offset=0):
     path = f"/api/organizations/{org_uuid}/chat_conversations?limit={limit}&offset={offset}"
     resp = client.get(f"{BASE_URL}{path}")
-    resp.raise_for_status()
-    return resp.json()
+    return resp["json"]
 
 
 def _get_conversation(client, org_uuid, conv_uuid):
@@ -94,8 +92,7 @@ def _get_conversation(client, org_uuid, conv_uuid):
         "?tree=True&rendering_mode=messages&render_all_tools=true"
     )
     resp = client.get(f"{BASE_URL}{path}")
-    resp.raise_for_status()
-    return resp.json()
+    return resp["json"]
 
 
 # -- Formatting helpers --------------------------------------------------------

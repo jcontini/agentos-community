@@ -1,4 +1,4 @@
-from agentos import surf
+from agentos import http
 
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -38,11 +38,10 @@ def _to_anthropic_msg(msg: dict) -> dict:
 
 
 def list_models(**params) -> list:
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/models",
-                          params={"limit": "1000"}, headers=_headers(params))
-        resp.raise_for_status()
-    return [_map_model(m) for m in resp.json().get("data", [])]
+    resp = http.get(f"{API_BASE}/models",
+                    params={"limit": "1000"}, headers=_headers(params),
+                    profile="api")
+    return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
 def chat(*, model: str, messages: list, tools: list = None,
@@ -58,11 +57,10 @@ def chat(*, model: str, messages: list, tools: list = None,
         body["tools"] = tools
     if system:
         body["system"] = system
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/messages",
-                           json=body, headers=_headers(params))
-        resp.raise_for_status()
-    data = resp.json()
+    resp = http.post(f"{API_BASE}/messages",
+                     json=body, headers=_headers(params),
+                     profile="api")
+    data = resp["json"]
     blocks = data.get("content", [])
     return {
         "content": next((b["text"] for b in blocks if b.get("type") == "text"), None),

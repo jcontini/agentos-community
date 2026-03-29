@@ -12,8 +12,7 @@ Auth:     AWS Cognito (us-east-1) via USER_PASSWORD_AUTH
 import json
 import re
 import time
-import httpx
-from agentos import surf
+from agentos import http
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -87,25 +86,27 @@ def _fetch(
     method: str | None = None,
 ) -> bytes:
     """
-    Fetch a URL with surf (httpx + HTTP/2), retrying on transient errors.
+    Fetch a URL via http.request(), retrying on transient errors.
 
-    HTTP/2 is required — CloudFront WAF uses JA4 fingerprinting which
-    includes ALPN. h1-only clients get flagged as bots.
-    surf(profile="api") provides the browser-like Sec-CH-UA + Sec-Fetch headers.
+    profile="api" provides browser-like Sec-CH-UA + Sec-Fetch headers
+    needed to pass CloudFront WAF JA4 fingerprinting.
     """
     if method is None:
         method = "POST" if data is not None else "GET"
     last_err = None
     for attempt in range(3):
         try:
-            with surf(profile="api", headers=headers) as client:
-                resp = client.request(method, url, content=data)
-                resp.raise_for_status()
-                return resp.content
-        except httpx.HTTPStatusError as e:
-            last_err = e
-            if e.response.status_code not in {429, 500, 502, 503, 504} or attempt == 2:
-                raise
+            resp = http.request(method, url, headers=headers, content=data, profile="api")
+            status = resp["status"]
+            if status >= 400:
+                if status not in {429, 500, 502, 503, 504} or attempt == 2:
+                    raise RuntimeError(f"HTTP {status} for {method} {url}: {resp['body'][:200]}")
+                last_err = RuntimeError(f"HTTP {status}")
+            else:
+                body = resp["body"]
+                return body.encode("utf-8") if isinstance(body, str) else body
+        except RuntimeError:
+            raise
         except Exception as e:
             last_err = e
             if attempt == 2:

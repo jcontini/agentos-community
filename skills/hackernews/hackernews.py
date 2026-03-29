@@ -1,6 +1,6 @@
 """Hacker News — public Algolia API, no auth required."""
 
-from agentos import surf
+from agentos import http
 
 BASE = "https://hn.algolia.com/api/v1"
 SITE = "https://news.ycombinator.com"
@@ -83,26 +83,22 @@ def list_posts(feed: str = "front", limit: int = 30) -> list[dict]:
     tag_map = {"new": "story", "ask": "ask_hn", "show": "show_hn"}
     tags = tag_map.get(feed, "front_page")
 
-    with surf() as client:
-        resp = client.get(f"{BASE}/{endpoint}", params={
-            "tags": tags,
-            "hitsPerPage": limit,
-        })
-        resp.raise_for_status()
+    resp = http.get(f"{BASE}/{endpoint}", params={
+        "tags": tags,
+        "hitsPerPage": str(limit),
+    })
 
-    return [_map_hit(h) for h in resp.json().get("hits", [])]
+    return [_map_hit(h) for h in (resp["json"] or {}).get("hits", [])]
 
 
 def search_posts(query: str, limit: int = 30) -> list[dict]:
-    with surf() as client:
-        resp = client.get(f"{BASE}/search", params={
-            "query": query,
-            "tags": "story",
-            "hitsPerPage": limit,
-        })
-        resp.raise_for_status()
+    resp = http.get(f"{BASE}/search", params={
+        "query": query,
+        "tags": "story",
+        "hitsPerPage": str(limit),
+    })
 
-    return [_map_hit(h) for h in resp.json().get("hits", [])]
+    return [_map_hit(h) for h in (resp["json"] or {}).get("hits", [])]
 
 
 def get_post(id: str = None, url: str = None) -> dict:
@@ -115,20 +111,16 @@ def get_post(id: str = None, url: str = None) -> dict:
         from agentos import skill_error
         return skill_error("Either id or url with id= parameter is required")
 
-    with surf() as client:
-        resp = client.get(f"{BASE}/items/{id}")
-        resp.raise_for_status()
+    resp = http.get(f"{BASE}/items/{id}")
 
-    return _map_item(resp.json())
+    return _map_item(resp["json"])
 
 
 def comments_post(id: str) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
-    with surf() as client:
-        resp = client.get(f"{BASE}/items/{id}")
-        resp.raise_for_status()
+    resp = http.get(f"{BASE}/items/{id}")
 
-    item = resp.json()
+    item = resp["json"]
     result = []
 
     def flatten(node: dict, parent_id: str | None):

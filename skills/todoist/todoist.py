@@ -1,5 +1,5 @@
 import re
-from agentos import surf
+from agentos import http
 
 API_BASE = "https://api.todoist.com/api/v1"
 
@@ -45,11 +45,9 @@ def _map_tag(t: dict) -> dict:
 
 def list_tasks(*, query: str = "today | overdue | #Inbox", **params) -> list:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/tasks/filter",
-                          params={"query": query}, headers=headers)
-        resp.raise_for_status()
-    return [_map_task(t) for t in resp.json().get("results", [])]
+    resp = http.get(f"{API_BASE}/tasks/filter",
+                    params={"query": query}, headers=headers, profile="api")
+    return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
 def list_all_tasks(*, project_id: str = None, section_id: str = None,
@@ -60,19 +58,15 @@ def list_all_tasks(*, project_id: str = None, section_id: str = None,
     if section_id: q["section_id"] = section_id
     if parent_id: q["parent_id"] = parent_id
     if label: q["label"] = label
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/tasks", params=q, headers=headers)
-        resp.raise_for_status()
-    return [_map_task(t) for t in resp.json().get("results", [])]
+    resp = http.get(f"{API_BASE}/tasks", params=q, headers=headers, profile="api")
+    return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
 def filter_task(*, filter: str, **params) -> list:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/tasks/filter",
-                          params={"query": filter}, headers=headers)
-        resp.raise_for_status()
-    return [_map_task(t) for t in resp.json().get("results", [])]
+    resp = http.get(f"{API_BASE}/tasks/filter",
+                    params={"query": filter}, headers=headers, profile="api")
+    return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
 def get_task(*, id: str = None, url: str = None, **params) -> dict:
@@ -81,10 +75,8 @@ def get_task(*, id: str = None, url: str = None, **params) -> dict:
         m = re.search(r"/task/([^/?#]+)", url)
         if m:
             id = m.group(1)
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/tasks/{id}", headers=headers)
-        resp.raise_for_status()
-    return _map_task(resp.json())
+    resp = http.get(f"{API_BASE}/tasks/{id}", headers=headers, profile="api")
+    return _map_task(resp["json"])
 
 
 def create_task(*, name: str, description: str = None, due: str = None,
@@ -98,10 +90,8 @@ def create_task(*, name: str, description: str = None, due: str = None,
     if project_id is not None: body["project_id"] = project_id
     if parent_id is not None: body["parent_id"] = parent_id
     if labels is not None: body["labels"] = labels
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/tasks", json=body, headers=headers)
-        resp.raise_for_status()
-    return _map_task(resp.json())
+    resp = http.post(f"{API_BASE}/tasks", json=body, headers=headers, profile="api")
+    return _map_task(resp["json"])
 
 
 def update_task(*, id: str, name: str = None, description: str = None,
@@ -115,47 +105,35 @@ def update_task(*, id: str, name: str = None, description: str = None,
     if priority is not None: body["priority"] = 5 - priority
     if labels is not None: body["labels"] = labels
     if project_id is not None: body["project_id"] = project_id
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/tasks/{id}", json=body, headers=headers)
-        resp.raise_for_status()
-    return _map_task(resp.json())
+    resp = http.post(f"{API_BASE}/tasks/{id}", json=body, headers=headers, profile="api")
+    return _map_task(resp["json"])
 
 
 def complete_task(*, id: str, **params) -> None:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/tasks/{id}/close", headers=headers)
-        resp.raise_for_status()
+    http.post(f"{API_BASE}/tasks/{id}/close", headers=headers, profile="api")
 
 
 def reopen_task(*, id: str, **params) -> None:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/tasks/{id}/reopen", headers=headers)
-        resp.raise_for_status()
+    http.post(f"{API_BASE}/tasks/{id}/reopen", headers=headers, profile="api")
 
 
 def delete_task(*, id: str, **params) -> None:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.delete(f"{API_BASE}/tasks/{id}", headers=headers)
-        resp.raise_for_status()
+    http.delete(f"{API_BASE}/tasks/{id}", headers=headers, profile="api")
 
 
 def list_projects(**params) -> list:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/projects", headers=headers)
-        resp.raise_for_status()
-    return [_map_project(p) for p in resp.json().get("results", [])]
+    resp = http.get(f"{API_BASE}/projects", headers=headers, profile="api")
+    return [_map_project(p) for p in (resp["json"] or {}).get("results", [])]
 
 
 def list_tags(**params) -> list:
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/labels", headers=headers)
-        resp.raise_for_status()
-    return [_map_tag(t) for t in resp.json().get("results", [])]
+    resp = http.get(f"{API_BASE}/labels", headers=headers, profile="api")
+    return [_map_tag(t) for t in (resp["json"] or {}).get("results", [])]
 
 
 def move_task(*, id: str, project_id: str = None, section_id: str = None,
@@ -165,7 +143,5 @@ def move_task(*, id: str, project_id: str = None, section_id: str = None,
     if project_id is not None: body["project_id"] = project_id
     if section_id is not None: body["section_id"] = section_id
     if parent_id is not None: body["parent_id"] = parent_id
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/tasks/{id}/move", json=body, headers=headers)
-        resp.raise_for_status()
-    return _map_task(resp.json())
+    resp = http.post(f"{API_BASE}/tasks/{id}/move", json=body, headers=headers, profile="api")
+    return _map_task(resp["json"])

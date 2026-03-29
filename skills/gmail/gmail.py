@@ -1,4 +1,4 @@
-"""Gmail skill — all operations implemented via surf() HTTP calls.
+"""Gmail skill — all operations implemented via http.get()/http.post()/etc.
 
 All public functions take **params. Auth token lives in
 params["auth"]["access_token"], injected by the engine from OAuth resolution.
@@ -10,7 +10,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from agentos import surf
+from agentos import http
 
 BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -254,7 +254,7 @@ def _build_raw(to, subject, body_text, html_body=None, cc=None, bcc=None,
 def list_email_stubs(*, query="", limit=20, label_ids=None, page_token=None, **params):
     """List email IDs/stubs only — no full message content."""
     headers = _auth_header(params)
-    query_params = {"maxResults": limit}
+    query_params = {"maxResults": str(limit)}
     if query:
         query_params["q"] = query
     if label_ids:
@@ -262,10 +262,8 @@ def list_email_stubs(*, query="", limit=20, label_ids=None, page_token=None, **p
     if page_token:
         query_params["pageToken"] = page_token
 
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/messages", params=query_params, headers=headers)
-        resp.raise_for_status()
-        return resp.json().get("messages", [])
+    resp = http.get(f"{BASE_URL}/messages", params=query_params, headers=headers, profile="api")
+    return resp["json"].get("messages", [])
 
 
 def get_email(*, id=None, url=None, **params):
@@ -277,10 +275,8 @@ def get_email(*, id=None, url=None, **params):
         id = [seg for seg in fragment.split("/") if seg][-1]
 
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/messages/{id}", params={"format": "full"}, headers=headers)
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.get(f"{BASE_URL}/messages/{id}", params={"format": "full"}, headers=headers, profile="api")
+    return _map_email(resp["json"])
 
 
 def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **params):
@@ -303,7 +299,7 @@ def search_emails(*, query, limit=20, **params):
 def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, **params):
     """List email threads with snippets."""
     headers = _auth_header(params)
-    query_params = {"maxResults": limit}
+    query_params = {"maxResults": str(limit)}
     if query:
         query_params["q"] = query
     if label_ids:
@@ -311,10 +307,8 @@ def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, *
     if page_token:
         query_params["pageToken"] = page_token
 
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/threads", params=query_params, headers=headers)
-        resp.raise_for_status()
-        threads = resp.json().get("threads", [])
+    resp = http.get(f"{BASE_URL}/threads", params=query_params, headers=headers, profile="api")
+    threads = resp["json"].get("threads", [])
     # Threads from list API only have id/snippet/historyId — map what's available
     return [_map_conversation(t) for t in threads]
 
@@ -322,56 +316,46 @@ def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, *
 def get_conversation(*, id, **params):
     """Get a full email thread with all messages, headers, and body content."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/threads/{id}", params={"format": "full"}, headers=headers)
-        resp.raise_for_status()
-        return _map_conversation(resp.json())
+    resp = http.get(f"{BASE_URL}/threads/{id}", params={"format": "full"}, headers=headers, profile="api")
+    return _map_conversation(resp["json"])
 
 
 def get_profile(**params):
     """Get Gmail account profile (email address, message count, history ID)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/profile", headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"{BASE_URL}/profile", headers=headers, profile="api")
+    return resp["json"]
 
 
 def list_labels(**params):
     """List all Gmail labels (system and user-created)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/labels", headers=headers)
-        resp.raise_for_status()
-        return resp.json().get("labels", [])
+    resp = http.get(f"{BASE_URL}/labels", headers=headers, profile="api")
+    return resp["json"].get("labels", [])
 
 
 def get_attachment(*, message_id, attachment_id, **params):
     """Download an email attachment (returns base64url-encoded data)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{BASE_URL}/messages/{message_id}/attachments/{attachment_id}",
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(
+        f"{BASE_URL}/messages/{message_id}/attachments/{attachment_id}",
+        headers=headers, profile="api",
+    )
+    return resp["json"]
 
 
 def get_raw(*, id, **params):
     """Get the full RFC 2822 raw source of an email (base64url-encoded)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/messages/{id}", params={"format": "raw"}, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"{BASE_URL}/messages/{id}", params={"format": "raw"}, headers=headers, profile="api")
+    return resp["json"]
 
 
 def get_history(*, start_history_id, label_id=None, history_types=None,
                 limit=100, page_token=None, **params):
     """Get incremental changes since a history ID."""
     headers = _auth_header(params)
-    query_params = {"startHistoryId": start_history_id, "maxResults": limit}
+    query_params = {"startHistoryId": str(start_history_id), "maxResults": str(limit)}
     if label_id:
         query_params["labelId"] = label_id
     if history_types:
@@ -379,61 +363,49 @@ def get_history(*, start_history_id, label_id=None, history_types=None,
     if page_token:
         query_params["pageToken"] = page_token
 
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/history", params=query_params, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"{BASE_URL}/history", params=query_params, headers=headers, profile="api")
+    return resp["json"]
 
 
 def get_vacation(**params):
     """Get vacation/auto-reply settings."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/settings/vacation", headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"{BASE_URL}/settings/vacation", headers=headers, profile="api")
+    return resp["json"]
 
 
 def list_drafts(*, query="", limit=20, page_token=None, **params):
     """List drafts."""
     headers = _auth_header(params)
-    query_params = {"maxResults": limit}
+    query_params = {"maxResults": str(limit)}
     if query:
         query_params["q"] = query
     if page_token:
         query_params["pageToken"] = page_token
 
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/drafts", params=query_params, headers=headers)
-        resp.raise_for_status()
-        return resp.json().get("drafts", [])
+    resp = http.get(f"{BASE_URL}/drafts", params=query_params, headers=headers, profile="api")
+    return resp["json"].get("drafts", [])
 
 
 def get_draft(*, id, **params):
     """Get a draft with full message content."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/drafts/{id}", params={"format": "full"}, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"{BASE_URL}/drafts/{id}", params={"format": "full"}, headers=headers, profile="api")
+    return resp["json"]
 
 
 def list_filters(**params):
     """List all server-side email filters/rules."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/settings/filters", headers=headers)
-        resp.raise_for_status()
-        return resp.json().get("filter", [])
+    resp = http.get(f"{BASE_URL}/settings/filters", headers=headers, profile="api")
+    return resp["json"].get("filter", [])
 
 
 def list_send_as(**params):
     """List send-as aliases (email addresses you can send from)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/settings/sendAs", headers=headers)
-        resp.raise_for_status()
-        return resp.json().get("sendAs", [])
+    resp = http.get(f"{BASE_URL}/settings/sendAs", headers=headers, profile="api")
+    return resp["json"].get("sendAs", [])
 
 
 # ==============================================================================
@@ -445,14 +417,12 @@ def send_email(*, to, subject, body, html_body=None, cc=None, bcc=None, **params
     """Send a new email (plain text or HTML)."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/messages/send",
-            json={"raw": raw},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(
+        f"{BASE_URL}/messages/send",
+        json={"raw": raw},
+        headers=headers, profile="api",
+    )
+    return _map_email(resp["json"])
 
 
 def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
@@ -464,14 +434,12 @@ def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
         in_reply_to=in_reply_to, references=references,
     )
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/messages/send",
-            json={"raw": raw, "threadId": thread_id},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(
+        f"{BASE_URL}/messages/send",
+        json={"raw": raw, "threadId": thread_id},
+        headers=headers, profile="api",
+    )
+    return _map_email(resp["json"])
 
 
 def forward_email(*, to, subject, body, html_body=None, cc=None, bcc=None,
@@ -482,10 +450,8 @@ def forward_email(*, to, subject, body, html_body=None, cc=None, bcc=None,
     payload = {"raw": raw}
     if thread_id:
         payload["threadId"] = thread_id
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/messages/send", json=payload, headers=headers)
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(f"{BASE_URL}/messages/send", json=payload, headers=headers, profile="api")
+    return _map_email(resp["json"])
 
 
 def modify_email(*, id, add_labels=None, remove_labels=None, **params):
@@ -495,28 +461,22 @@ def modify_email(*, id, add_labels=None, remove_labels=None, **params):
         "addLabelIds": add_labels or [],
         "removeLabelIds": remove_labels or [],
     }
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/messages/{id}/modify", json=body, headers=headers)
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(f"{BASE_URL}/messages/{id}/modify", json=body, headers=headers, profile="api")
+    return _map_email(resp["json"])
 
 
 def trash_email(*, id, **params):
     """Move an email to trash."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/messages/{id}/trash", headers=headers)
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(f"{BASE_URL}/messages/{id}/trash", headers=headers, profile="api")
+    return _map_email(resp["json"])
 
 
 def untrash_email(*, id, **params):
     """Remove an email from trash."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/messages/{id}/untrash", headers=headers)
-        resp.raise_for_status()
-        return _map_email(resp.json())
+    resp = http.post(f"{BASE_URL}/messages/{id}/untrash", headers=headers, profile="api")
+    return _map_email(resp["json"])
 
 
 def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
@@ -527,24 +487,20 @@ def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
         "addLabelIds": add_labels or [],
         "removeLabelIds": remove_labels or [],
     }
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/messages/batchModify", json=body, headers=headers)
-        resp.raise_for_status()
-        # 204 No Content on success
-        return {}
+    resp = http.post(f"{BASE_URL}/messages/batchModify", json=body, headers=headers, profile="api")
+    # 204 No Content on success
+    return {}
 
 
 def batch_delete_email(*, ids, **params):
     """Permanently delete multiple emails (max 1000 IDs). CANNOT BE UNDONE."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/messages/batchDelete",
-            json={"ids": ids},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return {}
+    resp = http.post(
+        f"{BASE_URL}/messages/batchDelete",
+        json={"ids": ids},
+        headers=headers, profile="api",
+    )
+    return {}
 
 
 def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
@@ -555,50 +511,42 @@ def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
     message = {"raw": raw}
     if thread_id:
         message["threadId"] = thread_id
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/drafts",
-            json={"message": message},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.post(
+        f"{BASE_URL}/drafts",
+        json={"message": message},
+        headers=headers, profile="api",
+    )
+    return resp["json"]
 
 
 def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **params):
     """Update an existing draft."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.put(
-            f"{BASE_URL}/drafts/{id}",
-            json={"message": {"raw": raw}},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.put(
+        f"{BASE_URL}/drafts/{id}",
+        json={"message": {"raw": raw}},
+        headers=headers, profile="api",
+    )
+    return resp["json"]
 
 
 def send_draft(*, id, **params):
     """Send an existing draft."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/drafts/send",
-            json={"id": id},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.post(
+        f"{BASE_URL}/drafts/send",
+        json={"id": id},
+        headers=headers, profile="api",
+    )
+    return resp["json"]
 
 
 def delete_draft(*, id, **params):
     """Permanently delete a draft."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.delete(f"{BASE_URL}/drafts/{id}", headers=headers)
-        resp.raise_for_status()
-        return {"status": "deleted"}
+    resp = http.delete(f"{BASE_URL}/drafts/{id}", headers=headers, profile="api")
+    return {"status": "deleted"}
 
 
 def set_vacation(*, enabled, subject=None, body=None, html_body=None,
@@ -619,10 +567,8 @@ def set_vacation(*, enabled, subject=None, body=None, html_body=None,
     if end_time is not None:
         payload["endTime"] = end_time
 
-    with surf(profile="api") as client:
-        resp = client.put(f"{BASE_URL}/settings/vacation", json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.put(f"{BASE_URL}/settings/vacation", json=payload, headers=headers, profile="api")
+    return resp["json"]
 
 
 def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **params):
@@ -633,10 +579,8 @@ def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **
         "labelListVisibility": show_in_label_list or "labelShow",
         "messageListVisibility": show_in_message_list or "show",
     }
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/labels", json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.post(f"{BASE_URL}/labels", json=payload, headers=headers, profile="api")
+    return resp["json"]
 
 
 def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list=None, **params):
@@ -650,19 +594,15 @@ def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list
     if show_in_message_list is not None:
         payload["messageListVisibility"] = show_in_message_list
 
-    with surf(profile="api") as client:
-        resp = client.request("PATCH", f"{BASE_URL}/labels/{id}", json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.patch(f"{BASE_URL}/labels/{id}", json=payload, headers=headers, profile="api")
+    return resp["json"]
 
 
 def delete_label(*, id, **params):
     """Delete a Gmail label (does not delete emails, just removes the label)."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.delete(f"{BASE_URL}/labels/{id}", headers=headers)
-        resp.raise_for_status()
-        return {"status": "deleted"}
+    resp = http.delete(f"{BASE_URL}/labels/{id}", headers=headers, profile="api")
+    return {"status": "deleted"}
 
 
 def create_filter(*, from_addr=None, to=None, subject=None, query=None,
@@ -690,16 +630,12 @@ def create_filter(*, from_addr=None, to=None, subject=None, query=None,
         action["forward"] = forward_to
 
     payload = {"criteria": criteria, "action": action}
-    with surf(profile="api") as client:
-        resp = client.post(f"{BASE_URL}/settings/filters", json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.post(f"{BASE_URL}/settings/filters", json=payload, headers=headers, profile="api")
+    return resp["json"]
 
 
 def delete_filter(*, id, **params):
     """Delete a server-side email filter/rule."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.delete(f"{BASE_URL}/settings/filters/{id}", headers=headers)
-        resp.raise_for_status()
-        return {"status": "deleted"}
+    resp = http.delete(f"{BASE_URL}/settings/filters/{id}", headers=headers, profile="api")
+    return {"status": "deleted"}

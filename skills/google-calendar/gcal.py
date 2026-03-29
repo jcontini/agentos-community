@@ -1,4 +1,4 @@
-"""Google Calendar skill — all operations via surf() HTTP calls.
+"""Google Calendar skill — all operations via http.get/post/patch/delete.
 
 Auth token lives in params["auth"]["access_token"], injected by the engine
 from the Mimestream OAuth provider (googleapis.com / calendar.events scope).
@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
-from agentos import surf
+from agentos import http
 
 BASE_URL = "https://www.googleapis.com/calendar/v3"
 
@@ -118,21 +118,19 @@ def _extract_event_id_from_url(url):
 def list_calendars(**params):
     """List all calendars the user can see."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/users/me/calendarList", headers=headers)
-        resp.raise_for_status()
-        items = resp.json().get("items", [])
-        return [
-            {
-                "id": c.get("id"),
-                "name": c.get("summary"),
-                "color": c.get("backgroundColor"),
-                "is_readonly": c.get("accessRole") in ("freeBusyReader", "reader"),
-                "is_primary": c.get("primary", False),
-                "timezone": c.get("timeZone"),
-            }
-            for c in items
-        ]
+    resp = http.get(f"{BASE_URL}/users/me/calendarList", headers=headers, profile="api")
+    items = (resp["json"] or {}).get("items", [])
+    return [
+        {
+            "id": c.get("id"),
+            "name": c.get("summary"),
+            "color": c.get("backgroundColor"),
+            "is_readonly": c.get("accessRole") in ("freeBusyReader", "reader"),
+            "is_primary": c.get("primary", False),
+            "timezone": c.get("timeZone"),
+        }
+        for c in items
+    ]
 
 
 def list_events(*, calendar_id="primary", days=7, past=False,
@@ -152,8 +150,8 @@ def list_events(*, calendar_id="primary", days=7, past=False,
     query_params = {
         "timeMin": time_min,
         "timeMax": time_max,
-        "maxResults": limit,
-        "singleEvents": True,
+        "maxResults": str(limit),
+        "singleEvents": "true",
         "orderBy": "startTime",
     }
     if query:
@@ -161,19 +159,17 @@ def list_events(*, calendar_id="primary", days=7, past=False,
     if page_token:
         query_params["pageToken"] = page_token
 
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{BASE_URL}/calendars/{calendar_id}/events",
-            params=query_params, headers=headers,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        events = [_map_event(e) for e in data.get("items", [])]
+    resp = http.get(
+        f"{BASE_URL}/calendars/{calendar_id}/events",
+        params=query_params, headers=headers, profile="api",
+    )
+    data = resp["json"] or {}
+    events = [_map_event(e) for e in data.get("items", [])]
 
-        if exclude_all_day:
-            events = [e for e in events if not e["all_day"]]
+    if exclude_all_day:
+        events = [e for e in events if not e["all_day"]]
 
-        return events
+    return events
 
 
 def get_event(*, id=None, url=None, calendar_id="primary", **params):
@@ -184,13 +180,11 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
         raise ValueError("Either id or url is required")
 
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return _map_event(resp.json())
+    resp = http.get(
+        f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
+        headers=headers, profile="api",
+    )
+    return _map_event(resp["json"])
 
 
 def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
@@ -229,13 +223,11 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
     if recurrence:
         body["recurrence"] = recurrence
 
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/calendars/{calendar_id}/events",
-            json=body, headers=headers,
-        )
-        resp.raise_for_status()
-        return _map_event(resp.json())
+    resp = http.post(
+        f"{BASE_URL}/calendars/{calendar_id}/events",
+        json=body, headers=headers, profile="api",
+    )
+    return _map_event(resp["json"])
 
 
 def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
@@ -257,13 +249,11 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
     if attendees is not None:
         body["attendees"] = [{"email": e} for e in attendees]
 
-    with surf(profile="api") as client:
-        resp = client.patch(
-            f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-            json=body, headers=headers,
-        )
-        resp.raise_for_status()
-        return _map_event(resp.json())
+    resp = http.patch(
+        f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
+        json=body, headers=headers, profile="api",
+    )
+    return _map_event(resp["json"])
 
 
 def search_events(*, calendar_id="primary", days=30, past=False,
@@ -278,13 +268,11 @@ def search_events(*, calendar_id="primary", days=30, past=False,
 def delete_event(*, id, calendar_id="primary", **params):
     """Delete a calendar event."""
     headers = _auth_header(params)
-    with surf(profile="api") as client:
-        resp = client.delete(
-            f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-            headers=headers,
-        )
-        resp.raise_for_status()
-        return {"status": "deleted"}
+    http.delete(
+        f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
+        headers=headers, profile="api",
+    )
+    return {"status": "deleted"}
 
 
 # ==============================================================================

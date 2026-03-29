@@ -5,7 +5,7 @@ All operations POST to the Linear GraphQL API with API key auth.
 """
 
 import re
-from agentos import surf
+from agentos import http
 
 API_URL = "https://api.linear.app/graphql"
 
@@ -22,10 +22,8 @@ def _gql(params, query, variables=None):
     if variables:
         # Strip None values so Linear doesn't choke on null filters
         body["variables"] = {k: v for k, v in variables.items() if v is not None}
-    with surf(profile="api") as client:
-        resp = client.post(API_URL, json=body, headers=headers)
-        resp.raise_for_status()
-    data = resp.json()
+    resp = http.post(API_URL, json=body, headers=headers, profile="api")
+    data = resp["json"]
     if data.get("errors"):
         raise Exception(f"GraphQL error: {data['errors']}")
     return data["data"]

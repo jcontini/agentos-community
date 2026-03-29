@@ -1,6 +1,6 @@
 """Brave Search — privacy-focused web search with independent index."""
 
-from agentos import surf
+from agentos import http
 
 API_BASE = "https://api.search.brave.com/res/v1"
 
@@ -12,18 +12,17 @@ def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> l
     if freshness:
         q_params["freshness"] = freshness
 
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{API_BASE}/web/search",
-            params=q_params,
-            headers={
-                "X-Subscription-Token": api_key,
-                "Accept": "application/json",
-            },
-        )
-        resp.raise_for_status()
+    resp = http.get(
+        f"{API_BASE}/web/search",
+        params=q_params,
+        headers={
+            "X-Subscription-Token": api_key,
+            "Accept": "application/json",
+        },
+        profile="api",
+    )
 
-    results = resp.json().get("web", {}).get("results", [])
+    results = (resp["json"] or {}).get("web", {}).get("results", [])
     return [
         {
             "id": r.get("url"),

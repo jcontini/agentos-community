@@ -24,7 +24,7 @@ import sys
 import urllib.request
 import urllib.error
 
-from agentos import surf
+from agentos import http
 
 BASE_URL = "https://here.now/api/v1"
 
@@ -48,38 +48,30 @@ def _map_website(w: dict) -> dict:
 def list_websites(**params) -> list[dict]:
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    with surf(profile="api") as client:
-        resp = client.get(f"{BASE_URL}/publishes", headers=headers)
-        resp.raise_for_status()
-    return [_map_website(w) for w in resp.json().get("publishes", [])]
+    resp = http.get(f"{BASE_URL}/publishes", headers=headers, profile="api")
+    return [_map_website(w) for w in (resp["json"] or {}).get("publishes", [])]
 
 
 def delete_website(*, slug: str, **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    with surf(profile="api") as client:
-        resp = client.delete(f"{BASE_URL}/publish/{slug}", headers=headers)
-        resp.raise_for_status()
+    http.delete(f"{BASE_URL}/publish/{slug}", headers=headers, profile="api")
     return {"success": True, "id": slug}
 
 
 def claim_website(*, slug: str, claim_token: str, **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE_URL}/publish/{slug}/claim",
-            json={"claimToken": claim_token},
-            headers=headers,
-        )
-        resp.raise_for_status()
+    http.post(
+        f"{BASE_URL}/publish/{slug}/claim",
+        json={"claimToken": claim_token},
+        headers=headers, profile="api",
+    )
     return {"success": True, "slug": slug}
 
 
 def op_signup(*, email: str, **params) -> dict:
-    with surf(profile="api") as client:
-        resp = client.post("https://here.now/api/auth/login", json={"email": email})
-        resp.raise_for_status()
+    http.post("https://here.now/api/auth/login", json={"email": email}, profile="api")
     return {
         "sent": True,
         "message": (
@@ -103,13 +95,10 @@ def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl
         viewer["description"] = description
     if viewer:
         body["viewer"] = viewer
-    with surf(profile="api") as client:
-        resp = client.patch(
-            f"{BASE_URL}/publish/{slug}/metadata",
-            json=body,
-            headers=headers,
-        )
-        resp.raise_for_status()
+    http.patch(
+        f"{BASE_URL}/publish/{slug}/metadata",
+        json=body, headers=headers, profile="api",
+    )
     return {"success": True}
 
 

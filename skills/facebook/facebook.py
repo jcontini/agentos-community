@@ -4,7 +4,7 @@ import re
 import shutil
 import subprocess
 
-from agentos import surf
+from agentos import http
 
 
 def get_community(
@@ -25,10 +25,9 @@ def get_community(
     group_url = f"https://www.facebook.com/groups/{group_name}/"
 
     # Fetch the page
-    with surf(timeout=30.0) as client:
-        resp = client.get(group_url)
+    resp = http.get(group_url, timeout=30.0)
 
-    html = resp.text
+    html = resp["body"]
     if not html:
         return {"error": "Failed to fetch group page. Group may be private or not found."}
 

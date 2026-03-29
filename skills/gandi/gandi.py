@@ -1,6 +1,6 @@
 """Gandi — domain and DNS management via the Gandi API."""
 
-from agentos import surf
+from agentos import http
 
 GANDI_BASE = "https://api.gandi.net/v5"
 
@@ -44,54 +44,42 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
 
 
 def list_domains(**params) -> list[dict]:
-    with surf(profile="api") as client:
-        resp = client.get(f"{GANDI_BASE}/domain/domains", headers=_auth_header(params))
-        resp.raise_for_status()
-    return [_map_domain(d) for d in resp.json()]
+    resp = http.get(f"{GANDI_BASE}/domain/domains", headers=_auth_header(params), profile="api")
+    return [_map_domain(d) for d in (resp["json"] or [])]
 
 
 def get_domain(*, domain: str, **params) -> dict:
-    with surf(profile="api") as client:
-        resp = client.get(f"{GANDI_BASE}/domain/domains/{domain}", headers=_auth_header(params))
-        resp.raise_for_status()
-    return _map_domain(resp.json())
+    resp = http.get(f"{GANDI_BASE}/domain/domains/{domain}", headers=_auth_header(params), profile="api")
+    return _map_domain(resp["json"])
 
 
 def list_dns_records(*, domain: str, **params) -> list[dict]:
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{GANDI_BASE}/livedns/domains/{domain}/records",
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
-    return [_map_dns_record(r, domain) for r in resp.json()]
+    resp = http.get(
+        f"{GANDI_BASE}/livedns/domains/{domain}/records",
+        headers=_auth_header(params), profile="api",
+    )
+    return [_map_dns_record(r, domain) for r in (resp["json"] or [])]
 
 
 def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
-    return _map_dns_record(resp.json(), domain)
+    resp = http.get(
+        f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
+        headers=_auth_header(params), profile="api",
+    )
+    return _map_dns_record(resp["json"], domain)
 
 
 def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: int = 3600, **params) -> dict:
-    with surf(profile="api") as client:
-        resp = client.put(
-            f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
-            json={"rrset_ttl": ttl or 3600, "rrset_values": values},
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
-    return resp.json() if resp.content else {"success": True}
+    resp = http.put(
+        f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
+        json={"rrset_ttl": ttl or 3600, "rrset_values": values},
+        headers=_auth_header(params), profile="api",
+    )
+    return resp["json"] or {"success": True}
 
 
 def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
-    with surf(profile="api") as client:
-        resp = client.delete(
-            f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
+    http.delete(
+        f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
+        headers=_auth_header(params), profile="api",
+    )

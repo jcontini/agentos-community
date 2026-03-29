@@ -1,6 +1,6 @@
 """Porkbun — domain and DNS management via the Porkbun API."""
 
-from agentos import surf
+from agentos import http
 
 API_BASE = "https://api.porkbun.com/api/json/v3"
 
@@ -45,24 +45,18 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
 
 def list_domains(**params) -> list[dict]:
     api_key, secret_key = _auth(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/domain/listAll",
-            json={"apikey": api_key, "secretapikey": secret_key},
-        )
-        resp.raise_for_status()
-    return [_map_domain(d) for d in resp.json().get("domains", [])]
+    resp = http.post(f"{API_BASE}/domain/listAll",
+                     json={"apikey": api_key, "secretapikey": secret_key},
+                     profile="api")
+    return [_map_domain(d) for d in (resp["json"] or {}).get("domains", [])]
 
 
 def list_dns_records(*, domain: str, **params) -> list[dict]:
     api_key, secret_key = _auth(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/dns/retrieve/{domain}",
-            json={"apikey": api_key, "secretapikey": secret_key},
-        )
-        resp.raise_for_status()
-    return [_map_dns_record(r, domain) for r in resp.json().get("records", [])]
+    resp = http.post(f"{API_BASE}/dns/retrieve/{domain}",
+                     json={"apikey": api_key, "secretapikey": secret_key},
+                     profile="api")
+    return [_map_dns_record(r, domain) for r in (resp["json"] or {}).get("records", [])]
 
 
 def create_dns_record(*, domain: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
@@ -74,10 +68,8 @@ def create_dns_record(*, domain: str, type: str, content: str, name: str = "", t
     }
     if prio is not None:
         body["prio"] = prio
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/dns/create/{domain}", json=body)
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.post(f"{API_BASE}/dns/create/{domain}", json=body, profile="api")
+    return resp["json"]
 
 
 def update_dns_record(*, domain: str, id: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
@@ -89,18 +81,13 @@ def update_dns_record(*, domain: str, id: str, type: str, content: str, name: st
     }
     if prio is not None:
         body["prio"] = prio
-    with surf(profile="api") as client:
-        resp = client.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body)
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body, profile="api")
+    return resp["json"]
 
 
 def delete_dns_record(*, domain: str, id: str, **params) -> dict:
     api_key, secret_key = _auth(params)
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/dns/delete/{domain}/{id}",
-            json={"apikey": api_key, "secretapikey": secret_key},
-        )
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.post(f"{API_BASE}/dns/delete/{domain}/{id}",
+                     json={"apikey": api_key, "secretapikey": secret_key},
+                     profile="api")
+    return resp["json"]

@@ -1,6 +1,6 @@
 """SerpAPI — Google Flights search via the SerpAPI proxy."""
 
-from agentos import surf
+from agentos import http
 
 SEARCH_URL = "https://serpapi.com/search"
 
@@ -76,10 +76,8 @@ def _map_offer(r: dict) -> dict:
 
 def _flight_get(query: dict, **params) -> dict:
     q = {**_auth_params(params), **{k: v for k, v in query.items() if v is not None}}
-    with surf(profile="api") as client:
-        resp = client.get(SEARCH_URL, params=q)
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.get(SEARCH_URL, params=q, profile="api")
+    return resp["json"]
 
 
 def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, adults: int = 1, children: int = None, stops: int = None, max_price: int = None, sort_by: int = None, include_airlines: str = None, exclude_airlines: str = None, currency: str = "USD", hl: str = "en", gl: str = None, deep_search: bool = None, **params) -> list[dict]:

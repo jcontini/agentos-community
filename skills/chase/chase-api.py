@@ -37,7 +37,7 @@ import json
 import sys
 import urllib.parse
 
-from agentos import require_cookies, surf
+from agentos import http, require_cookies
 
 BASE = "https://secure.chase.com"
 
@@ -50,8 +50,8 @@ EXTRA_HEADERS = {
 
 
 def _client(cookie_header: str):
-    """httpx client with Chase-specific headers."""
-    return surf(
+    """HTTP session with Chase-specific headers."""
+    return http.client(
         cookies=cookie_header,
         profile="api",
         headers=EXTRA_HEADERS,
@@ -69,9 +69,9 @@ def check_session(params: dict | None = None) -> dict:
 
     with _client(cookie_header) as client:
         resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
-        if resp.status_code != 200:
-            return {"authenticated": False, "error": f"HTTP {resp.status_code}"}
-        data = resp.json()
+        if resp["status"] != 200:
+            return {"authenticated": False, "error": f"HTTP {resp['status']}"}
+        data = resp["json"]
 
     for entry in data.get("cache", []):
         if not isinstance(entry, dict):
@@ -96,11 +96,11 @@ def get_accounts(params: dict | None = None) -> list | dict:
 
     with _client(cookie_header) as client:
         resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
-        if resp.status_code in (401, 403):
-            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp.status_code}")
-        if resp.status_code != 200:
-            return {"error": f"HTTP {resp.status_code}"}
-        data = resp.json()
+        if resp["status"] in (401, 403):
+            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp['status']}")
+        if resp["status"] != 200:
+            return {"error": f"HTTP {resp['status']}"}
+        data = resp["json"]
 
     tiles: list = []
     for entry in data.get("cache", []):
@@ -170,11 +170,11 @@ def get_transactions(params: dict | None = None) -> list | dict:
 
     with _client(cookie_header) as client:
         resp = client.get(path, headers={"network-channel-group-code": "DIGITAL"})
-        if resp.status_code in (401, 403):
-            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp.status_code}")
-        if resp.status_code != 200:
-            return {"error": f"HTTP {resp.status_code}"}
-        data = resp.json()
+        if resp["status"] in (401, 403):
+            raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp['status']}")
+        if resp["status"] != 200:
+            return {"error": f"HTTP {resp['status']}"}
+        data = resp["json"]
 
     return [_normalize_transaction(t) for t in data.get("transactions", [])]
 

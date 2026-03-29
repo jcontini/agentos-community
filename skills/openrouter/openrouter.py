@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from agentos import surf
+from agentos import http
 
 API_BASE = "https://openrouter.ai/api/v1"
 
@@ -24,9 +24,8 @@ def _ts_to_iso(ts) -> str | None:
 
 def list_models(**params) -> list[dict]:
     """List available AI models from all providers via OpenRouter."""
-    with surf(profile="api") as client:
-        resp = client.get(f"{API_BASE}/models", headers=_auth_header(params))
-        resp.raise_for_status()
+    resp = http.get(f"{API_BASE}/models", headers=_auth_header(params),
+                    profile="api")
     return [
         {
             "id": m.get("id"),
@@ -37,7 +36,7 @@ def list_models(**params) -> list[dict]:
             "model_type": "llm",
             "context_window": int(m["context_length"]) if m.get("context_length") else None,
         }
-        for m in resp.json().get("data", [])
+        for m in (resp["json"] or {}).get("data", [])
     ]
 
 
@@ -94,15 +93,10 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
             for t in tools
         ]
 
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/chat/completions",
-            json=body,
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
-
-    data = resp.json()
+    resp = http.post(f"{API_BASE}/chat/completions",
+                     json=body, headers=_auth_header(params),
+                     profile="api")
+    data = resp["json"]
     choices = data.get("choices") or [{}]
     choice = choices[0] if choices else {}
     message = choice.get("message") or {}

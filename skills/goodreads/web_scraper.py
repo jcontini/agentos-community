@@ -2,7 +2,7 @@
 """
 Authenticated Goodreads web scraping — friends, books, shelves, reviews, search people.
 
-Uses httpx + BeautifulSoup. Requires cookies via connection: web; AgentOS provides them.
+Uses http.client + BeautifulSoup. Requires cookies via connection: web; AgentOS provides them.
 Separate from public_graph.py which handles public GraphQL/Apollo data.
 """
 
@@ -10,8 +10,7 @@ import re
 from typing import Any
 from urllib.parse import quote_plus
 
-import httpx
-from agentos import molt, parse_int, parse_date, surf, get_cookies
+from agentos import molt, parse_int, parse_date, http, get_cookies
 from bs4 import BeautifulSoup
 
 BASE = "https://www.goodreads.com"
@@ -24,9 +23,9 @@ PER_PAGE_BOOKS = 25
 # ---------------------------------------------------------------------------
 
 
-def _fetch(client: httpx.Client, url: str) -> tuple[int, str]:
+def _fetch(client, url: str) -> tuple[int, str]:
     resp = client.get(url)
-    return resp.status_code, resp.text
+    return resp["status"], resp["body"]
 
 
 def _has_next(html_text: str) -> bool:
@@ -105,34 +104,33 @@ def check_session(params: dict | None = None) -> dict[str, Any]:
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
-    with surf(cookies=cookie_header) as client:
-        resp = client.get(BASE)
-        if resp.status_code != 200:
-            return {"authenticated": False, "status_code": resp.status_code}
+    resp = http.get(BASE, cookies=cookie_header)
+    if resp["status"] != 200:
+        return {"authenticated": False, "status_code": resp["status"]}
 
-        body = resp.text
+    body = resp["body"]
 
-        # Redirect to sign-in means cookies are invalid
-        if "/user/sign_in" in str(resp.url):
-            return {"authenticated": False, "redirect": str(resp.url)}
+    # Redirect to sign-in means cookies are invalid
+    if "/user/sign_in" in str(resp["url"]):
+        return {"authenticated": False, "redirect": str(resp["url"])}
 
-        # Extract user ID from profile link: /user/show/12345-name
-        user_id_match = re.search(r'/user/show/(\d+)', body)
-        # Extract display name from URL slug: /user/show/12345-first-last
-        name = ""
-        slug_match = re.search(r'/user/show/\d+-([^"&?/]+)', body)
-        if slug_match:
-            name = slug_match.group(1).replace("-", " ").strip().title()
+    # Extract user ID from profile link: /user/show/12345-name
+    user_id_match = re.search(r'/user/show/(\d+)', body)
+    # Extract display name from URL slug: /user/show/12345-first-last
+    name = ""
+    slug_match = re.search(r'/user/show/\d+-([^"&?/]+)', body)
+    if slug_match:
+        name = slug_match.group(1).replace("-", " ").strip().title()
 
-        user_id = user_id_match.group(1) if user_id_match else ""
+    user_id = user_id_match.group(1) if user_id_match else ""
 
-        if user_id:
-            return {
-                "authenticated": True,
-                "domain": "goodreads.com",
-                "identifier": user_id,
-                "display": name,
-            }
+    if user_id:
+        return {
+            "authenticated": True,
+            "domain": "goodreads.com",
+            "identifier": user_id,
+            "display": name,
+        }
 
     return {"authenticated": False}
 
@@ -255,8 +253,8 @@ def get_person(
     """Scrape a full Goodreads profile page and return rich person data."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Profile page returned {status}")
 
@@ -593,8 +591,8 @@ def list_friends(
     cookie_header = _require_cookies(cookie_header, params, "list_friends")
 
     if page > 0:
-        with surf(cookies=cookie_header) as client:
-            status, html_text = _fetch(client, f"{BASE}/friend/user/{user_id}?page={page}")
+        resp = http.get(f"{BASE}/friend/user/{user_id}?page={page}", cookies=cookie_header)
+        status, html_text = resp["status"], resp["body"]
         if status != 200:
             raise RuntimeError(f"Friends page returned {status}")
         _require_login(html_text)
@@ -603,7 +601,7 @@ def list_friends(
     # Auto-paginate
     all_friends: list[dict[str, Any]] = []
     seen: set[str] = set()
-    with surf(cookies=cookie_header) as client:
+    with http.client(cookies=cookie_header) as client:
         for p in range(1, MAX_PAGES + 1):
             status, html_text = _fetch(client, f"{BASE}/friend/user/{user_id}?page={p}")
             if status != 200:
@@ -635,8 +633,8 @@ def search_people(
 ) -> list[dict[str, Any]]:
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/search?q={quote_plus(query)}&search_type=people"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Search returned {status}")
 
@@ -677,7 +675,7 @@ def resolve_email(
     """Look up Goodreads accounts by email address."""
     cookie_header = _require_cookies(cookie_header, params, "resolve_email")
 
-    with surf(cookies=cookie_header) as client:
+    with http.client(cookies=cookie_header) as client:
         # Step 1: load the find_friend page to get the CSRF token (n=)
         status, form_html = _fetch(client, f"{BASE}/friend/find_friend")
         if status != 200:
@@ -770,8 +768,8 @@ def list_shelves(
 ) -> list[dict[str, Any]]:
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Profile returned {status}")
 
@@ -978,7 +976,7 @@ def _parse_book_rows(soup: BeautifulSoup, as_reviews: bool = False) -> list[dict
 
 
 def _fetch_book_pages(
-    client: httpx.Client,
+    client,
     url_template: str,
     page: int,
     as_reviews: bool,
@@ -1024,7 +1022,7 @@ def list_books(
     """List a user's books. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_books")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf={shelf}&sort={sort}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with surf(cookies=cookie_header) as client:
+    with http.client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=False)
 
 
@@ -1039,7 +1037,7 @@ def list_reviews(
     """List a user's reviews. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_reviews")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf=all&sort={sort}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with surf(cookies=cookie_header) as client:
+    with http.client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=True)
 
 
@@ -1054,7 +1052,7 @@ def list_shelf_books(
     """List books on a specific shelf. page=0 fetches all pages."""
     cookie_header = _require_cookies(cookie_header, params, "list_shelf_books")
     url_tpl = f"{BASE}/review/list/{user_id}?shelf={shelf_name}&page={{page}}&per_page={PER_PAGE_BOOKS}"
-    with surf(cookies=cookie_header) as client:
+    with http.client(cookies=cookie_header) as client:
         return _fetch_book_pages(client, url_tpl, page, as_reviews=False)
 
 
@@ -1071,8 +1069,8 @@ def list_groups(
     """List the authenticated user's groups."""
     cookie_header = _require_cookies(cookie_header, params, "list_groups")
     url = f"{BASE}/group?tab=my_groups"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Groups page returned {status}")
 
@@ -1177,8 +1175,8 @@ def list_following(
     """List accounts (users + authors) the user is following."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/following"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Following page returned {status}")
 
@@ -1203,8 +1201,8 @@ def list_followers(
     """List accounts following the user."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/followers"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Followers page returned {status}")
 
@@ -1234,8 +1232,8 @@ def list_quotes(
     """List a user's liked/saved quotes."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/quotes/list/{user_id}"
-    with surf(cookies=cookie_header) as client:
-        status, html_text = _fetch(client, url)
+    resp = http.get(url, cookies=cookie_header)
+    status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Quotes page returned {status}")
 

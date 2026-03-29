@@ -36,7 +36,7 @@ Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
 import urllib.parse
-from agentos import surf
+from agentos import http, surf
 
 AUTH_BASE = "https://auth.exa.ai"
 API_BASE = "https://api.exa.ai"
@@ -70,10 +70,10 @@ def _send_verification_email(client, csrf_token: str, email: str) -> dict:
 def _check_session(client) -> dict | None:
     """Check the current session on the dashboard. Returns user data or None."""
     resp = client.get(f"{DASHBOARD_BASE}/api/auth/session")
-    if resp.status_code != 200:
+    if resp["status"] != 200:
         return None
-    data = resp.json()
-    return data if data.get("user") else None
+    data = resp["json"]
+    return data if data and data.get("user") else None
 
 
 def _serialize_cookies(client) -> dict:
@@ -270,12 +270,12 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
 
 
 def _dashboard_client(cookies):
-    """Create a surf client for dashboard.exa.ai (Vercel-hosted).
+    """HTTP session for dashboard.exa.ai (Vercel-hosted).
 
-    Uses http2=False because Vercel's Security Checkpoint blocks httpx's
-    HTTP/2 JA4 fingerprint. profile="api" adds Sec-CH-UA + Sec-Fetch headers.
+    Uses http2=False because Vercel blocks HTTP/2 JA4 fingerprint.
+    profile="api" adds Sec-CH-UA + Sec-Fetch headers.
     """
-    return surf(cookies=cookies, profile="api", http2=False)
+    return http.client(cookies=cookies, profile="api", http2=False)
 
 
 def _require_session(client) -> dict:
@@ -305,8 +305,7 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
         email = session["user"]["email"]
 
         resp = client.get(f"{DASHBOARD_BASE}/api/get-api-keys")
-        resp.raise_for_status()
-        data = resp.json()
+        data = resp["json"]
 
     keys = data.get("apiKeys", [])
     enabled_keys = [k for k in keys if k.get("enabled")]
@@ -356,8 +355,7 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
     with _dashboard_client(cookies) as client:
         _require_session(client)
         resp = client.get(f"{DASHBOARD_BASE}/api/get-teams")
-        resp.raise_for_status()
-        data = resp.json()
+        data = resp["json"]
 
     teams = data.get("teams", [])
     return {
@@ -400,8 +398,7 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
             f"{DASHBOARD_BASE}/api/create-api-key",
             json={"name": name},
         )
-        resp.raise_for_status()
-        data = resp.json()
+        data = resp["json"]
 
     key_obj = data.get("apiKey") or {}
     api_key = key_obj.get("id") if isinstance(key_obj, dict) else key_obj
@@ -459,29 +456,27 @@ def search(*, query: str, limit: int = 10, category: str = None, include_text: b
     if category:
         body["category"] = category
 
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/search",
-            json=body,
-            headers={"x-api-key": api_key},
-        )
-        resp.raise_for_status()
+    resp = http.post(
+        f"{API_BASE}/search",
+        json=body,
+        headers={"x-api-key": api_key},
+        profile="api",
+    )
 
-    return [_map_result(r) for r in resp.json().get("results", [])]
+    return [_map_result(r) for r in (resp["json"] or {}).get("results", [])]
 
 
 def read_webpage(*, url: str, **params) -> dict:
     """Extract full content from a URL using Exa."""
     api_key = params.get("auth", {}).get("key", "")
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{API_BASE}/contents",
-            json={"urls": [url], "text": True},
-            headers={"x-api-key": api_key},
-        )
-        resp.raise_for_status()
+    resp = http.post(
+        f"{API_BASE}/contents",
+        json={"urls": [url], "text": True},
+        headers={"x-api-key": api_key},
+        profile="api",
+    )
 
-    results = resp.json().get("results", [])
+    results = (resp["json"] or {}).get("results", [])
     if not results:
         return {"id": url, "url": url, "error": "No content found"}
     return _map_result(results[0])

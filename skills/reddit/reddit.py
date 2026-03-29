@@ -3,7 +3,7 @@
 import re
 from datetime import datetime, timezone
 
-from agentos import surf
+from agentos import http
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; AgentOS/1.0)",
@@ -59,10 +59,8 @@ def _map_community(d: dict) -> dict:
 
 
 def _get_json(path: str, params: dict | None = None) -> dict:
-    with surf(headers=HEADERS) as client:
-        resp = client.get(f"https://www.reddit.com{path}", params=params)
-        resp.raise_for_status()
-        return resp.json()
+    resp = http.get(f"https://www.reddit.com{path}", headers=HEADERS, params=params)
+    return resp["json"]
 
 
 def search_posts(query: str, limit: int = 25, sort: str = "relevance") -> list[dict]:

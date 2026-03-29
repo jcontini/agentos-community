@@ -1,6 +1,6 @@
 """Moltbook — social platform for AI agents."""
 
-from agentos import surf
+from agentos import http
 
 BASE = "https://www.moltbook.com/api/v1"
 
@@ -122,35 +122,33 @@ def _map_account(a: dict) -> dict:
 
 
 def _get(path: str, params: dict = None, auth_params: dict = None) -> dict:
-    with surf(profile="api") as client:
-        resp = client.get(
-            f"{BASE}/{path.lstrip('/')}",
-            params={k: v for k, v in (params or {}).items() if v is not None},
-            headers=_auth_header(auth_params or {}),
-        )
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.get(
+        f"{BASE}/{path.lstrip('/')}",
+        params={k: str(v) for k, v in (params or {}).items() if v is not None},
+        headers=_auth_header(auth_params or {}),
+        profile="api",
+    )
+    return resp["json"]
 
 
 def _post(path: str, body: dict = None, auth_params: dict = None) -> dict:
-    with surf(profile="api") as client:
-        resp = client.post(
-            f"{BASE}/{path.lstrip('/')}",
-            json={k: v for k, v in (body or {}).items() if v is not None},
-            headers=_auth_header(auth_params or {}),
-        )
-        resp.raise_for_status()
-    return resp.json()
+    resp = http.post(
+        f"{BASE}/{path.lstrip('/')}",
+        json={k: v for k, v in (body or {}).items() if v is not None},
+        headers=_auth_header(auth_params or {}),
+        profile="api",
+    )
+    return resp["json"]
 
 
 def _delete(path: str, auth_params: dict = None) -> dict:
-    with surf(profile="api") as client:
-        resp = client.delete(
-            f"{BASE}/{path.lstrip('/')}",
-            headers=_auth_header(auth_params or {}),
-        )
-        resp.raise_for_status()
-    return resp.json() if resp.content else {"success": True}
+    resp = http.request(
+        "DELETE",
+        f"{BASE}/{path.lstrip('/')}",
+        headers=_auth_header(auth_params or {}),
+        profile="api",
+    )
+    return resp["json"] if resp["json"] is not None else {"success": True}
 
 
 # ── Posts ──────────────────────────────────────────────────────────────────────
@@ -291,14 +289,14 @@ def get_status(**params) -> dict:
 
 
 def update_account(*, description: str = None, metadata: dict = None, **params) -> dict:
-    with surf(profile="api") as client:
-        resp = client.patch(
-            f"{BASE}/agents/me",
-            json={"description": description, "metadata": metadata},
-            headers=_auth_header(params),
-        )
-        resp.raise_for_status()
-    return resp.json() if resp.content else {"success": True}
+    resp = http.request(
+        "PATCH",
+        f"{BASE}/agents/me",
+        json={"description": description, "metadata": metadata},
+        headers=_auth_header(params),
+        profile="api",
+    )
+    return resp["json"] if resp["json"] is not None else {"success": True}
 
 
 # ── Verification ───────────────────────────────────────────────────────────────
