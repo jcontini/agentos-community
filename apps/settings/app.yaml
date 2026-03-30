@@ -1,0 +1,127 @@
+# Settings App
+# System preferences and configuration for AgentOS
+
+id: settings
+name: Settings
+icon: icon.png
+description: Configure AgentOS preferences and credentials
+
+# Route settings tool activities to this app
+# (settings is a tool, not a data entity - so we use routes, not entities)
+routes:
+  - settings
+
+# What this app manages (shown in MCP tool description)
+manages:
+  - all credentials
+  - system settings
+
+# Menu bar configuration
+menus:
+  - name: Settings
+    items:
+      - label: Quit Settings
+        action: close
+  - name: File
+    items:
+      - label: Export Settings...
+        action: export_settings
+      - label: Import Settings...
+        action: import_settings
+
+views:
+  # Main sidebar settings panel
+  # Uses tabs with sidebar variant for master-detail layout
+  main:
+    title: Settings
+    layout:
+      - component: tabs
+        props:
+          variant: sidebar
+          tabs:
+            - id: appearance
+              label: Appearance
+              description: Theme, colors, and desktop icons
+            - id: wallpaper
+              label: Wallpaper
+              description: Desktop background
+            - id: features
+              label: Features
+              description: Core functionality toggles
+            - id: privacy
+              label: Privacy
+              description: What to share with AI
+            - id: defaults
+              label: Defaults
+              description: Default apps and handlers
+          default: appearance
+          activeTab: "{{params.tab}}"
+        slots:
+          appearance:
+            component: layout/scroll-area
+            children:
+              - component: layout/stack
+                props:
+                  gap: 16
+                children:
+                  - component: appearance-controls
+                  - component: desktop-icons-controls
+                  - component: theme-picker
+
+          wallpaper:
+            component: layout/scroll-area
+            children:
+              - component: layout/stack
+                props:
+                  gap: 16
+                children:
+                  - component: wallpaper-picker
+
+          features:
+            component: layout/scroll-area
+            children:
+              - component: layout/stack
+                props:
+                  gap: 16
+                children:
+                  - component: settings-panel
+                    props:
+                      category: features
+
+          privacy:
+            component: layout/scroll-area
+            children:
+              - component: layout/stack
+                props:
+                  gap: 16
+                children:
+                  - component: settings-panel
+                    props:
+                      category: privacy
+
+          defaults:
+            component: layout/scroll-area
+            children:
+              - component: layout/stack
+                props:
+                  gap: 16
+                children:
+                  - component: web-defaults
+                  - component: settings-panel
+                    props:
+                      category: handlers
+
+  # Standalone About view (opened from Apple menu > About AgentOS)
+  about:
+    title: About AgentOS
+    layout:
+      - component: layout/scroll-area
+        children:
+          - component: layout/stack
+            props:
+              gap: 16
+              padding: 16
+            children:
+              - component: about-panel
+
+default_view: main

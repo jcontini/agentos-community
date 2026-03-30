@@ -1,0 +1,16 @@
+id: store
+name: Library
+description: Browse and install skills, apps, themes, and components from the community
+icon: icon.png
+version: 1.0.0
+
+# Library is accessed directly, not through entity routing
+standalone: true
+
+default_view: main
+
+views:
+  main:
+    title: Library
+    layout:
+      - component: skill-browser

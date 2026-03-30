@@ -1,0 +1,64 @@
+# Accounts App
+# Manage connected accounts and credentials across all skills
+
+id: accounts
+name: Accounts
+icon: icon.png
+description: Manage connected accounts and credentials
+
+# System app - not entity-based
+standalone: true
+
+menus:
+  - name: Accounts
+    items:
+      - label: About Accounts
+        action: open_view
+        view: about
+  - name: Edit
+    items:
+      - label: Add Account...
+        action: open_view
+        view: add
+        shortcut: "⌘N"
+
+views:
+  # Main view - list all connected accounts
+  main:
+    title: Accounts
+    layout:
+      - component: account-list
+
+  # Add account view - skill picker + auth form flow
+  add:
+    title: Add Account
+    layout:
+      - component: add-account
+
+  # About view
+  about:
+    title: About Accounts
+    layout:
+      - component: layout/stack
+        props:
+          gap: 16
+          align: center
+          padding: 24
+        children:
+          - component: text
+            props:
+              content: Accounts
+              variant: title
+              align: center
+          - component: text
+            props:
+              content: Manage connected accounts and credentials
+              variant: body
+              align: center
+          - component: text
+            props:
+              content: Add accounts to connect AgentOS to your apps and services. Each account can have notes for AI to use when accessing the service.
+              variant: caption
+              align: center
+
+default_view: main
