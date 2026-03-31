@@ -157,8 +157,6 @@ operations:
         limit: 10
 
   accounts:
-    operation: read
-    label: "List accounts"
     description: List available contact accounts/containers (iCloud, local, work, etc.)
     returns: object[]
     python:
@@ -166,8 +164,6 @@ operations:
       function: op_accounts
 
   create:
-    operation: create
-    label: "Create contact"
     description: Create a new contact in a specific account
     returns:
       id: string
@@ -186,8 +182,6 @@ operations:
       function: op_create
 
   update:
-    operation: update
-    label: "Update contact"
     description: Update scalar fields on a contact
     returns:
       id: string
@@ -203,8 +197,6 @@ operations:
       function: op_update
 
   delete:
-    operation: delete
-    label: "Delete contact"
     description: Delete a contact
     returns:
       status: string
