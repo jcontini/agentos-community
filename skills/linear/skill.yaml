@@ -21,22 +21,9 @@ connections:
       header: { Authorization: .auth.key }
     label: API Key
     help_url: https://linear.app/settings/api
-    # Account-level params for auto-injection
-    # These are configured per-account and injected into operations automatically
-    # AI should call `setup` after credential is added to auto-configure these
-    account_params:
-      workspace_slug:
-      type: string
-      required: false
-      label: "Workspace URL"
-      description: "Organization URL slug for web links (e.g., 'thirdparty' in linear.app/thirdparty/...)"
-      discover: get_organization  # Returns urlKey field
-    team_id:
-      type: string
-      required: false
-      label: "Default Team"
-      description: "Filter operations to this team by default"
-      discover: get_teams  # Returns team id and key
+    # TODO: account_params (workspace_slug, team_id) will move to account: block
+    # when account management protocol lands. For now, configured via
+    # PUT /api/settings/account_params after calling get_organization/get_teams.
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ADAPTERS

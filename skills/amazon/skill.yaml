@@ -13,9 +13,6 @@ connections:
     auth:
       type: cookies
       domain: ".amazon.com"
-      liveness:
-        url: "https://www.amazon.com/gp/css/homepage.html"
-        expect_status: 200
       account:
         check: check_session
     label: Amazon Session

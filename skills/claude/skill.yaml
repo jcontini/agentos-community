@@ -12,9 +12,6 @@ connections:
       type: cookies
       domain: ".claude.ai"
       names: ["sessionKey"]
-      liveness:
-        url: "https://claude.ai/api/organizations"
-        expect_status: 200
       account:
         check: check_session
       login:

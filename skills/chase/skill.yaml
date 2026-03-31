@@ -10,9 +10,6 @@ connections:
       type: cookies
       domain: ".chase.com"
       names: ["AMSESSION", "sessioncacheid", "auth-guid", "dps-pod-id", "x-auth-activity-info", "akaalb_secure_chase_com", "auth-site-info"]
-      liveness:
-        url: "https://secure.chase.com/svc/rl/accounts/l4/v1/app/data/list"
-        expect_status: 200
       account:
         check: check_session
       login:

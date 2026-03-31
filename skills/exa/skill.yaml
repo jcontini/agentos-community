@@ -30,7 +30,8 @@ connections:
       type: cookies
       domain: ".exa.ai"
       names: ["next-auth.session-token"]
-      check: check_session
+      account:
+        check: check_session
       login:
         - email_code: true
         - sso: google
