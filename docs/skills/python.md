@@ -21,13 +21,26 @@ operations:
       timeout: 30
 ```
 
-The Python function receives keyword arguments and returns JSON-serializable data:
+The Python function receives keyword arguments and returns shape-native data — dicts whose keys match the declared shape:
 
 ```python
 def get_schedule(date: str = None, location_id: int = 6) -> list[dict]:
-    ...
-    return results
+    # ... fetch from API ...
+    return [
+        {
+            "id": cls["id"],
+            "name": cls["title"],
+            "datePublished": cls["start_time"],
+            "text": cls["description"],
+            # shape-specific fields
+            "instructor": cls.get("coach_name"),
+            "capacity": cls.get("max_capacity"),
+        }
+        for cls in raw_classes
+    ]
 ```
+
+The function does the field mapping — it transforms raw API/service data into dicts matching the shape declared in `returns:`. No separate mapping layer is needed.
 
 Rules:
 
@@ -41,7 +54,47 @@ Rules:
 - Auth values are available via `.auth.*` in args expressions
 - The runtime handles I/O — just return a value from your function
 
-Examples: `austin-boulder-project`, `goodreads`, `granola`, `cursor`, `here-now`.
+Examples: `gmail`, `claude`, `goodreads`, `granola`, `cursor`, `here-now`.
+
+## Returning shape-native data
+
+When an operation declares `returns: email[]`, the Python function must return a list of dicts matching the `email` shape. Use well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) plus any shape-specific fields.
+
+```python
+# gmail.py — returns email-shaped dicts directly
+def get_email(id: str, url: str = None, _call=None) -> dict:
+    # ... Gmail API logic ...
+    return {
+        "id": msg_id,
+        "name": subject,                    # well-known: primary label
+        "text": snippet,                     # well-known: preview text
+        "url": f"https://mail.google.com/...",
+        "datePublished": internal_date,      # well-known: temporal anchor
+        "content": body_text,                # well-known: long body (FTS)
+        # email-specific fields from shape
+        "from_email": sender,
+        "to": recipients,
+        "labels": label_ids,
+    }
+```
+
+For typed references (relations to other entities), return nested dicts keyed by entity type:
+
+```python
+def get_email(id: str, _call=None) -> dict:
+    return {
+        "id": msg_id,
+        "name": subject,
+        # typed reference — creates a linked account entity
+        "from": {
+            "account": {
+                "handle": sender_email,
+                "platform": "email",
+                "display_name": sender_name,
+            }
+        },
+    }
+```
 
 ## Connection dispatch
 
@@ -70,7 +123,7 @@ def list_items(vault, connection=None):
         return _list_via_cli(vault, connection.get("vars", {}))
 ```
 
-Both code paths normalize output into the same shape so the adapter works regardless of which backend ran. This pattern is useful when a primary path (SDK with batch ops) needs a stable fallback (CLI with subprocess calls). See `skills/granola/` for the `api` + `cache` variant of this pattern.
+Both code paths return the same shape-native dicts. This pattern is useful when a primary path (SDK with batch ops) needs a stable fallback (CLI with subprocess calls). See `skills/granola/` for the `api` + `cache` variant of this pattern.
 
 ## `_call` dispatch
 

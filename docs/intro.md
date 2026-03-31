@@ -14,8 +14,7 @@
 | [Skill Anatomy](skills/anatomy.md) | Folder shape, skill.yaml, entity vs local control |
 | [Operations](skills/operations.md) | Operations, actions, capabilities (`provides:`) |
 | [Connections & Auth](skills/connections.md) | API keys, cookies, OAuth, providers |
-| [Adapters](skills/adapters.md) | Canonical fields, entity mapping, relationships |
-| [Python Skills](skills/python.md) | Python executor, `_call` dispatch |
+| [Python Skills](skills/python.md) | Python executor, `_call` dispatch, shape-native returns |
 | [Auth Flows](skills/auth-flows.md) | Login flows, `__secrets__`, Playwright→HTTPX |
 | [Data & Storage](skills/data.md) | Sandbox storage, expressions, secret store |
 | [Views & Output](skills/views.md) | Preview/full/JSON output contract |

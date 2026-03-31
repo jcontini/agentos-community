@@ -5,10 +5,9 @@
 The current skill style is:
 
 - Use `connections:` for external service dependencies (auth, base URLs)
-- Use `adapters:` for entity mappings
+- Use `returns:` on operations to declare the shape (entity type) the operation produces
+- Python modules return dicts matching the shape schema directly — no mapping layer
 - Use simple `snake_case` tool names like `search`, `read_webpage`, or `send_text`
-- Put canonical fields directly in the adapter body
-- Treat the adapter body itself as the default mapping
 - Use `operations:` for both entity-returning tools and local-control/action tools
 - Use inline `returns:` schemas for non-entity or action-style tools
 - Validate live behavior through the direct MCP path, not just by reading YAML
@@ -20,7 +19,7 @@ Every skill is a folder like:
 ```text
 skills/
   my-skill/
-    skill.yaml           # required — executable manifest (connections, adapters, operations, …)
+    skill.yaml           # required — executable manifest (connections, operations, …)
     readme.md            # recommended before ship — markdown instructions for agents (no YAML front matter)
     requirements.md      # recommended — scope out the API, auth model, and entities before writing YAML
     my_helper.py         # optional — Python helper when inline command logic gets complex
@@ -50,17 +49,6 @@ connections:
     label: API Key
     help_url: https://example.com/api-keys
 
-adapters:
-  result:
-    id: .url
-    name: .title
-    text: .summary
-    url: .url
-    image: .image
-    author: .author
-    datePublished: .published_at
-    data.score: .score
-
 operations:
   search:
     description: Search the service
@@ -68,15 +56,32 @@ operations:
     params:
       query: { type: string, required: true }
       limit: { type: integer, required: false }
-    rest:
-      method: POST
-      url: /search
-      body:
-        query: .params.query
-        limit: '.params.limit // 10'
-      response:
-        root: /results
+    python:
+      module: ./search.py
+      function: search
+      timeout: 30
 ```
+
+The `returns: result[]` declaration points to a shape defined in `shapes/result.yaml`. The Python function returns a list of dicts whose keys match that shape's fields:
+
+```python
+def search(query: str, limit: int = 10, _call=None) -> list[dict]:
+    # ... API logic ...
+    return [
+        {
+            "id": item["url"],
+            "name": item["title"],
+            "text": item.get("summary"),
+            "url": item["url"],
+            "image": item.get("image"),
+            "author": item.get("author"),
+            "datePublished": item.get("published_at"),
+        }
+        for item in results
+    ]
+```
+
+The Python code is where field mapping happens — it transforms raw API data into shape-native dicts. No separate mapping layer needed.
 
 ## Local control shape
 

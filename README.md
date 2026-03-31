@@ -46,8 +46,7 @@ This means:
                                ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                           SKILLS                             │
-│  YAML configs: API endpoints, auth, field mappings (jaq)     │
-│  One line routes content to body table: content: .content    │
+│  YAML configs + Python: API endpoints, auth, shape-native returns │
 └──────────────────────────────┬───────────────────────────────┘
                                │ extract
                                ▼
@@ -89,8 +88,7 @@ The **Skill Book** is the complete guide for building, testing, and contributing
 | skill.yaml structure | [Skill Anatomy](docs/skills/anatomy.md) |
 | Operations, actions, capabilities | [Operations](docs/skills/operations.md) |
 | Connections, auth, cookies, OAuth | [Connections & Auth](docs/skills/connections.md) |
-| Entity field mappings | [Adapters](docs/skills/adapters.md) |
-| Python executor, `_call` dispatch | [Python Skills](docs/skills/python.md) |
+| Python executor, `_call` dispatch, shape-native returns | [Python Skills](docs/skills/python.md) |
 | Login flows, `__secrets__` | [Auth Flows](docs/skills/auth-flows.md) |
 | Sandbox storage, expressions | [Data & Storage](docs/skills/data.md) |
 | MCP testing, smoke metadata | [Testing](docs/skills/testing.md) |

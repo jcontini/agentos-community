@@ -217,6 +217,106 @@ After writing or editing a shape, ask yourself:
 
 ---
 
+## Returning shape-native data from operations
+
+When an operation declares `returns: email[]`, the Python function returns dicts whose keys match the shape. The shape is the contract — no separate mapping layer sits between the Python code and the engine.
+
+```yaml
+# shapes/email.yaml
+email:
+  also: [message]
+  fields:
+    from_email: string
+    to: string[]
+    cc: string[]
+    labels: string[]
+    thread_id: string
+  relations:
+    from: account
+    conversation: conversation
+  display:
+    title: name
+    subtitle: from_email
+    date: datePublished
+```
+
+```yaml
+# skill.yaml
+operations:
+  get_email:
+    returns: email         # points to the email shape
+    python:
+      module: ./gmail.py
+      function: get_email
+```
+
+```python
+# gmail.py — returns email-shaped dicts directly
+def get_email(id: str, _call=None) -> dict:
+    return {
+        "id": msg_id,
+        "name": subject,              # well-known field
+        "text": snippet,              # well-known field
+        "url": web_url,               # well-known field
+        "datePublished": date,         # well-known field
+        "content": body_text,          # well-known field (FTS)
+        "from_email": sender,          # shape-specific field
+        "to": recipients,             # shape-specific field
+        "labels": label_ids,          # shape-specific field
+    }
+```
+
+The Python code does the field mapping — it transforms raw API responses into shape-native dicts. Well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) are available on every shape without declaring them.
+
+### Canonical fields
+
+The renderer resolves entity display from well-known fields. Every Python return should populate as many of these as the source data supports — they drive consistent previews, detail views, and search results across all skills.
+
+| Field           | Purpose                                          |
+|-----------------|--------------------------------------------------|
+| `name`          | Primary label / title                            |
+| `text`          | Short summary or snippet for preview rows        |
+| `url`           | Clickable link                                   |
+| `image`         | Thumbnail / hero image                           |
+| `author`        | Creator / brand / owner                          |
+| `datePublished` | Temporal anchor                                  |
+| `content`       | Long body text (stored separately, FTS-indexed)  |
+
+Not every entity has all of these — a product may have no `datePublished`, an order may have no `image`. Map what the source provides; skip what doesn't apply.
+
+### Typed references (entity relationships)
+
+To create linked entities and graph edges, return nested dicts keyed by entity type:
+
+```python
+def get_email(id: str, _call=None) -> dict:
+    return {
+        "id": msg_id,
+        "name": subject,
+        # Single typed ref — creates: email --from--> account
+        "from": {
+            "account": {
+                "handle": sender_email,
+                "platform": "email",
+                "display_name": sender_name,
+            }
+        },
+        # Array typed ref — creates: email --to--> account (one per recipient)
+        "to": {
+            "account[]": [
+                {"handle": addr, "platform": "email", "display_name": name}
+                for addr, name in recipients
+            ]
+        },
+    }
+```
+
+The outer key (`from`, `to`) becomes the edge label. The inner key (`account`, `account[]`) is the entity tag. The engine auto-creates/deduplicates the linked entity and adds the edge.
+
+A typed ref is collapsed to null if none of its identity fields (`id` or `name`) survive — so partial data doesn't create ghost entities.
+
+---
+
 ## Prior Research
 
 Extensive entity modeling research lives in `/Users/joe/dev/entity-experiments/`. These are not authoritative — many are outdated — but contain valuable principles and platform analysis worth consulting when designing new shapes.

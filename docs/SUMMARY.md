@@ -23,7 +23,6 @@
 - [Skill Anatomy](skills/anatomy.md)
 - [Operations](skills/operations.md)
 - [Connections & Auth](skills/connections.md)
-- [Adapters](skills/adapters.md)
 - [Python Skills](skills/python.md)
 - [Auth Flows](skills/auth-flows.md)
 - [Data & Storage](skills/data.md)
