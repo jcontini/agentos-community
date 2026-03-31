@@ -407,7 +407,7 @@ types:
 # Source of truth: agentos-community/shapes/*.yaml
 #
 # Generation: shapes YAML → converter (flattens `also` chains, resolves
-# relations, injects well-known fields) → JTD (RFC 8927) → jtd-codegen
+# relations, injects standard fields) → JTD (RFC 8927) → jtd-codegen
 # → Python TypedDict / TS interfaces / Go structs / Rust structs
 
 shapes:
@@ -415,7 +415,7 @@ shapes:
   generator: jtd-codegen
   namespace: shape
 
-  well_known_fields:
+  standard_fields:
     id: string
     name: string
     text: string
@@ -429,7 +429,7 @@ shapes:
     - "Resolve 'also' chains — inherited fields are flattened into each shape"
     - "Relations become typed fields (e.g. written_by: author becomes written_by: Author)"
     - "Array relations (e.g. accounts: account[]) become list/array of the target type"
-    - Well-known fields are prepended to every shape
+    - Standard fields are prepended to every shape
     - Display metadata is dropped (not part of the data type)
     - "Field types map to language types (string to str, integer to int, etc.)"
 

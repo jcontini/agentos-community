@@ -20,8 +20,8 @@ try:
 except ImportError:
     pass
 
-# Well-known fields present on all shapes (from the engine)
-WELL_KNOWN_FIELDS = {
+# Standard fields present on all shapes (from the engine)
+STANDARD_FIELDS = {
     "id": "str",
     "name": "str",
     "text": "str",
@@ -154,13 +154,13 @@ def generate(shapes_dir: Path | None = None, output: Path | None = None) -> str:
 
         lines.append(f"class {cls}(TypedDict, total=False):")
 
-        # Well-known fields first
-        for wk_name, wk_type in WELL_KNOWN_FIELDS.items():
+        # Standard fields first
+        for wk_name, wk_type in STANDARD_FIELDS.items():
             lines.append(f"    {wk_name}: {wk_type}")
 
         # Shape-declared fields
         for field_name, field_type in sorted(fields.items()):
-            if field_name in WELL_KNOWN_FIELDS:
+            if field_name in STANDARD_FIELDS:
                 continue
             # Dot-notation fields → underscore (can't be Python identifiers)
             if "." in field_name:

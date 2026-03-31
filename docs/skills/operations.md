@@ -25,7 +25,7 @@ operations:
       timeout: 30
 ```
 
-`returns: email[]` means "this operation returns an array of records matching the `email` shape." The Python function must return dicts with keys matching the shape's fields (see [Shapes](shapes.md) for field definitions and well-known fields).
+`returns: email[]` means "this operation returns an array of records matching the `email` shape." The Python function must return dicts with keys matching the shape's fields (see [Shapes](shapes.md) for field definitions and standard fields).
 
 Rules:
 

@@ -47,7 +47,7 @@ Declares that this shape is also another shape. An email is also a message. A bo
 | `integer[]` | JSON array | Each element coerced to integer |
 | `json` | JSON string | Opaque blob, no coercion |
 
-### Well-known fields
+### Standard fields
 
 These are available on every record without declaring them in a shape:
 
@@ -113,7 +113,7 @@ Any field representing a monetary amount needs a companion currency field. Never
 
 ### 4. URLs that reference other things are relations
 
-The well-known `url` field is the record's own canonical link. But URLs that point to *other things* should be relations to the appropriate shape.
+The standard `url` field is the record's own canonical link. But URLs that point to *other things* should be relations to the appropriate shape.
 
 **Bad:** `website: url` on an organization (a website is its own entity)
 **Good:** `website: website` relation
@@ -122,7 +122,7 @@ The well-known `url` field is the record's own canonical link. But URLs that poi
 **Good:** `links_to: webpage` relation
 
 Ask: *"Is this URL the record itself, or does it point to something else?"*
-- Record's own link: keep as `url` (well-known field)
+- Record's own link: keep as `url` (standard field)
 - Points to another thing: make it a relation
 
 ### 5. Keep shapes domain-agnostic
@@ -148,9 +148,9 @@ A shape should describe the *kind of thing*, not the *source it came from*. Flig
 
 ### 7. Author is a shape, not just a string
 
-The well-known `author` field is a string for convenience. But when the author is a real entity with their own identity (a book author, a blog writer, a video creator), use a relation to the `author` or `account` shape.
+The standard `author` field is a string for convenience. But when the author is a real entity with their own identity (a book author, a blog writer, a video creator), use a relation to the `author` or `account` shape.
 
-**Quick attribution:** `author: "Paul Graham"` (well-known string field)
+**Quick attribution:** `author: "Paul Graham"` (standard string field)
 **Rich attribution:** `written_by: author` or `posted_by: account` (relation)
 
 Both can coexist — the string is for display, the relation is for traversal.
@@ -255,22 +255,22 @@ operations:
 def get_email(id: str, _call=None) -> dict:
     return {
         "id": msg_id,
-        "name": subject,              # well-known field
-        "text": snippet,              # well-known field
-        "url": web_url,               # well-known field
-        "datePublished": date,         # well-known field
-        "content": body_text,          # well-known field (FTS)
+        "name": subject,              # standard field
+        "text": snippet,              # standard field
+        "url": web_url,               # standard field
+        "datePublished": date,         # standard field
+        "content": body_text,          # standard field (FTS)
         "from_email": sender,          # shape-specific field
         "to": recipients,             # shape-specific field
         "labels": label_ids,          # shape-specific field
     }
 ```
 
-The Python code does the field mapping — it transforms raw API responses into shape-native dicts. Well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) are available on every shape without declaring them.
+The Python code does the field mapping — it transforms raw API responses into shape-native dicts. Standard fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) are available on every shape without declaring them.
 
 ### Canonical fields
 
-The renderer resolves entity display from well-known fields. Every Python return should populate as many of these as the source data supports — they drive consistent previews, detail views, and search results across all skills.
+The renderer resolves entity display from standard fields. Every Python return should populate as many of these as the source data supports — they drive consistent previews, detail views, and search results across all skills.
 
 | Field           | Purpose                                          |
 |-----------------|--------------------------------------------------|

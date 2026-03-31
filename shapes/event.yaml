@@ -3,7 +3,7 @@
 # The universal base for anything with a when: meetings, classes, parties,
 # conferences, concerts, life events. Subtypes extend via `also: [event]`.
 #
-# Well-known fields (inherited): id, name, text, url, image, author, datePublished
+# Standard fields (inherited): id, name, text, url, image, author, datePublished
 # datePublished is when the event was *posted/announced* — NOT when it happens.
 # Use start_date / end_date for the actual event timing.
 #

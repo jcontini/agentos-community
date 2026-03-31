@@ -27,7 +27,7 @@ from pathlib import Path
 # Intermediate representation
 # =============================================================================
 
-WELL_KNOWN = [
+STANDARD_FIELDS = [
     ("id", "string"),
     ("name", "string"),
     ("text", "string"),
@@ -116,13 +116,13 @@ def load_shapes(shapes_dir: Path) -> list[Shape]:
     for shape_name in sorted(raw.keys()):
         s = Shape(name=shape_name, class_name=to_class_name(shape_name))
 
-        # Well-known fields first
-        for wk_name, wk_type in WELL_KNOWN:
+        # Standard fields first
+        for wk_name, wk_type in STANDARD_FIELDS:
             s.fields.append(Field(wk_name, wk_type, False, False, None))
 
         # Shape-declared fields
         for fname, ftype in sorted(resolve_fields(shape_name).items()):
-            if any(wk[0] == fname for wk in WELL_KNOWN):
+            if any(sf[0] == fname for sf in STANDARD_FIELDS):
                 continue
             is_array = ftype.endswith("[]")
             base = ftype.rstrip("[]") if is_array else ftype

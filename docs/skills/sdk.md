@@ -191,7 +191,7 @@ post: shape.Post = {
 }
 ```
 
-Every shape has well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`) plus shape-specific fields and relations. Shapes are defined in `shapes/*.yaml` and generated at build time.
+Every shape has standard fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`) plus shape-specific fields and relations. Shapes are defined in `shapes/*.yaml` and generated at build time.
 
 Available shapes include: Account, Article, Author, Book, Community, Conversation, Domain, Email, Event, File, Flight, Meeting, Message, Note, Order, Person, Place, Playlist, Post, Product, Repository, Review, Role, Task, Transaction, Video, and more.
 

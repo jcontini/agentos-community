@@ -58,7 +58,7 @@ Examples: `gmail`, `claude`, `goodreads`, `granola`, `cursor`, `here-now`.
 
 ## Returning shape-native data
 
-When an operation declares `returns: email[]`, the Python function must return a list of dicts matching the `email` shape. Use well-known fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) plus any shape-specific fields.
+When an operation declares `returns: email[]`, the Python function must return a list of dicts matching the `email` shape. Use standard fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) plus any shape-specific fields.
 
 ```python
 # gmail.py — returns email-shaped dicts directly
@@ -66,11 +66,11 @@ def get_email(id: str, url: str = None, _call=None) -> dict:
     # ... Gmail API logic ...
     return {
         "id": msg_id,
-        "name": subject,                    # well-known: primary label
-        "text": snippet,                     # well-known: preview text
+        "name": subject,                    # standard: primary label
+        "text": snippet,                     # standard: preview text
         "url": f"https://mail.google.com/...",
-        "datePublished": internal_date,      # well-known: temporal anchor
-        "content": body_text,                # well-known: long body (FTS)
+        "datePublished": internal_date,      # standard: temporal anchor
+        "content": body_text,                # standard: long body (FTS)
         # email-specific fields from shape
         "from_email": sender,
         "to": recipients,
