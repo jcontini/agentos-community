@@ -141,6 +141,37 @@ class HttpSession:
 
 
 # ---------------------------------------------------------------------------
+# Cookie resolution — provider-agnostic, uses engine auth resolver
+# ---------------------------------------------------------------------------
+
+
+def cookies(domain: str, account: str | None = None) -> str:
+    """Resolve cookies for a domain via the auth system.
+
+    Uses the same provider discovery and ranking as connection-based
+    auth resolution: tries all installed cookie providers (brave-browser,
+    firefox, etc.), picks the best one, validates the session if possible.
+
+    Args:
+        domain:  Cookie domain (e.g. ".uber.com", ".amazon.com").
+        account: Optional account identifier to select a specific session.
+
+    Returns:
+        Cookie header string ("name=value; name=value; ...").
+
+    Raises:
+        ValueError: No cookie provider found or no cookies for this domain.
+    """
+    params = {"domain": domain}
+    if account:
+        params["account"] = account
+    result = dispatch("__cookie_resolve__", params)
+    if "__error__" in result:
+        raise ValueError(result["__error__"])
+    return result.get("cookies", "")
+
+
+# ---------------------------------------------------------------------------
 # Header composition — independent knobs, no engine profiles
 # ---------------------------------------------------------------------------
 
