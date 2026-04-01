@@ -187,12 +187,16 @@ _MODE = {
         "ECT": "4g",
         "RTT": "50",
         "Viewport-Width": "1512",
+        # Structured client hints — Amazon Lightsaber checks these
+        "Sec-CH-Device-Memory": "8",
+        "Sec-CH-DPR": "2",
+        "Sec-CH-UA-Full-Version-List": '"Chromium";v="131.0.6778.109", "Not:A-Brand";v="99.0.0.0"',
     },
 }
 
 _ACCEPT = {
     "json": {"Accept": "application/json"},
-    "html": {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+    "html": {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"},
     "any": {"Accept": "*/*"},
 }
 
