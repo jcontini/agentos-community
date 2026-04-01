@@ -344,9 +344,12 @@ operations:
       wait:
         type: integer
         description: "Milliseconds to wait after navigation for async requests (default: 5000)"
+      cookie_domain:
+        type: string
+        description: "Cookie domain to resolve automatically (e.g. '.uber.com'). Cookies are resolved from available browser providers via the auth system. Overridden by explicit cookies param."
       cookies:
         type: array
-        description: "Cookies to inject before navigating. Each item: {name, value, domain, path}. Obtain values from your workspace's cookie provider flow for that domain."
+        description: "Manual cookie injection (overrides cookie_domain). Each item: {name, value, domain, path}."
       capture_body:
         type: boolean
         description: "Capture JSON response bodies (default: true)"
