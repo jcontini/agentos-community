@@ -84,10 +84,10 @@ def _flip_name(name: str) -> str:
 
 def _field_value(row: Any, field_class: str) -> str | None:
     """Extract cleaned text from a td.field.<class> .value cell."""
-    td = row.select_one(f"td.field.{field_class}")
+    td = _first(row, f"td.field.{field_class}")
     if not td:
         return None
-    val_el = td.select_one(".value")
+    val_el = _first(td, ".value")
     text = molt((val_el or td).text_content())
     if text and text.lower() in ("not set", "unknown"):
         return None
@@ -328,22 +328,30 @@ def get_person(
     sections: dict[str, Any] = {}
     for hdr in doc.cssselect("h2.brownBackground, .bigBoxHeader"):
         label = (molt(hdr.text_content()) or "").lower()
-        parent_box = hdr.find_parent("div", class_="bigBox")
-        if parent_box:
-            body = parent_box.select_one(".bigBoxBody, .bigBoxContent")
-            if body:
-                sections[label] = body
+        # Walk up to find ancestor div.bigBox
+        parent_box = None
+        el = hdr.getparent()
+        while el is not None:
+            classes = (el.get("class") or "").split()
+            if el.tag == "div" and "bigBox" in classes:
+                parent_box = el
+                break
+            el = el.getparent()
+        if parent_box is not None:
+            body_els = parent_box.cssselect(".bigBoxBody, .bigBoxContent")
+            if body_els:
+                sections[label] = body_els[0]
         else:
-            sib = hdr.find_next_sibling()
-            if sib:
+            sib = hdr.getnext()
+            if sib is not None:
                 sections[label] = sib
 
     # Favorite books
     favorite_books: list[dict[str, Any]] = []
     for key, body in sections.items():
         if "favorite" in key and "book" in key:
-            for a in body.select('a[href*="/book/show/"]'):
-                bimg = a.select_one("img")
+            for a in body.cssselect('a[href*="/book/show/"]'):
+                bimg = _first(a, "img")
                 btitle = bimg.get("alt") if bimg else molt(a.text_content())
                 bm = re.search(r"/book/show/(\d+)", a.get("href", ""))
                 if bm and btitle:
@@ -361,7 +369,7 @@ def get_person(
     for key, body in sections.items():
         if "currently reading" in key:
             for update in body.cssselect(".Updates"):
-                book_link = update.select_one("a.bookTitle")
+                book_link = _first(update, "a.bookTitle")
                 if not book_link:
                     continue
                 btitle = molt(book_link.text_content())
@@ -369,10 +377,10 @@ def get_person(
                 if not bm or not btitle:
                     continue
 
-                date_el = update.select_one("a.updatedTimestamp")
+                date_el = _first(update, "a.updatedTimestamp")
                 date_added = parse_date(molt(date_el.text_content())) if date_el else None
 
-                author_link = update.select_one("a.authorName")
+                author_link = _first(update, "a.authorName")
                 author_name = molt(author_link.text_content()) if author_link else None
                 author_id = None
                 if author_link:
@@ -456,9 +464,9 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
 
         # td[0]: avatar image + user link
         # td[1]: name, book count, friend count, location
-        user_link = tds[1].select_one('a[href*="/user/show/"]') if len(tds) > 1 else None
+        user_link = _first(tds[1], 'a[href*="/user/show/"]') if len(tds) > 1 else None
         if not user_link:
-            user_link = row.select_one('a[href*="/user/show/"]')
+            user_link = _first(row, 'a[href*="/user/show/"]')
         if not user_link:
             continue
         href = user_link.get("href", "")
@@ -475,7 +483,7 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
         seen.add(uid)
 
         # Photo from td[0]
-        photo_img = tds[0].select_one("img") if tds else None
+        photo_img = _first(tds[0], "img") if tds else None
         photo_url = photo_img.get("src") if photo_img else None
         if photo_url:
             photo_url = re.sub(r"p2/", "p7/", photo_url)
@@ -485,13 +493,13 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
         friends_count = None
         location = None
 
-        books_link = tds[1].select_one('a[href*="/review/list/"]') if len(tds) > 1 else None
+        books_link = _first(tds[1], 'a[href*="/review/list/"]') if len(tds) > 1 else None
         if books_link:
             bm = re.search(r"(\d+)", books_link.text_content())
             if bm:
                 books_count = int(bm.group(1))
 
-        friends_link = tds[1].select_one('a[href*="/friend/"]') if len(tds) > 1 else None
+        friends_link = _first(tds[1], 'a[href*="/friend/"]') if len(tds) > 1 else None
         if friends_link:
             fm = re.search(r"(\d+)", friends_link.text_content())
             if fm:
@@ -512,7 +520,7 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
         # Currently reading from td[2]
         currently_reading = None
         if len(tds) > 2:
-            for book_link in tds[2].select('a[href*="/book/show/"]'):
+            for book_link in tds[2].cssselect('a[href*="/book/show/"]'):
                 book_text = molt(book_link.text_content())
                 if book_text:
                     bm2 = re.search(r"/book/show/(\d+)", book_link.get("href", ""))
@@ -682,7 +690,7 @@ def resolve_email(
 
     people: list[dict[str, Any]] = []
     for row in table.cssselect("tr"):
-        user_link = row.select_one('a[href*="/user/show/"]')
+        user_link = _first(row, 'a[href*="/user/show/"]')
         if not user_link:
             continue
         href = user_link.get("href", "")
@@ -692,12 +700,12 @@ def resolve_email(
         uid = m.group(1)
         name = molt(user_link.text_content())
         if not name:
-            img = row.select_one("img")
+            img = _first(row, "img")
             name = img.get("alt") if img else None
         if not name:
             continue
 
-        img = row.select_one("img[src*='/users/']")
+        img = _first(row, "img[src*='/users/']")
         photo_url = img.get("src") if img else None
 
         row_text = row.text_content()
@@ -790,11 +798,11 @@ def list_shelves(
 
 def _extract_date(row: Any, field_class: str) -> str | None:
     """Extract a clean date string from a td.field cell."""
-    td = row.select_one(f"td.field.{field_class}")
+    td = _first(row, f"td.field.{field_class}")
     if not td:
         return None
     # Prefer span[title] which has the full date
-    span = td.select_one("span[title]")
+    span = _first(td, "span[title]")
     if span:
         return molt(span.get("title") or span.text_content())
     # Fallback: look for non-grey text
@@ -807,7 +815,7 @@ def _extract_date(row: Any, field_class: str) -> str | None:
 
 def _extract_rating(row: Any) -> int | None:
     """Extract user's rating from the stars data-rating attribute."""
-    stars = row.select_one(".stars[data-rating]")
+    stars = _first(row, ".stars[data-rating]")
     if stars:
         val = stars.get("data-rating", "0")
         r = int(val) if val.isdigit() else 0
@@ -817,7 +825,7 @@ def _extract_rating(row: Any) -> int | None:
 
 def _extract_review_text(row: Any) -> str | None:
     """Extract review text, ignoring 'Write a review' placeholder."""
-    td = row.select_one("td.field.review")
+    td = _first(row, "td.field.review")
     if not td:
         return None
     text = molt(td.text_content())
@@ -834,7 +842,7 @@ def _extract_review_text(row: Any) -> str | None:
 
 def _extract_shelf(row: Any) -> str | None:
     """Extract shelf name from the shelves field."""
-    td = row.select_one("td.field.shelves")
+    td = _first(row, "td.field.shelves")
     if not td:
         return None
     text = molt(td.text_content())
@@ -853,7 +861,7 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
     for row in rows:
         book_id = row.get("data-resource-id")
         if not book_id:
-            for a in row.select('a[href*="/book/show/"]'):
+            for a in row.cssselect('a[href*="/book/show/"]'):
                 m = re.search(r"/book/show/(\d+)", a.get("href", ""))
                 if m:
                     book_id = m.group(1)
@@ -861,10 +869,10 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
         if not book_id:
             continue
 
-        title_el = row.select_one("td.field.title a, .title a, a.bookTitle")
+        title_el = _first(row, "td.field.title a, .title a, a.bookTitle")
         title = molt(title_el.get("title") or (title_el.text_content() if title_el else None))
 
-        author_el = row.select_one("td.field.author a, .author a, a.authorName")
+        author_el = _first(row, "td.field.author a, .author a, a.authorName")
         author_raw = molt(author_el.text_content() if author_el else None)
         author = _flip_name(author_raw) if author_raw else None
         author_id = None
@@ -882,7 +890,7 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
         date_started = _extract_date(row, "date_started")
         shelf = _extract_shelf(row)
 
-        cover_img = row.select_one("td.field.cover img")
+        cover_img = _first(row, "td.field.cover img")
         cover_url = cover_img.get("src") if cover_img else None
         if cover_url:
             cover_url = re.sub(r"\._SY\d+_", "._SY475_", cover_url)
@@ -902,7 +910,7 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
 
         if as_reviews:
             review_id = None
-            for a in row.select('a[href*="/review/show/"]'):
+            for a in row.cssselect('a[href*="/review/show/"]'):
                 m = re.search(r"/review/show/(\d+)", a.get("href", ""))
                 if m:
                     review_id = m.group(1)
@@ -1060,7 +1068,7 @@ def list_groups(
     seen: set[str] = set()
 
     for wrapper in doc.cssselect(".groupListItemWrapper"):
-        link = wrapper.select_one('a[href*="/group/show/"]')
+        link = _first(wrapper, 'a[href*="/group/show/"]')
         if not link:
             continue
         href = link.get("href", "")
@@ -1083,7 +1091,7 @@ def list_groups(
             if line.startswith("Active"):
                 last_active = line
 
-        img = wrapper.select_one("img")
+        img = _first(wrapper, "img")
         image_url = img.get("src") if img else None
 
         groups.append({
@@ -1125,9 +1133,9 @@ def _parse_follow_page(
             continue
         seen.add(key)
 
-        img_parent = link.find_parent()
-        img = img_parent.select_one("img") if img_parent else None
-        photo = img.get("src") if img else None
+        img_parent = link.getparent()
+        img_els = img_parent.cssselect("img") if img_parent is not None else []
+        photo = img_els[0].get("src") if img_els else None
 
         if kind == "author":
             authors.append({
@@ -1246,16 +1254,17 @@ def list_quotes(
         text = "".join(text_parts).strip()
         text = re.sub(r'^[\s\u201c\u201d"]+|[\s\u201c\u201d"]+$', "", text)
 
-        author_el = qt.select_one(".authorOrTitle")
+        author_el = _first(qt, ".authorOrTitle")
         author_name = molt(author_el.text_content()) if author_el else None
         if author_name:
             author_name = author_name.rstrip(",")
 
         # Author link from the parent container
-        parent = qt.find_parent()
-        author_link = parent.select_one('a[href*="/author/show/"]') if parent else None
+        parent = qt.getparent()
+        author_links = parent.cssselect('a[href*="/author/show/"]') if parent is not None else []
+        author_link = author_links[0] if author_links else None
         author_id = None
-        if author_link:
+        if author_link is not None:
             am = re.search(r"/author/show/(\d+)", author_link.get("href", ""))
             if am:
                 author_id = am.group(1)
@@ -1263,9 +1272,11 @@ def list_quotes(
         # Book link if present
         book_title = None
         book_id = None
-        title_el = qt.select_one('.authorOrTitle + .authorOrTitle, a[href*="/book/show/"]')
-        if not title_el and parent:
-            title_el = parent.select_one('a[href*="/book/show/"]')
+        title_els = qt.cssselect('.authorOrTitle + .authorOrTitle, a[href*="/book/show/"]')
+        title_el = title_els[0] if title_els else None
+        if title_el is None and parent is not None:
+            fallback = parent.cssselect('a[href*="/book/show/"]')
+            title_el = fallback[0] if fallback else None
         if title_el:
             book_title = molt(title_el.text_content())
             bm = re.search(r"/book/show/(\d+)", title_el.get("href", ""))
