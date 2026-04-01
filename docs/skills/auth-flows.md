@@ -1,11 +1,11 @@
 # Auth Flows
 
-When a skill needs credentials from a web dashboard (API keys, session tokens), the flow is: **discover with Playwright, implement with HTTPX**. For steps that HTTPX can't replay (native form POSTs, complex redirect chains), the agent uses Playwright for that step and HTTPX for everything after.
+When a skill needs credentials from a web dashboard (API keys, session tokens), the flow is: **discover with Playwright, implement with `agentos.http`**. For steps that `agentos.http` can't replay (native form POSTs, complex redirect chains), the agent uses Playwright for that step and `agentos.http` for everything after.
 
 ## The pattern
 
 1. **Discover** — use the Playwright skill interactively to walk through the login/signup flow. `capture_network` reveals endpoints, `cookies` shows what session cookies get set, `inspect` shows form structure.
-2. **Implement** — write the login flow as Python + `httpx` in the skill's `.py` file. Use `http2=True`, `follow_redirects=True`, and inject cookies from `params.auth.cookies` or `_call` to other skills (e.g. Gmail for magic links, `brave-browser` for Google session cookies).
+2. **Implement** — write the login flow as Python + `agentos.http` in the skill's `.py` file. Use `http.headers()` for WAF bypass and inject cookies from `params.auth.cookies` or `_call` to other skills (e.g. Gmail for magic links, `brave-browser` for Google session cookies).
 3. **Store** — return extracted credentials via `__secrets__` so the engine stores them securely. The LLM never sees raw secret values.
 4. **Test** — `test-skills.cjs` should work without a running browser. If your skill needs Playwright at runtime, rethink the approach.
 
@@ -31,7 +31,7 @@ connections:
         - email_link: true
 ```
 
-All auth goes under a single `auth:` key with a `type` discriminator (`api_key`, `cookies`, `oauth`). The `login` block declares available login methods. Login operations are Python functions that execute the flow with HTTPX. See `specs/auth-model.md` in the engine repo for the unified auth model, and `specs/sso-credential-bootstrap.md` for the end-to-end bootstrap flow.
+All auth goes under a single `auth:` key with a `type` discriminator (`api_key`, `cookies`, `oauth`). The `login` block declares available login methods. Login operations are Python functions that execute the flow with `agentos.http`. See `specs/auth-model.md` in the engine repo for the unified auth model, and `specs/sso-credential-bootstrap.md` for the end-to-end bootstrap flow.
 
 ## Secret-safe credential return
 
@@ -109,7 +109,8 @@ most of them) work correctly regardless of whether `names` is declared.
 
 ## Key rules
 
-- **Never import Playwright in skill Python code.** Playwright is a separate skill for investigation. Skill operations use `httpx`.
+- **Never import Playwright in skill Python code.** Playwright is a separate skill for investigation. Skill operations use `agentos.http`.
+- **All I/O through SDK modules.** `http.get/post`, `shell.run`, `sql.query`. Never `urllib`, `subprocess`, `sqlite3`, `requests`, `httpx`.
 - **Never expose secrets in `__result__`.** Secrets go in `__secrets__` only. The agent sees masked versions via `metadata.masked`.
 - **`_call` is same-skill only.** It dispatches to sibling operations within the same skill (e.g. Gmail's `list_emails` calling `get_email`). It cannot call operations in other skills.
 - **Cross-skill coordination goes through the agent.** If a login flow needs email access, the operation yields back to the agent (see below), and the agent uses whatever email capability is available.
@@ -126,26 +127,26 @@ Some login flows require input the skill can't obtain on its own — a verificat
 
 ### The multi-step pattern
 
-Split the flow so the agent orchestrates between HTTPX operations and Playwright when needed:
+Split the flow so the agent orchestrates between `agentos.http` operations and Playwright when needed:
 
 ```
 Agent calls skill.send_login_code({ email })
-  → Python/HTTPX: CSRF + trigger verification email
+  → Python/agentos.http: CSRF + trigger verification email
   → Returns: { status: "code_sent", hint: "..." }
 
 Agent checks email (any provider) and extracts the code
 
-Agent uses Playwright to complete login (if HTTPX can't replay the code submission)
+Agent uses Playwright to complete login (if `agentos.http` can't replay the code submission)
   → Navigate to login page, type email, submit, type code, submit
   → Extract cookies from browser
 
 Agent calls skill.store_session_cookies({ email, session_token, ... })
-  → Python/HTTPX: validates session, stores via __secrets__
+  → Python/agentos.http: validates session, stores via __secrets__
 ```
 
 The `hint` field tells the agent what to search for (e.g. "subject 'Sign in to Exa Dashboard' from exa.ai"). The agent knows how to search email — it picks the right provider and extracts the code.
 
-**Why Playwright for the code submission?** Some auth implementations (e.g. Exa's NextAuth) submit verification codes via a native HTML form POST that HTTPX cannot replay — the server-side handling differs from a programmatic POST. The fetch interceptor captures nothing, but the browser navigates successfully. When this happens, use Playwright for the form submission step and HTTPX for everything else.
+**Why Playwright for the code submission?** Some auth implementations (e.g. Exa's NextAuth) submit verification codes via a native HTML form POST that HTTPX cannot replay — the server-side handling differs from a programmatic POST. The fetch interceptor captures nothing, but the browser navigates successfully. When this happens, use Playwright for the form submission step and `agentos.http` for everything else.
 
 ### When to use this pattern
 
@@ -153,7 +154,7 @@ The `hint` field tells the agent what to search for (e.g. "subject 'Sign in to E
 - SMS/TOTP verification
 - OAuth consent that requires user approval
 - Any flow where the skill needs external input it can't obtain via `_call`
-- Any step where HTTPX replay fails but the browser works (native form POSTs, complex redirect chains)
+- Any step where `agentos.http` replay fails but the browser works (native form POSTs, complex redirect chains)
 
 ### Example: Exa
 

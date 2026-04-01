@@ -23,19 +23,14 @@ APP_BUNDLE_RE = re.compile(r'/_next/static/chunks/pages/_app-[a-f0-9]+\.js')
 
 
 def fetch_html(url: str) -> str:
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-    }
-    return fetch_url(url, headers=headers)
+    return fetch_url(url, extra_headers={"Cache-Control": "no-cache", "Pragma": "no-cache"}, accept="html")
 
 
 def fetch_url(
     url: str,
     *,
-    headers: dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
+    accept: str = "any",
     data: str | None = None,
     method: str | None = None,
 ) -> str:
@@ -45,7 +40,7 @@ def fetch_url(
     fn = dispatch.get(request_method, http.get)
 
     for attempt in range(4):
-        kwargs = {"headers": headers or {}, "profile": "navigate", "timeout": 30}
+        kwargs = {**http.headers(waf="cf", mode="navigate", accept=accept, extra=extra_headers), "timeout": 30}
         if data is not None:
             kwargs["data"] = data
         try:
@@ -146,7 +141,6 @@ def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
     try:
         bundle_js = fetch_url(
             f"{BASE_URL}{bundle_match.group()}",
-            headers={"Accept": "*/*"},
         )
     except Exception:
         return None
@@ -241,7 +235,7 @@ def graphql_request(
     payload = json.dumps({"query": query, "variables": variables})
     body = fetch_url(
         runtime["graphql_endpoint"],
-        headers=headers,
+        extra_headers=headers,
         data=payload,
         method="POST",
     )

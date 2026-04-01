@@ -24,8 +24,7 @@ def _ts_to_iso(ts) -> str | None:
 
 def list_models(**params) -> list[dict]:
     """List available AI models from all providers via OpenRouter."""
-    resp = http.get(f"{API_BASE}/models", headers=_auth_header(params),
-                    profile="api")
+    resp = http.get(f"{API_BASE}/models", **http.headers(accept="json", extra=_auth_header(params)))
     return [
         {
             "id": m.get("id"),
@@ -94,8 +93,7 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
         ]
 
     resp = http.post(f"{API_BASE}/chat/completions",
-                     json=body, headers=_auth_header(params),
-                     profile="api")
+                     json=body, **http.headers(accept="json", extra=_auth_header(params)))
     data = resp["json"]
     choices = data.get("choices") or [{}]
     choice = choices[0] if choices else {}

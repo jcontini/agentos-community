@@ -15,11 +15,9 @@ def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> l
     resp = http.get(
         f"{API_BASE}/web/search",
         params=q_params,
-        headers={
+        **http.headers(accept="json", extra={
             "X-Subscription-Token": api_key,
-            "Accept": "application/json",
-        },
-        profile="api",
+        }),
     )
 
     results = (resp["json"] or {}).get("web", {}).get("results", [])

@@ -44,19 +44,19 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
 
 
 def list_domains(**params) -> list[dict]:
-    resp = http.get(f"{GANDI_BASE}/domain/domains", headers=_auth_header(params), profile="api")
+    resp = http.get(f"{GANDI_BASE}/domain/domains", **http.headers(accept="json", extra=_auth_header(params)))
     return [_map_domain(d) for d in (resp["json"] or [])]
 
 
 def get_domain(*, domain: str, **params) -> dict:
-    resp = http.get(f"{GANDI_BASE}/domain/domains/{domain}", headers=_auth_header(params), profile="api")
+    resp = http.get(f"{GANDI_BASE}/domain/domains/{domain}", **http.headers(accept="json", extra=_auth_header(params)))
     return _map_domain(resp["json"])
 
 
 def list_dns_records(*, domain: str, **params) -> list[dict]:
     resp = http.get(
         f"{GANDI_BASE}/livedns/domains/{domain}/records",
-        headers=_auth_header(params), profile="api",
+        **http.headers(accept="json", extra=_auth_header(params)),
     )
     return [_map_dns_record(r, domain) for r in (resp["json"] or [])]
 
@@ -64,7 +64,7 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
 def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
     resp = http.get(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
-        headers=_auth_header(params), profile="api",
+        **http.headers(accept="json", extra=_auth_header(params)),
     )
     return _map_dns_record(resp["json"], domain)
 
@@ -73,7 +73,7 @@ def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: i
     resp = http.put(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
         json={"rrset_ttl": ttl or 3600, "rrset_values": values},
-        headers=_auth_header(params), profile="api",
+        **http.headers(accept="json", extra=_auth_header(params)),
     )
     return resp["json"] or {"success": True}
 
@@ -81,5 +81,5 @@ def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: i
 def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
     http.delete(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
-        headers=_auth_header(params), profile="api",
+        **http.headers(accept="json", extra=_auth_header(params)),
     )

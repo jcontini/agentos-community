@@ -1,0 +1,101 @@
+id: uber
+name: Uber
+description: Ride history, trip details, receipts, and account info from Uber
+color: "#000000"
+
+website: https://uber.com
+
+connections:
+  web:
+    description: "Uber rider account — requires cookies from a logged-in browser session"
+    base_url: "https://riders.uber.com"
+    auth:
+      type: cookies
+      domain: ".uber.com"
+      account:
+        check: check_session
+    label: "Uber Rider"
+    help_url: "https://riders.uber.com"
+
+operations:
+  check_session:
+    description: "Validate session cookies and return account identity"
+    returns:
+      authenticated: boolean
+      identifier: string
+      display: string
+      domain: string
+    connection: web
+    python:
+      module: ./uber.py
+      function: check_session
+      timeout: 30
+
+  list_trips:
+    description: "List ride history — past trips with date, destination, fare, and map URL. Supports pagination via nextPageToken."
+    returns:
+      trips: array
+      next_page_token: string
+      count: integer
+    params:
+      limit:
+        type: integer
+        description: "Number of trips to return (default: 10, max: 50)"
+      next_page_token:
+        type: string
+        description: "Pagination token from a previous response"
+      profile_type:
+        type: string
+        description: "Profile filter: PERSONAL (default) or BUSINESS"
+      order_types:
+        type: string
+        description: "Comma-separated order types: RIDES, TRAVEL, EATS (default: RIDES,TRAVEL)"
+    connection: web
+    python:
+      module: ./uber.py
+      function: list_trips
+      timeout: 30
+
+  get_trip:
+    description: "Get full trip details — driver, pickup/dropoff addresses, fare breakdown, distance, duration, receipt, and map"
+    returns:
+      trip_id: string
+      status: string
+      driver: string
+      pickup: string
+      dropoff: string
+      fare: string
+      distance: string
+      duration: string
+      vehicle_type: string
+      begin_time: string
+      dropoff_time: string
+      map_url: string
+      rating: string
+    params:
+      trip_id:
+        type: string
+        required: true
+        description: "Trip UUID (from list_trips)"
+    connection: web
+    python:
+      module: ./uber.py
+      function: get_trip
+      timeout: 30
+
+  whoami:
+    description: "Get current user profile — name, email, phone, rating, payment methods, Uber One status"
+    returns:
+      uuid: string
+      first_name: string
+      last_name: string
+      email: string
+      phone: string
+      rating: string
+      has_uber_one: boolean
+      payment_methods: array
+    connection: web
+    python:
+      module: ./uber.py
+      function: whoami
+      timeout: 30

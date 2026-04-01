@@ -53,8 +53,7 @@ def _client(cookie_header: str):
     """HTTP session with Chase-specific headers."""
     return http.client(
         cookies=cookie_header,
-        profile="api",
-        headers=EXTRA_HEADERS,
+        **http.headers(waf="cf", accept="json", extra=EXTRA_HEADERS),
     )
 
 

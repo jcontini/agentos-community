@@ -125,8 +125,7 @@ def _get(path: str, params: dict = None, auth_params: dict = None) -> dict:
     resp = http.get(
         f"{BASE}/{path.lstrip('/')}",
         params={k: str(v) for k, v in (params or {}).items() if v is not None},
-        headers=_auth_header(auth_params or {}),
-        profile="api",
+        **http.headers(accept="json", extra=_auth_header(auth_params or {})),
     )
     return resp["json"]
 
@@ -135,8 +134,7 @@ def _post(path: str, body: dict = None, auth_params: dict = None) -> dict:
     resp = http.post(
         f"{BASE}/{path.lstrip('/')}",
         json={k: v for k, v in (body or {}).items() if v is not None},
-        headers=_auth_header(auth_params or {}),
-        profile="api",
+        **http.headers(accept="json", extra=_auth_header(auth_params or {})),
     )
     return resp["json"]
 
@@ -145,8 +143,7 @@ def _delete(path: str, auth_params: dict = None) -> dict:
     resp = http.request(
         "DELETE",
         f"{BASE}/{path.lstrip('/')}",
-        headers=_auth_header(auth_params or {}),
-        profile="api",
+        **http.headers(accept="json", extra=_auth_header(auth_params or {})),
     )
     return resp["json"] if resp["json"] is not None else {"success": True}
 
@@ -293,8 +290,7 @@ def update_account(*, description: str = None, metadata: dict = None, **params) 
         "PATCH",
         f"{BASE}/agents/me",
         json={"description": description, "metadata": metadata},
-        headers=_auth_header(params),
-        profile="api",
+        **http.headers(accept="json", extra=_auth_header(params)),
     )
     return resp["json"] if resp["json"] is not None else {"success": True}
 

@@ -18,16 +18,18 @@ Each layer builds on the previous. Start at transport, work up.
 
 ## Core principle
 
-**Playwright discovers, HTTPX runs.**
+**Playwright discovers, `agentos.http` runs.**
 
-Use the [Playwright skill](https://github.com/jcontini/agentos-community/tree/main/skills/playwright) to investigate — walk through login flows, capture network requests, inspect DOM structure. Then implement what you learned as Python + `httpx` in the skill. No browser at runtime.
+Use the [Playwright skill](https://github.com/jcontini/agentos-community/tree/main/skills/playwright) to investigate — walk through login flows, capture network requests, inspect DOM structure. Then implement what you learned as Python + `agentos.http` in the skill. No browser at runtime.
+
+Headers are built in Python via `http.headers()` with independent knobs (`waf=`, `accept=`, `mode=`, `extra=`). The Rust engine is pure transport — it sets zero default headers.
 
 The progression:
 
 1. **Search** — check `web_search` for prior art, existing docs, API references.
 2. **Discover** — use Playwright to probe the live site: `inspect`, `capture_network`, `evaluate`.
-3. **Replay** — reproduce what you found with HTTPX + cookies. Verify it works.
-4. **Implement** — write the skill operation in Python with HTTPX. No browser dependency.
+3. **Replay** — reproduce what you found with `agentos.http` + cookies. Use `http.headers()` for WAF bypass.
+4. **Implement** — write the skill operation in Python with `agentos.http`. No browser dependency.
 5. **Test** — `test-skills.cjs` runs without a browser. If your skill needs Playwright at runtime, reconsider.
 
 See [Auth & Runtime](3-auth/index.md) for the full methodology, including:

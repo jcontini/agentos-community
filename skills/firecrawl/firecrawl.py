@@ -17,8 +17,7 @@ def read_webpage(*, url: str, wait_for_js: int = 0, timeout: int = 30000, **para
             "waitFor": wait_for_js,
             "timeout": timeout,
         },
-        headers={"Authorization": f"Bearer {api_key}"},
-        profile="api",
+        **http.headers(accept="json", extra={"Authorization": f"Bearer {api_key}"}),
     )
     data = (resp["json"] or {}).get("data") or {}
     meta = data.get("metadata") or {}

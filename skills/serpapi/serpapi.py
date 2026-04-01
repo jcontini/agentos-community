@@ -76,7 +76,7 @@ def _map_offer(r: dict) -> dict:
 
 def _flight_get(query: dict, **params) -> dict:
     q = {**_auth_params(params), **{k: v for k, v in query.items() if v is not None}}
-    resp = http.get(SEARCH_URL, params=q, profile="api")
+    resp = http.get(SEARCH_URL, params=q, **http.headers(accept="json"))
     return resp["json"]
 
 

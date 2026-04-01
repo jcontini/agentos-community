@@ -118,7 +118,7 @@ def _extract_event_id_from_url(url):
 def list_calendars(*, account=None, **params):
     """List all calendars the user can see."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/users/me/calendarList", headers=headers, profile="api")
+    resp = http.get(f"{BASE_URL}/users/me/calendarList", **http.headers(accept="json", extra=headers))
     items = (resp["json"] or {}).get("items", [])
     return [
         {
@@ -161,7 +161,7 @@ def list_events(*, calendar_id="primary", days=7, past=False,
 
     resp = http.get(
         f"{BASE_URL}/calendars/{calendar_id}/events",
-        params=query_params, headers=headers, profile="api",
+        params=query_params, **http.headers(accept="json", extra=headers),
     )
     data = resp["json"] or {}
     events = [_map_event(e) for e in data.get("items", [])]
@@ -182,7 +182,7 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
     headers = _auth_header(params)
     resp = http.get(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-        headers=headers, profile="api",
+        **http.headers(accept="json", extra=headers),
     )
     return _map_event(resp["json"])
 
@@ -225,7 +225,7 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
 
     resp = http.post(
         f"{BASE_URL}/calendars/{calendar_id}/events",
-        json=body, headers=headers, profile="api",
+        json=body, **http.headers(accept="json", extra=headers),
     )
     return _map_event(resp["json"])
 
@@ -251,7 +251,7 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
 
     resp = http.patch(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-        json=body, headers=headers, profile="api",
+        json=body, **http.headers(accept="json", extra=headers),
     )
     return _map_event(resp["json"])
 
@@ -270,7 +270,7 @@ def delete_event(*, id, calendar_id="primary", **params):
     headers = _auth_header(params)
     http.delete(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
-        headers=headers, profile="api",
+        **http.headers(accept="json", extra=headers),
     )
     return {"status": "deleted"}
 

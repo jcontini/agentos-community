@@ -51,21 +51,21 @@ def _connection_name(connection: dict | None) -> str:
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 def _http_get(url: str, timeout: int = 10) -> dict:
-    resp = http.get(url, profile="api", timeout=timeout)
+    resp = http.get(url, **http.headers(accept="json"), timeout=timeout)
     if not resp.get("ok"):
         raise RuntimeError(f"HTTP GET {url} failed: {resp.get('status', 0)}")
     return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
 def _http_post(url: str, body: dict, timeout: int = 300) -> dict:
-    resp = http.post(url, json=body, profile="api", timeout=timeout)
+    resp = http.post(url, json=body, **http.headers(accept="json"), timeout=timeout)
     if not resp.get("ok"):
         raise RuntimeError(f"HTTP POST {url} failed: {resp.get('status', 0)}")
     return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
 def _http_delete(url: str, body: dict, timeout: int = 30) -> int:
-    resp = http.delete(url, json=body, profile="api", timeout=timeout)
+    resp = http.delete(url, json=body, **http.headers(accept="json"), timeout=timeout)
     return resp.get("status", 0)
 
 

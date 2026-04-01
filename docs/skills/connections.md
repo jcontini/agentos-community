@@ -127,27 +127,33 @@ provider (one retry only).
 
 When a Python function receives `.auth.cookies` (via `args: { cookies: .auth.cookies }` in skill.yaml), the value is a **cookie header string** — e.g. `"name1=val1; name2=val2"`. This is the same format as the HTTP `Cookie` header.
 
-- **`urllib`** — set it directly: `req.add_header("cookie", cookies)` (Chase pattern)
-- **`httpx`** — parse to a dict first: `httpx.Client(cookies=parse_cookie_string(cookies))`
-- **`requests`** — same as httpx: `requests.get(url, cookies=parse_cookie_string(cookies))`
-
-Helper for parsing:
+Pass it directly to `agentos.http`:
 
 ```python
-def _parse_cookie_string(raw) -> dict:
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        return {
-            k.strip(): v.strip()
-            for part in raw.split(";")
-            if "=" in part
-            for k, _, v in [part.partition("=")]
-        }
-    return {}
+from agentos import http
+
+# Simple request
+resp = http.get(url, cookies=cookie_header, **http.headers(accept="json"))
+
+# Session with cookie jar
+with http.client(cookies=cookie_header) as c:
+    resp = c.get(url, **http.headers(waf="cf", accept="html"))
+```
+
+The SDK helpers `get_cookies(params)` and `require_cookies(params, op)` extract the cookie header from `params.auth.cookies`:
+
+```python
+from agentos.http import require_cookies
+
+cookie_header = require_cookies(params, "list_orders")
+# Raises ValueError if no cookies available
 ```
 
 Individual cookie values are also available as `.auth.{cookie_name}` — e.g. `.auth.sessionKey` — for operations that need specific cookies by name rather than the full header string.
+
+### Cookie domain filtering (RFC 6265)
+
+The engine automatically filters cookies by RFC 6265 domain matching when resolving auth. If a connection declares `base_url: "https://riders.uber.com"`, only cookies whose domain matches `riders.uber.com` (including parent domains like `.uber.com`) are included. Sibling subdomain cookies (`.auth.uber.com`, `.www.uber.com`) are filtered out. Skills don't need to handle this — the provider does it automatically.
 
 ## Cookie identity resolution
 

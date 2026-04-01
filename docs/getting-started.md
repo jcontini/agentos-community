@@ -80,7 +80,7 @@ Prefer Python scripts for skill logic. When an API has quirks (list returns stub
 
 When Python needs to call authenticated APIs, use `_call` dispatch (see [Python Skills](skills/python.md)) instead of handling credentials directly. The engine mediates all authenticated calls through sibling operations with full credential injection. Python scripts never see raw tokens.
 
-When Python needs to make HTTP requests directly (scraping, APIs without a REST executor, WAF-sensitive endpoints), use **httpx** with HTTP/2 enabled — not `urllib.request`, not `requests`. httpx handles HTTP/2, connection pooling, and presents a modern TLS fingerprint that avoids CDN bot detection. Install with `pip install "httpx[http2]"` and use `httpx.Client(http2=True)` for session reuse.
+All HTTP goes through `agentos.http` — never `urllib`, `requests`, or `httpx` directly. The engine handles HTTP/2, decompression, cookie jars, and logging. Use `http.headers()` for WAF bypass: `http.get(url, **http.headers(waf="cf", accept="json"))`. See [Transport & Anti-Bot](reverse-engineering/1-transport/index.md) and [SDK Reference](skills/sdk.md) for details.
 
 ## Runtime note
 

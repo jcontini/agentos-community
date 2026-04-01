@@ -60,13 +60,13 @@ which one a site uses, then replay it.
 A cookie is a name-value pair the server sends with `Set-Cookie` and the
 browser sends back with every request. The attributes control where and how:
 
-| Attribute | What it means | HTTPX impact |
+| Attribute | What it means | HTTP client impact |
 |-----------|--------------|--------------|
-| `HttpOnly` | JS can't read it | Doesn't affect HTTPX (only matters in browsers) |
+| `HttpOnly` | JS can't read it | Doesn't affect `agentos.http` (only matters in browsers) |
 | `Secure` | HTTPS only | Use `https://` URLs |
-| `SameSite=Lax` | Sent on navigations, not cross-site POSTs | HTTPX sends it normally |
-| `Domain=.example.com` | Works on all subdomains | Important when auth and dashboard are on different subdomains |
-| Expiry | Session (until browser close) or persistent (date) | HTTPX doesn't care — just send the cookie |
+| `SameSite=Lax` | Sent on navigations, not cross-site POSTs | `agentos.http` sends it normally |
+| `Domain=.example.com` | Works on all subdomains | Important when auth and dashboard are on different subdomains. The engine uses RFC 6265 domain matching to filter cookies by `host` from `connection.base_url` |
+| Expiry | Session (until browser close) or persistent (date) | `agentos.http` doesn't care — just send the cookie |
 
 **Cross-domain cookies:** When auth lives at `auth.exa.ai` and the dashboard
 at `dashboard.exa.ai`, the session cookie is scoped to `.exa.ai` so both
@@ -139,36 +139,39 @@ inspect { selector: "form" }
 ```
 
 This tells you:
-- **Email + code** → usually fully HTTPX-replayable (see below)
-- **Email + password** → replay entirely with HTTPX
+- **Email + code** → usually fully replayable with `agentos.http` (see below)
+- **Email + password** → replay entirely with `agentos.http`
 - **Google/GitHub OAuth** → Playwright for the consent screen, then cookies
 - **SSO (WorkOS, Okta)** → see vendor guides
 
 ### 3. Complete the login
 
-**Try HTTPX first.** Many email+code flows that appear browser-only are actually
-fully replayable. The key technique is scanning the JS bundles for custom
+**Try `agentos.http` first.** Many email+code flows that appear browser-only are
+actually fully replayable. The key technique is scanning the JS bundles for custom
 verification endpoints (e.g. `/api/verify-otp`) and using the Navigation API
 interceptor to discover token formats. See
 [Discovery: JS Bundle Scanning](../2-discovery/index.md#js-bundle-scanning) and
 [Discovery: Navigation API Interception](../2-discovery/index.md#navigation-api-interception).
 
 ```python
+from agentos import http
+
 # Example: Exa email+code login — no browser needed
 # 1. Trigger code email
-csrf_token = client.get(f"{AUTH_BASE}/api/auth/csrf").json()["csrfToken"]
-client.post(f"{AUTH_BASE}/api/auth/signin/email", data={"email": email, "csrfToken": csrf_token, ...})
+with http.client() as client:
+    csrf_token = client.get(f"{AUTH_BASE}/api/auth/csrf").json()["csrfToken"]
+    client.post(f"{AUTH_BASE}/api/auth/signin/email", data={"email": email, "csrfToken": csrf_token, ...})
 
-# 2. Agent reads code from email (Gmail, etc.)
+    # 2. Agent reads code from email (Gmail, etc.)
 
-# 3. Verify code via custom endpoint
-resp = client.post(f"{AUTH_BASE}/api/verify-otp", json={"email": email, "otp": code})
-data = resp.json()  # {hashedOtp, rawOtp}
-token = f"{data['hashedOtp']}:{data['rawOtp']}"
+    # 3. Verify code via custom endpoint
+    resp = client.post(f"{AUTH_BASE}/api/verify-otp", json={"email": email, "otp": code})
+    data = resp.json()  # {hashedOtp, rawOtp}
+    token = f"{data['hashedOtp']}:{data['rawOtp']}"
 
-# 4. Hit the standard callback with the constructed token
-client.get(f"{AUTH_BASE}/api/auth/callback/email?token={token}&email={email}&callbackUrl=...")
-# → session cookie is now set on the client
+    # 4. Hit the standard callback with the constructed token
+    client.get(f"{AUTH_BASE}/api/auth/callback/email?token={token}&email={email}&callbackUrl=...")
+    # → session cookie is now set on the client
 ```
 
 **Fall back to Playwright** only for flows that genuinely require a browser
@@ -190,7 +193,9 @@ You want the session cookie (usually `next-auth.session-token`, `session`,
 Validate it works:
 
 ```python
-with httpx.Client(http2=True, cookies={"next-auth.session-token": token}) as client:
+from agentos import http
+
+with http.client(cookies={"next-auth.session-token": token}) as client:
     session = client.get("https://dashboard.example.com/api/auth/session").json()
     assert session.get("user"), "Session invalid"
 ```
@@ -301,15 +306,22 @@ Nothing captured + URL changed? → Native form POST — inspect the <form>, the
 
 ---
 
-## Replaying with HTTPX
+## Replaying with `agentos.http`
 
-Once you understand what the browser does, replay it with HTTPX. The goal is
-to get the same cookies without a browser.
+Once you understand what the browser does, replay it with `agentos.http`. The
+goal is to get the same cookies without a browser.
+
+Skills use `agentos.http` for all HTTP — never raw httpx/requests/urllib.
+The `http.headers()` function builds the right header set for each request
+type, and the engine sets zero default headers — Python controls them all.
 
 ### Form POSTs
 
 ```python
-with httpx.Client(http2=True, follow_redirects=True, timeout=30) as client:
+from agentos import http
+
+headers = http.headers(mode="navigate")  # browser-like headers for form POSTs
+with http.client(headers=headers) as client:
     resp = client.post("https://auth.example.com/api/auth/login", data={
         "email": email,
         "password": password,
@@ -318,38 +330,56 @@ with httpx.Client(http2=True, follow_redirects=True, timeout=30) as client:
     session_cookies = dict(client.cookies)
 ```
 
-HTTPX with `follow_redirects=True` handles the redirect chain automatically —
-same as the browser. The cookies accumulate on the client.
+`http.client()` follows redirects by default and handles the redirect chain
+automatically — same as the browser. The cookies accumulate on the client.
 
 ### Fetch/XHR calls
 
 ```python
-resp = client.post("https://api.example.com/auth/login", json={
-    "email": email, "password": password
-})
-token = resp.json()["token"]
+from agentos import http
+
+headers = http.headers(accept="json")  # API-appropriate headers
+with http.client(headers=headers) as client:
+    resp = client.post("https://api.example.com/auth/login", json={
+        "email": email, "password": password
+    })
+    token = resp.json()["token"]
 ```
 
-### When HTTPX replay doesn't work
+### `http.headers()` knobs
 
-Sometimes the server does something specific to browser requests that HTTPX
-can't replicate (custom redirect handling, Cloudflare challenges, JS-dependent
-cookie setting). When that happens:
+The `http.headers()` function replaces the old `profile=` parameter. It builds
+headers from explicit knobs — the engine sets nothing by default:
+
+| Knob | What it does | Example |
+|------|-------------|---------|
+| `waf=` | Anti-bot headers (User-Agent, client hints) | `http.headers(waf="cloudflare")` |
+| `accept=` | Accept header type | `http.headers(accept="json")`, `http.headers(accept="html")` |
+| `mode=` | Fetch mode / navigation headers | `http.headers(mode="navigate")` |
+| `extra=` | Additional headers to merge | `http.headers(extra={"X-Custom": "val"})` |
+
+These compose: `http.headers(waf="cloudflare", accept="json", mode="cors")`.
+
+### When replay doesn't work
+
+Sometimes the server does something specific to browser requests that
+`agentos.http` can't replicate (custom redirect handling, Cloudflare challenges,
+JS-dependent cookie setting). When that happens:
 
 1. **Use Playwright for that step.** Let the browser handle it.
 2. **Extract the cookies** from Playwright after.
-3. **Use HTTPX for everything else** (dashboard APIs, data extraction, etc.)
+3. **Use `agentos.http` for everything else** (dashboard APIs, data extraction, etc.)
 
 This isn't a workaround — it's the right architecture. Playwright handles the
-login, HTTPX handles the work. Each tool does what it's good at.
+login, `agentos.http` handles the work. Each tool does what it's good at.
 
 | Situation | Solution |
 |-----------|----------|
-| Standard form POST or API call | HTTPX replay |
-| Custom OTP/code verification | Scan JS bundles for custom endpoints → HTTPX replay (see [discovery](../2-discovery/index.md#js-bundle-scanning)) |
-| Google OAuth consent screen | Playwright first login → cookies → HTTPX after |
+| Standard form POST or API call | `agentos.http` replay |
+| Custom OTP/code verification | Scan JS bundles for custom endpoints → `agentos.http` replay (see [discovery](../2-discovery/index.md#js-bundle-scanning)) |
+| Google OAuth consent screen | Playwright first login → cookies → `agentos.http` after |
 | Cloudflare JS challenge | Playwright or `brave-browser.cookie_get` for `cf_clearance` |
-| Vercel Security Checkpoint (`429`) | Switch to `httpx(http2=False)` — purely a JA4 fingerprint issue |
+| Vercel Security Checkpoint (`429`) | `http.client(http2=False)` — purely a JA4 fingerprint issue |
 | CAPTCHA | Cookies from user's real browser session |
 | Unknown client-side token construction | Navigation API interceptor → read the actual URL (see [discovery](../2-discovery/index.md#navigation-api-interception)) |
 
@@ -359,7 +389,7 @@ login, HTTPX handles the work. Each tool does what it's good at.
 
 **The fastest way to do authenticated discovery.**  When the user is already
 logged into a site in Brave/Firefox, skip the login flow entirely — extract
-cookies from their real browser and inject them into Playwright or HTTPX.
+cookies from their real browser and inject them into Playwright or `agentos.http`.
 
 ### The pattern
 
@@ -381,12 +411,9 @@ playwright.capture_network({
 })
 # → page loads authenticated, you can inspect/interact
 
-# 2b. OR parse into httpx.Cookies() for direct HTTPX calls
-cookies = httpx.Cookies()
-for part in cookie_header.split(";"):
-    name, val = part.strip().split("=", 1)
-    cookies.set(name.strip(), val.strip())
-client = httpx.Client(cookies=cookies, ...)
+# 2b. OR use http.client(cookies=...) for direct calls
+from agentos import http
+client = http.client(cookies={"_session_id2": "443a469...", "at-main": "Atza|gQCkt..."})
 ```
 
 ### Why this matters
@@ -399,23 +426,20 @@ client = httpx.Client(cookies=cookies, ...)
   `capture_network` or `goto`, the Playwright browser session keeps them.
   Subsequent `click`, `fill`, `inspect` calls stay logged in.
 
-### Cookie jar vs raw Cookie header (HTTPX gotcha)
+### Cookie jar vs raw Cookie header
 
-When making **multi-step HTTPX requests** (e.g., fetch a form page, then submit
-it), use `httpx.Cookies()` instead of a raw `Cookie` header:
+When making **multi-step requests** (e.g., fetch a form page, then submit
+it), use `http.client(cookies=...)` instead of a raw `Cookie` header:
 
 ```python
+from agentos import http
+
 # WRONG — raw header doesn't track Set-Cookie responses
-headers = {"Cookie": cookie_header}
-client = httpx.Client(headers=headers)
+client = http.client(headers={"Cookie": cookie_header})
 # Step 1 may set a new _session_id2, but step 2 sends the OLD one
 
 # RIGHT — cookie jar tracks Set-Cookie automatically
-cookies = httpx.Cookies()
-for part in cookie_header.split(";"):
-    name, val = part.strip().split("=", 1)
-    cookies.set(name.strip(), val.strip())
-client = httpx.Client(cookies=cookies)
+client = http.client(cookies={"_session_id2": "abc123", "at-main": "Atza|..."})
 # Step 1's Set-Cookie is carried to step 2
 ```
 
@@ -515,18 +539,21 @@ Common in gym/fitness SaaS (Approach, Mindbody, etc.). Pure AWS API calls —
 no browser needed at all.
 
 ```python
-resp = httpx.post(
-    "https://cognito-idp.us-east-1.amazonaws.com/",
-    headers={
-        "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-        "Content-Type": "application/x-amz-json-1.1",
-    },
-    content=json.dumps({
-        "AuthFlow": "USER_PASSWORD_AUTH",
-        "ClientId": client_id,
-        "AuthParameters": {"USERNAME": email, "PASSWORD": password},
-    }).encode(),
-)
+from agentos import http
+
+headers = http.headers(extra={
+    "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
+    "Content-Type": "application/x-amz-json-1.1",
+})
+with http.client(headers=headers) as client:
+    resp = client.post(
+        "https://cognito-idp.us-east-1.amazonaws.com/",
+        content=json.dumps({
+            "AuthFlow": "USER_PASSWORD_AUTH",
+            "ClientId": client_id,
+            "AuthParameters": {"USERNAME": email, "PASSWORD": password},
+        }).encode(),
+    )
 tokens = resp.json()["AuthenticationResult"]
 # Use tokens["AccessToken"] as Bearer token
 ```
@@ -547,7 +574,7 @@ For any site that uses session cookies without a framework like NextAuth:
 
 1. Walk through the login in Playwright
 2. Extract cookies: `cookies { domain: ".example.com" }`
-3. Use them in HTTPX: `httpx.Client(cookies={...})`
+3. Use them with `http.client(cookies={...})`
 
 Reference implementations:
 - `skills/claude/claude-login.py` (Cloudflare-protected)

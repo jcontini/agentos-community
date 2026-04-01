@@ -23,26 +23,20 @@ from agentos import http, get_cookies, parse_cookie
 
 BASE_URL = "https://claude.ai"
 
-CLAUDE_HEADERS = {
+# Claude.ai-specific headers — Cloudflare checks Sec-* and client hints.
+# Uses Brave's UA identity (v="146") since that's the browser with the cookies.
+# http2=False required — claude.ai Cloudflare config blocks HTTP/2 clients.
+_CLAUDE_H = http.headers(waf="cf", accept="json", extra={
     "Content-Type": "application/json",
     "anthropic-client-version": "claude-ai/web@1.1.5368",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
     "Sec-CH-UA": '"Chromium";v="146", "Brave";v="146", "Not-A.Brand";v="99"',
-    "Sec-CH-UA-Mobile": "?0",
-    "Sec-CH-UA-Platform": '"macOS"',
-}
+})
+_CLAUDE_H["http2"] = False  # override waf="cf" default (True)
 
 
 def _client(cookie_header: str):
-    """HTTP session configured for claude.ai (Cloudflare bypass, http2=False).
-
-    Uses profile="json" (not "api") because CLAUDE_HEADERS already provides
-    all Sec-* headers. Using "api" would cause duplicate Sec-CH-UA values
-    from both sources — a clear WAF detection signal.
-    """
-    return http.client(cookies=cookie_header, profile="json", headers=CLAUDE_HEADERS, http2=False)
+    """HTTP session configured for claude.ai (Cloudflare bypass, http2=False)."""
+    return http.client(cookies=cookie_header, **_CLAUDE_H)
 
 
 # -- API operations ------------------------------------------------------------

@@ -50,13 +50,13 @@ def list_persons(*, project_id: str, search: str = None, limit: int = None, offs
     if offset is not None:
         q["offset"] = str(offset)
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/persons/",
-                    params=q, headers=_auth_header(params), profile="api")
+                    params=q, **http.headers(accept="json", extra=_auth_header(params)))
     return [_map_person(p) for p in (resp["json"] or {}).get("results", [])]
 
 
 def get_person(*, project_id: str, id: str, **params) -> dict:
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/persons/{id}/",
-                    headers=_auth_header(params), profile="api")
+                    **http.headers(accept="json", extra=_auth_header(params)))
     return _map_person(resp["json"])
 
 
@@ -65,7 +65,7 @@ def search_persons(*, project_id: str, query: str, limit: int = None, **params) 
     if limit is not None:
         q["limit"] = str(limit)
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/persons/",
-                    params=q, headers=_auth_header(params), profile="api")
+                    params=q, **http.headers(accept="json", extra=_auth_header(params)))
     return [_map_person(p) for p in (resp["json"] or {}).get("results", [])]
 
 
@@ -80,26 +80,26 @@ def list_events(*, project_id: str, event: str = None, limit: int = None, after:
     if before:
         q["before"] = before
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/events/",
-                    params=q, headers=_auth_header(params), profile="api")
+                    params=q, **http.headers(accept="json", extra=_auth_header(params)))
     return [_map_event(e) for e in (resp["json"] or {}).get("results", [])]
 
 
 def get_event(*, project_id: str, id: str, **params) -> dict:
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/events/{id}/",
-                    headers=_auth_header(params), profile="api")
+                    **http.headers(accept="json", extra=_auth_header(params)))
     return _map_event(resp["json"])
 
 
 def get_projects(**params) -> list[dict]:
     resp = http.get(f"{POSTHOG_BASE}/api/projects/",
-                    headers=_auth_header(params), profile="api")
+                    **http.headers(accept="json", extra=_auth_header(params)))
     return (resp["json"] or {}).get("results", [])
 
 
 def query(*, project_id: str, hogql: str, **params) -> dict:
     resp = http.post(f"{POSTHOG_BASE}/api/projects/{project_id}/query/",
                      json={"query": {"kind": "HogQLQuery", "query": hogql}},
-                     headers=_auth_header(params), profile="api")
+                     **http.headers(accept="json", extra=_auth_header(params)))
     return resp["json"]
 
 
@@ -108,7 +108,7 @@ def get_event_definitions(*, project_id: str, limit: int = None, **params) -> li
     if limit is not None:
         q["limit"] = str(limit)
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/event_definitions/",
-                    params=q, headers=_auth_header(params), profile="api")
+                    params=q, **http.headers(accept="json", extra=_auth_header(params)))
     return (resp["json"] or {}).get("results", [])
 
 
@@ -119,5 +119,5 @@ def list_recordings(*, project_id: str, limit: int = None, offset: int = None, *
     if offset is not None:
         q["offset"] = str(offset)
     resp = http.get(f"{POSTHOG_BASE}/api/projects/{project_id}/session_recordings/",
-                    params=q, headers=_auth_header(params), profile="api")
+                    params=q, **http.headers(accept="json", extra=_auth_header(params)))
     return (resp["json"] or {}).get("results", [])

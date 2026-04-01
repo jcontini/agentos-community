@@ -19,6 +19,9 @@ MAX_PAGES = 20
 PER_PAGE_FRIENDS = 30
 PER_PAGE_BOOKS = 25
 
+# Goodreads is behind CloudFront — all requests need WAF headers.
+_H = http.headers(waf="cf", accept="html")
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -43,7 +46,7 @@ def _text(el: HtmlElement | None) -> str:
 
 
 def _fetch(client, url: str) -> tuple[int, str]:
-    resp = client.get(url)
+    resp = client.get(url, **_H)
     return resp["status"], resp["body"]
 
 
@@ -123,7 +126,7 @@ def check_session(**params) -> dict[str, Any]:
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
-    resp = http.get(BASE, cookies=cookie_header)
+    resp = http.get(BASE, cookies=cookie_header, **_H)
     if resp["status"] != 200:
         return {"authenticated": False, "status_code": resp["status"]}
 
@@ -231,7 +234,7 @@ def get_person(
     """Scrape a full Goodreads profile page and return rich person data."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Profile page returned {status}")
@@ -569,7 +572,7 @@ def list_friends(
     cookie_header = _require_cookies(cookie_header, params, "list_friends")
 
     if page > 0:
-        resp = http.get(f"{BASE}/friend/user/{user_id}?page={page}", cookies=cookie_header)
+        resp = http.get(f"{BASE}/friend/user/{user_id}?page={page}", cookies=cookie_header, **_H)
         status, html_text = resp["status"], resp["body"]
         if status != 200:
             raise RuntimeError(f"Friends page returned {status}")
@@ -611,7 +614,7 @@ def search_people(
 ) -> list[dict[str, Any]]:
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/search?q={quote_plus(query)}&search_type=people"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Search returned {status}")
@@ -746,7 +749,7 @@ def list_shelves(
 ) -> list[dict[str, Any]]:
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/show/{user_id}"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Profile returned {status}")
@@ -1047,7 +1050,7 @@ def list_groups(
     """List the authenticated user's groups."""
     cookie_header = _require_cookies(cookie_header, params, "list_groups")
     url = f"{BASE}/group?tab=my_groups"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Groups page returned {status}")
@@ -1153,7 +1156,7 @@ def list_following(
     """List accounts (users + authors) the user is following."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/following"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Following page returned {status}")
@@ -1179,7 +1182,7 @@ def list_followers(
     """List accounts following the user."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/user/{user_id}/followers"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Followers page returned {status}")
@@ -1210,7 +1213,7 @@ def list_quotes(
     """List a user's liked/saved quotes."""
     cookie_header = cookie_header or get_cookies(params)
     url = f"{BASE}/quotes/list/{user_id}"
-    resp = http.get(url, cookies=cookie_header)
+    resp = http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
         raise RuntimeError(f"Quotes page returned {status}")

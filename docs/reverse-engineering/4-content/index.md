@@ -2,7 +2,7 @@
 
 When there's no API, no GraphQL, no Apollo cache — just server-rendered HTML
 behind a login wall. This doc covers the patterns for authenticated HTML scraping
-with `httpx` + BeautifulSoup.
+with `agentos.http` + lxml.
 
 This is Layer 4 of the reverse-engineering docs:
 
@@ -89,7 +89,7 @@ touches browser databases or knows which browser the cookies came from.
 2. Executor finds an installed cookie provider (`brave-browser`, `firefox`, etc.)
 3. Provider extracts + decrypts cookies from the local browser database
 4. Executor injects them into params as `params.auth.cookies` (a `Cookie:` header string)
-5. Python reads them and passes to httpx
+5. Python reads them and passes to `http.client()`
 
 ### Python side
 
@@ -131,15 +131,17 @@ def _p(d: dict, key: str, default=None):
 
 ## HTTP Client: Shared Across Pages
 
-Create one `httpx.Client` per operation and reuse it across paginated requests.
+Create one `http.client()` per operation and reuse it across paginated requests.
 This keeps the TCP/TLS connection alive and avoids per-request overhead.
 
 ```python
-def _client(cookie_header: str | None) -> httpx.Client:
-    headers = dict(STANDARD_HEADERS)
+from agentos import http
+
+def _client(cookie_header: str | None) -> http.Client:
+    headers = http.headers(waf="standard", accept="html")
     if cookie_header:
         headers["Cookie"] = cookie_header
-    return httpx.Client(http2=True, follow_redirects=True, timeout=30, headers=headers)
+    return http.client(headers=headers)
 
 # Usage
 with _client(cookie_header) as client:
@@ -361,6 +363,8 @@ Amazon's subscription management page loads content via an AJAX endpoint that
 returns a JSON payload with embedded HTML:
 
 ```python
+from lxml import html as lhtml
+
 resp = client.get(
     f"{BASE}/auto-deliveries/ajax/subscriptionList",
     params={"pageNumber": 0},
@@ -371,7 +375,7 @@ resp = client.get(
 )
 data = resp.json()
 html_fragment = data.get("subscriptionListHtml", "")
-soup = BeautifulSoup(html_fragment, "html.parser")
+doc = lhtml.fromstring(html_fragment)
 ```
 
 **Key headers for AJAX:** Always include `X-Requested-With: XMLHttpRequest` and
@@ -447,7 +451,7 @@ Extract cookies once and save to a JSON file for local testing:
 
 ### 2. Test parsers against real pages
 
-Hit the live site with httpx and verify parsing before wiring to agentOS:
+Hit the live site with `agentos.http` and verify parsing before wiring to agentOS:
 
 ```python
 with open("scripts/test_cookies.json") as f:

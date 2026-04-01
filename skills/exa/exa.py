@@ -125,7 +125,7 @@ def send_login_code(*, email: str, **params) -> dict:
     if not email:
         return {"__result__": {"error": "email is required"}}
 
-    with http.client(profile="api", http2=False) as client:
+    with http.client(**http.headers(accept="json"), http2=False) as client:
         csrf_token = _get_csrf_token(client)
         _send_verification_email(client, csrf_token, email)
 
@@ -157,7 +157,7 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
 
     session_token = None
 
-    with http.client(profile="api", http2=False) as client:
+    with http.client(**http.headers(accept="json"), http2=False) as client:
         # Establish CSRF session (needed for the callback to accept our request)
         _get_csrf_token(client)
 
@@ -279,9 +279,9 @@ def _dashboard_client(cookies):
     """HTTP session for dashboard.exa.ai (Vercel-hosted).
 
     Uses http2=False because Vercel blocks HTTP/2 JA4 fingerprint.
-    profile="api" adds Sec-CH-UA + Sec-Fetch headers.
+    http.headers(accept="json") adds Accept + Sec-CH-UA + Sec-Fetch headers.
     """
-    return http.client(cookies=cookies, profile="api", http2=False)
+    return http.client(cookies=cookies, **http.headers(accept="json"), http2=False)
 
 
 def _require_session(client) -> dict:
@@ -465,8 +465,7 @@ def search(*, query: str, limit: int = 10, category: str = None, include_text: b
     resp = http.post(
         f"{API_BASE}/search",
         json=body,
-        headers={"x-api-key": api_key},
-        profile="api",
+        **http.headers(accept="json", extra={"x-api-key": api_key}),
     )
 
     return [_map_result(r) for r in (resp["json"] or {}).get("results", [])]
@@ -478,8 +477,7 @@ def read_webpage(*, url: str, **params) -> dict:
     resp = http.post(
         f"{API_BASE}/contents",
         json={"urls": [url], "text": True},
-        headers={"x-api-key": api_key},
-        profile="api",
+        **http.headers(accept="json", extra={"x-api-key": api_key}),
     )
 
     results = (resp["json"] or {}).get("results", [])

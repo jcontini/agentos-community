@@ -46,14 +46,14 @@ def _map_website(w: dict) -> dict:
 def list_websites(**params) -> list[dict]:
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    resp = http.get(f"{BASE_URL}/publishes", headers=headers, profile="api")
+    resp = http.get(f"{BASE_URL}/publishes", **http.headers(accept="json", extra=headers))
     return [_map_website(w) for w in (resp["json"] or {}).get("publishes", [])]
 
 
 def delete_website(*, slug: str, **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    http.delete(f"{BASE_URL}/publish/{slug}", headers=headers, profile="api")
+    http.delete(f"{BASE_URL}/publish/{slug}", **http.headers(accept="json", extra=headers))
     return {"success": True, "id": slug}
 
 
@@ -63,13 +63,13 @@ def claim_website(*, slug: str, claim_token: str, **params) -> dict:
     http.post(
         f"{BASE_URL}/publish/{slug}/claim",
         json={"claimToken": claim_token},
-        headers=headers, profile="api",
+        **http.headers(accept="json", extra=headers),
     )
     return {"success": True, "slug": slug}
 
 
 def op_signup(*, email: str, **params) -> dict:
-    http.post("https://here.now/api/auth/login", json={"email": email}, profile="api")
+    http.post("https://here.now/api/auth/login", json={"email": email}, **http.headers(accept="json"))
     return {
         "sent": True,
         "message": (
@@ -95,23 +95,26 @@ def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl
         body["viewer"] = viewer
     http.patch(
         f"{BASE_URL}/publish/{slug}/metadata",
-        json=body, headers=headers, profile="api",
+        json=body, **http.headers(accept="json", extra=headers),
     )
     return {"success": True}
 
 
 def make_request(url, method="GET", body=None, headers=None, content_type="application/json"):
-    headers = headers or {}
-    kwargs = {"headers": headers, "profile": "api"}
+    headers = dict(headers or {})
 
     if body is not None and isinstance(body, (dict, list)):
+        kwargs = http.headers(accept="json", extra=headers)
         kwargs["json"] = body
     elif body is not None:
         # Raw bytes/string — pass as data with explicit content-type
         if isinstance(body, bytes):
             body = body.decode("utf-8", errors="replace")
-        kwargs["data"] = body
         headers["Content-Type"] = content_type
+        kwargs = http.headers(accept="json", extra=headers)
+        kwargs["data"] = body
+    else:
+        kwargs = http.headers(accept="json", extra=headers)
 
     dispatch = {"GET": http.get, "POST": http.post, "PUT": http.put, "DELETE": http.delete, "PATCH": http.patch}
     fn = dispatch.get(method, http.get)

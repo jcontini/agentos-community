@@ -1,21 +1,23 @@
 """HTTP client for skills — routes all requests through the engine.
 
 All HTTP goes through the engine via dispatch. The engine handles:
-- Header profiles (default, json, api, navigate) for WAF bypass
 - Cookie jar management and writeback
 - HTTP/1.1 vs HTTP/2 toggle
 - Request/response logging to engine-io.jsonl
 - Domain allowlisting (future: firewall rules)
 
+Headers are built in Python via http.headers() — the engine is pure transport.
+
 Simple requests:
     from agentos import http
-    resp = http.get("https://api.example.com/data", profile="api")
+    resp = http.get("https://api.example.com/data", **http.headers(accept="json"))
     data = resp["json"]
 
 Session with cookie jar:
-    with http.client(cookies=cookie_header, profile="navigate") as c:
-        c.get("https://www.amazon.com/")  # warm session
-        resp = c.get("https://www.amazon.com/gp/your-account/order-history")
+    with http.client(cookies=cookie_header) as c:
+        c.get("https://www.amazon.com/", **http.headers(waf="cf", mode="navigate", accept="html"))
+        resp = c.get("https://www.amazon.com/gp/your-account/order-history",
+                      **http.headers(waf="cf", mode="navigate", accept="html"))
         orders = resp["body"]
 """
 
@@ -68,7 +70,6 @@ def client(
     cookies: str | None = None,
     *,
     headers: dict | None = None,
-    profile: str | None = None,
     skip_cookies: list[str] | None = None,
     timeout: float = 30.0,
     http2: bool = True,
@@ -79,9 +80,10 @@ def client(
 
     Use as a context manager for multi-request flows where cookies matter:
 
-        with http.client(cookies=auth["cookies"], profile="navigate") as c:
-            c.get("https://www.amazon.com/")
-            resp = c.get("https://www.amazon.com/gp/your-account/order-history")
+        with http.client(cookies=cookie_header) as c:
+            c.get("https://www.amazon.com/", **http.headers(waf="cf", mode="navigate", accept="html"))
+            resp = c.get("https://www.amazon.com/gp/your-account/order-history",
+                          **http.headers(waf="cf", mode="navigate", accept="html"))
 
     The engine tracks Set-Cookie responses and diffs the jar on close
     for automatic writeback to the credential store.
@@ -89,7 +91,6 @@ def client(
     return HttpSession(
         cookies=cookies,
         headers=headers,
-        profile=profile or "default",
         skip_cookies=skip_cookies,
         timeout=timeout,
         http2=http2,
@@ -137,6 +138,107 @@ class HttpSession:
         })
 
 
+
+
+# ---------------------------------------------------------------------------
+# Header composition — independent knobs, no engine profiles
+# ---------------------------------------------------------------------------
+
+
+_UA = {
+    "chrome-desktop": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "chrome-mobile": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.0.0 Mobile/15E148 Safari/604.1",
+    "safari-desktop": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+}
+
+_WAF = {
+    "cf": {
+        # Covers CloudFront (AWS) and Cloudflare — same signals today.
+        "hints": {
+            "Sec-CH-UA": '"Chromium";v="131", "Not:A-Brand";v="99"',
+            "Sec-CH-UA-Mobile": "?0",
+            "Sec-CH-UA-Platform": '"macOS"',
+        },
+        "http2": True,
+    },
+    "vercel": {
+        # Vercel checkpoint blocks HTTP/2 with 429.
+        "hints": {},
+        "http2": False,
+    },
+}
+
+_MODE = {
+    "fetch": {
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+    },
+    "navigate": {
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "Device-Memory": "8",
+        "Downlink": "10",
+        "DPR": "2",
+        "ECT": "4g",
+        "RTT": "50",
+        "Viewport-Width": "1512",
+    },
+}
+
+_ACCEPT = {
+    "json": {"Accept": "application/json"},
+    "html": {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+    "any": {"Accept": "*/*"},
+}
+
+
+def headers(*, waf=None, ua="chrome-desktop", mode="fetch", accept="any", extra=None):
+    """Build request headers from independent knobs.
+
+    Returns dict with "headers" and optionally "http2". Spread into
+    http.get/post/client with **: http.get(url, **http.headers(...))
+
+    Knobs (ordered by network layer):
+        waf:    WAF vendor — "cf", "vercel", or None (default).
+        ua:     User-Agent — "chrome-desktop", "chrome-mobile",
+                "safari-desktop", or a raw UA string.
+        mode:   Request type — "fetch" (default) or "navigate".
+                Sec-Fetch-* headers added only when waf is set.
+        accept: Content — "json", "html", or "any" (default).
+        extra:  Additional headers merged last (highest priority).
+    """
+    h = {}
+    result = {}
+
+    # Standard — every request gets baseline browser headers
+    h["User-Agent"] = _UA.get(ua, ua)
+    h["Accept-Language"] = "en-US,en;q=0.9"
+    h["Accept-Encoding"] = "gzip, deflate, br, zstd"
+
+    # Transport — WAF vendor client hints + protocol
+    if waf:
+        waf_config = _WAF[waf]
+        h.update(waf_config["hints"])
+        result["http2"] = waf_config["http2"]
+
+    # Request — Sec-Fetch-* metadata (only when WAF is checking)
+    if waf:
+        h.update(_MODE[mode])
+
+    # Content — what format you want back
+    h.update(_ACCEPT[accept])
+
+    # Extra — custom headers merge last, can override anything
+    if extra:
+        h.update(extra)
+
+    result["headers"] = h
+    return result
 
 
 # ---------------------------------------------------------------------------

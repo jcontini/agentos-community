@@ -88,7 +88,7 @@ def _fetch(
     """
     Fetch a URL via http.request(), retrying on transient errors.
 
-    profile="api" provides browser-like Sec-CH-UA + Sec-Fetch headers
+    http.headers(accept="json") provides browser-like Sec-CH-UA + Sec-Fetch headers
     needed to pass CloudFront WAF JA4 fingerprinting.
     """
     if method is None:
@@ -96,7 +96,7 @@ def _fetch(
     last_err = None
     for attempt in range(3):
         try:
-            resp = http.request(method, url, headers=headers, content=data, profile="api")
+            resp = http.request(method, url, content=data, **http.headers(accept="json", extra=headers))
             status = resp["status"]
             if status >= 400:
                 if status not in {429, 500, 502, 503, 504} or attempt == 2:

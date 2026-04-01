@@ -6,7 +6,7 @@ The agentOS SDK in three imports:
 from agentos import molt, http, shape
 ```
 
-`molt` cleans and parses scraped data. `http` makes requests through the engine with WAF-resistant header profiles. `shape` gives you 60 typed entity classes. All three are designed to work identically across future TypeScript, Go, and Rust SDKs.
+`molt` cleans and parses scraped data. `http` makes requests through the engine with composable header knobs for WAF bypass. `shape` gives you 60 typed entity classes. All three are designed to work identically across future TypeScript, Go, and Rust SDKs.
 
 ---
 
@@ -69,7 +69,7 @@ bio = clean_html('<p>First paragraph.</p><p>Second paragraph.</p>')
 
 ## `http` — all requests go through the engine
 
-Every HTTP request routes through the Rust engine via dispatch. The engine handles header profiles, cookie jar management with automatic writeback, HTTP/2 toggle, and request/response logging.
+Every HTTP request routes through the Rust engine via dispatch. The engine handles transport (HTTP/2, decompression, timeouts), cookie jar management with automatic writeback, and request/response logging. Headers are built in Python via `http.headers()` — the engine sets zero default headers.
 
 ### Simple requests
 
@@ -101,35 +101,45 @@ def my_operation(**params):
 For multi-request flows where cookies accumulate across requests:
 
 ```python
-with http.client(cookies=cookie_header, profile="navigate") as c:
-    c.get("https://www.amazon.com/")  # warm session
-    resp = c.get("https://www.amazon.com/gp/your-account/order-history")
+with http.client(cookies=cookie_header) as c:
+    c.get("https://www.amazon.com/", **http.headers(waf="cf", mode="navigate", accept="html"))
+    resp = c.get("https://www.amazon.com/gp/your-account/order-history",
+                  **http.headers(waf="cf", mode="navigate", accept="html"))
     orders = resp["body"]
 ```
 
 The engine tracks Set-Cookie responses and diffs the jar on close for automatic writeback to the credential store. Connection pools persist across requests within a session.
 
-### Profiles
+### `http.headers()` — composable header knobs
 
-Different services have different anti-bot measures. `http` has four header profiles, from lightest to heaviest:
-
-| Profile | Headers | Use when |
-|---------|---------|----------|
-| `"default"` | User-Agent, Accept, Accept-Language | Most APIs, unprotected endpoints |
-| `"json"` | User-Agent, Accept: application/json | JSON API endpoints |
-| `"api"` | + Sec-CH-UA, Sec-Fetch-* (CORS mode) | Cloudflare/CloudFront-protected JSON APIs |
-| `"navigate"` | + Device-Memory, Downlink, Rtt, Ect, Dpr, full client hints | Protected HTML pages (Amazon, eBay, auth-gated content) |
+Headers are built from four independent knobs. The engine sets zero headers — Python controls everything.
 
 ```python
-# CDN-protected API
-resp = http.get('https://api.example.com/data', cookies=header, profile="api")
-
-# Amazon-level anti-bot (Lightsaber, Siege)
-with http.client(cookies=header, profile="navigate") as c:
-    resp = c.get('https://www.amazon.com/your-orders/orders')
+conf = http.headers(waf="cf", ua="chrome-desktop", mode="navigate", accept="html")
+# Returns {"headers": {...}, "http2": True}
+# Spread into http.get/post/client with **
 ```
 
-Start with the default. If you get 403/429, try `"api"`, then `"navigate"`. See [Transport & Anti-Bot](../reverse-engineering/1-transport/index.md) for the full diagnostic protocol.
+| Knob | What it controls | Values |
+|------|-----------------|--------|
+| `waf` | WAF vendor — client hints + HTTP/2 | `"cf"` (CloudFront/Cloudflare), `"vercel"`, `None` |
+| `ua` | User-Agent | `"chrome-desktop"`, `"chrome-mobile"`, `"safari-desktop"`, or raw string |
+| `mode` | Sec-Fetch-* metadata (only when waf is set) | `"fetch"` (XHR), `"navigate"` (page load + device hints) |
+| `accept` | Content negotiation | `"json"`, `"html"`, `"any"` (default) |
+| `extra` | Custom headers merged last | Auth tokens, CSRF, Origin, Referer, etc. |
+
+```python
+# JSON API (Gmail, Linear, Todoist)
+resp = http.get(url, **http.headers(accept="json", extra={"Authorization": f"Bearer {token}"}))
+
+# HTML behind CloudFront (Amazon, Goodreads)
+resp = http.get(url, **http.headers(waf="cf", mode="navigate", accept="html"))
+
+# Vercel checkpoint bypass
+resp = http.get(url, **http.headers(waf="vercel", accept="json"))
+```
+
+See [Transport & Anti-Bot](../reverse-engineering/1-transport/index.md) for the full diagnostic protocol.
 
 ### Cookie filtering
 
@@ -142,22 +152,14 @@ with http.client(cookies=header, skip_cookies=["csd-key", "csm-hit"]) as c:
 
 Amazon's `csd-key` cookie triggers Siege client-side encryption. Stripping it makes the server return readable HTML instead of encrypted blobs. See [Cookie Stripping](../reverse-engineering/1-transport/index.md#cookie-stripping--disabling-client-side-features).
 
-### HTTP/2 toggle
-
-Most services need HTTP/2 (default). Vercel Security Checkpoint blocks it:
-
-```python
-# Vercel-hosted endpoint that blocks h2
-with http.client(http2=False) as c:
-    resp = c.get('https://dashboard.example.com')
-```
-
 ### Extra headers
 
-Merge additional headers with the profile defaults:
+Custom headers go in the `extra=` parameter of `http.headers()`:
 
 ```python
-with http.client(cookies=header, profile="navigate", headers={"Host": "www.amazon.com"}) as c:
+with http.client(cookies=header,
+                 **http.headers(waf="cf", mode="navigate", accept="html",
+                                extra={"Host": "www.amazon.com"})) as c:
     resp = c.get(url)
 ```
 
@@ -223,12 +225,14 @@ molt(s, 'date')                  # parse to ISO 8601
 molt(timestamp, 'date')          # convert ms/s timestamp
 
 # --- http: engine-routed requests ---
-http.get(url)                    # simple GET
-http.post(url, json={...})       # POST with JSON body
-http.get(url, cookies=header)    # with session cookies
-http.get(url, profile="api")     # WAF-resistant headers
-http.client(cookies=header)      # session with cookie jar
-get_cookies(params)              # extract cookies from runtime params
+http.get(url)                                    # simple GET
+http.post(url, json={...})                       # POST with JSON body
+http.get(url, cookies=header)                    # with session cookies
+http.get(url, **http.headers(accept="json"))     # JSON API headers
+http.get(url, **http.headers(waf="cf"))          # CloudFront/Cloudflare WAF bypass
+http.client(cookies=header)                      # session with cookie jar
+http.headers(waf=, accept=, mode=, extra=)       # build header config
+get_cookies(params)                              # extract cookies from runtime params
 
 # --- shape: typed entities ---
 shape.Book                       # TypedDict with book fields

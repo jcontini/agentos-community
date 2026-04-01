@@ -22,7 +22,7 @@ def _gql(params, query, variables=None):
     if variables:
         # Strip None values so Linear doesn't choke on null filters
         body["variables"] = {k: v for k, v in variables.items() if v is not None}
-    resp = http.post(API_URL, json=body, headers=headers, profile="api")
+    resp = http.post(API_URL, json=body, **http.headers(accept="json", extra=headers))
     data = resp["json"]
     if data.get("errors"):
         raise Exception(f"GraphQL error: {data['errors']}")

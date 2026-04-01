@@ -47,7 +47,7 @@ def list_domains(**params) -> list[dict]:
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/domain/listAll",
                      json={"apikey": api_key, "secretapikey": secret_key},
-                     profile="api")
+                     **http.headers(accept="json"))
     return [_map_domain(d) for d in (resp["json"] or {}).get("domains", [])]
 
 
@@ -55,7 +55,7 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/dns/retrieve/{domain}",
                      json={"apikey": api_key, "secretapikey": secret_key},
-                     profile="api")
+                     **http.headers(accept="json"))
     return [_map_dns_record(r, domain) for r in (resp["json"] or {}).get("records", [])]
 
 
@@ -68,7 +68,7 @@ def create_dns_record(*, domain: str, type: str, content: str, name: str = "", t
     }
     if prio is not None:
         body["prio"] = prio
-    resp = http.post(f"{API_BASE}/dns/create/{domain}", json=body, profile="api")
+    resp = http.post(f"{API_BASE}/dns/create/{domain}", json=body, **http.headers(accept="json"))
     return resp["json"]
 
 
@@ -81,7 +81,7 @@ def update_dns_record(*, domain: str, id: str, type: str, content: str, name: st
     }
     if prio is not None:
         body["prio"] = prio
-    resp = http.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body, profile="api")
+    resp = http.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body, **http.headers(accept="json"))
     return resp["json"]
 
 
@@ -89,5 +89,5 @@ def delete_dns_record(*, domain: str, id: str, **params) -> dict:
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/dns/delete/{domain}/{id}",
                      json={"apikey": api_key, "secretapikey": secret_key},
-                     profile="api")
+                     **http.headers(accept="json"))
     return resp["json"]

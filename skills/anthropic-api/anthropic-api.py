@@ -39,8 +39,7 @@ def _to_anthropic_msg(msg: dict) -> dict:
 
 def list_models(**params) -> list:
     resp = http.get(f"{API_BASE}/models",
-                    params={"limit": "1000"}, headers=_headers(params),
-                    profile="api")
+                    params={"limit": "1000"}, **http.headers(accept="json", extra=_headers(params)))
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
@@ -58,8 +57,7 @@ def chat(*, model: str, messages: list, tools: list = None,
     if system:
         body["system"] = system
     resp = http.post(f"{API_BASE}/messages",
-                     json=body, headers=_headers(params),
-                     profile="api")
+                     json=body, **http.headers(accept="json", extra=_headers(params)))
     data = resp["json"]
     blocks = data.get("content", [])
     return {

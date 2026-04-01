@@ -7,7 +7,7 @@ http.client for HTML page parsing. Order history and account operations
 use session cookies from a browser cookie provider. No API keys required.
 
 Transport notes (see docs/reverse-engineering/1-transport/):
-- profile="navigate" — full client hints (Device-Memory, Rtt, etc.) required
+- waf="cf", mode="navigate" — full client hints (Device-Memory, Rtt, etc.) required
   by Amazon's Lightsaber bot detection. Without these, auth pages redirect to login.
 - skip_cookies=["csd-key", "csm-hit", "aws-waf-token"] — csd-key triggers Siege
   client-side encryption. Stripping it forces plain HTML responses.
@@ -514,7 +514,7 @@ def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
     if page > 1:
         url_params["startIndex"] = str((page - 1) * 10)
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
 
         resp = c.get(
@@ -742,7 +742,7 @@ def buy_again(**params) -> list[dict[str, Any]]:
     """Get products Amazon recommends for repurchase."""
     cookie_header = _require_cookies(params, "buy_again")
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
         resp = c.get(
             f"{BASE}/gp/buyagain",
@@ -807,7 +807,7 @@ def subscriptions(**params) -> dict[str, Any]:
     """List active Subscribe & Save subscriptions and upcoming deliveries."""
     cookie_header = _require_cookies(params, "subscriptions")
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
 
         mgmt_resp = c.get(
@@ -965,7 +965,7 @@ def get_order(*, order_id, **params) -> dict[str, Any]:
     if not order_id:
         raise ValueError("order_id is required")
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
 
         resp = c.get(
@@ -1129,7 +1129,7 @@ def list_lists(**params) -> list[dict[str, Any]]:
     """List all of the user's Amazon lists (wishlists, shopping lists, etc.)."""
     cookie_header = _require_cookies(params, "list_lists")
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
         resp = c.get(
             f"{BASE}/hz/wishlist/ls",
@@ -1199,7 +1199,7 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     list_privacy = None
     list_type = None
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
 
         resp = c.get(
@@ -1388,7 +1388,7 @@ def whoami(**params) -> dict[str, Any]:
     """
     cookie_header = _require_cookies(params, "whoami")
 
-    with http.client(cookies=cookie_header, profile="navigate", skip_cookies=_SKIP_COOKIES, headers={"Host": "www.amazon.com"}) as c:
+    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
         _warm_session(c)
         resp = c.get(f"{BASE}/gp/css/homepage.html")
 

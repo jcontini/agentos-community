@@ -101,10 +101,8 @@ def get_cookies(domain: str, names: list[str] | None = None,
     shutil.copy2(cookies_db, tmp_db)
 
     try:
-        # Use host if specified (more specific), otherwise use domain
-        match_field = host or domain
-
-        # Build query with optional name filter
+        # Always query by domain (broad TLD match) to get all cookies.
+        # If host is specified, post-filter by RFC 6265 domain-matching.
         if names:
             placeholders = ",".join(f":name{i}" for i in range(len(names)))
             query = f"""
@@ -115,7 +113,7 @@ def get_cookies(domain: str, names: list[str] | None = None,
                   AND name IN ({placeholders})
                 ORDER BY name
             """
-            params = {"match": f"%{match_field}%"}
+            params = {"match": f"%{domain}%"}
             for i, n in enumerate(names):
                 params[f"name{i}"] = n
         else:
@@ -126,7 +124,7 @@ def get_cookies(domain: str, names: list[str] | None = None,
                 WHERE host_key LIKE :match
                 ORDER BY name
             """
-            params = {"match": f"%{match_field}%"}
+            params = {"match": f"%{domain}%"}
 
         rows = sql.query(query, db=tmp_db, params=params)
 
@@ -163,9 +161,29 @@ def get_cookies(domain: str, names: list[str] | None = None,
                 "created": created_unix,
             })
 
+        # RFC 6265 domain-matching: filter cookies to only those that should
+        # be sent to the target host. Drops sibling subdomain cookies.
+        if host:
+            cookies = [c for c in cookies if _domain_matches(c["domain"], host)]
+
         return cookies
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _domain_matches(cookie_domain: str, request_host: str) -> bool:
+    """RFC 6265 §5.1.3 domain matching.
+
+    A cookie with domain=".uber.com" matches "riders.uber.com" (subdomain)
+    and "uber.com" (exact). But domain=".auth.uber.com" does NOT match
+    "riders.uber.com" (sibling subdomain).
+    """
+    cd = cookie_domain.lstrip(".")
+    if request_host == cd:
+        return True
+    if request_host.endswith("." + cd):
+        return True
+    return False
 
 
 def op_cookie_get(
