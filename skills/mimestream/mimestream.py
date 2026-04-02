@@ -354,6 +354,10 @@ def credential_get(*, account, **params):
     })
 
     # Step 3: Exchange refresh token for access token
+    # The response includes "scope" — a space-separated list of granted scopes.
+    # Mimestream's Google grant typically includes:
+    #   mail.google.com, calendar.events, contacts, contacts.other.readonly,
+    #   directory.readonly, gmail.settings.basic, userinfo.profile
     token_response = oauth.exchange(
         token_url=fields["token_url"],
         refresh_token=fields["refresh_token"],
@@ -363,6 +367,7 @@ def credential_get(*, account, **params):
     return {
         "access_token": token_response.get("access_token"),
         "expires_in": token_response.get("expires_in"),
+        "scope": token_response.get("scope"),
         "refresh_token": fields["refresh_token"],
         "client_id": fields["client_id"],
         "token_url": fields["token_url"],
