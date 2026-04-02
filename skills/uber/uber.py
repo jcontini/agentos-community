@@ -440,16 +440,19 @@ def get_trip(trip_id: str, **params) -> dict:
         }
 
     if waypoints:
-        out["origin"] = {"full_address": waypoints[0], "feature_type": "address"}
-        out["destination"] = {"full_address": waypoints[-1], "feature_type": "address"}
+        out["origin"] = {"name": waypoints[0], "full_address": waypoints[0], "feature_type": "address"}
+        out["destination"] = {"name": waypoints[-1], "full_address": waypoints[-1], "feature_type": "address"}
 
     # Build legs from waypoint pairs (multi-stop support)
     if len(waypoints) >= 2:
+        trip_id = trip.get("uuid") or trip.get("jobUUID") or trip_id
         out["legs"] = [
             {
+                "id": f"{trip_id}_leg_{i + 1}",
+                "name": f"Leg {i + 1}: {waypoints[i + 1]}",
                 "sequence": i + 1,
-                "origin": {"full_address": waypoints[i], "feature_type": "address"},
-                "destination": {"full_address": waypoints[i + 1], "feature_type": "address"},
+                "origin": {"name": waypoints[i], "full_address": waypoints[i], "feature_type": "address"},
+                "destination": {"name": waypoints[i + 1], "full_address": waypoints[i + 1], "feature_type": "address"},
             }
             for i in range(len(waypoints) - 1)
         ]
@@ -1373,6 +1376,8 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
     # Courier GPS location as a leg with trace
     if courier_loc:
         leg_data = {
+            "id": f"{order_uuid}_leg_1",
+            "name": f"Delivery leg",
             "sequence": 1,
         }
         if courier_loc.get("latitude") and courier_loc.get("longitude"):
