@@ -622,15 +622,20 @@ def get_store(store_uuid: str, **params) -> dict:
     raw_addr = location.get("address") or {}
     address = raw_addr if isinstance(raw_addr, dict) else {"eaterFormattedAddress": str(raw_addr)}
 
+    # isOpen can be True even when the store isn't accepting orders right now.
+    # closedMessage tells you when it actually opens (e.g. "Opens Saturday 9:30 AM").
+    # Check BOTH is_open AND closed_message to determine real availability.
     return {
         "name": data.get("title", ""),
         "id": data.get("uuid", ""),
         "is_open": data.get("isOpen", False),
         "is_orderable": data.get("isOrderable", False),
+        "closed_message": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
         "rating": (data.get("rating") or {}).get("ratingValue"),
         "review_count": (data.get("rating") or {}).get("reviewCount"),
         "address": address.get("eaterFormattedAddress"),
+        "hours": data.get("hours"),
         "products": products,
         "product_count": len(products),
     }
