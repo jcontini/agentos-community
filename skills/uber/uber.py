@@ -440,8 +440,8 @@ def get_trip(trip_id: str, **params) -> dict:
         }
 
     if waypoints:
-        out["origin"] = {"name": waypoints[0], "full_address": waypoints[0], "feature_type": "address"}
-        out["destination"] = {"name": waypoints[-1], "full_address": waypoints[-1], "feature_type": "address"}
+        out["origin"] = {"id": waypoints[0], "name": waypoints[0], "full_address": waypoints[0], "feature_type": "address"}
+        out["destination"] = {"id": waypoints[-1], "name": waypoints[-1], "full_address": waypoints[-1], "feature_type": "address"}
 
     # Build legs from waypoint pairs (multi-stop support)
     if len(waypoints) >= 2:
@@ -451,8 +451,8 @@ def get_trip(trip_id: str, **params) -> dict:
                 "id": f"{trip_id}_leg_{i + 1}",
                 "name": f"Leg {i + 1}: {waypoints[i + 1]}",
                 "sequence": i + 1,
-                "origin": {"name": waypoints[i], "full_address": waypoints[i], "feature_type": "address"},
-                "destination": {"name": waypoints[i + 1], "full_address": waypoints[i + 1], "feature_type": "address"},
+                "origin": {"id": waypoints[i], "name": waypoints[i], "full_address": waypoints[i], "feature_type": "address"},
+                "destination": {"id": waypoints[i + 1], "name": waypoints[i + 1], "full_address": waypoints[i + 1], "feature_type": "address"},
             }
             for i in range(len(waypoints) - 1)
         ]
@@ -1392,9 +1392,11 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
     store_info = info.get("storeInfo") or {}
     store_loc = store_info.get("location") or {}
     if store_info.get("name"):
+        store_addr = (store_loc.get("address") or {}).get("eaterFormattedAddress")
         trip_data["origin"] = {
+            "id": store_info.get("uuid") or store_addr or store_info["name"],
             "name": store_info["name"],
-            "full_address": (store_loc.get("address") or {}).get("eaterFormattedAddress"),
+            "full_address": store_addr,
             "latitude": store_loc.get("latitude"),
             "longitude": store_loc.get("longitude"),
             "feature_type": "poi",
@@ -1412,6 +1414,8 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
             None,
         )
         dest_place = {
+            "id": dest_address,
+            "name": dest_address,
             "full_address": dest_address,
             "feature_type": "address",
         }
