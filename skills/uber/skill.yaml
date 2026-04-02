@@ -207,3 +207,58 @@ operations:
       module: ./uber.py
       function: search_store
       timeout: 30
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # EATS CART (WRITE operations — modify cart state)
+  # API shapes: requirements.md "addItemsToDraftOrderV2" + "createDraftOrderV2"
+  # ─────────────────────────────────────────────────────────────────────────
+
+  add_to_cart:
+    description: "Add items to an Uber Eats cart. Creates a new cart if none exists for the store. WRITE operation."
+    returns:
+      draft_order_uuid: string
+      added: array
+      added_count: integer
+      cart_items: array
+      cart_total_items: integer
+    params:
+      store_uuid:
+        type: string
+        required: true
+        description: "Store UUID"
+      items:
+        type: json
+        required: true
+        description: "Array of items: [{uuid, name, price_cents, quantity, image?, _section_uuid?, _subsection_uuid?}]"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: add_to_cart
+      timeout: 60
+
+  get_cart:
+    description: "Get current Uber Eats cart contents across all stores"
+    returns:
+      carts: array
+      cart_count: integer
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_cart
+      timeout: 30
+
+  clear_cart:
+    description: "Clear an Uber Eats cart (discard draft order). WRITE operation."
+    returns:
+      status: string
+      draft_order_uuid: string
+    params:
+      draft_order_uuid:
+        type: string
+        required: true
+        description: "Draft order UUID to discard (from get_cart or add_to_cart)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: clear_cart
+      timeout: 30

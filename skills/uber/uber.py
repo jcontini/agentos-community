@@ -1,5 +1,6 @@
 """Uber skill — rides (GraphQL) and Eats (RPC) via browser session cookies."""
 
+import uuid as uuid_mod
 from agentos import http, get_cookies, require_cookies
 
 # ---------------------------------------------------------------------------
@@ -612,6 +613,9 @@ def get_store(store_uuid: str, **params) -> dict:
                     "text": ci.get("itemDescription"),
                     "category": section_title,
                     "is_available": ci.get("isAvailable", True),
+                    # Section UUIDs needed by add_to_cart — see requirements.md addItemsToDraftOrderV2
+                    "_section_uuid": ci.get("sectionUUID") or item.get("catalogSectionUUID", ""),
+                    "_subsection_uuid": item.get("catalogSectionUUID", ""),
                 })
 
     location = data.get("location") or {}
@@ -648,3 +652,165 @@ def search_store(store_uuid: str, query: str, **params) -> dict:
         "matches": matches,
         "match_count": len(matches),
     }
+
+
+# ---------------------------------------------------------------------------
+# Eats cart operations (WRITE — these modify state)
+# ---------------------------------------------------------------------------
+# API shapes captured from browser XHR hooks — see requirements.md
+# "addItemsToDraftOrderV2" and "createDraftOrderV2" sections.
+# ---------------------------------------------------------------------------
+
+def _build_cart_item(product: dict, store_uuid: str) -> dict:
+    """Build the item shape that addItemsToDraftOrderV2 / createDraftOrderV2 expects.
+
+    Product dict should have: uuid, name, price_cents, image, category (section uuid).
+    Shape documented in requirements.md under addItemsToDraftOrderV2.
+    """
+    return {
+        "uuid": product["uuid"],
+        "shoppingCartItemUuid": str(uuid_mod.uuid4()),
+        "storeUuid": store_uuid,
+        "sectionUuid": product.get("_section_uuid", ""),
+        "subsectionUuid": product.get("_subsection_uuid", ""),
+        "price": product.get("price_cents", 0),
+        "title": product.get("name", ""),
+        "quantity": product.get("quantity", 1),
+        "customizations": {},
+        "imageURL": product.get("image", ""),
+        "specialInstructions": "",
+        "fulfillmentIssueAction": {
+            "type": "STORE_REPLACE_ITEM",
+            "itemSubstitutes": None,
+            "selectionSource": "UBER_SUGGESTED",
+        },
+        "pricedByUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT"},
+        "soldByUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT"},
+    }
+
+
+def _get_or_create_draft(cookie_header: str, store_uuid: str, first_item: dict) -> dict:
+    """Get existing draft order for this store, or create a new one with the first item.
+
+    Returns the draft order data dict (with uuid, shoppingCart, etc).
+    See requirements.md for createDraftOrderV2 / getDraftOrdersByEaterUuidV1 shapes.
+    """
+    # Check for existing draft for this store
+    drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
+    for draft in (drafts_data.get("draftOrders") or []):
+        if draft.get("storeUuid") == store_uuid:
+            return draft
+
+    # No existing draft — create one with the first item inline
+    # This is how the browser does it: createDraftOrderV2 includes shoppingCartItems
+    create_body = {
+        "removeAdapters": True,
+        "isMulticart": True,
+        "useCredits": True,
+        "extraPaymentProfiles": [],
+        "promotionOptions": {
+            "autoApplyPromotionUUIDs": [],
+            "selectedPromotionInstanceUUIDs": [],
+            "skipApplyingPromotion": False,
+        },
+        "deliveryTime": {"asap": True},
+        "deliveryType": "ASAP",
+        "currencyCode": "USD",
+        "interactionType": "door_to_door",
+        "checkMultipleDraftOrdersCap": True,
+        "actionMeta": {"isQuickAdd": True},
+        "analyticsRelevantData": {"profileSource": ""},
+        "businessDetails": {},
+        "shoppingCartItems": [first_item],
+    }
+    data = _eats_post(cookie_header, "createDraftOrderV2", create_body)
+    return data
+
+
+def add_to_cart(store_uuid: str, items: list, **params) -> dict:
+    """Add items to an Uber Eats cart for a store.
+
+    items: list of dicts with at minimum {uuid, name, price_cents, quantity}.
+    Extra fields (image, _section_uuid, _subsection_uuid) improve fidelity.
+
+    Creates a new draft order if none exists for this store.
+    This is a WRITE operation — it modifies cart state.
+    """
+    cookie_header = require_cookies(params, "add_to_cart")
+
+    if not items:
+        return {"error": "no items to add"}
+
+    # Build cart items
+    cart_items = [_build_cart_item(item, store_uuid) for item in items]
+
+    # Get or create draft order (first item goes into create call if new)
+    draft = _get_or_create_draft(cookie_header, store_uuid, cart_items[0])
+    draft_uuid = draft.get("uuid", "")
+    cart_uuid = (draft.get("shoppingCart") or {}).get("uuid", "")
+
+    added = [cart_items[0]["title"]]  # first item was in create or already existed
+
+    # Add remaining items via addItemsToDraftOrderV2
+    for cart_item in cart_items[1:]:
+        add_body = {
+            "items": [cart_item],
+            "cartUUID": cart_uuid,
+            "draftOrderUUID": draft_uuid,
+            "storeUUID": store_uuid,
+            "actionMeta": {"isQuickAdd": True},
+            "shouldUpdateDraftOrderMetadata": True,
+            "isNewCartAbstraction": True,
+            "locationType": "GROCERY_STORE",
+        }
+        _eats_post(cookie_header, "addItemsToDraftOrderV2", add_body)
+        added.append(cart_item["title"])
+
+    # Get final cart state
+    final_draft = _eats_post(cookie_header, "getDraftOrderByUuidV1", {"draftOrderUuid": draft_uuid})
+    final_items = (final_draft.get("shoppingCart") or {}).get("items") or []
+
+    return {
+        "draft_order_uuid": draft_uuid,
+        "store_uuid": store_uuid,
+        "added": added,
+        "added_count": len(added),
+        "cart_items": [
+            {"name": i.get("title"), "quantity": i.get("quantity"), "price": f"${i.get('price', 0)/100:.2f}"}
+            for i in final_items
+        ],
+        "cart_total_items": len(final_items),
+    }
+
+
+def get_cart(**params) -> dict:
+    """Get current Uber Eats cart contents across all stores."""
+    cookie_header = require_cookies(params, "get_cart")
+
+    drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
+    carts = []
+    for draft in (drafts_data.get("draftOrders") or []):
+        cart = draft.get("shoppingCart") or {}
+        items = cart.get("items") or []
+        store = draft.get("storeInfo") or {}
+        if items:
+            total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in items)
+            carts.append({
+                "draft_order_uuid": draft.get("uuid"),
+                "store_name": store.get("title", "Unknown"),
+                "store_uuid": draft.get("storeUuid"),
+                "items": [
+                    {"name": i.get("title"), "quantity": i.get("quantity"), "price": f"${i.get('price', 0)/100:.2f}"}
+                    for i in items
+                ],
+                "item_count": len(items),
+                "estimated_subtotal": f"${total_cents / 100:.2f}",
+            })
+    return {"carts": carts, "cart_count": len(carts)}
+
+
+def clear_cart(draft_order_uuid: str, **params) -> dict:
+    """Discard a draft order (clear the cart for a store)."""
+    cookie_header = require_cookies(params, "clear_cart")
+    _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft_order_uuid})
+    return {"status": "cleared", "draft_order_uuid": draft_order_uuid}
