@@ -683,14 +683,21 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
     raw = product.get("_raw") or {}
     quantity = product.get("quantity", 1)
 
-    # Start with the raw catalog item — has sectionUUID, imageUrl, price,
-    # sellingOption, and everything else the API needs
+    # RE principle: replay, don't reconstruct.
+    # The raw catalog item from getStoreV1 has the exact field names (lowercase):
+    #   sectionUuid (NOT sectionUUID), subsectionUuid, imageUrl, price
+    # And purchase info nested under purchaseInfo.purchaseOptions[0]
+    purchase = ((raw.get("purchaseInfo") or {}).get("purchaseOptions") or [{}])[0] if raw else {}
+    pricing = (raw.get("purchaseInfo") or {}).get("pricingInfo") or {}
+
     item = {
         "uuid": raw.get("uuid") or product["uuid"],
         "shoppingCartItemUuid": str(uuid_mod.uuid4()),
         "storeUuid": store_uuid,
-        "sectionUuid": raw.get("sectionUUID") or product.get("_parent_section_uuid", ""),
-        "subsectionUuid": product.get("_parent_section_uuid", ""),
+        # sectionUuid comes from the catalog item itself (lowercase 'u')
+        "sectionUuid": raw.get("sectionUuid") or product.get("_parent_section_uuid", ""),
+        # subsectionUuid is the parent HORIZONTAL_GRID section UUID
+        "subsectionUuid": raw.get("subsectionUuid") or product.get("_parent_section_uuid", ""),
         "title": raw.get("title") or product.get("name", ""),
         "price": raw.get("price") or product.get("price_cents", 0),
         "quantity": quantity,
@@ -701,26 +708,30 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
             "type": "STORE_REPLACE_ITEM",
             "itemSubstitutes": None,
             "selectionSource": "UBER_SUGGESTED",
+            "storeReplaceItem": {"preferredReplacementType": "SIMILAR_ITEM"},
         },
     }
 
-    # Pass through sellingOption and measurement info from raw catalog if available
-    if raw.get("sellingOption"):
-        item["sellingOption"] = raw["sellingOption"]
-    if raw.get("pricedByUnit"):
-        item["pricedByUnit"] = raw["pricedByUnit"]
-    if raw.get("itemQuantity"):
-        item["itemQuantity"] = raw["itemQuantity"]
-    elif quantity:
-        item["itemQuantity"] = {
-            "inSellableUnit": {
-                "value": {"coefficient": quantity, "exponent": 0},
-                "measurementUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT",
-                                    "length": None, "weight": None, "volume": None},
-                "measurementUnitAbbreviationText": None,
-            },
-            "inPriceableUnit": None,
-        }
+    # sellingOption and pricedByUnit from purchaseInfo (where the browser gets them)
+    if purchase.get("soldByUnit"):
+        item["sellingOption"] = {"soldByUnit": purchase["soldByUnit"]}
+        if purchase.get("quantityConstraintsV2"):
+            item["sellingOption"]["quantityConstraintsV2"] = purchase["quantityConstraintsV2"]
+    if pricing.get("pricedByUnit"):
+        item["pricedByUnit"] = pricing["pricedByUnit"]
+    if purchase.get("soldByUnit"):
+        item["soldByUnit"] = purchase["soldByUnit"]
+
+    # itemQuantity
+    item["itemQuantity"] = {
+        "inSellableUnit": {
+            "value": {"coefficient": quantity, "exponent": 0},
+            "measurementUnit": purchase.get("soldByUnit") or {"measurementType": "MEASUREMENT_TYPE_COUNT",
+                                "length": None, "weight": None, "volume": None},
+            "measurementUnitAbbreviationText": None,
+        },
+        "inPriceableUnit": None,
+    }
 
     return item
 
