@@ -504,6 +504,56 @@ The browser uses **XHR** (not fetch) for this endpoint. The request requires a p
 
 **Active order items:** During a live delivery, `getOrderEntityByUuidV1` should return structured JSON item data (untested — need a live order). This will be the Phase 2 path.
 
+### Reorder mechanism — draft orders carry catalog UUIDs (discovered 2026-04-02)
+
+**Key discovery:** When the browser navigates to `/orders/{uuid}`, Uber auto-creates a draft order
+(`createDraftOrderV2`) containing all items from that past order, mapped to their **current catalog
+UUIDs** with section/subsection UUIDs, prices, and images. This is the reorder mechanism.
+
+The draft order items have `uuid` fields that are **catalog product UUIDs** (NOT order-line UUIDs).
+These match the UUIDs from `getStoreV1` exactly. No fuzzy name matching needed.
+
+**Flow:**
+1. `getPastOrdersV1` → get order UUID
+2. Visit `/orders/{uuid}` (or call the endpoint that auto-creates the reorder draft)
+3. `getDraftOrdersByEaterUuidV1` → find the new draft for the same store
+4. `getDraftOrderByUuidV2` → read cart items with catalog UUIDs
+5. Items have: `uuid` (catalog), `sectionUuid`, `subsectionUuid`, `title`, `price`, `imageURL`, `quantity`
+
+**Draft order item shape (from getDraftOrderByUuidV2):**
+```json
+{
+  "shoppingCartItemUuid": "...",      // per-line UUID (client-generated)
+  "uuid": "67017397-fbe2-...",        // CATALOG PRODUCT UUID — matches getStoreV1
+  "storeUuid": "c928e271-...",
+  "sectionUuid": "f0faacd4-...",
+  "subsectionUuid": "b71a1b81-...",
+  "title": "Dole Organic Bananas",
+  "price": 277,                       // cents
+  "imageURL": "https://tb-static...",
+  "quantity": 1,
+  "fulfillmentIssueAction": {...},
+  "customizations": [...]
+}
+```
+
+**Important:** Receipt item UUIDs (from `getReceiptByWorkflowUuidV1` data-testid attributes) are
+order-line-item UUIDs — NOT catalog UUIDs. They live in a different ID space. Only the draft
+order / shopping cart items carry catalog UUIDs that join with `getStoreV1` products.
+
+**Reorder mechanism confirmed (2026-04-02):** The "Reorder" button on `/orders` calls
+`createDraftOrderV2` with ALL past order items pre-populated in `shoppingCartItems[]`. Each item
+has its catalog UUID, store UUID, section UUIDs, prices, quantities, and customizations. The
+browser resolves the past-order→catalog-UUID mapping client-side from React state data.
+
+There is also a `createDraftOrderByOrderUuidV1` endpoint in the JS bundles, but it returns 400
+with all param shapes we tried. The browser doesn't use it — it uses the standard `createDraftOrderV2`
+with items inline.
+
+**For API-based reorder:** Call `getStoreV1` to get current catalog UUIDs, match past order item
+names to catalog products (name normalization), then call `createDraftOrderV2` with `shoppingCartItems[]`
+containing catalog UUIDs. This is exactly what the browser does — it just has the mapping cached.
+
 ### `getStoreV1` — store details + full product catalog (captured 2026-04-02)
 
 The key endpoint for browsing store products. Returns store metadata AND the entire product catalog in one call.
