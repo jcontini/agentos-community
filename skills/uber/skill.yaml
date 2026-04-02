@@ -130,15 +130,12 @@ operations:
       timeout: 30
 
   list_deliveries:
-    description: "List Uber Eats order history — stores, totals, timestamps. Supports pagination via cursor."
-    returns:
-      deliveries: array
-      next_cursor: string
-      count: integer
+    description: "List Uber Eats order history — past orders with store, total, items, delivery address"
+    returns: order[]
     params:
       cursor:
         type: string
-        description: "Pagination cursor from a previous response (next_cursor)"
+        description: "Pagination cursor from a previous response"
     connection: eats
     python:
       module: ./uber.py
@@ -146,14 +143,8 @@ operations:
       timeout: 30
 
   get_delivery:
-    description: "Get full Uber Eats delivery details — items, quantities, and fare breakdown from receipt"
-    returns:
-      id: string
-      items: array
-      item_count: integer
-      fare: json
-      timestamp: string
-      receipts: array
+    description: "Get full delivery details — items, fare breakdown, receipt data"
+    returns: order
     params:
       order_uuid:
         type: string
@@ -166,15 +157,8 @@ operations:
       timeout: 30
 
   get_store:
-    description: "Get store details and full product catalog — all items with name, price, image, availability"
-    returns:
-      name: string
-      id: string
-      is_open: boolean
-      is_orderable: boolean
-      eta: string
-      products: array
-      product_count: integer
+    description: "Get store details and full product catalog with prices, images, availability"
+    returns: organization
     params:
       store_uuid:
         type: string
@@ -214,13 +198,8 @@ operations:
   # ─────────────────────────────────────────────────────────────────────────
 
   add_to_cart:
-    description: "Add items to an Uber Eats cart. Creates a new cart if none exists for the store. WRITE operation."
-    returns:
-      draft_order_uuid: string
-      added: array
-      added_count: integer
-      cart_items: array
-      cart_total_items: integer
+    description: "Add items to an Uber Eats cart — creates a draft order with products. WRITE operation."
+    returns: order
     params:
       store_uuid:
         type: string
@@ -229,7 +208,7 @@ operations:
       items:
         type: json
         required: true
-        description: "Array of items: [{uuid, name, price_cents, quantity, image?, _section_uuid?, _subsection_uuid?}]"
+        description: "Array of product dicts from get_store (must include _raw field from catalog)"
     connection: eats
     python:
       module: ./uber.py
@@ -237,10 +216,8 @@ operations:
       timeout: 60
 
   get_cart:
-    description: "Get current Uber Eats cart contents across all stores"
-    returns:
-      carts: array
-      cart_count: integer
+    description: "Get current Uber Eats carts as draft orders with products"
+    returns: order[]
     connection: eats
     python:
       module: ./uber.py

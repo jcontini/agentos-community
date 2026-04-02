@@ -458,9 +458,10 @@ def check_eats_session(**params) -> dict:
     }
 
 
-def list_deliveries(cursor: str = "", **params) -> dict:
-    """List Uber Eats order history. Returns orders with store, total, status, timestamps.
+def list_deliveries(cursor: str = "", **params) -> list:
+    """List Uber Eats order history as order-shaped entities.
 
+    Returns: order[] — each with store relation (organization) and shipping_address (place).
     Backed by getPastOrdersV1. See requirements.md for full response shape.
     """
     cookie_header = require_cookies(params, "list_deliveries")
@@ -469,43 +470,61 @@ def list_deliveries(cursor: str = "", **params) -> dict:
 
     order_uuids = data.get("orderUuids") or []
     orders_map = data.get("ordersMap") or {}
-    pagination = data.get("paginationData") or {}
 
-    deliveries = []
+    orders = []
     for uuid in order_uuids:
         order = orders_map.get(uuid, {})
         base = order.get("baseEaterOrder") or {}
-        store = order.get("storeInfo") or {}
+        store_info = order.get("storeInfo") or {}
         fare = order.get("fareInfo") or {}
-        location = store.get("location") or {}
-        address = location.get("address") or {}
+        location = store_info.get("location") or {}
+        raw_addr = location.get("address") or {}
+        if isinstance(raw_addr, str):
+            raw_addr = {"eaterFormattedAddress": raw_addr}
 
-        # Prices are in cents
         total_cents = fare.get("totalPrice", 0)
 
-        deliveries.append({
+        # Determine status
+        if base.get("isCancelled"):
+            status = "cancelled"
+        elif base.get("isCompleted"):
+            status = "completed"
+        else:
+            status = "in_progress"
+
+        orders.append({
+            # Standard fields
             "id": uuid,
-            "name": store.get("title", "Unknown store"),
-            "store_uuid": store.get("uuid"),
-            "store_image": store.get("heroImageUrl"),
-            "store_address": address.get("eaterFormattedAddress"),
-            "total": f"${total_cents / 100:.2f}" if total_cents else None,
-            "total_cents": total_cents,
-            "is_completed": base.get("isCompleted", False),
-            "is_cancelled": base.get("isCancelled", False),
-            "completed_at": base.get("completedAt"),
+            "name": store_info.get("title", "Unknown store"),
+            "image": store_info.get("heroImageUrl"),
             "datePublished": base.get("completedAt") or base.get("lastStateChangeAt"),
+            # Order shape fields
+            "total": f"${total_cents / 100:.2f}" if total_cents else None,
+            "total_amount": total_cents / 100 if total_cents else None,
+            "currency": "USD",
+            "status": status,
             "fare_breakdown": [
                 {"label": item.get("label"), "amount": item.get("rawValue"), "key": item.get("key")}
                 for item in (fare.get("checkoutInfo") or [])
             ],
+            # Typed references — create linked entities in the graph
+            "store": {
+                "organization": {
+                    "id": store_info.get("uuid"),
+                    "name": store_info.get("title"),
+                    "image": store_info.get("heroImageUrl"),
+                }
+            },
+            "shipping_address": {
+                "place": {
+                    "full_address": raw_addr.get("eaterFormattedAddress"),
+                    "latitude": location.get("latitude"),
+                    "longitude": location.get("longitude"),
+                }
+            } if raw_addr.get("eaterFormattedAddress") else None,
         })
 
-    result = {"deliveries": deliveries, "count": len(deliveries)}
-    next_cursor = pagination.get("nextCursor")
-    if next_cursor:
-        result["next_cursor"] = next_cursor
-    return result
+    return orders
 
 
 def get_delivery(order_uuid: str, **params) -> dict:
@@ -558,16 +577,37 @@ def get_delivery(order_uuid: str, **params) -> dict:
             if el:
                 fare[key] = el[0].text_content().strip()
 
+    # Parse total as number
+    total_str = fare.get("total", "")
+    total_amount = None
+    if total_str:
+        try:
+            total_amount = float(total_str.replace("$", "").replace(",", ""))
+        except ValueError:
+            pass
+
     return {
+        # Standard fields
         "id": order_uuid,
-        "items": items,
-        "item_count": len(items),
-        "fare": fare,
-        "timestamp": timestamp,
-        "receipts": [
-            {"timestamp": r.get("timestamp"), "type": r.get("type")}
-            for r in receipts
-        ],
+        "name": f"Delivery ({len(items)} items)",
+        "datePublished": timestamp,
+        # Order shape fields
+        "total": fare.get("total"),
+        "total_amount": total_amount,
+        "currency": "USD",
+        "status": "completed",
+        "fare_breakdown": fare,
+        # Typed reference: contains → product[]
+        "contains": {
+            "product[]": [
+                {
+                    "id": item["item_uuid"],
+                    "name": item["name"],
+                    "quantity": item["quantity"],
+                }
+                for item in items
+            ]
+        },
     }
 
 
@@ -611,16 +651,21 @@ def get_store(store_uuid: str, **params) -> dict:
                 # add_to_cart needs the EXACT fields the API returned — sectionUUID,
                 # sellingOption, imageUrl, etc. Don't reconstruct, replay.
                 # See docs/reverse-engineering/overview.md "Write operations"
+                # Product shape: standard fields + product-specific fields
                 products.append({
+                    # Standard fields
+                    "id": uid,
                     "name": ci.get("title", ""),
-                    "uuid": uid,
-                    "price": f"${price_cents / 100:.2f}" if price_cents else None,
-                    "price_cents": price_cents,
                     "image": ci.get("imageUrl"),
                     "text": ci.get("itemDescription"),
-                    "category": section_title,
-                    "is_available": ci.get("isAvailable", True),
-                    # Raw catalog item — passed through to add_to_cart verbatim
+                    # Product shape fields
+                    "price": f"${price_cents / 100:.2f}" if price_cents else None,
+                    "price_amount": price_cents / 100 if price_cents else None,
+                    "currency": "USD",
+                    "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
+                    "categories": [section_title] if section_title else [],
+                    # Raw catalog item — passed through to add_to_cart verbatim.
+                    # RE principle: preserve raw data for write operations.
                     "_raw": ci,
                     "_parent_section_uuid": item.get("catalogSectionUUID", ""),
                 })
@@ -632,17 +677,30 @@ def get_store(store_uuid: str, **params) -> dict:
     # isOpen can be True even when the store isn't accepting orders right now.
     # closedMessage tells you when it actually opens (e.g. "Opens Saturday 9:30 AM").
     # Check BOTH is_open AND closed_message to determine real availability.
+    rating_data = data.get("rating") or {}
     return {
-        "name": data.get("title", ""),
+        # Standard fields (organization shape)
         "id": data.get("uuid", ""),
+        "name": data.get("title", ""),
+        "image": (data.get("heroImageUrls") or [None])[0],
+        "url": f"https://www.ubereats.com/store/{data.get('slug', '')}",
+        # Organization shape — headquarters → place
+        "headquarters": {
+            "place": {
+                "full_address": address.get("eaterFormattedAddress"),
+                "latitude": location.get("latitude"),
+                "longitude": location.get("longitude"),
+            }
+        } if address.get("eaterFormattedAddress") else None,
+        # Store-specific fields (not in org shape, but useful metadata)
         "is_open": data.get("isOpen", False),
         "is_orderable": data.get("isOrderable", False),
         "closed_message": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
-        "rating": (data.get("rating") or {}).get("ratingValue"),
-        "review_count": (data.get("rating") or {}).get("reviewCount"),
-        "address": address.get("eaterFormattedAddress"),
+        "rating": rating_data.get("ratingValue"),
+        "review_count": rating_data.get("reviewCount"),
         "hours": data.get("hours"),
+        # Products as product-shaped entities
         "products": products,
         "product_count": len(products),
     }
@@ -806,43 +864,91 @@ def add_to_cart(store_uuid: str, items: list, **params) -> dict:
     cart = draft.get("shoppingCart") or {}
     final_items = cart.get("items") or []
 
+    # Return order-shaped (status: draft) with contains → product[]
+    total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in final_items)
     return {
-        "draft_order_uuid": draft_uuid,
-        "store_uuid": store_uuid,
-        "added": [ci["title"] for ci in cart_items],
-        "added_count": len(cart_items),
-        "cart_items": [
-            {"name": i.get("title"), "quantity": i.get("quantity"), "price": f"${i.get('price', 0)/100:.2f}"}
-            for i in final_items
-        ],
-        "cart_total_items": len(final_items),
+        # Standard fields
+        "id": draft_uuid,
+        "name": f"Cart ({len(final_items)} items)",
+        # Order shape fields
+        "status": "draft",
+        "total": f"${total_cents / 100:.2f}" if total_cents else None,
+        "total_amount": total_cents / 100 if total_cents else None,
+        "currency": "USD",
+        # Typed reference: contains → product[]
+        "contains": {
+            "product[]": [
+                {
+                    "id": i.get("uuid"),
+                    "name": i.get("title"),
+                    "image": i.get("imageURL"),
+                    "price": f"${i.get('price', 0)/100:.2f}" if i.get("price") else None,
+                    "price_amount": i.get("price", 0) / 100 if i.get("price") else None,
+                    "currency": "USD",
+                    "quantity": i.get("quantity", 1),
+                }
+                for i in final_items
+            ]
+        },
     }
 
 
-def get_cart(**params) -> dict:
-    """Get current Uber Eats cart contents across all stores."""
+def get_cart(**params) -> list:
+    """Get current Uber Eats carts as order-shaped entities (status: draft).
+
+    Returns: order[] — each draft order with store (organization) and contains (product[]).
+    """
     cookie_header = require_cookies(params, "get_cart")
 
     drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
-    carts = []
+    orders = []
     for draft in (drafts_data.get("draftOrders") or []):
         cart = draft.get("shoppingCart") or {}
         items = cart.get("items") or []
         store = draft.get("storeInfo") or {}
-        if items:
-            total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in items)
-            carts.append({
-                "draft_order_uuid": draft.get("uuid"),
-                "store_name": store.get("title", "Unknown"),
-                "store_uuid": draft.get("storeUuid"),
-                "items": [
-                    {"name": i.get("title"), "quantity": i.get("quantity"), "price": f"${i.get('price', 0)/100:.2f}"}
+        if not items:
+            continue
+
+        total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in items)
+
+        orders.append({
+            # Standard fields
+            "id": draft.get("uuid"),
+            "name": store.get("title") or draft.get("storeUuid", "Unknown store"),
+            "datePublished": draft.get("createdAt"),
+            # Order shape fields
+            "status": "draft",
+            "total": f"${total_cents / 100:.2f}" if total_cents else None,
+            "total_amount": total_cents / 100 if total_cents else None,
+            "currency": "USD",
+            # Typed references
+            "store": {
+                "organization": {
+                    "id": draft.get("storeUuid"),
+                    "name": store.get("title"),
+                    "image": store.get("heroImageUrl"),
+                }
+            } if store.get("title") else None,
+            # getDraftOrdersByEaterUuidV1 items use different field names than getStoreV1:
+            #   skuUUID (not uuid) = catalog product UUID
+            #   imageURL (not imageUrl) = product image
+            #   title = product name
+            #   price is NOT in draft items — resolved at checkout
+            "contains": {
+                "product[]": [
+                    {
+                        "id": i.get("skuUUID") or i.get("uuid"),
+                        "name": i.get("title"),
+                        "image": i.get("imageURL"),
+                        "quantity": i.get("quantity", 1),
+                        "currency": "USD",
+                    }
                     for i in items
-                ],
-                "item_count": len(items),
-                "estimated_subtotal": f"${total_cents / 100:.2f}",
-            })
-    return {"carts": carts, "cart_count": len(carts)}
+                ]
+            },
+        })
+
+    return orders
 
 
 def clear_cart(draft_order_uuid: str, **params) -> dict:
