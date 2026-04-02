@@ -437,9 +437,57 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 
 **Write operations (require [firewall](../../../docs/specs/firewall.md)):**
 
+#### `addItemsToDraftOrderV2` — add items to cart (captured 2026-04-02)
+
+The browser uses **XHR** (not fetch) for this endpoint. The request requires a pre-existing draft order UUID.
+
+```json
+// Request — captured from browser quick-add click
+{
+  "items": [
+    {
+      "uuid": "f2a36234-4936-577a-...",           // catalog item UUID (from getStoreV1)
+      "shoppingCartItemUuid": "503161fb-...",      // NEW client-generated UUID (uuid4)
+      "storeUuid": "c928e271-...",                 // store UUID
+      "sectionUuid": "d3de65fb-...",               // catalog section UUID (from getStoreV1 structure)
+      "subsectionUuid": "9d480d3e-...",            // subsection UUID
+      "price": 430.92,                             // price in cents (from getStoreV1)
+      "title": "Kirkland Signature Purified Water", // item title
+      "quantity": 1,
+      "customizations": {},
+      "imageURL": "https://tb-static.uber.com/...",
+      "specialInstructions": "",
+      "fulfillmentIssueAction": {
+        "type": "STORE_REPLACE_ITEM",              // default: let store substitute
+        "itemSubstitutes": null,
+        "selectionSource": "UBER_SUGGESTED"
+      },
+      "pricedByUnit": { "measurementType": "MEASUREMENT_TYPE_COUNT" },
+      "soldByUnit": { "measurementType": "MEASUREMENT_TYPE_COUNT" }
+    }
+  ],
+  "cartUUID": "85cf3299-...",                      // from getDraftOrderByUuidV1
+  "draftOrderUUID": "9c7a4af4-...",                // draft order UUID
+  "storeUUID": "c928e271-...",                     // store UUID (repeated)
+  "actionMeta": { "isQuickAdd": true },
+  "shouldUpdateDraftOrderMetadata": true,
+  "isNewCartAbstraction": true,
+  "locationType": "GROCERY_STORE"
+}
+```
+
+**Key discovery notes:**
+- Browser uses XHR, not fetch — that's why our fetch hook missed it initially
+- `shoppingCartItemUuid` is a client-generated UUID (uuid4) — new for each add
+- `sectionUuid` and `subsectionUuid` come from the catalog structure in getStoreV1
+- `fulfillmentIssueAction.type: "STORE_REPLACE_ITEM"` means "let the store substitute if out of stock"
+- `cartUUID` is different from `draftOrderUUID` — get it from `getDraftOrderByUuidV1`
+- Without the draft order UUID, returns `MISSING_DRAFT_ORDER_UUID` (404)
+- With wrong item shape (e.g. missing fields), returns `empty items` (400)
+
 | Endpoint | Purpose |
 |----------|---------|
-| `addItemsToDraftOrderV2` | Add items to cart |
+| `addItemsToDraftOrderV2` | Add items to cart — **captured**, full shape documented above |
 | `addItemsToGroupDraftOrderV2` | Group order cart |
 | `addItemsToOrderV1` | Add items to active order |
 | `createDraftOrderV2` | Create new order |
