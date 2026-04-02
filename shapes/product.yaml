@@ -1,7 +1,7 @@
 # A purchasable item. Base type for book and aircraft.
-# Amazon-specific fields (prime, sponsored) are present because Amazon is the primary source.
+# Cross-skill: Amazon products, Uber Eats grocery items, any retail catalog.
 #
-# Sources: Amazon
+# Sources: Amazon, Uber Eats (grocery), Open Food Facts (enrichment)
 product:
   fields:
     price:             string    # formatted price (e.g. "$29.99") — current/discounted price
@@ -18,12 +18,27 @@ product:
     sponsored:         boolean   # paid placement
     images:            json
     quantity:          integer
+    # Physical / grocery
+    weight:            string    # formatted weight/size ("12 oz", "3 lbs", "500ml")
+    weight_value:      number    # numeric weight for math
+    weight_unit:       string    # oz, lb, kg, g, ml, L, ct, etc.
+    sold_by_weight:    boolean   # true if priced per-lb/kg (vs per-unit)
+    department:        string    # top-level grocery department ("Produce", "Dairy", "Bakery")
+    aisle:             string    # store aisle/section ("Fresh Fruits", "Organic Dairy")
+    sku:               string    # retailer SKU / catalog UUID
+    barcode:           string    # UPC/EAN barcode (from Open Food Facts)
+    # Nutrition (populated via Open Food Facts enrichment)
+    nutrition_score:   string    # Nutri-Score A-E
+    nova_group:        integer   # NOVA 1-4 ultra-processing level
+    calories:          number    # per serving
+    serving_size:      string    # "1 cup (240ml)"
   relations:
     brand:             brand
     manufacturer:      organization
+    tagged:            tag[]     # dietary (VEGAN), allergens, certifications (Organic), departments
   display:
     title: name
-    subtitle: author
+    subtitle: brand
     description: text
     image: image
     date: datePublished
@@ -31,6 +46,6 @@ product:
       - name:            Name
       - brand:           Brand
       - price:           Price
-      - rating:          Rating
-      - ratings_count:   Reviews
+      - weight:          Size
+      - department:      Dept
       - availability:    Available

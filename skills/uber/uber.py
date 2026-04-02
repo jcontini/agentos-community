@@ -737,13 +737,16 @@ def get_store(store_uuid: str, **params) -> dict:
                 # See docs/reverse-engineering/overview.md "Write operations"
                 # Product shape: standard fields + product-specific fields
                 # Extract weight/size from thumbnail labels (e.g. "12 oz", "32 oz")
+                import re as _re
                 weight = None
                 for te in (ci.get("itemThumbnailElements") or []):
                     at = (te.get("payload", {}).get("labelPayload", {})
                           .get("label", {}).get("accessibilityText", ""))
-                    if at and not at.startswith("$") and at != ci.get("title", ""):
-                        weight = at
-                        break
+                    if (at and not at.startswith("$") and at != ci.get("title", "")
+                            and at.lower() not in ("sponsored", "ad")):
+                        if _re.search(r'\d+\s*(?:oz|lb|lbs|g|kg|ml|fl|ct|count|pk|pack|each|ea)', at, _re.I):
+                            weight = at
+                            break
 
                 product = {
                     # Standard fields
@@ -810,22 +813,108 @@ def get_store(store_uuid: str, **params) -> dict:
     }
 
 
-def search_store(store_uuid: str, query: str, **params) -> dict:
-    """Search for products within a store by name.
+def search_products(store_uuid: str, query: str, **params) -> list:
+    """Search products within a store. Server-side search via getInStoreSearchV1.
 
-    Fetches the full catalog via getStoreV1 and filters client-side.
-    Good enough for Costco (~165 items). For larger catalogs, may need
-    a server-side search endpoint (not yet discovered).
+    Returns richer data than get_store catalog: dietary tags (VEGAN, Non-GMO, SNAP),
+    original/discounted prices, promotion info. Also returns aisle/department filters.
+
+    Returns: product[] — each with tags, prices, weight, availability.
     """
-    store = get_store(store_uuid=store_uuid, **params)
-    query_lower = query.lower()
-    matches = [p for p in store["offers"] if query_lower in p["name"].lower()]
-    return {
-        "store_name": store["name"],
-        "query": query,
-        "matches": matches,
-        "match_count": len(matches),
-    }
+    cookie_header = require_cookies(params, "search_products")
+
+    data = _eats_post(cookie_header, "getInStoreSearchV1", {
+        "diningMode": "DELIVERY",
+        "storeUUIDs": [store_uuid],
+        "userQuery": query,
+        "isGrocery": True,
+        "sectionUUIDs": None,
+    })
+
+    products = []
+    seen = set()
+    for sec_val in (data.get("catalogSectionsMap") or {}).values():
+        if not isinstance(sec_val, list):
+            continue
+        for item in sec_val:
+            payload = item.get("payload") or {}
+            sp = payload.get("standardItemsPayload") or payload.get("verticalGridItemsPayload") or {}
+            section_title = (sp.get("title") or {}).get("title", "")
+            for ci in (sp.get("catalogItems") or []):
+                uid = ci.get("uuid", "")
+                if uid in seen:
+                    continue
+                seen.add(uid)
+
+                price_cents = ci.get("price", 0)
+
+                # Extract dietary tags from titleBadge accessibility text
+                # e.g. "California Olive Ranch Extra Virgin Olive Oil, VEGAN"
+                badge = ci.get("titleBadge") or {}
+                badge_text = badge.get("accessibilityText", "")
+                tags = []
+                if badge_text and ", " in badge_text:
+                    # Tags are after the last comma in accessibilityText
+                    tag_part = badge_text.rsplit(", ", 1)[-1] if ", " in badge_text else ""
+                    if tag_part and tag_part.upper() == tag_part:
+                        tags = [t.strip() for t in tag_part.split(",")]
+
+                # Also check for badge images (vegan.png, non-gmo.png, etc.)
+                badge_html = badge.get("textFormat", "")
+                if "vegan.png" in badge_html and "VEGAN" not in tags:
+                    tags.append("VEGAN")
+                if "non-gmo" in badge_html.lower() and "NON-GMO" not in tags:
+                    tags.append("NON-GMO")
+                if "organic" in badge_html.lower() and "ORGANIC" not in tags:
+                    tags.append("ORGANIC")
+                if "snap" in badge_html.lower() and "SNAP" not in tags:
+                    tags.append("SNAP")
+
+                # Extract original/discounted price from priceTagline
+                tagline = ci.get("priceTagline") or {}
+                tagline_text = tagline.get("accessibilityText", "")
+                original_price = None
+                if "discounted from" in tagline_text:
+                    original_price = tagline_text.split("discounted from ")[-1].strip()
+
+                # Extract weight/size from thumbnail labels (e.g. "12 oz", "3 lbs")
+                import re as _re
+                weight = None
+                for te in (ci.get("itemThumbnailElements") or []):
+                    at = (te.get("payload", {}).get("labelPayload", {})
+                          .get("label", {}).get("accessibilityText", ""))
+                    if (at and not at.startswith("$") and at != ci.get("title", "")
+                            and at.lower() not in ("sponsored", "ad")):
+                        # Only accept if it looks like a weight/unit (has a number + unit)
+                        if _re.search(r'\d+\s*(?:oz|lb|lbs|g|kg|ml|fl|ct|count|pk|pack|each|ea)', at, _re.I):
+                            weight = at
+                            break
+
+                product = {
+                    "id": uid,
+                    "name": ci.get("title", ""),
+                    "image": ci.get("imageUrl"),
+                    "price_amount": price_cents / 100 if price_cents else None,
+                    "original_price": original_price,
+                    "currency": "USD",  # TODO: from store data
+                    "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
+                    "categories": [section_title] if section_title else [],
+                }
+                if tags:
+                    product["tagged"] = [
+                        {"name": t, "tag_type": "dietary"}
+                        for t in tags
+                    ]
+                if weight:
+                    product["weight"] = weight
+                if ci.get("hasCustomizations"):
+                    product["has_customizations"] = True
+                # Preserve raw for add_to_cart
+                product["_raw"] = ci
+
+                products.append(product)
+
+    return products
 
 
 def list_nearby_stores(**params) -> list:

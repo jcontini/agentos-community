@@ -163,13 +163,9 @@ operations:
       function: get_store
       timeout: 30
 
-  search_store:
-    description: "Search for products within a store by name"
-    returns:
-      store_name: string
-      query: string
-      matches: array
-      match_count: integer
+  search_products:
+    description: "Search products within a store — returns dietary tags (VEGAN, Non-GMO, SNAP), prices, weight, aisles"
+    returns: product[]
     params:
       store_uuid:
         type: string
@@ -178,12 +174,12 @@ operations:
       query:
         type: string
         required: true
-        description: "Search term to match against product names"
+        description: "Search term (e.g. 'olive oil', 'organic banana')"
     connection: eats
     python:
       module: ./uber.py
-      function: search_store
-      timeout: 30
+      function: search_products
+      timeout: 15
 
   # ─────────────────────────────────────────────────────────────────────────
   # EATS CART (WRITE operations — modify cart state)
