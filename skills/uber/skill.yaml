@@ -248,13 +248,13 @@ operations:
       timeout: 60
 
   track_delivery:
-    description: "Track a live delivery — courier GPS, ETA, progress, item fulfillment states (PENDING/FOUND/REPLACED/NOT_FOUND)"
+    description: "Track a live delivery — courier GPS, ETA, progress, item fulfillment states (PENDING/FOUND/REPLACED/NOT_FOUND). Omit order_uuid to auto-discover active orders."
     returns: order
     params:
       order_uuid:
         type: string
-        required: true
-        description: "Order UUID (from checkout, list_deliveries, or getActiveOrdersV1)"
+        required: false
+        description: "Order UUID — omit to auto-discover the current active delivery"
     connection: eats
     python:
       module: ./uber.py

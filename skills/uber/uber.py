@@ -431,35 +431,31 @@ def get_trip(trip_id: str, **params) -> dict:
         "stops": max(0, len(waypoints) - 2) if waypoints else 0,
     }
 
-    # Typed references
+    # Typed references — return data directly, engine infers type from shape relations
     if driver_name:
         out["driver"] = {
-            "person": {
-                "name": driver_name,
-                "first_name": driver_parts[0] if driver_parts else None,
-                "last_name": driver_parts[1] if len(driver_parts) > 1 else None,
-            }
+            "name": driver_name,
+            "first_name": driver_parts[0] if driver_parts else None,
+            "last_name": driver_parts[1] if len(driver_parts) > 1 else None,
         }
 
     if waypoints:
-        out["origin"] = {"place": {"full_address": waypoints[0], "feature_type": "address"}}
-        out["destination"] = {"place": {"full_address": waypoints[-1], "feature_type": "address"}}
+        out["origin"] = {"full_address": waypoints[0], "feature_type": "address"}
+        out["destination"] = {"full_address": waypoints[-1], "feature_type": "address"}
 
     # Build legs from waypoint pairs (multi-stop support)
     if len(waypoints) >= 2:
-        legs = []
-        for i in range(len(waypoints) - 1):
-            legs.append({
-                "leg": {
-                    "sequence": i + 1,
-                    "origin": {"place": {"full_address": waypoints[i], "feature_type": "address"}},
-                    "destination": {"place": {"full_address": waypoints[i + 1], "feature_type": "address"}},
-                }
-            })
-        out["legs"] = {"leg[]": legs}
+        out["legs"] = [
+            {
+                "sequence": i + 1,
+                "origin": {"full_address": waypoints[i], "feature_type": "address"},
+                "destination": {"full_address": waypoints[i + 1], "feature_type": "address"},
+            }
+            for i in range(len(waypoints) - 1)
+        ]
 
     if (result.get("organization") or {}).get("name"):
-        out["carrier"] = {"organization": {"name": result["organization"]["name"]}}
+        out["carrier"] = {"name": result["organization"]["name"]}
 
     return out
 
@@ -599,22 +595,18 @@ def list_deliveries(cursor: str = "", **params) -> list:
             # Typed references — create linked entities in the graph
             # Store is a place (POI), not an organization. See place.yaml.
             "store": {
-                "place": {
-                    "id": store_info.get("uuid"),
-                    "name": store_info.get("title"),
-                    "image": store_info.get("heroImageUrl"),
-                    "feature_type": "poi",
-                    "full_address": raw_addr.get("eaterFormattedAddress"),
-                    "latitude": location.get("latitude"),
-                    "longitude": location.get("longitude"),
-                }
+                "id": store_info.get("uuid"),
+                "name": store_info.get("title"),
+                "image": store_info.get("heroImageUrl"),
+                "feature_type": "poi",
+                "full_address": raw_addr.get("eaterFormattedAddress"),
+                "latitude": location.get("latitude"),
+                "longitude": location.get("longitude"),
             },
             "shipping_address": {
-                "place": {
-                    "full_address": raw_addr.get("eaterFormattedAddress"),
-                    "latitude": location.get("latitude"),
-                    "longitude": location.get("longitude"),
-                }
+                "full_address": raw_addr.get("eaterFormattedAddress"),
+                "latitude": location.get("latitude"),
+                "longitude": location.get("longitude"),
             } if raw_addr.get("eaterFormattedAddress") else None,
         })
 
@@ -686,17 +678,15 @@ def get_delivery(order_uuid: str, **params) -> dict:
         "currency": currency,
         "status": "completed",
         "fare_breakdown": fare,
-        # Typed reference: contains → product[]
-        "contains": {
-            "product[]": [
-                {
-                    "id": item["item_uuid"],
-                    "name": item["name"],
-                    "quantity": item["quantity"],
-                }
-                for item in items
-            ]
-        },
+        # Typed reference: contains → product[] (engine infers type from shape)
+        "contains": [
+            {
+                "id": item["item_uuid"],
+                "name": item["name"],
+                "quantity": item["quantity"],
+            }
+            for item in items
+        ],
     }
 
 
@@ -796,11 +786,8 @@ def get_store(store_uuid: str, **params) -> dict:
         "is_orderable": data.get("isOrderable", False),
         "closed_message": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
-        # Brand → organization (the company, not the location)
         "brand": {
-            "organization": {
-                "name": data.get("title", ""),
-            }
+            "name": data.get("title", ""),
         },
         # Products as product-shaped entities
         "products": products,
@@ -1060,20 +1047,17 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
         "status": "draft",
         "total_amount": total_cents / 100 if total_cents else None,
         "currency": draft_currency,
-        # Typed reference: contains → product[]
-        "contains": {
-            "product[]": [
-                {
-                    "id": i.get("uuid"),
-                    "name": i.get("title"),
-                    "image": i.get("imageURL"),
-                    "price_amount": i.get("price", 0) / 100 if i.get("price") else None,
-                    "currency": draft_currency,
-                    "quantity": i.get("quantity", 1),
-                }
-                for i in final_items
-            ]
-        },
+        "contains": [
+            {
+                "id": i.get("uuid"),
+                "name": i.get("title"),
+                "image": i.get("imageURL"),
+                "price_amount": i.get("price", 0) / 100 if i.get("price") else None,
+                "currency": draft_currency,
+                "quantity": i.get("quantity", 1),
+            }
+            for i in final_items
+        ],
     }
 
 
@@ -1105,32 +1089,22 @@ def get_cart(**params) -> list:
             "status": "draft",
             "total_amount": total_cents / 100 if total_cents else None,
             "currency": cart_currency,
-            # Typed references
             "store": {
-                "place": {
-                    "id": draft.get("storeUuid"),
-                    "name": store.get("title"),
-                    "image": store.get("heroImageUrl"),
-                    "feature_type": "poi",
-                }
+                "id": draft.get("storeUuid"),
+                "name": store.get("title"),
+                "image": store.get("heroImageUrl"),
+                "feature_type": "poi",
             } if store.get("title") or draft.get("storeUuid") else None,
-            # getDraftOrdersByEaterUuidV1 items use different field names than getStoreV1:
-            #   skuUUID (not uuid) = catalog product UUID
-            #   imageURL (not imageUrl) = product image
-            #   title = product name
-            #   price is NOT in draft items — resolved at checkout
-            "contains": {
-                "product[]": [
-                    {
-                        "id": i.get("skuUUID") or i.get("uuid"),
-                        "name": i.get("title"),
-                        "image": i.get("imageURL"),
-                        "quantity": i.get("quantity", 1),
-                        "currency": cart_currency,
-                    }
-                    for i in items
-                ]
-            },
+            "contains": [
+                {
+                    "id": i.get("skuUUID") or i.get("uuid"),
+                    "name": i.get("title"),
+                    "image": i.get("imageURL"),
+                    "quantity": i.get("quantity", 1),
+                    "currency": cart_currency,
+                }
+                for i in items
+            ],
         })
 
     return orders
@@ -1240,16 +1214,42 @@ def checkout(draft_order_uuid: str, **params) -> dict:
     }
 
 
-def track_delivery(order_uuid: str, **params) -> dict:
+def track_delivery(order_uuid: str = "", **params) -> dict:
     """Track a live Uber Eats delivery — courier location, ETA, progress, item fulfillment.
 
     Backed by getActiveOrdersV1 + getOrderEntityByUuidV1.
-    Returns order with delivery→trip (courier as driver with GPS),
+    If order_uuid is omitted, auto-discovers the current active order.
+    Returns order with delivery→trip (courier as driver→person, vehicle),
     and item fulfillment states (PENDING, FOUND, REPLACED, NOT_FOUND).
     """
     cookie_header = require_cookies(params, "track_delivery")
 
-    # Fetch both in sequence (can't do parallel in skill Python)
+    # Discover active order UUID if not provided
+    if not order_uuid:
+        discover_data = _eats_post(cookie_header, "getActiveOrdersV1", {
+            "orderUuid": None,
+            "timezone": "America/Chicago",
+            "showAppUpsellIllustration": True,
+            "isDirectTracking": False,
+        })
+        discover_orders = discover_data.get("orders") or []
+        if not discover_orders:
+            return {"status": "not_found", "error": "No active deliveries"}
+        # The order UUID can be in several places — try them all
+        first = discover_orders[0]
+        order_uuid = (
+            first.get("orderInfo", {}).get("orderUuid")
+            or first.get("orderUUID")
+            or first.get("uuid")
+            or first.get("activeOrderOverview", {}).get("orderUuid")
+            or ""
+        )
+        if not order_uuid:
+            # Debug: return the keys we see so we can find the UUID
+            return {"status": "not_found", "error": "No UUID found in active order",
+                    "_debug_keys": list(first.keys()),
+                    "_debug_orderInfo_keys": list(first.get("orderInfo", {}).keys())}
+
     active_data = _eats_post(cookie_header, "getActiveOrdersV1", {
         "orderUuid": order_uuid,
         "timezone": "America/Chicago",
@@ -1272,6 +1272,9 @@ def track_delivery(order_uuid: str, **params) -> dict:
     info = order.get("orderInfo") or {}
     contacts = order.get("contacts") or []
     overview = order.get("activeOrderOverview") or {}
+
+    # Extract delivery address from the delivery feed card (always present)
+    delivery_card = next((c.get("delivery") for c in (order.get("feedCards") or []) if c.get("type") == "delivery"), None) or {}
 
     # Courier from contacts + map entities
     courier_contact = next((c for c in contacts if c.get("type") == "COURIER"), None)
@@ -1335,11 +1338,8 @@ def track_delivery(order_uuid: str, **params) -> dict:
         "progress": status_obj.get("currentProgress"),
         "progress_total": status_obj.get("totalProgressSegments"),
         "total": overview.get("subtitle"),
-        # Item fulfillment
         "item_states": state_counts,
-        "contains": {
-            "product[]": items,
-        },
+        "contains": items,
     }
 
     # Delivery trip with courier
@@ -1349,52 +1349,72 @@ def track_delivery(order_uuid: str, **params) -> dict:
         "eta": eta,
     }
 
+    # Driver as person — engine knows trip.driver → person from shape
     if courier_contact:
-        trip_data["driver"] = {
-            "person": {
-                "name": courier_contact.get("title"),
-                "phone": courier_contact.get("formattedPhoneNumber"),
-                "image": courier_info.get("iconUrl"),
-            }
+        person_data = {
+            "name": courier_contact.get("title"),
         }
+        if courier_contact.get("formattedPhoneNumber"):
+            person_data["phone"] = courier_contact["formattedPhoneNumber"]
+        if courier_info.get("iconUrl"):
+            person_data["image"] = courier_info["iconUrl"]
+        trip_data["driver"] = person_data
 
     # Parse vehicle from courier card: description="YUSIEL is in a Toyota RAV4", title="YUSIEL • VVL5357"
     desc = courier_info.get("description") or ""
     title_str = courier_info.get("title") or ""
     plate = title_str.split("•")[-1].strip() if "•" in title_str else None
-    vehicle_name = desc.split(" is in a ")[-1] if " is in a " in desc else desc
+    vehicle_name = desc.split(" is in a ")[-1] if " is in a " in desc else None
     vehicle_parts = vehicle_name.split(None, 1) if vehicle_name else []
 
     if vehicle_name:
         trip_data["vehicle_type"] = vehicle_name
-    if plate:
-        trip_data["license_plate"] = plate
-    if len(vehicle_parts) >= 2:
-        trip_data["vehicle_make"] = vehicle_parts[0]
-        trip_data["vehicle_model"] = vehicle_parts[1]
 
+    # Courier GPS location as a leg with trace
     if courier_loc:
-        trip_data["driver_location"] = courier_loc
+        leg_data = {
+            "sequence": 1,
+        }
+        if courier_loc.get("latitude") and courier_loc.get("longitude"):
+            leg_data["trace"] = [courier_loc]
         if courier_path:
-            trip_data["driver_path"] = courier_path
-
-    if route_polyline:
-        trip_data["route_polyline"] = route_polyline
+            leg_data["trace"] = courier_path
+        if route_polyline:
+            leg_data["polyline"] = route_polyline
+        trip_data["legs"] = [leg_data]
 
     # Store as origin
     store_info = info.get("storeInfo") or {}
     store_loc = store_info.get("location") or {}
     if store_info.get("name"):
         trip_data["origin"] = {
-            "place": {
-                "name": store_info["name"],
-                "full_address": (store_loc.get("address") or {}).get("eaterFormattedAddress"),
-                "latitude": store_loc.get("latitude"),
-                "longitude": store_loc.get("longitude"),
-                "feature_type": "poi",
-            }
+            "name": store_info["name"],
+            "full_address": (store_loc.get("address") or {}).get("eaterFormattedAddress"),
+            "latitude": store_loc.get("latitude"),
+            "longitude": store_loc.get("longitude"),
+            "feature_type": "poi",
         }
 
-    result["delivery"] = {"trip": trip_data}
+    # Delivery address as destination
+    delivery_addr = info.get("deliveryAddress") or {}
+    card_addr = delivery_card.get("address") or {}
+    dest_address = delivery_addr.get("address") or card_addr.get("formattedAddress")
+    if dest_address:
+        eater_entity = next(
+            (e for card in (order.get("backgroundFeedCards") or [])
+             for e in (card.get("mapEntity") or [])
+             if e.get("type") == "EATER"),
+            None,
+        )
+        dest_place = {
+            "full_address": dest_address,
+            "feature_type": "address",
+        }
+        if eater_entity:
+            dest_place["latitude"] = eater_entity.get("latitude")
+            dest_place["longitude"] = eater_entity.get("longitude")
+        trip_data["destination"] = dest_place
+
+    result["delivery"] = trip_data
 
     return result
