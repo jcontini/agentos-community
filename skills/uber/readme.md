@@ -1,6 +1,12 @@
 # Uber
 
-Ride history, trip details, receipts, and account info from Uber. Uses Uber's internal GraphQL API at `riders.uber.com/graphql` via browser session cookies.
+Ride history, trip details, receipts, and account info from Uber. Uses Uber's internal GraphQL API at `riders.uber.com/graphql` via browser session cookies. Uber Eats uses a separate RPC API at `ubereats.com/_p/api/`.
+
+> **Before extending this skill**, read:
+> 1. [Reverse Engineering overview](../../docs/reverse-engineering/overview.md) — methodology, tools, progression
+> 2. [Transport & Anti-Bot](../../docs/reverse-engineering/1-transport/index.md) — TLS fingerprinting, WAF bypass, cookie domain filtering
+> 3. [requirements.md](./requirements.md) — captured API shapes, endpoint inventory, auth headers
+> 4. [Uber Eats E2E spec](../../../docs/specs/uber-eats-e2e.md) — the plan for what we're building
 
 ## Features
 
@@ -112,7 +118,7 @@ Phase 3 (write — requires [firewall](../../../docs/specs/firewall.md)):
 
 ### How to extend
 
-To discover new Uber Eats endpoints:
+**Step 1: Capture network traffic with CDP**
 
 ```bash
 # Launch Brave with CDP
@@ -122,7 +128,26 @@ open -a "Brave Browser" --args --remote-debugging-port=9222 --remote-allow-origi
 python3 bin/browse-capture.py https://www.ubereats.com/store/costco/... --port 9222
 
 # Look for /_p/api/ POST requests in the output
-# Response bodies need CDP Network.getResponseBody (not yet captured — TODO)
+# Response bodies are captured automatically via CDP Network.getResponseBody
 ```
 
-See [Transport & Anti-Bot docs](../../docs/reverse-engineering/1-transport/index.md) for general reverse engineering methodology and [Browse Toolkit spec](../../../docs/specs/browse-toolkit.md) for tool documentation.
+**Step 2: Extract full API surface from JS bundles**
+
+Don't just capture what one page loads — extract ALL endpoint names from the client JS:
+
+```bash
+# Find the main bundle URL from browse-capture output
+# Then grep for API endpoint patterns
+curl -s "https://www.ubereats.com/_static/client-main-*.js" \
+  | grep -oE 'get[A-Z][a-zA-Z]+V[0-9]+' | sort -u   # read endpoints
+curl -s "https://www.ubereats.com/_static/client-main-*.js" \
+  | grep -oE '[a-z]+[A-Z][a-zA-Z]+V[0-9]+' | sort -u | grep -v '^get'  # write endpoints
+```
+
+This revealed 32 endpoints (22 read, 10 write) that weren't visible from a single page capture. The pattern `{verb}{Entity}V{version}` is consistent across all Uber Eats endpoints.
+
+**Step 3: Test individual endpoints**
+
+Use `agentos browse request` or direct `curl` to test specific endpoints. The auth headers and cookie domain are documented in [requirements.md](./requirements.md).
+
+See [Reverse Engineering overview](../../docs/reverse-engineering/overview.md) for the full methodology and [Browse Toolkit spec](../../../docs/specs/browse-toolkit.md) for tool documentation.

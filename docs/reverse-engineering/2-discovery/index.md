@@ -12,7 +12,9 @@ This is Layer 2 of the reverse-engineering docs:
 - **Layer 5: Social Networks** — [5-social](../5-social/index.md) — modeling people, relationships, and social graphs
 - **Layer 6: Desktop Apps** — [6-desktop-apps](../6-desktop-apps/index.md) — macOS, Electron, local state, unofficial APIs
 
-**Tool:** The Playwright skill (`skills/playwright/readme.md`) is the primary browser-based discovery tool. Use it to probe pages, inspect DOM/hydration state, capture network traffic, and extract cookies. The patterns in this doc tell you what to do with what Playwright finds.
+**Tool:** `browse capture` (`bin/browse-capture.py`) is the primary discovery tool. It connects to your real browser (Brave/Chrome) via CDP and captures all network traffic with full headers and response bodies. For DOM inspection, use the browser's own DevTools. See the [overview](../overview.md) for the full toolkit.
+
+> **Why not Playwright?** Playwright's bundled Chromium has a detectable TLS fingerprint. Sites like Amazon and Cloudflare-protected services reject it. CDP to a real browser produces authentic fingerprints and uses existing sessions. See [Transport](../1-transport/index.md#cdp-detection-signals--why-playwright-gets-caught).
 
 ---
 

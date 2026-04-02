@@ -18,19 +18,33 @@ Each layer builds on the previous. Start at transport, work up.
 
 ## Core principle
 
-**Playwright discovers, `agentos.http` runs.**
+**CDP discovers, `agentos.http` runs.**
 
-Use the [Playwright skill](https://github.com/jcontini/agentos-community/tree/main/skills/playwright) to investigate — walk through login flows, capture network requests, inspect DOM structure. Then implement what you learned as Python + `agentos.http` in the skill. No browser at runtime.
+Use **`browse capture`** (CDP to a real browser) to investigate — navigate pages, capture every network request with full headers and response bodies, inspect cookies. Then implement what you learned as Python + `agentos.http` in the skill. No browser at runtime.
+
+**Why CDP to real browsers, not Playwright?** Playwright's bundled Chromium has a detectable TLS fingerprint (JA3/JA4) that anti-bot systems flag. CDP to the user's real Brave/Chrome produces authentic TLS fingerprints, real GPU canvas rendering, and uses existing sessions. Sites like Amazon reject Playwright but accept real browsers. See [Transport](1-transport/index.md#headless-browser-stealth) for the full analysis.
 
 Headers are built in Python via `http.headers()` with independent knobs (`waf=`, `accept=`, `mode=`, `extra=`). The Rust engine is pure transport — it sets zero default headers.
 
 The progression:
 
 1. **Search** — check `web_search` for prior art, existing docs, API references.
-2. **Discover** — use Playwright to probe the live site: `inspect`, `capture_network`, `evaluate`.
-3. **Replay** — reproduce what you found with `agentos.http` + cookies. Use `http.headers()` for WAF bypass.
-4. **Implement** — write the skill operation in Python with `agentos.http`. No browser dependency.
-5. **Test** — `test-skills.cjs` runs without a browser. If your skill needs Playwright at runtime, reconsider.
+2. **Discover** — use `browse capture` to probe the live site via CDP. Launch Brave with `--remote-debugging-port=9222 --remote-allow-origins="*"`, then `python3 bin/browse-capture.py <url> --port 9222`. Captures all requests, responses, headers, cookies, and API response bodies automatically.
+3. **Extract API surface** — grep the site's JS bundles for endpoint patterns (e.g. `grep -oE 'get[A-Z][a-zA-Z]+V[0-9]+' bundle.js`). This reveals the full API surface without navigating every page.
+4. **Replay** — reproduce what you found with `agentos.http` + cookies. Use `http.headers()` for WAF bypass. Test with `agentos browse request <skill> <url>`.
+5. **Implement** — write the skill operation in Python with `agentos.http`. No browser dependency at runtime.
+6. **Test** — `agentos test-skill <skill>` validates against shapes and expectations.
+
+### Browse toolkit commands
+
+| Command | What it does |
+|---------|-------------|
+| `agentos browse request <skill> <url>` | Make an authenticated HTTP request (same TLS fingerprint as engine), show full headers, cookies, response |
+| `agentos browse cookies <skill>` | Cookie inventory — all cookies from all sources with timestamps and provenance |
+| `agentos browse auth <skill>` | Auth resolution trace — which provider won, identity, timing |
+| `python3 bin/browse-capture.py <url> --port 9222` | CDP network capture — navigate Brave to a URL, capture every request/response with full headers and bodies |
+
+See [Browse Toolkit spec](../../docs/specs/browse-toolkit.md) for details.
 
 See [Auth & Runtime](3-auth/index.md) for the full methodology, including:
 - **Credential Bootstrap Lifecycle** — the five-phase pattern from entry through API key storage
@@ -58,8 +72,9 @@ For detailed examples, see each layer's documentation. Real-world reference impl
 
 | Skill | What it demonstrates |
 |-------|---------------------|
+| `skills/uber/` | **Two completely different APIs on one platform** — rides use GraphQL (`riders.uber.com/graphql`), Eats uses RPC (`ubereats.com/_p/api/`). CDP `browse capture` for API discovery, JS bundle grepping for full endpoint surface (32 endpoints extracted), receipt HTML parsing with `data-testid` selectors, real-time event channels (SSE), separate cookie domains. Reference for CDP-based discovery and RPC API reverse engineering. |
+| `skills/amazon/` | Deep anti-bot bypass (client hints, Siege encryption, session warming), session staleness (30-min TTL, CDP session warming), fallback CSS selector chains for resilient HTML parsing, AJAX endpoints for dynamic content, `SESSION_EXPIRED` provider retry convention, tiered cookie architecture. Full reference for [1-transport](1-transport/index.md) and [4-content](4-content/index.md). |
 | `skills/exa/` | Full credential bootstrap: NextAuth email code → Playwright form submit → session cookies → API key extraction from dashboard API. Reference for [nextauth.md](3-auth/nextauth.md) |
 | `skills/goodreads/` | Multi-tier discovery, Apollo cache extraction, auth boundary mapping, runtime config fallback |
 | `skills/claude/` | Cookie-based auth, Cloudflare stealth settings, API replay from browser session |
-| `skills/amazon/` | Deep anti-bot bypass (client hints, Siege encryption, session warming), fallback CSS selector chains for resilient HTML parsing, AJAX endpoints for dynamic content, `SESSION_EXPIRED` provider retry convention, tiered cookie architecture. Full reference for [1-transport](1-transport/index.md) and [4-content](4-content/index.md). |
 | `skills/austin-boulder-project/` | JS bundle config extraction, tenant-namespace auth |
