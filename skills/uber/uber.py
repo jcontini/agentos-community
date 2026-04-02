@@ -568,3 +568,83 @@ def get_delivery(order_uuid: str, **params) -> dict:
             for r in receipts
         ],
     }
+
+
+def get_store(store_uuid: str, **params) -> dict:
+    """Get store details and full product catalog.
+
+    Backed by getStoreV1. Returns store metadata (open/orderable, ETA, rating)
+    and every available product with title, uuid, price, image.
+    See requirements.md for full response shape documentation.
+    """
+    cookie_header = require_cookies(params, "get_store")
+
+    data = _eats_post(cookie_header, "getStoreV1", {"storeUuid": store_uuid})
+
+    # Extract products from catalogSectionsMap
+    # Items are nested: sections → HORIZONTAL_GRID items → payload → standardItemsPayload → catalogItems
+    # See requirements.md "getStoreV1" section for the full structure.
+    sections_map = data.get("catalogSectionsMap") or {}
+    products = []
+    seen_uuids = set()
+
+    for sec_items in sections_map.values():
+        if not isinstance(sec_items, list):
+            continue
+        for item in sec_items:
+            if item.get("type") != "HORIZONTAL_GRID":
+                continue
+            payload = item.get("payload") or {}
+            std = payload.get("standardItemsPayload") or {}
+            section_title = (std.get("title") or {}).get("title", "")
+            for ci in (std.get("catalogItems") or []):
+                uid = ci.get("uuid", "")
+                if uid in seen_uuids:
+                    continue  # items appear in multiple sections — deduplicate
+                seen_uuids.add(uid)
+                price_cents = ci.get("price", 0)
+                products.append({
+                    "name": ci.get("title", ""),
+                    "uuid": uid,
+                    "price": f"${price_cents / 100:.2f}" if price_cents else None,
+                    "price_cents": price_cents,
+                    "image": ci.get("imageUrl"),
+                    "text": ci.get("itemDescription"),
+                    "category": section_title,
+                    "is_available": ci.get("isAvailable", True),
+                })
+
+    location = data.get("location") or {}
+    raw_addr = location.get("address") or {}
+    address = raw_addr if isinstance(raw_addr, dict) else {"eaterFormattedAddress": str(raw_addr)}
+
+    return {
+        "name": data.get("title", ""),
+        "id": data.get("uuid", ""),
+        "is_open": data.get("isOpen", False),
+        "is_orderable": data.get("isOrderable", False),
+        "eta": (data.get("etaRange") or {}).get("text"),
+        "rating": (data.get("rating") or {}).get("ratingValue"),
+        "review_count": (data.get("rating") or {}).get("reviewCount"),
+        "address": address.get("eaterFormattedAddress"),
+        "products": products,
+        "product_count": len(products),
+    }
+
+
+def search_store(store_uuid: str, query: str, **params) -> dict:
+    """Search for products within a store by name.
+
+    Fetches the full catalog via getStoreV1 and filters client-side.
+    Good enough for Costco (~165 items). For larger catalogs, may need
+    a server-side search endpoint (not yet discovered).
+    """
+    store = get_store(store_uuid=store_uuid, **params)
+    query_lower = query.lower()
+    matches = [p for p in store["products"] if query_lower in p["name"].lower()]
+    return {
+        "store_name": store["name"],
+        "query": query,
+        "matches": matches,
+        "match_count": len(matches),
+    }

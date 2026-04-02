@@ -416,7 +416,7 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getOrderEntityByUuidV1` | Order entity for **active orders only** | **Tested** — returns 404 for completed orders. Only useful during live delivery (Phase 2). |
 | `getOrderEntitiesV1` | Order entities for **active orders only** | **Tested** — returns null/empty for completed orders. Only useful during live delivery (Phase 2). |
 | `getActiveOrdersV1` | Live order status/tracking | **Captured** — returns feed cards, order phase |
-| `getStoreV1` | Store details | Not yet captured |
+| `getStoreV1` | Store details + full product catalog | **Captured** — 165 Costco items with title, uuid, price, image. See section below. |
 | `getPaginatedStoresV1` | Store browsing with pagination | Not yet captured |
 | `getFeedV1` | Home feed (store listings) | Not yet captured |
 | `getFeedItemsUpdateV1` | Feed updates | Not yet captured |
@@ -455,6 +455,84 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 **Completed order items:** `getOrderEntityByUuidV1` and `getOrderEntitiesV1` both return 404/null for completed orders — they only work during active delivery. For completed order history, `getReceiptByWorkflowUuidV1` is the **only** path to item-level data. The HTML is stable (uses `data-testid` attributes) and parseable with lxml. Per-item prices are empty on completed orders, but totals/fees are always present.
 
 **Active order items:** During a live delivery, `getOrderEntityByUuidV1` should return structured JSON item data (untested — need a live order). This will be the Phase 2 path.
+
+### `getStoreV1` — store details + full product catalog (captured 2026-04-02)
+
+The key endpoint for browsing store products. Returns store metadata AND the entire product catalog in one call.
+
+```json
+// Request
+{ "storeUuid": "c928e271-ee69-5eba-b331-3756bd2f5345" }
+
+// Response shape (91 top-level keys)
+{
+  "status": "success",
+  "data": {
+    "title": "Costco Wholesale",
+    "uuid": "c928e271-ee69-5eba-b331-3756bd2f5345",
+    "isOpen": true,
+    "isOrderable": true,
+    "etaRange": { "text": "66–66 Min" },
+    "rating": { "ratingValue": 4.8, "reviewCount": "4000+" },
+    "categories": [...],           // category links for navigation
+    "catalogSectionsMap": {        // THE PRODUCT CATALOG
+      "<section-uuid>": [
+        {
+          "type": "HORIZONTAL_GRID",  // or "EATER_MESSAGE" (skip these)
+          "catalogSectionUUID": "<uuid>",
+          "payload": {
+            "type": "standardItemsPayload",
+            "standardItemsPayload": {
+              "title": { "title": "Section Name" },
+              "catalogItems": [
+                {
+                  "title": "Kirkland Signature Rotisserie Chicken",
+                  "uuid": "c526b0a6-625d-5b65-b84b-e394a9b7aef2",
+                  "price": 539,              // CENTS — divide by 100 for dollars
+                  "imageUrl": "https://tb-static.uber.com/...",
+                  "itemDescription": "...",
+                  "isAvailable": true,
+                  "hasCustomizations": false,  // true for items with size/options
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+**Key facts about `getStoreV1`:**
+- Returns the FULL catalog — no pagination needed (165 items for Costco Austin)
+- Prices are in cents (fractional — e.g. `538.92` = $5.39). Some have rounding artifacts.
+- Items appear in multiple sections (e.g. Rotisserie Chicken appears 4x in different categories)
+- `type: "EATER_MESSAGE"` items are promotional banners — skip them
+- `type: "HORIZONTAL_GRID"` items contain actual products in `payload.standardItemsPayload.catalogItems`
+- Store UUID can come from `list_deliveries` (past orders) or `getSearchHomeV2` / `getFeedV1` (browsing)
+- Only needs `x-csrf-token: x` header + cookies (browser UA injected by engine for cookie-auth)
+
+**Item fields:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | string | Product name with size/count |
+| `uuid` | string | Item UUID — used for `addItemsToDraftOrderV2` |
+| `price` | number | Cents (fractional). Divide by 100. |
+| `imageUrl` | string | Product image URL |
+| `itemDescription` | string | Longer description |
+| `isAvailable` | boolean | Whether item can be ordered now |
+| `hasCustomizations` | boolean | Whether item has size/option variants |
+
+**Costco Austin sample (165 items, 11 sections):**
+- Rotisserie Chicken $5.39
+- Organic Bananas $2.37
+- Kirkland Smoked Salmon $25.91
+- Kirkland Cashews $21.59
+- Fresh Chicken Breast $23.22
+- Wild Sockeye Salmon Fillet $18.12
+- Fairlife Protein Shake 18-pack $43.19
 
 ### Next steps
 

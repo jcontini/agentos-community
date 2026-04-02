@@ -164,3 +164,46 @@ operations:
       module: ./uber.py
       function: get_delivery
       timeout: 30
+
+  get_store:
+    description: "Get store details and full product catalog — all items with name, price, image, availability"
+    returns:
+      name: string
+      id: string
+      is_open: boolean
+      is_orderable: boolean
+      eta: string
+      products: array
+      product_count: integer
+    params:
+      store_uuid:
+        type: string
+        required: true
+        description: "Store UUID (from list_deliveries or search)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_store
+      timeout: 30
+
+  search_store:
+    description: "Search for products within a store by name"
+    returns:
+      store_name: string
+      query: string
+      matches: array
+      match_count: integer
+    params:
+      store_uuid:
+        type: string
+        required: true
+        description: "Store UUID"
+      query:
+        type: string
+        required: true
+        description: "Search term to match against product names"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: search_store
+      timeout: 30
