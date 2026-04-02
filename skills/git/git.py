@@ -32,19 +32,30 @@ _COMMIT_FORMAT = "%H%n%h%n%an%n%ae%n%cn%n%ce%n%aI%n%s"
 
 
 def _parse_commit_block(block):
-    """Parse an 8-line commit block (from _COMMIT_FORMAT) into a dict."""
+    """Parse an 8-line commit block (from _COMMIT_FORMAT) into a shape-native dict."""
     lines = block.strip().split("\n")
     if len(lines) < 8:
         return None
+    sha = lines[0]
+    author_name = lines[2]
+    author_email = lines[3]
+    committer_name = lines[4]
+    committer_email = lines[5]
     return {
-        "hash": lines[0],
+        "id": sha,
+        "sha": sha,
         "short_hash": lines[1],
-        "author_name": lines[2],
-        "author_email": lines[3],
-        "committer_name": lines[4],
-        "committer_email": lines[5],
-        "timestamp": lines[6],
-        "message": lines[7],
+        "name": lines[7],
+        "content": lines[7],
+        "datePublished": lines[6],
+        "author": author_name,
+        "committer": {
+            "account": {
+                "name": committer_name,
+                "handle": committer_email,
+                "platform": "email",
+            }
+        },
     }
 
 
@@ -72,7 +83,7 @@ def _commits_with_stats(raw):
                 files, ins, dels = _parse_shortstat(line)
                 break
         commit["files_changed"] = files
-        commit["insertions"] = ins
+        commit["additions"] = ins
         commit["deletions"] = dels
         results.append(commit)
     return results
@@ -117,7 +128,7 @@ def get_git_commit(path, id):
             files, ins, dels = _parse_shortstat(line)
             break
     commit["files_changed"] = files
-    commit["insertions"] = ins
+    commit["additions"] = ins
     commit["deletions"] = dels
     return commit
 
@@ -152,6 +163,7 @@ def list_branches(path):
         upstream = parts[1] if len(parts) > 1 else ""
         head = parts[2] if len(parts) > 2 else ""
         branches.append({
+            "id": name,
             "name": name,
             "upstream": upstream,
             "is_remote": name.startswith("origin/"),
@@ -177,6 +189,7 @@ def get_branch(path, name):
         upstream = parts[1] if len(parts) > 1 else ""
         head = parts[2] if len(parts) > 2 else ""
         return {
+            "id": branch_name,
             "name": branch_name,
             "upstream": upstream,
             "is_remote": branch_name.startswith("origin/"),
@@ -206,22 +219,10 @@ def get_repository(path):
     if m:
         full_name = m.group(1)
 
-    platform = "local"
-    for host, name in [
-        ("github.com", "github"),
-        ("gitlab.com", "gitlab"),
-        ("bitbucket.org", "bitbucket"),
-        ("codeberg.org", "codeberg"),
-    ]:
-        if host in remote:
-            platform = name
-            break
-
     return {
+        "id": full_name or repo_name,
         "name": repo_name,
-        "full_name": full_name,
         "url": remote,
-        "platform": platform,
         "default_branch": branch,
     }
 
@@ -238,11 +239,13 @@ def list_tags(path):
         if not line:
             continue
         parts = line.split("|", 4)
+        tag_name = parts[0] if len(parts) > 0 else ""
         tags.append({
-            "name": parts[0] if len(parts) > 0 else "",
+            "id": tag_name,
+            "name": tag_name,
             "hash": parts[1] if len(parts) > 1 else "",
-            "date": parts[2] if len(parts) > 2 else "",
-            "message": parts[3] if len(parts) > 3 else "",
+            "datePublished": parts[2] if len(parts) > 2 else "",
+            "text": parts[3] if len(parts) > 3 else "",
             "annotated": (parts[4] == "tag") if len(parts) > 4 else False,
         })
     return tags
@@ -259,11 +262,13 @@ def get_tag(path, name):
     if not line:
         raise RuntimeError(f"Tag not found: {name}")
     parts = line.split("|", 4)
+    tag_name = parts[0] if len(parts) > 0 else ""
     return {
-        "name": parts[0] if len(parts) > 0 else "",
+        "id": tag_name,
+        "name": tag_name,
         "hash": parts[1] if len(parts) > 1 else "",
-        "date": parts[2] if len(parts) > 2 else "",
-        "message": parts[3] if len(parts) > 3 else "",
+        "datePublished": parts[2] if len(parts) > 2 else "",
+        "text": parts[3] if len(parts) > 3 else "",
         "annotated": (parts[4] == "tag") if len(parts) > 4 else False,
     }
 

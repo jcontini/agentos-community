@@ -6,6 +6,7 @@ message:
   fields:
     conversation_id:   string
     is_outgoing:       boolean   # true if sent by the user
+    is_starred:        boolean   # user-flagged as important
   relations:
     platform:          product
     from:              account   # sender

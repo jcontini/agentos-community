@@ -34,6 +34,188 @@ def _swift(script, args=None, stdin_data=None):
 
 
 # ==============================================================================
+# Shape mapping
+# ==============================================================================
+
+
+import re
+
+
+_APPLE_LABEL_RE = re.compile(r"^_\$!<(.+)>!\$_$")
+_GENERIC_LABELS = frozenset([
+    "profile", "website", "homepage", "home-page", "company",
+    "company-website", "business", "personal", "other", "home", "work",
+])
+_SERVICE_ALIASES = {
+    "li": "linkedin", "lin": "linkedin", "linke": "linkedin", "linked": "linkedin",
+    "linkedin": "linkedin",
+    "fac": "facebook", "face": "facebook", "faceb": "facebook", "facebook": "facebook",
+    "twit": "twitter", "twitt": "twitter", "twitter": "twitter", "x": "twitter",
+    "ins": "instagram", "inst": "instagram", "insta": "instagram", "instagram": "instagram",
+    "plus": "google-plus",
+}
+_USERNAME_PATTERNS = [
+    (re.compile(r"/(in|pub)/([^/?]+)"), 2),
+    (re.compile(r"/users?/([^/?]+)"), 1),
+    (re.compile(r"/profile/([^.?][^/?]*)"), 1),
+    (re.compile(r"profile\.php\?id=(\d+)"), 1),
+    (re.compile(r"/@([^/?]+)"), 1),
+    (re.compile(r"/people/([^/?]+)"), 1),
+    (re.compile(r"https?://[^/]+/([^/?]+)"), 1),
+]
+
+
+def _parse_apple_label(label):
+    """Parse Apple's _$!<Home>!$_ format to 'home', or return lowercased label."""
+    if not label:
+        return None
+    m = _APPLE_LABEL_RE.match(label)
+    if m:
+        return m.group(1).lower()
+    return label.lower()
+
+
+def _url_to_platform(url):
+    """Extract platform from URL domain: 'https://www.linkedin.com/in/joe' → 'linkedin'."""
+    if not url:
+        return None
+    m = re.match(r"https?://(?:www\.)?([^/]+)", url)
+    if not m:
+        return None
+    domain = m.group(1).split(".")[0]
+    if domain == "x":
+        return "twitter"
+    if domain == "angel":
+        return "angellist"
+    return domain
+
+
+def _extract_username(url):
+    """Extract username from common URL patterns."""
+    if not url:
+        return None
+    for pattern, group in _USERNAME_PATTERNS:
+        m = pattern.search(url)
+        if m:
+            return m.group(group)
+    return None
+
+
+def _normalize_service(service):
+    """Normalize truncated service names: 'li' → 'linkedin'."""
+    if not service:
+        return None
+    key = service.lower()
+    for prefix, normalized in _SERVICE_ALIASES.items():
+        if key.startswith(prefix):
+            return normalized
+    return key
+
+
+def _build_accounts(row):
+    """Build account typed refs from phones, emails, URLs, and social profiles."""
+    accounts = []
+
+    # Phones
+    for p in json.loads(row.get("phones_json") or "[]"):
+        if not p.get("value"):
+            continue
+        entry = {"handle": p["value"], "platform": "phone"}
+        label = _parse_apple_label(p.get("label"))
+        if label:
+            entry["name"] = label
+        accounts.append(entry)
+
+    # Emails
+    for e in json.loads(row.get("emails_json") or "[]"):
+        if not e.get("value"):
+            continue
+        entry = {"handle": e["value"], "platform": "email"}
+        label = _parse_apple_label(e.get("label"))
+        if label:
+            entry["name"] = label
+        accounts.append(entry)
+
+    # URLs → accounts
+    seen_platforms = set()
+    for u in json.loads(row.get("urls_json") or "[]"):
+        url = u.get("url")
+        if not url:
+            continue
+        label = u.get("label", "")
+        normalized_label = label.lower().replace(" ", "-") if label else ""
+
+        if _APPLE_LABEL_RE.match(label or "") or normalized_label in _GENERIC_LABELS:
+            platform = _url_to_platform(url)
+        else:
+            platform = normalized_label
+
+        if not platform or platform in seen_platforms:
+            continue
+        seen_platforms.add(platform)
+
+        entry = {"platform": platform, "url": url}
+        username = _extract_username(url)
+        if username:
+            entry["handle"] = username
+        accounts.append(entry)
+
+    # Social profiles
+    for sp in json.loads(row.get("social_json") or "[]"):
+        username = sp.get("username")
+        if not username:
+            continue
+        platform = _normalize_service(sp.get("service"))
+        if not platform or platform in seen_platforms:
+            continue
+        seen_platforms.add(platform)
+        accounts.append({"handle": username.lower(), "platform": platform})
+
+    return accounts
+
+
+def _map_person(row):
+    """Map a SQL row to the person shape."""
+    display_name = row.get("display_name") or row.get("organization") or ""
+
+    result = {
+        "id": row["id"],
+        "name": display_name,
+        "first_name": row.get("first_name"),
+        "last_name": row.get("last_name"),
+        "middle_name": row.get("middle_name"),
+        "nickname": row.get("nickname"),
+        "birthday": row.get("birthday"),
+        "notes": row.get("notes"),
+    }
+
+    # Image from photo data
+    if row.get("has_photo"):
+        result["image"] = f"contacts://photo/{row['id']}"
+
+    # Accounts as typed refs
+    accounts = _build_accounts(row)
+    if accounts:
+        result["accounts"] = {"account[]": accounts}
+
+    # Role (organization + job title + department) as typed ref
+    org = row.get("organization")
+    title = row.get("job_title")
+    dept = row.get("department")
+    if org or title:
+        role = {}
+        if title:
+            role["title"] = title
+        if dept:
+            role["department"] = dept
+        if org:
+            role["organization"] = {"organization": {"name": org}}
+        result["roles"] = {"role[]": [role]}
+
+    return result
+
+
+# ==============================================================================
 # SQL operations
 # ==============================================================================
 
@@ -41,7 +223,7 @@ def _swift(script, args=None, stdin_data=None):
 def op_list_persons(*, account, query=None, organization=None, sort="modified",
                     limit=1000, connection=None, **kw):
     """List contacts from a specific account."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           r.ZUNIQUEID as id,
           r.ZFIRSTNAME as first_name,
@@ -76,6 +258,7 @@ def op_list_persons(*, account, query=None, organization=None, sort="modified",
         ORDER BY r.ZMODIFICATIONDATE DESC
         LIMIT :limit
     """, db=_db_path(account), params={"limit": limit})
+    return [_map_person(r) for r in rows]
 
 
 def op_search_persons(*, account, query, limit=1000, connection=None, **kw):
@@ -123,6 +306,7 @@ def op_search_persons(*, account, query, limit=1000, connection=None, **kw):
         ORDER BY COALESCE(r.ZLASTNAME, r.ZFIRSTNAME, r.ZORGANIZATION)
         LIMIT :limit
     """, db=_db_path(account), params={"query": query, "limit": limit})
+    return [_map_person(r) for r in rows]
 
 
 # ==============================================================================

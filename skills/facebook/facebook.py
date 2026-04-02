@@ -29,7 +29,7 @@ def get_community(
 
     html = resp["body"]
     if not html:
-        return {"error": "Failed to fetch group page. Group may be private or not found."}
+        raise ValueError("Failed to fetch group page. Group may be private or not found.")
 
     # Extract metadata from meta tags via CSS selectors
     doc = lhtml.fromstring(html)
@@ -69,11 +69,10 @@ def get_community(
     return {
         "id": group_id,
         "name": title,
-        "description": description,
+        "text": description,
         "url": group_url,
-        "icon": og_image,
-        "member_count_raw": member_count_raw,
-        "member_count_numeric": member_count_numeric,
+        "image": og_image,
+        "member_count": member_count_numeric,
         "privacy": "OPEN",
     }
 

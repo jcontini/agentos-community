@@ -21,10 +21,21 @@ BRAVE_BASE = os.path.expanduser("~/Library/Application Support/BraveSoftware/Bra
 # ==============================================================================
 
 
+def _map_webpage(row):
+    """Map a SQL row to the webpage shape."""
+    return {
+        "id": row["url"],
+        "name": row.get("title") or row["url"],
+        "url": row["url"],
+        "visit_count": row.get("visit_count"),
+        "last_visit_unix": row.get("last_visit_unix"),
+    }
+
+
 def op_list_webpages(*, limit=200, connection=None, **kw):
     """List recently visited pages from Brave browsing history."""
     db = connection or HISTORY_DB
-    return sql.query("""
+    rows = sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
         FROM urls
@@ -32,12 +43,13 @@ def op_list_webpages(*, limit=200, connection=None, **kw):
         ORDER BY last_visit_time DESC
         LIMIT :limit
     """, db=db, params={"limit": limit})
+    return [_map_webpage(r) for r in rows]
 
 
 def op_search_webpages(*, query, limit=200, connection=None, **kw):
     """Search Brave browsing history by URL or title."""
     db = connection or HISTORY_DB
-    return sql.query("""
+    rows = sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
         FROM urls
@@ -46,6 +58,7 @@ def op_search_webpages(*, query, limit=200, connection=None, **kw):
         ORDER BY last_visit_time DESC
         LIMIT :limit
     """, db=db, params={"query": f"%{query}%", "limit": limit})
+    return [_map_webpage(r) for r in rows]
 
 
 # ==============================================================================

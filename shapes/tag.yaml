@@ -4,6 +4,8 @@
 tag:
   fields:
     color:             string
+    hash:              string    # commit hash the tag points to
+    annotated:         boolean   # true if annotated (vs lightweight)
   relations:
     repository:        repository
   display:

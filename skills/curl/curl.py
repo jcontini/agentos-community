@@ -20,8 +20,9 @@ def read_webpage(*, url: str, **params) -> dict:
             title = title_el[0].text_content().strip()
 
     return {
+        "id": url,
+        "name": title or url,
         "url": url,
-        "title": title,
-        "content": content,
+        "text": content,
         "content_type": content_type,
     }

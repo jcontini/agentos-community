@@ -15,13 +15,75 @@ DB_PATH = "~/Library/Messages/chat.db"
 
 
 # ==============================================================================
+# Shape mapping
+# ==============================================================================
+
+
+def _handle_to_account(handle):
+    """Convert a handle string (phone or email) to an account typed ref dict."""
+    if not handle:
+        return None
+    if handle.startswith("+") or handle.replace("+", "").isdigit():
+        return {"handle": handle, "platform": "phone"}
+    if "@" in handle:
+        return {"handle": handle, "platform": "email"}
+    return {"handle": handle, "platform": "imessage"}
+
+
+def _map_conversation(row):
+    """Map a SQL row to the conversation shape."""
+    result = {
+        "id": row["id"],
+        "name": row.get("name"),
+        "datePublished": row.get("updated_at"),
+        "is_group": row.get("type") == "group",
+    }
+
+    # Participants as typed refs
+    handles_str = row.get("participant_handles")
+    if handles_str:
+        accounts = []
+        for h in handles_str.split(","):
+            h = h.strip()
+            acct = _handle_to_account(h)
+            if acct:
+                accounts.append(acct)
+        if accounts:
+            result["participant"] = {"account[]": accounts}
+
+    return result
+
+
+def _map_message(row):
+    """Map a SQL row to the message shape."""
+    result = {
+        "id": row["id"],
+        "name": row.get("conversation_name"),
+        "content": row.get("content"),
+        "datePublished": row.get("timestamp"),
+        "conversation_id": row.get("conversation_id"),
+        "is_outgoing": bool(row.get("is_outgoing")),
+    }
+
+    # Sender as typed ref (only for incoming messages)
+    sender = row.get("sender_handle")
+    if sender and not row.get("is_outgoing"):
+        result["author"] = sender
+        acct = _handle_to_account(sender)
+        if acct:
+            result["from"] = {"account": acct}
+
+    return result
+
+
+# ==============================================================================
 # Conversation operations
 # ==============================================================================
 
 
 def op_list_conversations(*, limit=200, **params):
     """List all iMessage/SMS conversations."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           c.ROWID as id,
           COALESCE(c.display_name, c.chat_identifier) as name,
@@ -50,6 +112,7 @@ def op_list_conversations(*, limit=200, **params):
         ORDER BY updated_at DESC
         LIMIT :limit
     """, db=DB_PATH, params={"limit": limit})
+    return [_map_conversation(r) for r in rows]
 
 
 def op_get_conversation(*, id, **params):
@@ -77,7 +140,7 @@ def op_get_conversation(*, id, **params):
         FROM chat c
         WHERE c.ROWID = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_conversation(rows[0]) if rows else None
 
 
 # ==============================================================================
@@ -109,6 +172,7 @@ def op_list_messages(*, conversation_id, limit=200, **params):
         "conversation_id": conversation_id,
         "limit": limit,
     })
+    return [_map_message(r) for r in rows]
 
 
 def op_get_message(*, id, **params):
@@ -130,7 +194,7 @@ def op_get_message(*, id, **params):
         LEFT JOIN chat c ON cmj.chat_id = c.ROWID
         WHERE m.ROWID = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_message(rows[0]) if rows else None
 
 
 def op_search_messages(*, query, limit=200, **params):
@@ -158,6 +222,7 @@ def op_search_messages(*, query, limit=200, **params):
         "query": query,
         "limit": limit,
     })
+    return [_map_message(r) for r in rows]
 
 
 # ==============================================================================

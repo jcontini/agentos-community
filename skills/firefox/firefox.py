@@ -24,9 +24,20 @@ def _db(connection, default):
 # ==============================================================================
 
 
+def _map_webpage(row):
+    """Map a SQL row to the webpage shape."""
+    return {
+        "id": row["url"],
+        "name": row.get("title") or row["url"],
+        "url": row["url"],
+        "visit_count": row.get("visit_count"),
+        "last_visit_unix": row.get("last_visit_unix"),
+    }
+
+
 def op_list_webpages(*, limit=200, connection=None, **kw):
     """List recently visited pages from Firefox browsing history."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT p.url, p.title, p.visit_count,
                CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
         FROM moz_places p
@@ -36,11 +47,12 @@ def op_list_webpages(*, limit=200, connection=None, **kw):
         ORDER BY p.last_visit_date DESC
         LIMIT :limit
     """, db=_db(connection, PLACES_DB), params={"limit": limit})
+    return [_map_webpage(r) for r in rows]
 
 
 def op_search_webpages(*, query, limit=200, connection=None, **kw):
     """Search Firefox browsing history by URL or title."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT p.url, p.title, p.visit_count,
                CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
         FROM moz_places p
@@ -54,6 +66,7 @@ def op_search_webpages(*, query, limit=200, connection=None, **kw):
         "query": f"%{query}%",
         "limit": limit,
     })
+    return [_map_webpage(r) for r in rows]
 
 
 # ==============================================================================

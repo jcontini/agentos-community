@@ -26,56 +26,8 @@ connections:
     # PUT /api/settings/account_params after calling get_organization/get_teams.
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-# Entity adapters transform API data into universal entity format.
-# Mapping defined ONCE per entity — applied automatically to all operations.
-
-adapters:
-  task:
-    id: .id
-    name: .title
-    text: .description
-    priority: 'if .priority == 0 then null else .priority end'  # Linear 0=none, 1=urgent, 2=high, 3=medium, 4=low
-    started_at: 'if .state.type == "started" then .updatedAt else null end'
-    target.date: .dueDate
-    remote_id: .identifier
-    url: .url
-    datePublished: .createdAt
-    updated_at: .updatedAt
-    assignee.id: '(.assignee // {}).id'
-    assignee.name: '(.assignee // {}).name'
-    assigned_to:
-      person:
-        id: '(.assignee // {}).id'
-        name: '(.assignee // {}).name'
-    project_id:
-      ref: project
-      value: '(.project // {}).id'
-    _project_name: '(.project // {}).name'
-    _team_id: '(.team // {}).id'
-    _team_name: '(.team // {}).name'
-    _cycle_id: '(.cycle // {}).id'
-    _cycle_number: '(.cycle // {}).number'
-    _state_id: '(.state // {}).id'
-    _state_name: '(.state // {}).name'
-    _state_type: '(.state // {}).type'
-    _parent_id: '(.parent // {}).id'
-    _labels: '[((.labels // {}).nodes // [])[] | .name]'
-    _children: '[((.children // {}).nodes // [])[] | .id]'
-    _blocked_by: '[((.inverseRelations // {}).nodes // [])[] | .issue.id]'
-    _blocks: '[((.relations // {}).nodes // [])[] | .relatedIssue.id]'
-  project:
-    id: .id
-    name: .name
-    state: .state
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-# Entity operations that return typed entities.
-# Mapping from `adapters` is applied automatically based on return type.
-# Naming convention: snake_case
 
 operations:
   list_tasks:

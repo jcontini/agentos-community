@@ -5,6 +5,7 @@
 role:
   fields:
     title:             string
+    department:        string
     role_type:         string    # employment, board, advisor, contractor, etc.
     start_date:        datetime
     end_date:          datetime

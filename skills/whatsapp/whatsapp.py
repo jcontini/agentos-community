@@ -17,13 +17,133 @@ CONTACTS_DB = "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/Con
 
 
 # ==============================================================================
+# Shape mapping
+# ==============================================================================
+
+
+def _jid_to_phone(jid):
+    """Convert a WhatsApp JID to a phone number: '1234@s.whatsapp.net' → '+1234'."""
+    if not jid or not isinstance(jid, str):
+        return None
+    if jid.endswith("@s.whatsapp.net"):
+        num = jid.split("@")[0]
+        return f"+{num}" if not num.startswith("+") else num
+    return jid
+
+
+def _jid_to_account(jid, display_name=None):
+    """Convert a WhatsApp JID to an account typed ref dict."""
+    if not jid:
+        return None
+    phone = _jid_to_phone(jid)
+    acct = {"id": jid, "platform": "whatsapp", "handle": phone or jid}
+    if display_name:
+        acct["display_name"] = display_name
+    return acct
+
+
+def _map_person(row):
+    """Map a SQL row to the person shape."""
+    jid = row.get("jid")
+    name = (row.get("real_name") or row.get("contact_name")
+            or row.get("display_name") or row.get("phone") or jid)
+    result = {
+        "id": jid,
+        "name": name,
+        "text": row.get("about"),
+        "nickname": row.get("username"),
+    }
+
+    phone = row.get("phone") or _jid_to_phone(jid)
+
+    # Profile photo
+    if row.get("profile_photo"):
+        result["image"] = row["profile_photo"]
+
+    # WhatsApp account as typed ref
+    acct = {"id": jid, "platform": "whatsapp"}
+    if phone:
+        acct["handle"] = phone
+    acct["display_name"] = (row.get("real_name") or row.get("contact_name")
+                            or row.get("display_name"))
+    if row.get("about"):
+        acct["bio"] = row["about"]
+    result["accounts"] = {"account[]": [acct]}
+
+    return result
+
+
+def _map_conversation(row):
+    """Map a SQL row to the conversation shape."""
+    result = {
+        "id": row["id"],
+        "name": row.get("name"),
+        "datePublished": row.get("updated_at"),
+        "is_group": row.get("type") == "group",
+        "is_archived": bool(row.get("is_archived")),
+        "unread_count": row.get("unread_count"),
+    }
+
+    # Participant as typed ref (for direct chats)
+    contact_jid = row.get("contact_jid")
+    if contact_jid:
+        acct = _jid_to_account(contact_jid, row.get("name"))
+        if acct:
+            result["participant"] = {"account[]": [acct]}
+
+    # Optional counts
+    if row.get("participant_count") is not None:
+        pass  # derivable from participant relation
+    if row.get("message_count") is not None:
+        pass  # derivable from message relation
+
+    return result
+
+
+def _map_message(row):
+    """Map a SQL row to the message shape."""
+    is_outgoing = bool(row.get("is_outgoing"))
+    result = {
+        "id": row["id"],
+        "name": row.get("conversation_name"),
+        "content": row.get("content"),
+        "datePublished": row.get("timestamp"),
+        "conversation_id": row.get("conversation_id"),
+        "is_outgoing": is_outgoing,
+    }
+
+    if is_outgoing:
+        result["author"] = "Me"
+    else:
+        sender_name = row.get("sender_name")
+        if sender_name:
+            result["author"] = sender_name
+
+        sender_jid = row.get("sender_jid")
+        if sender_jid:
+            acct = _jid_to_account(sender_jid, sender_name)
+            if acct:
+                result["from"] = {"account": acct}
+
+    # Starred
+    if row.get("is_starred"):
+        result["is_starred"] = True
+
+    # Reply
+    if row.get("reply_to_id"):
+        result["replies_to"] = {"message": {"id": str(row["reply_to_id"])}}
+
+    return result
+
+
+# ==============================================================================
 # Person operations
 # ==============================================================================
 
 
 def op_list_persons(*, conversation_id=None, limit=200, **params):
     """Get WhatsApp contacts, or group participants when conversation_id is provided."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT DISTINCT
           -- Identity
           COALESCE(cs.ZCONTACTJID, gm.ZMEMBERJID) as jid,
@@ -72,6 +192,7 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
     }, attach={
         "contacts": CONTACTS_DB,
     })
+    return [_map_person(r) for r in rows]
 
 
 # ==============================================================================
@@ -81,7 +202,7 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
 
 def op_list_conversations(*, archived=False, limit=200, **params):
     """List WhatsApp conversations. Defaults to active (non-archived) chats only."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           cs.Z_PK as id,
           cs.ZPARTNERNAME as name,
@@ -103,6 +224,7 @@ def op_list_conversations(*, archived=False, limit=200, **params):
         "archived": 1 if archived else 0,
         "limit": limit,
     })
+    return [_map_conversation(r) for r in rows]
 
 
 def op_get_conversation(*, id, **params):
@@ -124,7 +246,7 @@ def op_get_conversation(*, id, **params):
         FROM ZWACHATSESSION cs
         WHERE cs.Z_PK = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_conversation(rows[0]) if rows else None
 
 
 # ==============================================================================
@@ -134,7 +256,7 @@ def op_get_conversation(*, id, **params):
 
 def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **params):
     """List messages in a conversation. Use is_unread=True without conversation_id to get all unread."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
@@ -173,6 +295,7 @@ def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **param
         "unread": 1 if is_unread else 0,
         "limit": limit,
     })
+    return [_map_message(r) for r in rows]
 
 
 def op_get_message(*, id, **params):
@@ -200,12 +323,12 @@ def op_get_message(*, id, **params):
         LEFT JOIN ZWAPROFILEPUSHNAME pn ON m.ZFROMJID = pn.ZJID
         WHERE m.Z_PK = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_message(rows[0]) if rows else None
 
 
 def op_search_messages(*, query, limit=200, **params):
     """Search messages by text content."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
@@ -231,3 +354,4 @@ def op_search_messages(*, query, limit=200, **params):
         "query": query,
         "limit": limit,
     })
+    return [_map_message(r) for r in rows]

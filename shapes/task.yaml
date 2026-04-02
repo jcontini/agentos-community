@@ -4,6 +4,7 @@
 # Sources: Linear, Todoist, GitHub
 task:
   fields:
+    remote_id:         string    # source-specific ID (e.g. PROJ-123, #456)
     priority:          integer   # 1 = highest (normalized across sources)
     state:             string
     labels:            string[]

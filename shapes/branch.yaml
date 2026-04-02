@@ -8,6 +8,7 @@ branch:
     ahead:             integer
     behind:            integer
     is_current:        boolean
+    is_remote:         boolean
   relations:
     repository:        repository
   display:

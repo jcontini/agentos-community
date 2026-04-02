@@ -194,6 +194,51 @@ A comment is a post that `replies_to` another post. A reply to a message is stil
 **Bad:** `is_fork: boolean` (from what?)
 **Good:** `forked_from: repository` (the source is traversable)
 
+### 14. Booleans that encode direction are really relationships
+
+`is_outgoing: boolean` on a message means "I sent this." But that information already lives in the `from: account` relation — if the `from` account is the user, it's outgoing. Don't duplicate relationship semantics as boolean flags.
+
+**Bad:** `is_outgoing: boolean` on message
+**Good:** `from: account` relation — direction is derived by comparing `from` to the current user
+
+Same pattern: `is_sent`, `is_received`, `is_mine` — all derivable from a directional relation.
+
+### 15. Booleans that encode cardinality are derivable
+
+`is_group: boolean` on a conversation means "has more than two participants." That's not state — it's a count. Don't store what you can derive from the structure.
+
+**Bad:** `is_group: boolean` on conversation
+**Good:** `participant: account[]` relation — `is_group` is `len(participants) > 2`
+
+Same pattern: `has_attachments` (derive from `attachment: file[]`), `has_unread` (derive from messages), `is_empty` (derive from children).
+
+### 16. Source data doesn't dictate shape
+
+A skill's source (API, database, scrape) returns whatever it returns. That doesn't constrain the shape. The Python function is the transformation boundary — it takes raw source data and returns shape-native dicts.
+
+Apple Contacts gives flat strings: `Organization: Anthropic`, `Title: Engineer`. That doesn't mean person gets `organization: string`. It means the skill transforms those strings into a `roles: role[]` typed ref.
+
+**Bad:** "The API returns `platform: string`, so the shape needs a `platform` field"
+**Good:** "What kind of thing is this? Model it correctly. The skill transforms source data to fit."
+
+Design shapes for the domain, not for the source. Every skill file is a template — other agents copy the patterns they see.
+
+### 17. Model life like LinkedIn, not like a spreadsheet
+
+People have roles at organizations. Roles have titles, departments, start dates, end dates. Education is a role at a school. Membership is a role in a community. Authorship is a role on a publication.
+
+The LinkedIn mental model: a person has a timeline of positions, each connecting them to an organization with a title and time range. This is principle #2 made concrete.
+
+```
+person --roles--> role[] --organization--> organization
+                         --title: "Engineer"
+                         --department: "Research"
+                         --start_date: 2024-01-15
+                         --end_date: null (current)
+```
+
+This applies broadly: board membership, team membership, project assignment, course enrollment. If a relationship has a time dimension or a title, it's a role.
+
 ---
 
 ## Review Checklist
@@ -214,6 +259,10 @@ After writing or editing a shape, ask yourself:
 - [ ] **Nesting via reply_to?** Is a "sub-type" really just this shape with a parent relation?
 - [ ] **ISO standards?** Are languages (ISO 639-1), countries (ISO 3166-1), currencies (ISO 4217) using standard codes?
 - [ ] **Booleans or relations?** Does any boolean imply a relationship? (`is_fork` → `forked_from`)
+- [ ] **Direction booleans?** Is `is_outgoing`/`is_sent` derivable from a `from` relation?
+- [ ] **Cardinality booleans?** Is `is_group`/`has_attachments` derivable from counting a relation?
+- [ ] **Source-independent?** Did you design for the domain, or did the API shape leak into the schema?
+- [ ] **Roles modeled as LinkedIn?** Are jobs/education/memberships `role[]` relations with title + org + time range?
 
 ---
 
@@ -314,6 +363,24 @@ def get_email(id: str, _call=None) -> dict:
 The outer key (`from`, `to`) becomes the edge label. The inner key (`account`, `account[]`) is the entity tag. The engine auto-creates/deduplicates the linked entity and adds the edge.
 
 A typed ref is collapsed to null if none of its identity fields (`id` or `name`) survive — so partial data doesn't create ghost entities.
+
+---
+
+## Validation
+
+Shape conformance is checked at two levels:
+
+### Pre-commit (static)
+
+`bin/audit-skills.py` parses Python return dict literals via AST and warns if keys don't match the declared shape. Runs automatically on every commit. Catches dict-literal returns but misses dynamic construction, helper functions, and `_call` composition.
+
+### Runtime
+
+The engine validates every entity-returning skill call after execution. If the returned data contains keys not declared in the shape (fields, relations, or standard fields), a warning is logged to `engine.log`. Missing identity fields (`id` and `name`) also trigger warnings.
+
+Runtime validation catches everything the static check misses — it sees the actual data. Check `~/.agentos/logs/engine.log` for `Shape conformance` warnings after running a skill.
+
+Both checks are advisory (warnings, not errors). They exist to surface non-conformant skills, not to block execution.
 
 ---
 

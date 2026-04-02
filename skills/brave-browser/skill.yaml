@@ -28,17 +28,6 @@ provides:
     description: "Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption pipeline."
 
 # ==============================================================================
-# ADAPTERS
-# ==============================================================================
-
-adapters:
-  webpage:
-    id: .url
-    name: '.title // .url'
-    visit_count: .visit_count
-    last_visit_unix: .last_visit_unix
-
-# ==============================================================================
 # OPERATIONS
 # ==============================================================================
 

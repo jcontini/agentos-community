@@ -21,17 +21,6 @@ provides:
     creation_timestamps: true
     description: "Extract plaintext Firefox cookies from local profiles for cookie-based connections."
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-adapters:
-  webpage:
-    id: .url
-    name: '.title // .url'
-    visit_count: .visit_count
-    last_visit_unix: .last_visit_unix
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 

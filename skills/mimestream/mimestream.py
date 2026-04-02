@@ -14,13 +14,79 @@ DB_PATH = "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Applicati
 
 
 # ==============================================================================
+# Shape mapping
+# ==============================================================================
+
+
+def _map_email(row):
+    """Map a SQL row to the email shape."""
+    result = {
+        "id": row["id"],
+        "name": row.get("subject"),
+        "subject": row.get("subject"),
+        "text": row.get("snippet"),
+        "author": row.get("from_email"),
+        "datePublished": row.get("date_received"),
+        "is_unread": bool(row.get("is_unread")),
+        "is_starred": bool(row.get("is_flagged")),
+        "is_draft": bool(row.get("is_draft")),
+        "is_sent": bool(row.get("is_sent")),
+        "is_trash": bool(row.get("is_trash")),
+        "is_spam": bool(row.get("is_spam")),
+        "has_attachments": bool(row.get("has_attachments")),
+        "conversation_id": str(row["thread_id"]) if row.get("thread_id") else None,
+        "account_email": row.get("account_email"),
+    }
+
+    # Optional fields (only on get_email, not list)
+    if row.get("message_id"):
+        result["message_id"] = row["message_id"]
+    if row.get("in_reply_to"):
+        result["in_reply_to"] = row["in_reply_to"]
+    if row.get("body_text"):
+        result["content"] = row["body_text"]
+    if row.get("body_html"):
+        result["body_html"] = row["body_html"]
+    if row.get("size_estimate"):
+        result["size_estimate"] = row["size_estimate"]
+    if row.get("to_raw"):
+        result["to_raw"] = row["to_raw"]
+    if row.get("cc_raw"):
+        result["cc_raw"] = row["cc_raw"]
+    if row.get("bcc_raw"):
+        result["bcc_raw"] = row["bcc_raw"]
+
+    # From as typed ref
+    from_email = row.get("from_email")
+    if from_email:
+        acct = {"handle": from_email, "platform": "email"}
+        from_name = row.get("from_name")
+        if from_name:
+            acct["display_name"] = from_name
+        result["from"] = {"account": acct}
+
+    return result
+
+
+def _map_conversation(row):
+    """Map a SQL row to the conversation shape."""
+    return {
+        "id": str(row["id"]),
+        "name": row.get("subject"),
+        "text": row.get("snippet"),
+        "datePublished": row.get("date_updated"),
+        "account_email": row.get("account_email"),
+    }
+
+
+# ==============================================================================
 # Email operations
 # ==============================================================================
 
 
 def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **params):
     """List emails, optionally filtered by mailbox, account, or flags."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZSUBJECT as subject,
@@ -69,6 +135,7 @@ def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **par
         "mailbox": mailbox,
         "limit": limit,
     })
+    return [_map_email(r) for r in rows]
 
 
 def get_email(*, id, **params):
@@ -113,12 +180,12 @@ def get_email(*, id, **params):
         LEFT JOIN ZMESSAGECONTENT c ON m.ZCONTENT = c.Z_PK
         WHERE m.Z_PK = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_email(rows[0]) if rows else None
 
 
 def search_emails(*, query, account=None, limit=1000, **params):
     """Search emails by subject, snippet, body text, or sender."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZSUBJECT as subject,
@@ -160,6 +227,7 @@ def search_emails(*, query, account=None, limit=1000, **params):
         "account": account,
         "limit": limit,
     })
+    return [_map_email(r) for r in rows]
 
 
 # ==============================================================================
@@ -169,7 +237,7 @@ def search_emails(*, query, account=None, limit=1000, **params):
 
 def list_conversations(*, account=None, limit=1000, **params):
     """List email threads with latest message info."""
-    return sql.query("""
+    rows = sql.query("""
         SELECT
           t.Z_PK as id,
           a.ZNAME as account_email,
@@ -188,6 +256,7 @@ def list_conversations(*, account=None, limit=1000, **params):
         "account": account,
         "limit": limit,
     })
+    return [_map_conversation(r) for r in rows]
 
 
 def get_conversation(*, id, **params):
@@ -206,7 +275,7 @@ def get_conversation(*, id, **params):
         LEFT JOIN ZACCOUNT a ON t.ZACCOUNT = a.Z_PK
         WHERE t.Z_PK = :id
     """, db=DB_PATH, params={"id": id})
-    return rows[0] if rows else None
+    return _map_conversation(rows[0]) if rows else None
 
 
 # ==============================================================================

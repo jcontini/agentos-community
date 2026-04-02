@@ -9,64 +9,6 @@ connections:
   db:
     sqlite: "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-adapters:
-  person:
-    id: .jid
-    name: '.real_name // .contact_name // .display_name // .phone // .jid'
-    text: .about
-    phone: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | if startswith("+") then . else "+" + . end) else null end)'
-    nickname: .username
-    avatar:
-      image:
-        path: .profile_photo
-    claim:
-      account:
-        id: .jid
-        platform: '"whatsapp"'
-        handle: '.phone // (if (.jid | type == "string" and endswith("@s.whatsapp.net")) then (.jid | split("@") | .[0] | "+" + .) else .jid end)'
-        display_name: '.real_name // .contact_name // .display_name'
-        bio: .about
-
-  conversation:
-    id: .id
-    name: .name
-    datePublished: .updated_at
-    is_group: '.type == "group"'
-    is_archived: '.is_archived == 1 or .is_archived == true'
-    unread_count: .unread_count
-    participant_count: .participant_count
-    message_count: .message_count
-    _contact_jid: .contact_jid
-    participant:
-      account:
-        id: ._contact_jid
-        platform: '"whatsapp"'
-        handle: 'if (._contact_jid | type == "string" and endswith("@s.whatsapp.net")) then (._contact_jid | split("@") | .[0] | "+" + .) else ._contact_jid end'
-        display_name: .name
-
-  message:
-    id: .id
-    name: .conversation_name
-    content: .content
-    author: 'if .is_outgoing == 1 or .is_outgoing == true then "Me" else .sender_name end'
-    datePublished: .timestamp
-    conversation_id: .conversation_id
-    is_outgoing: '.is_outgoing == 1 or .is_outgoing == true'
-    is_starred: .is_starred
-    _reply_to_id: .reply_to_id
-    _sender_jid: .sender_jid
-    _sender_name: .sender_name
-    from:
-      account:
-        id: ._sender_jid
-        platform: '"whatsapp"'
-        handle: 'if (._sender_jid | type == "string" and endswith("@s.whatsapp.net")) then (._sender_jid | split("@") | .[0] | "+" + .) else ._sender_jid end'
-        display_name: ._sender_name
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 

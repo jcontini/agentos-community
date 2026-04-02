@@ -54,6 +54,92 @@ _ISSUE_FIELDS_FULL = _ISSUE_FIELDS + """
 
 
 # ---------------------------------------------------------------------------
+# Shape mapping
+# ---------------------------------------------------------------------------
+
+
+def _map_task(node):
+    """Map a Linear issue GraphQL node to the task shape."""
+    result = {
+        "id": node["id"],
+        "name": node.get("title"),
+        "text": node.get("description"),
+        "remote_id": node.get("identifier"),
+        "url": node.get("url"),
+        "datePublished": node.get("createdAt"),
+        "priority": node.get("priority") if node.get("priority") else None,
+        "target_date": node.get("dueDate"),
+    }
+
+    # State
+    state = node.get("state") or {}
+    if state.get("name"):
+        result["state"] = state["name"]
+    if state.get("type") == "started":
+        result["started_at"] = node.get("updatedAt")
+
+    # Labels
+    labels_data = node.get("labels") or {}
+    label_nodes = labels_data.get("nodes") or []
+    if label_nodes:
+        result["labels"] = [l["name"] for l in label_nodes if l.get("name")]
+
+    # Assignee as typed ref
+    assignee = node.get("assignee")
+    if assignee and assignee.get("id"):
+        result["assigned_to"] = {"person": {"id": assignee["id"], "name": assignee.get("name")}}
+
+    # Project as typed ref
+    project = node.get("project")
+    if project and project.get("id"):
+        result["project"] = {"project": {"id": project["id"], "name": project.get("name")}}
+
+    # Parent as typed ref
+    parent = node.get("parent")
+    if parent and parent.get("id"):
+        result["parent"] = {"task": {"id": parent["id"], "name": parent.get("identifier")}}
+
+    # Children as typed refs (only present in full queries)
+    children_data = node.get("children") or {}
+    children_nodes = children_data.get("nodes") or []
+    if children_nodes:
+        result["children"] = {"task[]": [
+            {"id": c["id"], "name": c.get("identifier") or c.get("title")}
+            for c in children_nodes if c.get("id")
+        ]}
+
+    # Blocks/blocked_by as typed refs (only present in full queries)
+    relations = node.get("relations") or {}
+    rel_nodes = relations.get("nodes") or []
+    blocks = [r["relatedIssue"] for r in rel_nodes if r.get("relatedIssue", {}).get("id")]
+    if blocks:
+        result["blocks"] = {"task[]": [
+            {"id": b["id"], "name": b.get("identifier") or b.get("title")}
+            for b in blocks
+        ]}
+
+    inv_relations = node.get("inverseRelations") or {}
+    inv_nodes = inv_relations.get("nodes") or []
+    blocked_by = [r["issue"] for r in inv_nodes if r.get("issue", {}).get("id")]
+    if blocked_by:
+        result["blocked_by"] = {"task[]": [
+            {"id": b["id"], "name": b.get("identifier") or b.get("title")}
+            for b in blocked_by
+        ]}
+
+    return result
+
+
+def _map_project(node):
+    """Map a Linear project GraphQL node to the project shape."""
+    return {
+        "id": node["id"],
+        "name": node.get("name"),
+        "state": node.get("state"),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Operations
 # ---------------------------------------------------------------------------
 
@@ -73,7 +159,7 @@ def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **
         }
     """ % _ISSUE_FIELDS
     data = _gql(params, query, {"limit": limit, "teamId": team_id, "stateId": state_id})
-    return data["issues"]["nodes"]
+    return [_map_task(n) for n in data["issues"]["nodes"]]
 
 
 def get_task(*, id: str = None, url: str = None, **params) -> dict:
@@ -94,7 +180,7 @@ def get_task(*, id: str = None, url: str = None, **params) -> dict:
         }
     """ % _ISSUE_FIELDS_FULL
     data = _gql(params, query, {"id": id})
-    return data["issue"]
+    return _map_task(data["issue"])
 
 
 def create_task(*, team_id: str, name: str, description: str = None,
@@ -116,7 +202,7 @@ def create_task(*, team_id: str, name: str, description: str = None,
     if parent_id is not None: input_vars["parentId"] = parent_id
     if due is not None: input_vars["dueDate"] = due
     data = _gql(params, query, {"input": input_vars})
-    return data["issueCreate"]["issue"]
+    return _map_task(data["issueCreate"]["issue"])
 
 
 def update_task(*, id: str, name: str = None, description: str = None,
@@ -138,7 +224,7 @@ def update_task(*, id: str, name: str = None, description: str = None,
     if state_id is not None: input_vars["stateId"] = state_id
     if due is not None: input_vars["dueDate"] = due
     data = _gql(params, query, {"id": id, "input": input_vars})
-    return data["issueUpdate"]["issue"]
+    return _map_task(data["issueUpdate"]["issue"])
 
 
 def delete_task(*, id: str, **params) -> dict:
@@ -156,7 +242,7 @@ def list_projects(**params) -> list:
     """List all projects."""
     query = "{ projects { nodes { id name state } } }"
     data = _gql(params, query)
-    return data["projects"]["nodes"]
+    return [_map_project(n) for n in data["projects"]["nodes"]]
 
 
 def setup(**params) -> dict:

@@ -7,43 +7,6 @@ website: https://git-scm.com
 
 connections: {}
 
-adapters:
-  git_commit:
-    id: .hash
-    content: .message
-    short_hash: .short_hash
-    datePublished: .timestamp
-    author_name: .author_name
-    author_email: .author_email
-    committer_name: .committer_name
-    committer_email: .committer_email
-    files_changed: .files_changed
-    insertions: .insertions
-    deletions: .deletions
-    sender:
-      person:
-        name: .author_name
-        email: .author_email
-
-  branch:
-    id: .name
-    is_remote: .is_remote
-    upstream: .upstream
-
-  repository:
-    id: .full_name
-    name: .name
-    url: .url
-    platform: .platform
-    default_branch: .default_branch
-
-  tag:
-    id: .name
-    hash: .hash
-    date: .date
-    message: .message
-    annotated: .annotated
-
 operations:
   list_git_commits:
     description: List recent commits in a git repository. Returns commits newest first with diff stats.

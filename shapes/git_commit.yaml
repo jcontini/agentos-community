@@ -4,6 +4,7 @@
 git_commit:
   fields:
     sha:               string    # full 40-char SHA hash
+    short_hash:        string    # abbreviated SHA (7-char)
     message:           text      # commit message
     additions:         integer   # lines added
     deletions:         integer   # lines deleted

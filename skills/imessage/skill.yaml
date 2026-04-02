@@ -8,37 +8,6 @@ connections:
   db:
     sqlite: "~/Library/Messages/chat.db"
 # ═══════════════════════════════════════════════════════════════════════════════
-# ADAPTERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-adapters:
-  conversation:
-    id: .id
-    name: .name
-    datePublished: .updated_at
-    is_group: '.type == "group"'
-    _participant_handles: .participant_handles
-    participant:
-      person:
-        phone: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (startswith("+")) then . elif test("^[0-9]+$") then "+" + . else null end) else null end'
-        email: 'if (._participant_handles | type == "string") then (._participant_handles | split(",") | .[0] | if (contains("@") and (startswith("+") | not)) then . else null end) else null end'
-        name: .name
-
-  message:
-    id: .id
-    name: .conversation_name
-    content: .content
-    author: .sender_handle
-    datePublished: .timestamp
-    conversation_id: .conversation_id
-    is_outgoing: .is_outgoing
-    from:
-      person:
-        phone: 'if (.is_outgoing != true and .sender_handle != null) then (if (.sender_handle | startswith("+")) then .sender_handle elif (.sender_handle | test("^[0-9]+$")) then "+" + .sender_handle else null end) else null end'
-        email: 'if (.is_outgoing != true and .sender_handle != null and (.sender_handle | contains("@")) and (.sender_handle | startswith("+") | not)) then .sender_handle else null end'
-        name: .sender_handle
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
