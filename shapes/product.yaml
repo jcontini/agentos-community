@@ -4,8 +4,10 @@
 # Sources: Amazon
 product:
   fields:
-    price:             string    # formatted price (e.g. "$29.99")
+    price:             string    # formatted price (e.g. "$29.99") — current/discounted price
     price_amount:      number    # numeric price for math
+    original_price:    string    # pre-discount price (e.g. "$10.99" before Uber One / Prime / sale)
+    original_price_amount: number
     currency:          string
     rating:            number
     ratings_count:     integer

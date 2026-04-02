@@ -6,6 +6,9 @@ order:
   fields:
     total:             string    # formatted total (e.g. "$42.99")
     total_amount:      number    # numeric total for math
+    original_total:    string    # pre-discount total (before membership/promo savings)
+    original_total_amount: number
+    savings:           number    # total discount amount (membership + promotions)
     currency:          string
     status:            string    # draft, placed, confirmed, delivering, completed, cancelled
     delivery_date:     datetime  # actual or estimated delivery
@@ -20,6 +23,7 @@ order:
     contains:          product[]
     shipping_address:  place
     store:             place         # store/restaurant LOCATION (place with feature_type: poi)
+    delivery:          trip          # delivery trip (Uber Eats: store → customer)
     tracking:          webpage       # carrier tracking page
   display:
     title: name

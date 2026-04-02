@@ -43,11 +43,8 @@ operations:
       timeout: 30
 
   list_trips:
-    description: "List ride history — past trips with date, destination, fare, and map URL. Supports pagination via nextPageToken."
-    returns:
-      trips: array
-      next_page_token: string
-      count: integer
+    description: "List ride history — destination, fare with currency, map. Supports pagination."
+    returns: trip[]
     params:
       limit:
         type: integer
@@ -68,21 +65,8 @@ operations:
       timeout: 30
 
   get_trip:
-    description: "Get full trip details — driver, pickup/dropoff addresses, fare breakdown, distance, duration, receipt, and map"
-    returns:
-      trip_id: string
-      status: string
-      driver: string
-      pickup: string
-      dropoff: string
-      fare: string
-      distance: string
-      duration: string
-      vehicle_type: string
-      begin_time: string
-      dropoff_time: string
-      map_url: string
-      rating: string
+    description: "Get full trip details — driver (person), origin/destination (places), legs for multi-stop rides, fare with currency"
+    returns: trip
     params:
       trip_id:
         type: string
@@ -156,6 +140,15 @@ operations:
       function: get_delivery
       timeout: 30
 
+  list_nearby_stores:
+    description: "Browse stores and restaurants available for delivery near the user's saved address"
+    returns: place[]
+    connection: eats
+    python:
+      module: ./uber.py
+      function: list_nearby_stores
+      timeout: 30
+
   get_store:
     description: "Get store location, hours, rating, and full product catalog"
     returns: place
@@ -163,7 +156,7 @@ operations:
       store_uuid:
         type: string
         required: true
-        description: "Store UUID (from list_deliveries or search)"
+        description: "Store UUID (from list_nearby_stores, list_deliveries, or search)"
     connection: eats
     python:
       module: ./uber.py
@@ -238,4 +231,32 @@ operations:
     python:
       module: ./uber.py
       function: clear_cart
+      timeout: 30
+
+  checkout:
+    description: "Place an Uber Eats order from a draft cart. WRITE — spends money, requires explicit user consent."
+    returns: order
+    params:
+      draft_order_uuid:
+        type: string
+        required: true
+        description: "Draft order UUID to checkout (from add_to_cart or get_cart)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: checkout
+      timeout: 60
+
+  track_delivery:
+    description: "Track a live delivery — courier GPS, ETA, progress, item fulfillment states (PENDING/FOUND/REPLACED/NOT_FOUND)"
+    returns: order
+    params:
+      order_uuid:
+        type: string
+        required: true
+        description: "Order UUID (from checkout, list_deliveries, or getActiveOrdersV1)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: track_delivery
       timeout: 30

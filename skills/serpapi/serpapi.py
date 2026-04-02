@@ -11,7 +11,7 @@ def _auth_params(params: dict) -> dict:
 
 
 def _map_offer(r: dict) -> dict:
-    """Map a SerpAPI flight result to shape-native offer fields."""
+    """Map a SerpAPI flight result to an offer with trip→leg[] shape."""
     flights = r.get("flights") or []
     layovers = r.get("layovers") or []
     first = flights[0] if flights else {}
@@ -32,6 +32,69 @@ def _map_offer(r: dict) -> dict:
     duration = r.get("total_duration") or 0
     hrs, mins = duration // 60, duration % 60
 
+    # Build legs from SerpAPI flights[] array
+    legs = []
+    for i, f in enumerate(flights):
+        f_dep = f.get("departure_airport") or {}
+        f_arr = f.get("arrival_airport") or {}
+        layover_min = layovers[i].get("duration") if i < len(layovers) else None
+
+        legs.append({
+            "leg": {
+                "sequence": i + 1,
+                "departure_time": f_dep.get("time"),
+                "arrival_time": f_arr.get("time"),
+                "duration_minutes": f.get("duration"),
+                "flight_number": f.get("flight_number"),
+                "cabin_class": f.get("travel_class"),
+                "vehicle_type": f.get("airplane"),
+                "layover_minutes": layover_min,
+                "carbon_emissions": f.get("extensions"),
+                "origin": {
+                    "place": {
+                        "name": f_dep.get("name"),
+                        "id": f_dep.get("id"),
+                        "feature_type": "poi",
+                    }
+                },
+                "destination": {
+                    "place": {
+                        "name": f_arr.get("name"),
+                        "id": f_arr.get("id"),
+                        "feature_type": "poi",
+                    }
+                },
+                "carrier": {
+                    "organization": {"name": f.get("airline", "")}
+                } if f.get("airline") else None,
+            }
+        })
+
+    # Build trip (one direction of travel)
+    trip = {
+        "trip": {
+            "trip_type": "flight",
+            "departure_time": dep.get("time"),
+            "arrival_time": (last.get("arrival_airport") or {}).get("time"),
+            "duration": f"{hrs}h {mins}m",
+            "duration_minutes": duration,
+            "stops": stops,
+            "cabin_class": first.get("travel_class"),
+            "carbon_emissions": r.get("carbon_emissions"),
+            "origin": {
+                "place": {"name": dep.get("name"), "id": dep_id, "feature_type": "poi"}
+            },
+            "destination": {
+                "place": {"name": arr.get("name"), "id": arr_id, "feature_type": "poi"}
+            },
+            "carrier": {
+                "organization": {"name": airline}
+            },
+            "legs": {"leg[]": legs} if legs else None,
+        }
+    }
+
+    # Summary content
     lines = [
         f"{dep_id} → {arr_id}",
         f"Price: ${price} {r.get('type', '')}".rstrip(),
@@ -39,7 +102,6 @@ def _map_offer(r: dict) -> dict:
         f"Airline: {airline}",
         f"Flight: {first.get('flight_number') or 'Unknown'}",
         f"Class: {first.get('travel_class') or 'Economy'}",
-        f"Aircraft: {first.get('airplane') or 'Unknown'}",
     ]
     if stops > 0:
         layover_str = ", ".join(
@@ -49,11 +111,6 @@ def _map_offer(r: dict) -> dict:
         lines.append(f"Stops: {stops} ({layover_str})")
     else:
         lines.append("Nonstop")
-    lines.append(f"Depart: {dep_time} from {dep.get('name', '')}")
-    lines.append(f"Arrive: {arr.get('time', '')} at {arr.get('name', '')}")
-    carbon = r.get("carbon_emissions") or {}
-    if carbon.get("this_flight"):
-        lines.append(f"Carbon: {carbon['this_flight'] // 1000} kg CO₂")
 
     return {
         "id": f"{dep_id}-{arr_id}-{dep_date}-{flight_num}",
@@ -61,16 +118,12 @@ def _map_offer(r: dict) -> dict:
         "price": price,
         "currency": "USD",
         "offer_type": "flight",
-        "trip_type": r.get("type"),
-        "total_duration": r.get("total_duration"),
-        "flights": flights,
-        "layovers": layovers,
-        "carbon_emissions": r.get("carbon_emissions"),
-        "airline_logo": r.get("airline_logo"),
-        "extensions": r.get("extensions"),
+        "image": r.get("airline_logo"),
         "departure_token": r.get("departure_token"),
         "booking_token": r.get("booking_token"),
         "content": "\n".join(lines),
+        # Typed reference: offer → trip
+        "trips": {"trip[]": [trip]},
     }
 
 

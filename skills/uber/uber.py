@@ -1,5 +1,6 @@
 """Uber skill — rides (GraphQL) and Eats (RPC) via browser session cookies."""
 
+import json as _json
 import uuid as uuid_mod
 from agentos import http, get_cookies, require_cookies
 
@@ -236,6 +237,34 @@ def _is_login_redirect(resp: dict) -> bool:
     return "auth.uber.com" in url or "/v2/?" in url
 
 
+from price_parser import Price
+
+# Common Uber currency symbols → ISO 4217. price-parser extracts the symbol/code
+# from fare strings; we resolve ambiguous symbols (like "$") using this map.
+# Uber always prefixes with ISO codes for non-$ currencies (ZAR, TRY, CAD uses CA$),
+# so the ambiguity is mostly theoretical — "$" is USD in Uber's context.
+_SYMBOL_TO_ISO = {
+    "$": "USD", "£": "GBP", "€": "EUR", "¥": "JPY",
+    "₹": "INR", "R$": "BRL", "A$": "AUD", "C$": "CAD",
+    "CA$": "CAD", "NZ$": "NZD", "HK$": "HKD", "S$": "SGD",
+}
+
+
+def _parse_fare(fare_str: str) -> tuple[float | None, str | None]:
+    """Parse a fare string like '$16.37', 'ZAR 303.00', '£12.50' into (amount, currency_code).
+
+    Uses price-parser for extraction. Returns (None, None) if unparseable.
+    """
+    if not fare_str:
+        return None, None
+    p = Price.fromstring(fare_str)
+    amount = float(p.amount) if p.amount is not None else None
+    currency = p.currency
+    if currency and len(currency) == 3 and currency.isupper():
+        return amount, currency  # already ISO code (ZAR, TRY, etc.)
+    return amount, _SYMBOL_TO_ISO.get(currency) if currency else None
+
+
 # ---------------------------------------------------------------------------
 # Operations
 # ---------------------------------------------------------------------------
@@ -304,8 +333,11 @@ def list_trips(
     profile_type: str = "PERSONAL",
     order_types: str = "RIDES,TRAVEL",
     **params,
-) -> dict:
-    """List past trips with pagination support."""
+) -> list:
+    """List past trips.
+
+    Returns: trip[] — each with fare, currency, destination as name.
+    """
     cookie_header = require_cookies(params, "list_trips")
 
     types = [t.strip() for t in order_types.split(",")]
@@ -323,27 +355,36 @@ def list_trips(
     activities = data.get("activities", {})
     past = activities.get("past", {})
     raw_trips = past.get("activities") or []
-    token = past.get("nextPageToken")
 
     trips = []
     for t in raw_trips:
+        fare_str = t.get("description") or ""
+        total_amount, currency = _parse_fare(fare_str)
+
         trips.append({
-            "trip_id": t.get("uuid"),
-            "destination": t.get("title"),
-            "fare": t.get("description"),
-            "date": t.get("subtitle"),
-            "map_url": (t.get("imageURL") or {}).get("light"),
-            "detail_url": t.get("cardURL"),
+            # Standard fields
+            "id": t.get("uuid"),
+            "name": t.get("title"),  # destination name
+            "image": (t.get("imageURL") or {}).get("light"),
+            "url": t.get("cardURL"),
+            "datePublished": t.get("subtitle"),
+            # Trip shape fields
+            "trip_type": "ride",
+            "status": "completed",
+            "fare": fare_str or None,
+            "fare_amount": total_amount,
+            "currency": currency,
         })
 
-    result = {"trips": trips, "count": len(trips)}
-    if token:
-        result["next_page_token"] = token
-    return result
+    return trips
 
 
 def get_trip(trip_id: str, **params) -> dict:
-    """Get full trip details including receipt."""
+    """Get full trip details.
+
+    Returns: trip with driver→person, origin→place, destination→place, legs→leg[].
+    Multi-stop rides have multiple legs (one per waypoint pair).
+    """
     cookie_header = require_cookies(params, "get_trip")
 
     data = _gql(
@@ -358,26 +399,69 @@ def get_trip(trip_id: str, **params) -> dict:
     receipt = result.get("receipt") or {}
     waypoints = trip.get("waypoints") or []
 
-    return {
-        "trip_id": trip.get("uuid") or trip.get("jobUUID"),
-        "status": trip.get("status"),
-        "driver": trip.get("driver"),
-        "pickup": waypoints[0] if len(waypoints) > 0 else None,
-        "dropoff": waypoints[1] if len(waypoints) > 1 else None,
-        "fare": trip.get("fare"),
-        "distance": f"{receipt.get('distance', '')} {receipt.get('distanceLabel', '')}".strip() or None,
+    fare_str = trip.get("fare") or ""
+    fare_amount, currency = _parse_fare(fare_str)
+    status_raw = (trip.get("status") or "").lower()
+
+    driver_name = trip.get("driver") or ""
+    driver_parts = driver_name.split(None, 1) if driver_name else []
+
+    distance = f"{receipt.get('distance', '')} {receipt.get('distanceLabel', '')}".strip() or None
+
+    out = {
+        # Standard fields
+        "id": trip.get("uuid") or trip.get("jobUUID"),
+        "name": waypoints[-1] if waypoints else trip_id,
+        "image": result.get("mapURL"),
+        "datePublished": trip.get("beginTripTime"),
+        # Trip shape fields
+        "trip_type": "ride",
+        "status": status_raw,
+        "departure_time": trip.get("beginTripTime"),
+        "arrival_time": trip.get("dropoffTime"),
         "duration": receipt.get("duration"),
+        "distance": distance,
         "vehicle_type": receipt.get("vehicleType"),
-        "begin_time": trip.get("beginTripTime"),
-        "dropoff_time": trip.get("dropoffTime"),
-        "map_url": result.get("mapURL"),
-        "rating": result.get("rating"),
+        "fare": fare_str or None,
+        "fare_amount": fare_amount,
+        "currency": currency,
+        "rating": result.get("rating") or None,
         "is_surge": trip.get("isSurgeTrip", False),
         "is_scheduled": trip.get("isScheduledRide", False),
-        "is_reserve": trip.get("isUberReserve", False),
-        "marketplace": trip.get("marketplace"),
-        "organization": (result.get("organization") or {}).get("name"),
+        "stops": max(0, len(waypoints) - 2) if waypoints else 0,
     }
+
+    # Typed references
+    if driver_name:
+        out["driver"] = {
+            "person": {
+                "name": driver_name,
+                "first_name": driver_parts[0] if driver_parts else None,
+                "last_name": driver_parts[1] if len(driver_parts) > 1 else None,
+            }
+        }
+
+    if waypoints:
+        out["origin"] = {"place": {"full_address": waypoints[0], "feature_type": "address"}}
+        out["destination"] = {"place": {"full_address": waypoints[-1], "feature_type": "address"}}
+
+    # Build legs from waypoint pairs (multi-stop support)
+    if len(waypoints) >= 2:
+        legs = []
+        for i in range(len(waypoints) - 1):
+            legs.append({
+                "leg": {
+                    "sequence": i + 1,
+                    "origin": {"place": {"full_address": waypoints[i], "feature_type": "address"}},
+                    "destination": {"place": {"full_address": waypoints[i + 1], "feature_type": "address"}},
+                }
+            })
+        out["legs"] = {"leg[]": legs}
+
+    if (result.get("organization") or {}).get("name"):
+        out["carrier"] = {"organization": {"name": result["organization"]["name"]}}
+
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -483,6 +567,11 @@ def list_deliveries(cursor: str = "", **params) -> list:
             raw_addr = {"eaterFormattedAddress": raw_addr}
 
         total_cents = fare.get("totalPrice", 0)
+        # getPastOrdersV1 doesn't include a currencyCode field.
+        # The totalPrice is in local-currency cents. We can't reliably
+        # determine the currency from this endpoint alone — leave it to
+        # get_delivery (which parses the receipt HTML total with symbol).
+        currency = fare.get("currencyCode")  # future-proof if Uber adds it
 
         # Determine status
         if base.get("isCancelled"):
@@ -499,9 +588,9 @@ def list_deliveries(cursor: str = "", **params) -> list:
             "image": store_info.get("heroImageUrl"),
             "datePublished": base.get("completedAt") or base.get("lastStateChangeAt"),
             # Order shape fields
-            "total": f"${total_cents / 100:.2f}" if total_cents else None,
+            "total": f"{total_cents / 100:.2f}" if total_cents else None,
             "total_amount": total_cents / 100 if total_cents else None,
-            "currency": "USD",
+            "currency": currency,
             "status": status,
             "fare_breakdown": [
                 {"label": item.get("label"), "amount": item.get("rawValue"), "key": item.get("key")}
@@ -582,14 +671,9 @@ def get_delivery(order_uuid: str, **params) -> dict:
             if el:
                 fare[key] = el[0].text_content().strip()
 
-    # Parse total as number
+    # Parse total — the receipt HTML total has the currency symbol (e.g. "$214.50")
     total_str = fare.get("total", "")
-    total_amount = None
-    if total_str:
-        try:
-            total_amount = float(total_str.replace("$", "").replace(",", ""))
-        except ValueError:
-            pass
+    total_amount, currency = _parse_fare(total_str)
 
     return {
         # Standard fields
@@ -599,7 +683,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
         # Order shape fields
         "total": fare.get("total"),
         "total_amount": total_amount,
-        "currency": "USD",
+        "currency": currency,
         "status": "completed",
         "fare_breakdown": fare,
         # Typed reference: contains → product[]
@@ -633,6 +717,8 @@ def get_store(store_uuid: str, **params) -> dict:
     # Extract products from catalogSectionsMap
     # Items are nested: sections → HORIZONTAL_GRID items → payload → standardItemsPayload → catalogItems
     # See requirements.md "getStoreV1" section for the full structure.
+    # getStoreV1 may include currencyCode at top level (91 keys — not all documented yet)
+    store_currency = data.get("currencyCode") or data.get("currency")
     sections_map = data.get("catalogSectionsMap") or {}
     products = []
     seen_uuids = set()
@@ -664,9 +750,8 @@ def get_store(store_uuid: str, **params) -> dict:
                     "image": ci.get("imageUrl"),
                     "text": ci.get("itemDescription"),
                     # Product shape fields
-                    "price": f"${price_cents / 100:.2f}" if price_cents else None,
                     "price_amount": price_cents / 100 if price_cents else None,
-                    "currency": "USD",
+                    "currency": store_currency,
                     "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
                     "categories": [section_title] if section_title else [],
                     # Raw catalog item — passed through to add_to_cart verbatim.
@@ -739,6 +824,88 @@ def search_store(store_uuid: str, query: str, **params) -> dict:
         "matches": matches,
         "match_count": len(matches),
     }
+
+
+def list_nearby_stores(**params) -> list:
+    """List nearby stores/restaurants available for delivery.
+
+    Backed by getFeedV1. Returns place-shaped entities (POIs) with
+    rating, ETA, delivery fee, and image. Uses the user's saved delivery
+    address from their Uber Eats session.
+    """
+    cookie_header = require_cookies(params, "list_nearby_stores")
+
+    data = _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
+
+    currency = data.get("currencyCode")
+    items = data.get("feedItems") or []
+
+    stores = []
+    seen = set()
+    for item in items:
+        # Extract stores from both REGULAR_STORE and carousel types
+        if item.get("type") == "REGULAR_STORE":
+            store_data = item.get("store", item)
+            _extract_feed_store(store_data, stores, seen, currency)
+        elif item.get("type") in ("REGULAR_CAROUSEL", "FEATURED_STORES"):
+            for store_data in (item.get("carousel", {}).get("stores") or []):
+                _extract_feed_store(store_data, stores, seen, currency)
+
+    return stores
+
+
+def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | None):
+    """Extract a place-shaped entity from a getFeedV1 store item."""
+    uuid = store_data.get("storeUuid", "")
+    if not uuid or uuid in seen:
+        return
+    seen.add(uuid)
+
+    title_obj = store_data.get("title") or {}
+    name = title_obj.get("text", "") if isinstance(title_obj, dict) else str(title_obj)
+    if not name:
+        return
+
+    rating_obj = store_data.get("rating") or {}
+    marker = store_data.get("mapMarker") or {}
+    images = (store_data.get("image") or {}).get("items") or []
+    action = store_data.get("actionUrl", "")
+
+    # Parse meta badges for ETA, delivery fee
+    eta = None
+    delivery_fee = None
+    for badge in (store_data.get("meta") or []):
+        badge_type = badge.get("badgeType", "")
+        text = badge.get("text", "")
+        if badge_type == "ETD":
+            eta = text
+        elif badge_type in ("FARE", "MembershipBenefit"):
+            delivery_fee = text
+
+    # Rating text is "4.7" — parse to float
+    rating_val = None
+    try:
+        rating_val = float(rating_obj.get("text", ""))
+    except (ValueError, TypeError):
+        pass
+
+    out.append({
+        # Standard fields
+        "id": uuid,
+        "name": name,
+        "image": images[0]["url"] if images else None,
+        "url": f"https://www.ubereats.com{action}" if action else None,
+        # Place shape fields
+        "feature_type": "poi",
+        "latitude": marker.get("latitude"),
+        "longitude": marker.get("longitude"),
+        "rating": rating_val,
+        "review_count": rating_obj.get("accessibilityText"),
+        # Contextual delivery info (depends on user's address, not intrinsic to place)
+        "eta": eta,
+        "delivery_fee": delivery_fee,
+        "currency": currency,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -823,11 +990,12 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
     return item
 
 
-def add_to_cart(store_uuid: str, items: list, **params) -> dict:
+def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **params) -> dict:
     """Add items to an Uber Eats cart for a store.
 
     items: list of product dicts from get_store (must include _raw field).
     Each item can have an optional "quantity" field (default 1).
+    currency_code: ISO 4217 code (from get_store's currency field, defaults to USD).
 
     Discards any existing draft for this store and creates a fresh one with
     ALL items inline via createDraftOrderV2 — the same pattern the browser uses
@@ -866,7 +1034,7 @@ def add_to_cart(store_uuid: str, items: list, **params) -> dict:
         },
         "deliveryTime": {"asap": True},
         "deliveryType": "ASAP",
-        "currencyCode": "USD",
+        "currencyCode": currency_code,
         "interactionType": "door_to_door",
         "checkMultipleDraftOrdersCap": True,
         "actionMeta": {"isQuickAdd": True},
@@ -883,15 +1051,15 @@ def add_to_cart(store_uuid: str, items: list, **params) -> dict:
 
     # Return order-shaped (status: draft) with contains → product[]
     total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in final_items)
+    draft_currency = data.get("currencyCode") or draft.get("currencyCode")
     return {
         # Standard fields
         "id": draft_uuid,
         "name": f"Cart ({len(final_items)} items)",
         # Order shape fields
         "status": "draft",
-        "total": f"${total_cents / 100:.2f}" if total_cents else None,
         "total_amount": total_cents / 100 if total_cents else None,
-        "currency": "USD",
+        "currency": draft_currency,
         # Typed reference: contains → product[]
         "contains": {
             "product[]": [
@@ -899,9 +1067,8 @@ def add_to_cart(store_uuid: str, items: list, **params) -> dict:
                     "id": i.get("uuid"),
                     "name": i.get("title"),
                     "image": i.get("imageURL"),
-                    "price": f"${i.get('price', 0)/100:.2f}" if i.get("price") else None,
                     "price_amount": i.get("price", 0) / 100 if i.get("price") else None,
-                    "currency": "USD",
+                    "currency": draft_currency,
                     "quantity": i.get("quantity", 1),
                 }
                 for i in final_items
@@ -927,6 +1094,7 @@ def get_cart(**params) -> list:
             continue
 
         total_cents = sum(i.get("price", 0) * i.get("quantity", 1) for i in items)
+        cart_currency = draft.get("currencyCode")
 
         orders.append({
             # Standard fields
@@ -935,9 +1103,8 @@ def get_cart(**params) -> list:
             "datePublished": draft.get("createdAt"),
             # Order shape fields
             "status": "draft",
-            "total": f"${total_cents / 100:.2f}" if total_cents else None,
             "total_amount": total_cents / 100 if total_cents else None,
-            "currency": "USD",
+            "currency": cart_currency,
             # Typed references
             "store": {
                 "place": {
@@ -959,7 +1126,7 @@ def get_cart(**params) -> list:
                         "name": i.get("title"),
                         "image": i.get("imageURL"),
                         "quantity": i.get("quantity", 1),
-                        "currency": "USD",
+                        "currency": cart_currency,
                     }
                     for i in items
                 ]
@@ -974,3 +1141,260 @@ def clear_cart(draft_order_uuid: str, **params) -> dict:
     cookie_header = require_cookies(params, "clear_cart")
     _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft_order_uuid})
     return {"status": "cleared", "draft_order_uuid": draft_order_uuid}
+
+
+def checkout(draft_order_uuid: str, **params) -> dict:
+    """Place an Uber Eats order from a draft cart.
+
+    WRITE operation — spends money. Requires explicit user consent via firewall.
+
+    Calls getCheckoutPresentationV1 to get the checkout session and payment info,
+    then checkoutOrdersByDraftOrdersV1 to place the order.
+
+    RE principle: replay, don't reconstruct. The checkout request shape was captured
+    from a live browser order placement. See requirements.md for the full shape.
+    """
+    cookie_header = require_cookies(params, "checkout")
+
+    # Step 1: Get checkout presentation — we need the checkout session UUID,
+    # payment profile, and total fare from this response.
+    presentation = _eats_post(cookie_header, "getCheckoutPresentationV1", {
+        "payloadTypes": [
+            "paymentBarPayload", "total", "subtotal", "upfrontTipping",
+            "promotion", "fareBreakdown", "eta", "restrictedItems",
+            "orderConfirmations", "paymentProfilesEligibility",
+        ],
+        "draftOrderUUIDs": [draft_order_uuid],
+    })
+
+    # Extract total and currency
+    total_payload = presentation.get("checkoutPayloads", {}).get("total", {})
+    total_obj = total_payload.get("total", {})
+    total_value = total_obj.get("value", {})
+    total_e5 = total_value.get("amountE5", 0)
+    currency = total_value.get("currencyCode", "USD")
+
+    # Extract payment profile from draft orders
+    drafts = presentation.get("draftOrders") or []
+    draft = drafts[0] if drafts else {}
+    payment_uuid = draft.get("paymentProfileUUID", "")
+
+    # Extract checkout action result params (session UUID + payment plan)
+    # This comes from the presentation response's validation/action flow
+    checkout_session = str(uuid_mod.uuid4())
+
+    # Step 2: Place the order
+    checkout_body = {
+        "draftOrderUUID": draft_order_uuid,
+        "storeInstructions": "",
+        "extraPaymentData": "",
+        "shareCPFWithRestaurant": False,
+        "extraParams": {
+            "timezone": "America/Chicago",
+            "trackingCode": "",
+            "paymentIntent": "personal",
+            "paymentProfileTokenType": "braintree",
+            "paymentProfileUuid": payment_uuid,
+            "isNeutralZoneEnabled": True,
+            "isScheduledOrder": False,
+            "orderTotalFare": total_e5,
+            "orderCurrency": currency,
+            "checkoutType": "drafting",
+            "cookieConsent": True,
+            "isAddOnOrder": False,
+            "isBillSplitOrder": False,
+            "isDraftOrderParticipant": False,
+            "isEditScheduledOrder": False,
+        },
+        "currentEaterConsent": {"defaultOptIn": False, "eaterConsented": False},
+        "newEaterConsented": False,
+        "isGroupOrder": False,
+        "bypassAuthDeclineForTrustedUser": False,
+        "checkoutActionResultParams": {
+            "value": _json.dumps({
+                "checkoutSessionUUID": checkout_session,
+                "actionResults": [],
+                "estimatedPaymentPlan": {
+                    "defaultPaymentProfile": {
+                        "paymentProfileUUID": payment_uuid,
+                        "currencyAmount": {"amountE5": total_e5, "currencyCode": currency},
+                    },
+                    "useCredits": True,
+                },
+            })
+        },
+        "skipOrderRequestedEvent": False,
+    }
+
+    data = _eats_post(cookie_header, "checkoutOrdersByDraftOrdersV1", checkout_body)
+
+    total_amount = total_e5 / 100000 if total_e5 else None
+
+    return {
+        "id": draft_order_uuid,
+        "name": f"Order placed (${total_amount:.2f})" if total_amount else "Order placed",
+        "status": "placed",
+        "total": total_obj.get("formattedValue"),
+        "total_amount": total_amount,
+        "currency": currency,
+    }
+
+
+def track_delivery(order_uuid: str, **params) -> dict:
+    """Track a live Uber Eats delivery — courier location, ETA, progress, item fulfillment.
+
+    Backed by getActiveOrdersV1 + getOrderEntityByUuidV1.
+    Returns order with delivery→trip (courier as driver with GPS),
+    and item fulfillment states (PENDING, FOUND, REPLACED, NOT_FOUND).
+    """
+    cookie_header = require_cookies(params, "track_delivery")
+
+    # Fetch both in sequence (can't do parallel in skill Python)
+    active_data = _eats_post(cookie_header, "getActiveOrdersV1", {
+        "orderUuid": order_uuid,
+        "timezone": "America/Chicago",
+        "showAppUpsellIllustration": True,
+        "isDirectTracking": False,
+    })
+
+    entity_data = _eats_post(cookie_header, "getOrderEntityByUuidV1", {
+        "orderUUID": order_uuid,
+        "workflowUuid": order_uuid,
+    })
+
+    # Parse active order
+    orders = active_data.get("orders") or []
+    if not orders:
+        return {"id": order_uuid, "status": "not_found", "error": "No active order found"}
+
+    order = orders[0]
+    status_obj = order.get("activeOrderStatus") or {}
+    info = order.get("orderInfo") or {}
+    contacts = order.get("contacts") or []
+    overview = order.get("activeOrderOverview") or {}
+
+    # Courier from contacts + map entities
+    courier_contact = next((c for c in contacts if c.get("type") == "COURIER"), None)
+    courier_cards = []
+    for card in (order.get("feedCards") or []):
+        if card.get("courier"):
+            courier_cards = card["courier"]
+
+    courier_loc = None
+    courier_path = None
+    route_polyline = None
+    for card in (order.get("backgroundFeedCards") or []):
+        for entity in (card.get("mapEntity") or []):
+            if entity.get("type") == "COURIER":
+                courier_loc = {"latitude": entity.get("latitude"), "longitude": entity.get("longitude")}
+                courier_path = entity.get("pathPoints")
+                legs = entity.get("routelineLegs") or []
+                if legs:
+                    route_polyline = legs[0].get("encodedPolyline")
+
+    # Parse item fulfillment from order entity
+    entity = entity_data.get("orderEntity") or {}
+    cart = entity.get("cart", {}).get("shoppingCart", {})
+    items_raw = cart.get("items") or []
+
+    items = []
+    for item in items_raw:
+        fc = item.get("fulfillmentContext") or {}
+        fs = fc.get("fulfillmentState") or {}
+        items.append({
+            "id": item.get("skuUUID") or item.get("itemID", {}).get("catalogItemUUID"),
+            "name": item.get("title"),
+            "image": item.get("imageURL"),
+            "quantity": item.get("quantity", 1),
+            "fulfillment_state": fs.get("type", "UNKNOWN"),
+        })
+
+    # Count fulfillment states
+    state_counts = {}
+    for i in items:
+        s = i["fulfillment_state"]
+        state_counts[s] = state_counts.get(s, 0) + 1
+
+    # Build the delivery trip
+    phase = (status_obj.get("titleSummary") or {}).get("summary", {}).get("text", "")
+    eta = (status_obj.get("subtitleSummary") or {}).get("summary", {}).get("text", "")
+
+    # Latest arrival from status card
+    status_cards = [c for c in (order.get("feedCards") or []) if c.get("type") == "status"]
+    status_card = status_cards[0].get("status", {}) if status_cards else {}
+    latest_arrival = (status_card.get("statusSummary") or {}).get("text", "")
+
+    courier_info = courier_cards[0] if courier_cards else {}
+
+    result = {
+        "id": order_uuid,
+        "name": overview.get("title") or info.get("storeInfo", {}).get("name"),
+        "status": phase.lower().replace("...", "").replace("…", "").strip() or "active",
+        "eta": eta,
+        "latest_arrival": latest_arrival or None,
+        "progress": status_obj.get("currentProgress"),
+        "progress_total": status_obj.get("totalProgressSegments"),
+        "total": overview.get("subtitle"),
+        # Item fulfillment
+        "item_states": state_counts,
+        "contains": {
+            "product[]": items,
+        },
+    }
+
+    # Delivery trip with courier
+    trip_data = {
+        "trip_type": "delivery",
+        "status": "in_progress",
+        "eta": eta,
+    }
+
+    if courier_contact:
+        trip_data["driver"] = {
+            "person": {
+                "name": courier_contact.get("title"),
+                "phone": courier_contact.get("formattedPhoneNumber"),
+                "image": courier_info.get("iconUrl"),
+            }
+        }
+
+    # Parse vehicle from courier card: description="YUSIEL is in a Toyota RAV4", title="YUSIEL • VVL5357"
+    desc = courier_info.get("description") or ""
+    title_str = courier_info.get("title") or ""
+    plate = title_str.split("•")[-1].strip() if "•" in title_str else None
+    vehicle_name = desc.split(" is in a ")[-1] if " is in a " in desc else desc
+    vehicle_parts = vehicle_name.split(None, 1) if vehicle_name else []
+
+    if vehicle_name:
+        trip_data["vehicle_type"] = vehicle_name
+    if plate:
+        trip_data["license_plate"] = plate
+    if len(vehicle_parts) >= 2:
+        trip_data["vehicle_make"] = vehicle_parts[0]
+        trip_data["vehicle_model"] = vehicle_parts[1]
+
+    if courier_loc:
+        trip_data["driver_location"] = courier_loc
+        if courier_path:
+            trip_data["driver_path"] = courier_path
+
+    if route_polyline:
+        trip_data["route_polyline"] = route_polyline
+
+    # Store as origin
+    store_info = info.get("storeInfo") or {}
+    store_loc = store_info.get("location") or {}
+    if store_info.get("name"):
+        trip_data["origin"] = {
+            "place": {
+                "name": store_info["name"],
+                "full_address": (store_loc.get("address") or {}).get("eaterFormattedAddress"),
+                "latitude": store_loc.get("latitude"),
+                "longitude": store_loc.get("longitude"),
+                "feature_type": "poi",
+            }
+        }
+
+    result["delivery"] = {"trip": trip_data}
+
+    return result

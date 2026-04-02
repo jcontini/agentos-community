@@ -14,6 +14,7 @@ offer:
   relations:
     for:               product   # what this offer is selling
     offered_by:        organization
+    trips:             trip[]    # the trip(s) this offer books (flights: outbound + return)
   display:
     title: name
     description: content

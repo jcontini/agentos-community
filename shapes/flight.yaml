@@ -1,21 +1,22 @@
-# A specific flight leg. Part of an offer (which may have multiple legs/stops).
+# A flight — a specific leg of air travel. A flight IS a leg.
+# A nonstop itinerary has one flight. A connection has multiple flights.
 #
 # Sources: SerpAPI (Google Flights)
 flight:
+  also: [leg]           # a flight is also a leg
   fields:
     flight_number:     string    # e.g. UA 1234
     departure_time:    datetime
     arrival_time:      datetime
     duration_minutes:  integer
     cabin_class:       string    # economy, premium_economy, business, first
-    stops:             integer
+    stops:             integer   # intermediate stops without transfer (rare, multi-stop flights)
     carbon_emissions:  json      # CO2 estimate from Google Flights
   relations:
     airline:           airline
     departs_from:      airport
     arrives_at:        airport
     aircraft:          aircraft
-    layovers:          airport[] # intermediate stops
   display:
     title: name
     subtitle: airline

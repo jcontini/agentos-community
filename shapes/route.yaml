@@ -1,0 +1,36 @@
+# A transport service that operates between places on a schedule.
+# A route IS a schedule — it inherits recurrence fields and adds
+# transport-specific structure: stops, direction, route identifiers.
+#
+# Each occurrence of the route produces a trip (with legs).
+#
+# Examples:
+#   Bus 29 Austin — route_type: bus, stops: [Congress, Riverside, ...]
+#   UA 1234 LAX→JFK daily — route_type: flight, origin/destination airports
+#   Amtrak Acela NYC→DC — route_type: train
+#   Costco delivery (Sat 9:30a-7p) — route_type: delivery, store as origin
+#
+# GTFS alignment: GTFS "route" = this shape. GTFS "trip" = our trip shape.
+# GTFS "stop_times" = our leg origins/destinations.
+#
+# Sources: future (GTFS, flight timetables, Uber Eats store hours)
+route:
+  also: [schedule]      # a route is also a schedule
+  fields:
+    route_type:        string    # bus, train, flight, ferry, delivery, ride
+    route_number:      string    # "29", "UA 1234", "Acela Express"
+    direction:         string    # inbound, outbound, northbound, etc.
+    color:             string    # route color for display (hex, from GTFS)
+  relations:
+    stops:             place[]   # ordered waypoints (bus stops, stations, airports)
+    origin:            place     # first stop / departure point
+    destination:       place     # last stop / arrival point
+    operator:          organization  # transit agency, airline (overrides schedule.operator)
+  display:
+    title: name
+    subtitle: route_number
+    columns:
+      - name:            Route
+      - route_type:      Type
+      - route_number:    Number
+      - direction:       Direction

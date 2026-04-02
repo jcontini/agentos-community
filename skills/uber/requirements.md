@@ -284,6 +284,75 @@ total = total_el[0].text_content().strip() if total_el else None
 // Will be useful in Phase 2 (live tracking) but NOT for Phase 1 (history).
 ```
 
+#### `getFeedV1` — home feed with nearby stores (captured 2026-04-02)
+
+Returns all stores available for delivery near the user's saved address. 126 feedItems, 97 REGULAR_STORE + carousels.
+
+```json
+// Request
+// POST https://www.ubereats.com/_p/api/getFeedV1?localeCode=en-US
+{}  // empty body — uses user's saved location from cookies
+
+// Response (top-level)
+{
+  "status": "success",
+  "data": {
+    "currencyCode": "USD",        // THE CURRENCY CODE — use this everywhere
+    "cityName": "austin",
+    "isInServiceArea": true,
+    "feedItems": [
+      // REGULAR_STORE (97 items) — individual store listings
+      {
+        "uuid": "...",
+        "type": "REGULAR_STORE",
+        "store": {
+          "storeUuid": "31639dbf-5335-5fdb-b5c8-108fce505ed3",
+          "title": { "text": "Sprouts Farmers Market" },
+          "rating": {
+            "text": "4.7",        // parse to float
+            "accessibilityText": "A top rated restaurant with 4.7 out of 5 stars based on more than 2,000 reviews.",
+            "badgeType": "RATINGS"
+          },
+          "actionUrl": "/store/sprouts-farmers-market-.../MWOdv1M1X9u1yBCPzlBe0w?diningMode=DELIVERY",
+          "image": {
+            "items": [
+              { "url": "https://tb-static.uber.com/...", "width": 2880, "height": 2304 }
+            ]
+          },
+          "mapMarker": {
+            "latitude": 30.3047,
+            "longitude": -97.7095
+          },
+          "meta": [
+            // Badge array — ETA, delivery fee, membership benefits
+            { "text": "$0 Delivery Fee", "badgeType": "MembershipBenefit" },
+            { "text": "35 min", "badgeType": "ETD" }
+          ],
+          "signposts": [...],       // promotional badges
+          "endorsements": [...]     // distance surcharges, etc.
+        }
+      },
+      // REGULAR_CAROUSEL (11 items) — horizontal scrollable rows
+      {
+        "type": "REGULAR_CAROUSEL",
+        "carousel": {
+          "stores": [...],         // same store shape as REGULAR_STORE
+          "header": { "title": "..." }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Key facts about `getFeedV1`:**
+- Empty body `{}` works — location comes from cookies/session
+- `currencyCode` at top level is the **authoritative currency** for this market
+- `meta` badges have `badgeType: "ETD"` for delivery time, `"MembershipBenefit"` for Uber One fee
+- `mapMarker` has lat/lng for the store location
+- `image.items[0].url` for the store image (multiple resolutions available)
+- Stores appear in both REGULAR_STORE and carousel items — deduplicate by storeUuid
+
 #### `getActiveOrdersV1` — live orders
 ```json
 // Request
@@ -488,7 +557,7 @@ The browser uses **XHR** (not fetch) for this endpoint. The request requires a p
 | Endpoint | Purpose |
 |----------|---------|
 | `addItemsToDraftOrderV2` | Add items to cart — **captured**, full shape documented above |
-| `checkoutOrdersByDraftOrdersV1` | **PLACE ORDER** — takes draft order UUIDs, submits the order. NOT YET CAPTURED — need to capture request body. |
+| `checkoutOrdersByDraftOrdersV1` | **PLACE ORDER** — **CAPTURED 2026-04-02**. See full request shape below. |
 | `cancelOrderV1` | Cancel an active order |
 | `getRepeatOrderViewV1` | Repeat order view (not yet tested) |
 | `addItemsToGroupDraftOrderV2` | Group order cart |
@@ -500,6 +569,64 @@ The browser uses **XHR** (not fetch) for this endpoint. The request requires a p
 | `applyPromoV1` | Apply promo code |
 | `createEaterFavoritesV1` | Add to favorites |
 | `deleteEaterFavoritesV1` | Remove from favorites |
+
+#### `checkoutOrdersByDraftOrdersV1` — place order (captured 2026-04-02)
+
+The checkout endpoint. Takes a draft order UUID and places the order.
+
+```json
+// Request — captured from live Sprouts order ($81.44, 13 items)
+{
+  "draftOrderUUID": "2404af12-...",           // from createDraftOrderV2 / getDraftOrdersByEaterUuidV1
+  "storeInstructions": "",
+  "extraPaymentData": "",
+  "shareCPFWithRestaurant": false,
+  "extraParams": {
+    "timezone": "America/Chicago",
+    "trackingCode": "{\"metaInfo\":{\"analyticsLabel\":\"past_orders_reorder\"}}",
+    "storeUuid": "31639dbf-...",              // store UUID
+    "cityName": "austin",
+    "paymentIntent": "personal",              // personal or business
+    "paymentProfileTokenType": "braintree",
+    "paymentProfileUuid": "ac6b9149-...",     // from whoami / getCheckoutPresentationV1
+    "isNeutralZoneEnabled": true,
+    "isScheduledOrder": false,                // true for scheduled delivery
+    "orderTotalFare": 8144000,                // amountE5 — $81.44
+    "orderCurrency": "USD",
+    "verticalLabel": "GROCERY",               // GROCERY, RESTAURANT, etc.
+    "checkoutType": "drafting",
+    "cookieConsent": true
+  },
+  "currentEaterConsent": {
+    "defaultOptIn": false,
+    "eaterConsented": false,
+    "orgUUID": "94784998-..."                 // store's org UUID
+  },
+  "newEaterConsented": false,
+  "isGroupOrder": false,
+  "bypassAuthDeclineForTrustedUser": false,
+  "checkoutActionResultParams": {
+    "value": "{\"checkoutSessionUUID\":\"...\",\"useCaseKey\":\"...\",\"actionResults\":[],\"estimatedPaymentPlan\":{\"defaultPaymentProfile\":{\"paymentProfileUUID\":\"ac6b9149-...\",\"currencyAmount\":{\"amountE5\":8144000,\"currencyCode\":\"USD\"}},\"useCredits\":true}}"
+  },
+  "skipOrderRequestedEvent": false
+}
+```
+
+**Key fields:**
+- `draftOrderUUID` — the cart (from add_to_cart / createDraftOrderV2)
+- `extraParams.storeUuid` — which store
+- `extraParams.paymentProfileUuid` — payment method UUID (from whoami or getCheckoutPresentationV1)
+- `extraParams.orderTotalFare` — total in amountE5 (multiply by 10^-5 for dollars)
+- `extraParams.orderCurrency` — ISO 4217
+- `extraParams.isScheduledOrder` — false for ASAP, true for scheduled
+- `checkoutActionResultParams.value` — JSON string with checkout session UUID and payment plan (from getCheckoutPresentationV1)
+- `extraParams.verticalLabel` — "GROCERY" for grocery stores, "RESTAURANT" for restaurants
+
+**Response:** Redirects to order tracking page at `/orders/{uuid}?entryPoint=checkout`
+
+**After checkout, these endpoints become active:**
+- `getActiveOrdersV1` — live tracking with ETA, progress, map, courier (null until assigned)
+- `getOrderEntityByUuidV1` — structured item data with fulfillment states (PENDING → FOUND/REPLACED/NOT_FOUND)
 
 **Key insight:** The Eats API is NOT GraphQL — it's protobuf-style RPC over JSON at `/_p/api/`. The `_p` likely stands for "protobuf" or "protocol". All endpoints follow the pattern `{verb}{Entity}V{version}`. This is a stable, versioned API surface.
 
