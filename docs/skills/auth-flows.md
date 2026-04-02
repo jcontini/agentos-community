@@ -58,23 +58,25 @@ The engine writes `__secrets__` to the credential store, creates an account enti
 
 ## Cookie resolution chain
 
-When the engine resolves cookie auth for a connection, it follows this order:
+The engine uses **timestamp-based resolution** — all cookie sources are checked, and the one with the newest cookies wins. There's no fixed priority order. See `connections.md` → Resolution Algorithm for the full explanation with worked examples.
 
-1. **Credential store** — check `credentials.sqlite` for a stored cookie matching the issuer (derived from the connection's `base_url`).
-2. **Providers** — if the store has nothing (or on retry after auth failure), query all installed skills that `provides: - auth: cookies`. Three providers exist today: **Brave** (SQLite cookie DB), **Firefox** (SQLite cookie DB), **Playwright** (persistent Chromium session via CDP).
-3. **Fail** — if no provider can supply the cookies, raise a credential error.
+**Sources (all checked on every resolve):**
 
-Playwright is the primary provider for cookies acquired through login automation. After a successful login flow, cookies live in Playwright's persistent browser context. The engine can query them via `playwright.cookies` the same way it queries `brave-browser.cookie_get`. The `store_session_cookies` step persists them to the credential store so future runs don't need Playwright.
+1. **In-memory cache** — cookies from the last extraction, updated by `Set-Cookie` responses from our own HTTP requests (writeback). Can be *newer* than the browser when a server rotates tokens.
+2. **Browser providers** (Brave, Firefox) — fresh extraction from the browser's local cookie database (~20ms). Reflects the user's latest browsing.
+3. **Credential store** (`credentials.sqlite`) — persistent copy, also updated by writeback. Survives engine restart.
 
-### Provider selection heuristic
+The candidate with the highest `newest_cookie_at` (latest per-cookie timestamp) wins. On ties, the cache wins (first candidate). No TTL — timestamps are the only arbiter.
 
-When multiple providers can supply cookies for the same domain, the engine scores
-them:
+Playwright is always skipped unless explicitly requested via the `provider` parameter. It's used for reverse engineering and login automation, not runtime auth.
+
+### Provider scoring (within the provider tier)
+
+When multiple browser providers return cookies for the same domain:
 
 1. **Required names** — providers with all cookies listed in `auth.names` score highest
-2. **Playwright preference** — live browser session beats database-extracted cookies
-3. **Creation timestamp** — most recently created cookies win (prevents stale Brave cookies from beating fresh Playwright ones just because Brave has more cookies)
-4. **Cookie count** — final tiebreaker
+2. **Creation timestamp** — most recently created cookies win
+3. **Cookie count** — final tiebreaker
 
 ### Retry on auth failure
 
