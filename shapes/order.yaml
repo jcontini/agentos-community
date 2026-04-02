@@ -1,18 +1,26 @@
 # A purchase order. Contains products and tracks delivery.
+# Used for both e-commerce (Amazon) and delivery (Uber Eats) orders.
 #
-# Sources: Amazon
+# Sources: Amazon, Uber Eats
 order:
   fields:
     total:             string    # formatted total (e.g. "$42.99")
     total_amount:      number    # numeric total for math
     currency:          string
-    status:            string
-    delivery_date:     datetime
+    status:            string    # draft, placed, confirmed, delivering, completed, cancelled
+    delivery_date:     datetime  # actual or estimated delivery
+    eta:               string    # estimated time range (e.g. "11:33-11:53 AM")
+    subtotal:          number
+    tip_amount:        number
+    delivery_fee:      number
+    taxes:             number
     summary:           string
+    fare_breakdown:    json      # line items: [{label, amount, key}]
   relations:
     contains:          product[]
     shipping_address:  place
-    tracking:          webpage   # carrier tracking page
+    store:             organization  # restaurant or store the order is from
+    tracking:          webpage       # carrier tracking page
   display:
     title: name
     date: datePublished
