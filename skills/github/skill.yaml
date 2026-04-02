@@ -164,7 +164,7 @@ operations:
 
   list_documents:
     description: List files and folders at a repository path
-    returns: document[]
+    returns: file[]
     params:
       repo:
         type: string
@@ -183,7 +183,7 @@ operations:
 
   read_document:
     description: Read a text file from a repository
-    returns: document
+    returns: file
     params:
       repo:
         type: string

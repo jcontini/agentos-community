@@ -60,7 +60,7 @@ operations:
       Scans the global Cursor SQLite store for Task blobs that meet research thresholds
       (3+ web searches, 3000+ chars output, 5+ conversation steps) and returns them
       as document entities for the graph.
-    returns: document[]
+    returns: file[]
     params: {}
     python:
       module: ./cursor.py

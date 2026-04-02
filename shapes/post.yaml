@@ -11,6 +11,7 @@ post:
     comment_count: integer
     likes:         integer
     view_count:    integer
+    replies:       post[]     # nested comment tree (comments are posts)
   relations:
     posted_by:         account   # who posted it
     publish:           community # subreddit, group, or channel it was posted to

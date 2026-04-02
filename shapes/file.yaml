@@ -1,21 +1,28 @@
-# A file — document, attachment, download, or any discrete digital artifact.
-# Base type for image. Files can be attached to emails, messages, or any entity.
+# A file — source code, attachment, download, or any discrete digital artifact.
+# Base type for image. Covers repo files (GitHub, Cursor), email attachments
+# (Mimestream), filesystem entries, and downloads.
 #
-# Sources: Mimestream (email attachments), filesystem, any skill with downloads
+# Sources: GitHub, Cursor, Mimestream, filesystem
 file:
   fields:
     filename:          string    # original filename with extension
     mime_type:         string    # IANA MIME type (e.g. application/pdf, text/plain)
     size:              integer   # file size in bytes
-    path:              string    # local filesystem path (if available)
+    path:              string    # file path within repository, workspace, or filesystem
     format:            string    # human-readable format (e.g. "PDF", "DOCX")
+    language:          string    # programming language (source code files)
+    encoding:          string    # content encoding (e.g. base64, utf-8)
+    line_count:        integer   # line count (text files)
+    kind:              string    # file, dir, symlink, submodule
+    sha:               string    # git blob SHA (repo files)
   relations:
     attached_to:       message   # email/message this file was attached to
+    repository:        repository
   display:
     title: name
-    subtitle: mime_type
+    subtitle: path
     columns:
       - name:            File
-      - filename:        Filename
-      - mime_type:       Type
+      - path:            Path
+      - language:        Language
       - size:            Size

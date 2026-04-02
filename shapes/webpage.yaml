@@ -7,6 +7,7 @@ webpage:
     visit_count:       integer   # browser history visit count
     last_visit_unix:   integer   # browser history last visit timestamp
     content_type:      string    # MIME type (e.g. text/html, text/markdown)
+    error:             string    # error message if fetch failed
   display:
     title: name
     subtitle: url

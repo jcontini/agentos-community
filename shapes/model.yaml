@@ -5,13 +5,19 @@ model:
   fields:
     provider:          string    # e.g., "anthropic", "openai", "meta"
     context_length:    integer
+    context_window:    integer   # alias for context_length (OpenRouter uses this name)
     max_output:        integer
     pricing_input:     string    # e.g., "$3/1M tokens"
     pricing_output:    string
     modality:          string[]  # e.g., ["text", "vision"]
+    model_type:        string    # e.g., "chat", "completion", "embedding"
     quantization:      string    # e.g., "Q4_K_M"
+    quantization_level: string   # e.g., "Q4_0" (Ollama naming)
     size:              string    # e.g., "7B", "70B"
+    parameter_size:    string    # e.g., "7.6B" (Ollama naming)
     format:            string    # e.g., "gguf"
+    family:            string    # model family, e.g., "llama", "qwen"
+    digest:            string    # content-addressable hash of model weights
   display:
     title: name
     subtitle: provider

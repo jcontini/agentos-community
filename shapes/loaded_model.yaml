@@ -7,6 +7,8 @@ loaded_model:
     quantization:      string
     expires_at:        datetime
     vram_usage:        string
+    size_vram:         integer   # VRAM bytes used by this model
+    digest:            string    # content-addressable hash
   display:
     title: name
     subtitle: size
