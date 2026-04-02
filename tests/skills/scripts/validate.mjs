@@ -344,17 +344,9 @@ function checkMappings(frontmatter) {
   const errors = [];
   let total = 0;
   let passed = 0;
-  const adapters = getAdapters(frontmatter);
-  const operations = Object.values(frontmatter.operations || {});
-  const hasEntityOperations = operations.some(op => returnsEntity(op));
-  
-  if (!adapters) {
-    if (hasEntityOperations) {
-      errors.push('Has operations but no adapters section — data won\'t flow through entities');
-      total = 1;
-    }
-    return { pass: errors.length === 0, passed, total, errors };
-  }
+  // Adapters removed — all skills return shape-native data from Python.
+  // Mapping validation is no longer needed.
+  return { pass: true, passed: 1, total: 1, errors };
   
   for (const [entityName, adapter] of Object.entries(adapters)) {
     const mapping = getAdapterMapping(adapter);

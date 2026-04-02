@@ -220,10 +220,6 @@ function requestRootWarnings(value, path) {
 
 function lintSkill(frontmatter) {
   const issues = [];
-  const adapters = frontmatter.adapters && typeof frontmatter.adapters === 'object'
-    ? Object.keys(frontmatter.adapters)
-    : [];
-  const adapterSet = new Set(adapters);
   const returnedEntities = new Set();
 
   if (frontmatter.api?.base_url) {
@@ -272,15 +268,6 @@ function lintSkill(frontmatter) {
     const entityName = returnsEntityName(op);
     if (entityName) {
       returnedEntities.add(entityName);
-      if (!adapterSet.has(entityName)) {
-        issues.push(
-          issue(
-            'error',
-            `operations.${opName}.returns`,
-            `returns '${entityName}' but adapters.${entityName} is missing`
-          )
-        );
-      }
     }
 
     if (op.rest) {
@@ -332,12 +319,6 @@ function lintSkill(frontmatter) {
 
     if (op.command?.env) {
       issues.push(...requestRootWarnings(op.command.env, `operations.${opName}.command.env`));
-    }
-  }
-
-  for (const adapterName of adapters) {
-    if (!returnedEntities.has(adapterName)) {
-      issues.push(issue('warn', `adapters.${adapterName}`, 'adapter is defined but no operation returns it'));
     }
   }
 

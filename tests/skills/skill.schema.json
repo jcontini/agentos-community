@@ -55,13 +55,6 @@
     "api": {
       "$ref": "#/definitions/api"
     },
-    "adapters": {
-      "type": "object",
-      "description": "Entity adapters that transform API data into universal entity format. Each key is an entity type.",
-      "additionalProperties": {
-        "$ref": "#/definitions/transformer"
-      }
-    },
     "operations": {
       "type": "object",
       "description": "Skill operations, including entity-returning reads/writes and inline-schema action tools",
@@ -74,7 +67,7 @@
     },
     "handles": {
       "type": "object",
-      "description": "URL patterns this adapter handles for routing",
+      "description": "URL patterns this skill handles for routing",
       "properties": {
         "urls": {
           "type": "array",
