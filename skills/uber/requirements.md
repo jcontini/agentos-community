@@ -327,9 +327,60 @@ GET https://payments.ubereats.com/_api/payment-profiles?ctx={latitude,longitude}
 
 Separate payment service — note the different subdomain (`payments.ubereats.com`).
 
+### Full API surface (extracted from JS bundles, 2026-04-02)
+
+Extracted by grepping `client-main-*.js` for endpoint name patterns.
+
+**Read operations:**
+
+| Endpoint | Purpose | Status |
+|----------|---------|--------|
+| `getPastOrdersV1` | Order history with store, fare, timestamps | **Captured** — full response shape documented |
+| `getReceiptByWorkflowUuidV1` | Receipt HTML with item names | **Captured** — HTML parsing needed (fragile) |
+| `getOrderEntityByUuidV1` | **Structured order detail by UUID** | **Not yet captured** — likely the JSON version of item data. Try this before HTML parsing. |
+| `getActiveOrdersV1` | Live order status/tracking | **Captured** — returns feed cards, order phase |
+| `getStoreV1` | Store details | Not yet captured |
+| `getPaginatedStoresV1` | Store browsing with pagination | Not yet captured |
+| `getFeedV1` | Home feed (store listings) | Not yet captured |
+| `getFeedItemsUpdateV1` | Feed updates | Not yet captured |
+| `getSearchHomeV2` | Search/browse home | **Captured** — top-level keys only |
+| `getCheckoutPresentationV1` | Checkout flow/presentation | Not yet captured |
+| `getEaterMessagingContentV1` | Driver messages/chat | Not yet captured |
+| `getOriginalCartV1` | Cart before substitutions | Not yet captured |
+| `getDraftOrderByUuidV1` / `V2` | Draft order details | Not yet captured |
+| `getOrderEntitiesV1` | Order entities (returns null without context) | **Captured** — empty response |
+| `getUserV1` | User profile | **Captured** |
+| `getProfilesForUserV1` | User profiles list | **Captured** |
+| `getCartsViewForEaterUuidV1` | Current cart state | **Captured** |
+| `getLocationV1` | Location details | Not yet captured |
+| `getNavigationLinksV1` | Nav structure | Not yet captured |
+| `getEatsPassV1` | Uber One / Eats Pass | Not yet captured |
+| `getUberBalancesV1` | Uber credits/balances | Not yet captured |
+| `getInvoiceStatusV1` | Invoice/receipt status | **Captured** |
+
+**Write operations (require [firewall](../../../docs/specs/firewall.md)):**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `addItemsToDraftOrderV2` | Add items to cart |
+| `addItemsToGroupDraftOrderV2` | Group order cart |
+| `addItemsToOrderV1` | Add items to active order |
+| `createDraftOrderV2` | Create new order |
+| `confirmCartUpdatesV1` | Confirm substitutions |
+| `discardDraftOrderV2` / `V1` | Cancel draft order |
+| `removeItemsFromDraftOrderV2` | Remove cart items |
+| `applyPromoV1` | Apply promo code |
+| `createEaterFavoritesV1` | Add to favorites |
+| `deleteEaterFavoritesV1` | Remove from favorites |
+
+**Key insight:** The Eats API is NOT GraphQL — it's protobuf-style RPC over JSON at `/_p/api/`. The `_p` likely stands for "protobuf" or "protocol". All endpoints follow the pattern `{verb}{Entity}V{version}`. This is a stable, versioned API surface — much better than HTML parsing.
+
+**Priority:** Try `getOrderEntityByUuidV1` before falling back to HTML receipt parsing. If it returns structured item data as JSON, we avoid the fragile `data-testid` CSS selector approach entirely.
+
 ### Next steps
 
-1. **Capture response bodies** — enhance `browse-capture.py` with `Network.getResponseBody` to see what each endpoint returns
-2. **Capture Costco store page** — `browse capture` on a Costco store URL to discover menu/product endpoints
-3. **Document response shapes** — product, order, delivery, driver structures
-4. **Determine if `.ubereats.com` cookies work** — the rides skill uses `.uber.com`; Eats may need its own connection
+1. **Call `getOrderEntityByUuidV1`** with an order UUID — this is likely the structured JSON for order items
+2. **Capture Costco store page** — `browse capture` on a Costco store URL to discover `getStoreV1` and menu endpoints
+3. **Add Eats connection** — `.ubereats.com` cookie domain, separate from `.uber.com` rides connection
+4. **Build `list_deliveries`** — backed by `getPastOrdersV1`
+5. **Build `get_delivery`** — backed by `getOrderEntityByUuidV1` (preferred) or `getReceiptByWorkflowUuidV1` (fallback)
