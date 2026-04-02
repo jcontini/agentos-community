@@ -55,6 +55,51 @@ See [Auth & Runtime](3-auth/index.md) for the full methodology, including:
 - **Playwright Gotchas** — `type` vs `fill` for React forms, honeypot fields, and when HTTPX replay fails
 - **Vendor guides** — [NextAuth.js](3-auth/nextauth.md), [WorkOS](3-auth/workos.md)
 
+## Write operations — replay, don't reconstruct
+
+Write operations (creating orders, adding to carts, submitting forms) are where most RE bugs hide.
+The API accepts your request (200 OK) but stores degraded data because your payload was subtly wrong.
+
+### Principles
+
+**1. Replay, don't reconstruct.** Capture a working browser request and replay its exact structure.
+If the browser sends 15 fields on a cart item, send 15 fields. Don't "simplify" to the 6 you think
+matter. The 9 you dropped might include section UUIDs, selling options, or measurement types that
+the server needs to properly resolve the item.
+
+**2. Trace data provenance.** For every field in a write request, document which read endpoint
+provided the value. Don't just document the shape — document the data flow:
+```
+getStoreV1.catalogSectionsMap[secKey][i].catalogSectionUUID
+  → addItemsToDraftOrderV2.items[].sectionUuid
+
+getStoreV1...catalogItems[].sectionUUID
+  → addItemsToDraftOrderV2.items[].sectionUuid (different! item-level, not parent)
+```
+
+**3. Compare field-by-field.** After making a write call, compare your result against browser-created
+state. Don't just check "200 OK" or "items exist." Check: do items have images? Prices? Can the
+browser render them normally? Grayed-out images or "Nothing to eat here" means your data was
+accepted but degraded.
+
+**4. Preserve raw data.** When extracting from a read endpoint, keep the original response data
+alongside your clean shape. Your clean shape is for display; the raw data is for downstream write
+operations that need the exact fields the API expects back. Don't lossy-extract into your own
+shape and throw away the original.
+
+**5. Hook BOTH fetch AND XHR.** Some sites use `fetch()` for reads but `XMLHttpRequest` for writes
+(Uber Eats does this). If you only hook one, you'll miss the write calls entirely.
+
+### Real example: Uber Eats cart bug
+
+We captured `addItemsToDraftOrderV2` and built item payloads ourselves. The API returned 200,
+items appeared in the cart with correct names and prices. But images were grayed out and clicking
+items showed "Nothing to eat here." Root cause: we used the wrong `sectionUuid` and `subsectionUuid`
+(same UUID for all items instead of per-item values from the catalog), and omitted `sellingOption`.
+The server accepted the items but couldn't resolve them against the catalog properly.
+
+Fix: pass through the raw catalog item data from `getStoreV1` instead of reconstructing it.
+
 ## Starting a new reverse-engineered skill
 
 ```bash
