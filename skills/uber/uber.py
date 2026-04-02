@@ -508,11 +508,16 @@ def list_deliveries(cursor: str = "", **params) -> list:
                 for item in (fare.get("checkoutInfo") or [])
             ],
             # Typed references — create linked entities in the graph
+            # Store is a place (POI), not an organization. See place.yaml.
             "store": {
-                "organization": {
+                "place": {
                     "id": store_info.get("uuid"),
                     "name": store_info.get("title"),
                     "image": store_info.get("heroImageUrl"),
+                    "feature_type": "poi",
+                    "full_address": raw_addr.get("eaterFormattedAddress"),
+                    "latitude": location.get("latitude"),
+                    "longitude": location.get("longitude"),
                 }
             },
             "shipping_address": {
@@ -678,28 +683,40 @@ def get_store(store_uuid: str, **params) -> dict:
     # closedMessage tells you when it actually opens (e.g. "Opens Saturday 9:30 AM").
     # Check BOTH is_open AND closed_message to determine real availability.
     rating_data = data.get("rating") or {}
+
+    # A store is a place (POI), not an organization. The organization (brand)
+    # is the company (e.g. "Sprouts Farmers Market Inc."). The store is a
+    # location of that brand — with address, hours, rating, delivery capability.
+    # See place.yaml — modeled after Google Places API.
     return {
-        # Standard fields (organization shape)
+        # Standard fields
         "id": data.get("uuid", ""),
         "name": data.get("title", ""),
         "image": (data.get("heroImageUrls") or [None])[0],
         "url": f"https://www.ubereats.com/store/{data.get('slug', '')}",
-        # Organization shape — headquarters → place
-        "headquarters": {
-            "place": {
-                "full_address": address.get("eaterFormattedAddress"),
-                "latitude": location.get("latitude"),
-                "longitude": location.get("longitude"),
-            }
-        } if address.get("eaterFormattedAddress") else None,
-        # Store-specific fields (not in org shape, but useful metadata)
+        # Place shape fields
+        "full_address": address.get("eaterFormattedAddress"),
+        "latitude": location.get("latitude"),
+        "longitude": location.get("longitude"),
+        "feature_type": "poi",
+        "categories": [c.get("name") for c in (data.get("categories") or []) if c.get("name")],
+        "phone": data.get("phoneNumber"),
+        "hours": data.get("hours"),
+        "business_status": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
+        "rating": rating_data.get("ratingValue"),
+        "review_count": rating_data.get("reviewCount"),
+        "delivery": True,
+        # Extra fields not in place shape but needed for UX
         "is_open": data.get("isOpen", False),
         "is_orderable": data.get("isOrderable", False),
         "closed_message": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
-        "rating": rating_data.get("ratingValue"),
-        "review_count": rating_data.get("reviewCount"),
-        "hours": data.get("hours"),
+        # Brand → organization (the company, not the location)
+        "brand": {
+            "organization": {
+                "name": data.get("title", ""),
+            }
+        },
         # Products as product-shaped entities
         "products": products,
         "product_count": len(products),
@@ -923,12 +940,13 @@ def get_cart(**params) -> list:
             "currency": "USD",
             # Typed references
             "store": {
-                "organization": {
+                "place": {
                     "id": draft.get("storeUuid"),
                     "name": store.get("title"),
                     "image": store.get("heroImageUrl"),
+                    "feature_type": "poi",
                 }
-            } if store.get("title") else None,
+            } if store.get("title") or draft.get("storeUuid") else None,
             # getDraftOrdersByEaterUuidV1 items use different field names than getStoreV1:
             #   skuUUID (not uuid) = catalog product UUID
             #   imageURL (not imageUrl) = product image

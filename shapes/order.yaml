@@ -19,7 +19,7 @@ order:
   relations:
     contains:          product[]
     shipping_address:  place
-    store:             organization  # restaurant or store the order is from
+    store:             place         # store/restaurant LOCATION (place with feature_type: poi)
     tracking:          webpage       # carrier tracking page
   display:
     title: name

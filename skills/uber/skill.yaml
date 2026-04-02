@@ -157,8 +157,8 @@ operations:
       timeout: 30
 
   get_store:
-    description: "Get store details and full product catalog with prices, images, availability"
-    returns: organization
+    description: "Get store location, hours, rating, and full product catalog"
+    returns: place
     params:
       store_uuid:
         type: string

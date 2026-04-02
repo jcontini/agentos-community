@@ -1,7 +1,12 @@
 # A physical location — address, building, city, or point of interest.
-# Used for meeting locations, shipping addresses, headquarters, airports, etc.
+# Used for meeting locations, shipping addresses, store/restaurant locations,
+# headquarters, airports, etc.
 #
-# Sources: Apple Calendar, Amazon (shipping), Mapbox (geocoding)
+# Follows the Google Places / Mapbox model: a place IS the thing. A Costco
+# location is a place with feature_type "poi", hours, rating, and delivery.
+# The company (Costco Inc.) is an organization. The location is a place.
+#
+# Sources: Apple Calendar, Amazon (shipping), Mapbox (geocoding), Uber Eats (stores)
 place:
   fields:
     # Formatted strings (pre-computed, avoid client-side formatting)
@@ -25,12 +30,28 @@ place:
     longitude:         number
     accuracy:          string    # geocoding confidence: rooftop, parcel, interpolated
 
-    # Classification
-    feature_type:      string    # Mapbox type: address, poi, place, region, etc.
+    # Classification (Google Places / Mapbox aligned)
+    feature_type:      string    # address, poi, place, region, etc.
+    categories:        string[]  # Google: types[] / primaryType (e.g. "grocery_store", "restaurant")
+
+    # Business / POI attributes (Google Places aligned)
+    phone:             string    # national phone number
+    website:           url       # business website
+    hours:             json      # opening hours [{dayRange, sectionHours: [{startTime, endTime}]}]
+    business_status:   string    # open, closed, temporarily_closed
+    rating:            number    # 1.0-5.0
+    review_count:      integer
+    price_level:       string    # free, inexpensive, moderate, expensive, very_expensive
+    delivery:          boolean
+    takeout:           boolean
+    timezone:          string    # IANA timezone (e.g. "America/Chicago")
 
     # External identifiers
     mapbox_id:         string
     wikidata_id:       string
+    google_place_id:   string
+  relations:
+    brand:             organization  # the company this location belongs to
   display:
     title: name
     subtitle: full_address
