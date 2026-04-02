@@ -488,6 +488,9 @@ The browser uses **XHR** (not fetch) for this endpoint. The request requires a p
 | Endpoint | Purpose |
 |----------|---------|
 | `addItemsToDraftOrderV2` | Add items to cart — **captured**, full shape documented above |
+| `checkoutOrdersByDraftOrdersV1` | **PLACE ORDER** — takes draft order UUIDs, submits the order. NOT YET CAPTURED — need to capture request body. |
+| `cancelOrderV1` | Cancel an active order |
+| `getRepeatOrderViewV1` | Repeat order view (not yet tested) |
 | `addItemsToGroupDraftOrderV2` | Group order cart |
 | `addItemsToOrderV1` | Add items to active order |
 | `createDraftOrderV2` | Create new order |
