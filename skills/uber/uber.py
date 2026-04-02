@@ -705,9 +705,9 @@ def get_store(store_uuid: str, **params) -> dict:
         "business_status": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
         "rating": rating_data.get("ratingValue"),
         "review_count": rating_data.get("reviewCount"),
-        "delivery": True,
-        # Extra fields not in place shape but needed for UX
-        "is_open": data.get("isOpen", False),
+        # delivery/eta/is_orderable are CONTEXTUAL — they depend on the user's
+        # delivery address, not intrinsic to the place. Returned here for UX
+        # but not part of the place shape.
         "is_orderable": data.get("isOrderable", False),
         "closed_message": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
