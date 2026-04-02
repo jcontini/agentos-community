@@ -1,17 +1,21 @@
-# A tag or label — git tag, Todoist label, etc.
+# A tag or label — Gmail label, Todoist label, GitHub label, git tag, etc.
+# Cross-skill: anything can carry tags. An email has labels, a task has tags,
+# a PR has labels, a git commit has tags.
 #
-# Sources: git, Todoist
+# Sources: Gmail, Todoist, GitHub, git
 tag:
   fields:
-    color:             string
-    hash:              string    # commit hash the tag points to
-    annotated:         boolean   # true if annotated (vs lightweight)
+    color:             string    # hex color (#EA4335) or named color
+    tag_type:          string    # system, user — distinguishes built-in vs custom
+    hash:              string    # commit hash the tag points to (git)
+    annotated:         boolean   # true if annotated vs lightweight (git)
   relations:
     repository:        repository
   display:
     title: name
-    subtitle: text
+    subtitle: tag_type
     date: datePublished
     columns:
       - name:            Tag
-      - datePublished:   Date
+      - tag_type:        Type
+      - color:           Color

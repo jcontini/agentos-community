@@ -385,10 +385,16 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
     return {
+        "name": f"Display {target['display_id']} screenshot",
+        "filename": resolved_path.rsplit("/", 1)[-1],
+        "path": resolved_path,
+        "format": "PNG",
+        "mime_type": "image/png",
+        "width": target.get("width"),
+        "height": target.get("height"),
         "display_id": target["display_id"],
         "display_index": target["display_index"],
-        "path": resolved_path,
-        "captured_at": iso_now(),
+        "datePublished": iso_now(),
     }
 
 
@@ -405,12 +411,18 @@ def screenshot_window(*, window_id, path=None, **params):
     result = shell.run("screencapture", ["-x", "-l", str(target_window_id), resolved_path])
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
+    frame = target.get("frame", {})
     return {
+        "name": f"{target.get('app_name', 'Window')} — {target.get('title', '')}",
+        "filename": resolved_path.rsplit("/", 1)[-1],
+        "path": resolved_path,
+        "format": "PNG",
+        "mime_type": "image/png",
+        "width": frame.get("width"),
+        "height": frame.get("height"),
         "window_id": target_window_id,
         "app_name": target.get("app_name"),
-        "title": target.get("title"),
-        "path": resolved_path,
-        "captured_at": iso_now(),
+        "datePublished": iso_now(),
     }
 
 

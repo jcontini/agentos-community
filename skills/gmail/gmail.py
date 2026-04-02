@@ -5,7 +5,9 @@ params["auth"]["access_token"], injected by the engine from OAuth resolution.
 """
 
 import base64
+import json
 import re
+import time
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -106,23 +108,132 @@ def _decode_body_text(payload):
     return _find_plain(payload)
 
 
+def _decode_body_html(payload):
+    """Find the text/html part and base64url-decode its content."""
+    if not payload:
+        return ""
+
+    def _find_html(part):
+        mime = part.get("mimeType", "")
+        if mime == "text/html":
+            data = (part.get("body") or {}).get("data", "")
+            if data:
+                padded = data + "=" * ((4 - len(data) % 4) % 4)
+                try:
+                    return base64.urlsafe_b64decode(padded).decode("utf-8", errors="replace")
+                except Exception:
+                    return ""
+        if mime.startswith("multipart/"):
+            for sub in part.get("parts") or []:
+                result = _find_html(sub)
+                if result:
+                    return result
+        return ""
+
+    for sub in payload.get("parts") or []:
+        result = _find_html(sub)
+        if result:
+            return result
+    return _find_html(payload)
+
+
+def _extract_manage_subscription_url(html):
+    """Extract manage subscription/preferences URL from HTML using lxml.
+
+    Looks for links by href patterns and anchor text patterns,
+    language-independent where possible.
+    """
+    if not html:
+        return None
+    try:
+        from lxml import html as lxml_html
+    except ImportError:
+        return None
+
+    try:
+        doc = lxml_html.fromstring(html)
+    except Exception:
+        return None
+
+    # Strategy 1: href patterns — these are URL-based, language-independent
+    href_patterns = [
+        "manage_subscription", "manage-subscription",
+        "manage_preferences", "manage-preferences",
+        "subscription_preferences", "subscription-preferences",
+        "email_preferences", "email-preferences",
+        "communication_preferences", "communication-preferences",
+        "notification_preferences", "notification-preferences",
+        "update_preferences", "update-preferences",
+        "mailing_preferences", "mailing-preferences",
+        "list-manage.com/profile",     # Mailchimp
+        "manage_subscription_preferences",  # Customer.io
+        "email-preferences",           # HubSpot
+        "subscription-center",         # Salesforce
+        "preference-center",           # Generic
+    ]
+    for link in doc.cssselect("a[href]"):
+        href = link.get("href", "")
+        href_lower = href.lower()
+        for pattern in href_patterns:
+            if pattern in href_lower:
+                return href
+
+    # Strategy 2: anchor text (English fallback)
+    text_patterns = [
+        "manage preferences", "update preferences",
+        "manage your preferences", "update your preferences",
+        "email preferences", "subscription preferences",
+        "communication preferences", "notification preferences",
+        "manage subscription", "manage your subscription",
+    ]
+    for link in doc.cssselect("a[href]"):
+        text = (link.text_content() or "").strip().lower()
+        for pattern in text_patterns:
+            if pattern in text:
+                return link.get("href", "")
+
+    return None
+
+
 def _collect_attachments(payload):
-    """Recursively collect attachment metadata from MIME parts."""
+    """Recursively collect attachment metadata as file-shaped objects."""
     results = []
     if not payload:
         return results
+
+    def _mime_to_format(mime_type):
+        """Derive human-readable format from MIME type."""
+        formats = {
+            "application/pdf": "PDF",
+            "application/zip": "ZIP",
+            "application/gzip": "GZIP",
+            "text/plain": "TXT",
+            "text/csv": "CSV",
+            "text/html": "HTML",
+            "image/png": "PNG",
+            "image/jpeg": "JPEG",
+            "image/gif": "GIF",
+            "image/webp": "WebP",
+        }
+        if not mime_type:
+            return None
+        return formats.get(mime_type)
 
     def _walk(part):
         filename = part.get("filename")
         body = part.get("body") or {}
         attachment_id = body.get("attachmentId")
         if filename and attachment_id:
+            mime_type = part.get("mimeType")
             results.append(
                 {
+                    "id": attachment_id,
+                    "name": filename,
                     "filename": filename,
-                    "mime_type": part.get("mimeType"),
+                    "mime_type": mime_type,
+                    "format": _mime_to_format(mime_type),
                     "size": body.get("size"),
-                    "attachment_id": attachment_id,
+                    "encoding": "base64url",
                 }
             )
         for sub in part.get("parts") or []:
@@ -130,6 +241,25 @@ def _collect_attachments(payload):
 
     _walk(payload)
     return results
+
+
+def _extract_domain(email_addr):
+    """Extract domain from an email address."""
+    if not email_addr or "@" not in email_addr:
+        return None
+    return email_addr.rsplit("@", 1)[1].lower()
+
+
+def _domains_from_accounts(accounts):
+    """Extract unique domain objects from a list of parsed account dicts."""
+    seen = set()
+    domains = []
+    for acct in accounts:
+        domain = _extract_domain(acct.get("handle", ""))
+        if domain and domain not in seen:
+            seen.add(domain)
+            domains.append({"name": domain})
+    return domains
 
 
 def _internaldate_to_iso(internal_date):
@@ -164,6 +294,51 @@ def _map_email(msg):
     else:
         author = None
 
+    to_accounts = _parse_addresses(_get_header(headers, "To"))
+    cc_accounts = _parse_addresses(_get_header(headers, "Cc"))
+    bcc_accounts = _parse_addresses(_get_header(headers, "Bcc"))
+    attachments = _collect_attachments(payload)
+
+    # Extract List-Unsubscribe header (RFC 2369) — prefer URL over mailto
+    # RFC 8058: List-Unsubscribe-Post enables one-click unsubscribe via POST
+    unsubscribe = None
+    unsubscribe_one_click = False
+    unsub_raw = _get_header(headers, "List-Unsubscribe") or ""
+    if unsub_raw:
+        urls = re.findall(r"<([^>]+)>", unsub_raw)
+        for url in urls:
+            if url.startswith("http"):
+                unsubscribe = url
+                break
+        if not unsubscribe and urls:
+            unsubscribe = urls[0]
+    if _get_header(headers, "List-Unsubscribe-Post") and unsubscribe and unsubscribe.startswith("http"):
+        unsubscribe_one_click = True
+
+    # List-Id (RFC 2919) — extract the identifier from angle brackets
+    list_id_raw = _get_header(headers, "List-Id") or ""
+    list_id_match = re.search(r"<([^>]+)>", list_id_raw)
+    list_id = list_id_match.group(1) if list_id_match else (list_id_raw.strip() or None)
+
+    # Auto-Submitted (RFC 3834) — anything other than "no" means automated
+    auto_submitted = _get_header(headers, "Auto-Submitted")
+    is_automated = auto_submitted is not None and auto_submitted.lower() != "no"
+
+    # Manage subscription URL — look for List-Subscribe header first,
+    # then scan body for common preference center patterns
+    manage_sub = None
+    list_subscribe_raw = _get_header(headers, "List-Subscribe") or ""
+    if list_subscribe_raw:
+        sub_urls = re.findall(r"<([^>]+)>", list_subscribe_raw)
+        for url in sub_urls:
+            if url.startswith("http"):
+                manage_sub = url
+                break
+    if not manage_sub:
+        # Parse HTML body with lxml — href patterns are language-independent
+        body_html = _decode_body_html(payload)
+        manage_sub = _extract_manage_subscription_url(body_html)
+
     return {
         "id": msg.get("id"),
         "name": subject,
@@ -173,6 +348,11 @@ def _map_email(msg):
         "is_starred": "STARRED" in label_ids,
         "is_unread": "UNREAD" in label_ids,
         "is_draft": "DRAFT" in label_ids,
+        "is_sent": "SENT" in label_ids,
+        "is_trash": "TRASH" in label_ids,
+        "is_spam": "SPAM" in label_ids,
+        "is_automated": is_automated,
+        "has_attachments": len(attachments) > 0,
         "message_id": _get_header(headers, "Message-ID") or "",
         "in_reply_to": _get_header(headers, "In-Reply-To"),
         "conversation_id": msg.get("threadId", ""),
@@ -183,11 +363,24 @@ def _map_email(msg):
         "references": _get_header(headers, "References"),
         "reply_to": _get_header(headers, "Reply-To"),
         "delivered_to": _get_header(headers, "Delivered-To"),
-        "attachments": _collect_attachments(payload),
+        "return_path": _get_header(headers, "Return-Path"),
+        "list_id": list_id,
+        "precedence": _get_header(headers, "Precedence"),
+        "mailer": _get_header(headers, "X-Mailer") or _get_header(headers, "User-Agent"),
+        "auth_results": _get_header(headers, "Authentication-Results"),
+        "feedback_id": _get_header(headers, "Feedback-ID"),
+        "unsubscribe": unsubscribe,
+        "unsubscribe_one_click": unsubscribe_one_click,
+        "manage_subscription": manage_sub,
+        "attachments": attachments,
+        # Relations
         "from": from_obj,
-        "to": _parse_addresses(_get_header(headers, "To")),
-        "cc": _parse_addresses(_get_header(headers, "Cc")),
-        "bcc": _parse_addresses(_get_header(headers, "Bcc")),
+        "to": to_accounts,
+        "cc": cc_accounts,
+        "bcc": bcc_accounts,
+        "domain": {"name": _extract_domain(from_obj.get("handle", ""))} if _extract_domain(from_obj.get("handle", "")) else None,
+        "to_domain": _domains_from_accounts(to_accounts),
+        "cc_domain": _domains_from_accounts(cc_accounts),
     }
 
 
@@ -195,30 +388,64 @@ def _map_conversation(thread):
     """Map a Gmail thread object to the agentOS conversation shape."""
     if not thread:
         return thread
-    messages = thread.get("messages") or []
+    raw_messages = thread.get("messages") or []
     snippet = thread.get("snippet", "")
 
     # Subject from first message
     name = None
-    if messages:
-        first_headers = (messages[0].get("payload") or {}).get("headers") or []
+    if raw_messages:
+        first_headers = (raw_messages[0].get("payload") or {}).get("headers") or []
         name = _get_header(first_headers, "Subject")
     if not name:
         name = snippet[:120] + ("…" if len(snippet) > 120 else "")
 
     # datePublished from last message
     date_published = None
-    if messages:
-        date_published = _internaldate_to_iso(messages[-1].get("internalDate"))
+    if raw_messages:
+        date_published = _internaldate_to_iso(raw_messages[-1].get("internalDate"))
+
+    # Map messages through _map_email and extract unique participants
+    mapped_messages = [_map_email(m) for m in raw_messages] if raw_messages else []
+    participants = _extract_participants(mapped_messages)
+
+    # Unread if any message is unread
+    unread_count = sum(1 for m in mapped_messages if m and m.get("is_unread"))
 
     return {
         "id": thread.get("id"),
         "name": name,
         "text": snippet,
         "datePublished": date_published,
-        "message_count": len(messages) if messages else None,
+        "message_count": len(mapped_messages) if mapped_messages else None,
+        "unread_count": unread_count,
         "history_id": thread.get("historyId"),
+        # Relations
+        "message": mapped_messages,
+        "participant": participants,
     }
+
+
+def _extract_participants(mapped_emails):
+    """Extract unique participant accounts from a list of mapped emails."""
+    seen = set()
+    participants = []
+    for email in mapped_emails:
+        if not email:
+            continue
+        # Collect from, to, cc, bcc
+        accounts = []
+        from_obj = email.get("from")
+        if from_obj:
+            accounts.append(from_obj)
+        accounts.extend(email.get("to") or [])
+        accounts.extend(email.get("cc") or [])
+        accounts.extend(email.get("bcc") or [])
+        for acct in accounts:
+            handle = acct.get("handle", "")
+            if handle and handle not in seen:
+                seen.add(handle)
+                participants.append(acct)
+    return participants
 
 
 def _build_raw(to, subject, body_text, html_body=None, cc=None, bcc=None,
@@ -327,21 +554,38 @@ def get_profile(**params):
     return resp["json"]
 
 
+def _map_label(label):
+    """Map a Gmail label to the tag shape."""
+    return {
+        "id": label.get("id"),
+        "name": label.get("name"),
+        "tag_type": label.get("type", "").lower() or None,  # system, user
+        "color": (label.get("color") or {}).get("backgroundColor"),
+    }
+
+
 def list_labels(**params):
-    """List all Gmail labels (system and user-created)."""
+    """List all Gmail labels (system and user-created) as tags."""
     headers = _auth_header(params)
     resp = http.get(f"{BASE_URL}/labels", **http.headers(accept="json", extra=headers))
-    return resp["json"].get("labels", [])
+    return [_map_label(l) for l in resp["json"].get("labels", [])]
 
 
 def get_attachment(*, message_id, attachment_id, **params):
-    """Download an email attachment (returns base64url-encoded data)."""
+    """Download an email attachment as a file with base64url-encoded content."""
     headers = _auth_header(params)
     resp = http.get(
         f"{BASE_URL}/messages/{message_id}/attachments/{attachment_id}",
         **http.headers(accept="json", extra=headers),
     )
-    return resp["json"]
+    data = resp["json"]
+    return {
+        "id": attachment_id,
+        "name": attachment_id,
+        "content": data.get("data", ""),
+        "size": data.get("size"),
+        "encoding": "base64url",
+    }
 
 
 def get_raw(*, id, **params):
@@ -375,7 +619,7 @@ def get_vacation(**params):
 
 
 def list_drafts(*, query="", limit=20, page_token=None, **params):
-    """List drafts."""
+    """List drafts with full email content — fetches stubs then hydrates each via get_draft."""
     headers = _auth_header(params)
     query_params = {"maxResults": str(limit)}
     if query:
@@ -384,14 +628,21 @@ def list_drafts(*, query="", limit=20, page_token=None, **params):
         query_params["pageToken"] = page_token
 
     resp = http.get(f"{BASE_URL}/drafts", params=query_params, **http.headers(accept="json", extra=headers))
-    return resp["json"].get("drafts", [])
+    stubs = resp["json"].get("drafts", [])
+    if not stubs:
+        return []
+    return [get_draft(id=s["id"], **params) for s in stubs]
 
 
 def get_draft(*, id, **params):
-    """Get a draft with full message content."""
+    """Get a draft with full message content, mapped to the email shape."""
     headers = _auth_header(params)
     resp = http.get(f"{BASE_URL}/drafts/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
-    return resp["json"]
+    draft = resp["json"]
+    email = _map_email(draft.get("message", {}))
+    if email:
+        email["draft_id"] = draft.get("id")
+    return email
 
 
 def list_filters(**params):
@@ -406,6 +657,130 @@ def list_send_as(**params):
     headers = _auth_header(params)
     resp = http.get(f"{BASE_URL}/settings/sendAs", **http.headers(accept="json", extra=headers))
     return resp["json"].get("sendAs", [])
+
+
+# ==============================================================================
+# Unsubscribe (RFC 8058 one-click)
+# ==============================================================================
+
+
+def unsubscribe_email(*, id, **params):
+    """Unsubscribe from a mailing list using RFC 8058 one-click.
+
+    Fetches the email, checks for List-Unsubscribe + List-Unsubscribe-Post
+    headers, and fires the POST. No browser or cookies needed.
+    """
+    email = get_email(id=id, **params)
+    if not email:
+        raise ValueError("Email not found")
+
+    unsub_url = email.get("unsubscribe")
+    one_click = email.get("unsubscribe_one_click")
+
+    if not unsub_url:
+        raise ValueError(
+            f"No List-Unsubscribe header on this email (from: {email.get('author') or email.get('from', {}).get('handle')}). "
+            f"Manual unsubscribe may be required — check the email body for a link."
+        )
+
+    if not one_click:
+        return {
+            "status": "manual_required",
+            "unsubscribe_url": unsub_url,
+            "message": "This sender doesn't support one-click unsubscribe. Open this URL in a browser to unsubscribe.",
+        }
+
+    # RFC 8058: POST with form data List-Unsubscribe=One-Click
+    resp = http.post(unsub_url, data={"List-Unsubscribe": "One-Click"})
+    status_code = resp.get("status", 0)
+
+    return {
+        "status": "unsubscribed" if 200 <= status_code < 300 else "failed",
+        "status_code": status_code,
+        "from": email.get("from", {}).get("handle"),
+        "domain": (email.get("domain") or {}).get("name"),
+        "subject": email.get("name"),
+        "thread_id": email.get("conversation_id"),
+        "message_id": email.get("message_id"),
+    }
+
+
+# ==============================================================================
+# Gmail sync protocol (cookie-authenticated)
+# ==============================================================================
+
+# Gmail's internal label identifiers for unsubscribe state.
+# Discovered via CDP capture of Gmail's web UI unsubscribe flow.
+_CATEGORY_TO_SMARTLABEL = {
+    "CATEGORY_PROMOTIONS": "^smartlabel_promo",
+    "CATEGORY_UPDATES": "^smartlabel_notification",
+    "CATEGORY_SOCIAL": "^smartlabel_social",
+    "CATEGORY_FORUMS": "^smartlabel_group",
+    "CATEGORY_PERSONAL": "^smartlabel_personal",
+}
+
+SYNC_BASE = "https://mail.google.com/sync/u/0/i/s"
+
+
+def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None, **params):
+    """Record an unsubscribe in Gmail's internal state via the sync protocol.
+
+    Applies ^punsub (unsubscribed) and ^punsub_sat (satisfied) internal labels
+    to a thread. This is exactly what Gmail's web UI does when you click the
+    Unsubscribe button — it makes the 'You unsubscribed' banner appear and
+    hides the Unsubscribe link on future emails from that sender.
+
+    Uses the 'sync' connection (cookie-auth from browser), not OAuth.
+    Call this AFTER unsubscribe_email to complete the full unsubscribe flow.
+    """
+    from agentos import get_cookies
+    cookie_header = get_cookies(params)
+    if not cookie_header:
+        raise ValueError("No Gmail session cookies available. The 'sync' connection requires browser cookies.")
+
+    thread_ref = f"thread-f:{thread_id}"
+    msg_ref = f"msg-f:{msg_id}"
+
+    # Map Gmail label IDs to internal smartlabel refs
+    smartlabel_refs = []
+    for lid in (label_ids or []):
+        if lid in _CATEGORY_TO_SMARTLABEL:
+            smartlabel_refs.append(_CATEGORY_TO_SMARTLABEL[lid])
+
+    now_ms = int(time.time() * 1000)
+    payload = [
+        None,
+        [[[99, [thread_ref, [
+            None, None, None, None, None, None,
+            [
+                ["^punsub", "^punsub_sat"],
+                None,
+                [msg_ref],
+                None, None, None, None, None, None, None, None,
+                [None, [message_id_header] if message_id_header else [], smartlabel_refs]
+            ]
+        ]]]]],
+        [1, 0, None, None, [None, 0], None, 1],
+        [now_ms, 1, now_ms + 100, 0, 47],
+        2
+    ]
+
+    resp = http.post(
+        SYNC_BASE,
+        params={"hl": "en", "c": "0", "rt": "r", "pt": "ji"},
+        json=payload,
+        cookies=cookie_header,
+    )
+
+    status_code = resp.get("status", 0)
+    if status_code != 200:
+        return {"status": "failed", "status_code": status_code}
+
+    return {
+        "status": "synced",
+        "thread_id": thread_id,
+        "labels_applied": ["^punsub", "^punsub_sat"],
+    }
 
 
 # ==============================================================================
@@ -516,7 +891,11 @@ def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
         json={"message": message},
         **http.headers(accept="json", extra=headers),
     )
-    return resp["json"]
+    draft = resp["json"]
+    email = _map_email(draft.get("message", {}))
+    if email:
+        email["draft_id"] = draft.get("id")
+    return email
 
 
 def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **params):
@@ -528,7 +907,11 @@ def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **
         json={"message": {"raw": raw}},
         **http.headers(accept="json", extra=headers),
     )
-    return resp["json"]
+    draft = resp["json"]
+    email = _map_email(draft.get("message", {}))
+    if email:
+        email["draft_id"] = draft.get("id")
+    return email
 
 
 def send_draft(*, id, **params):
@@ -539,7 +922,7 @@ def send_draft(*, id, **params):
         json={"id": id},
         **http.headers(accept="json", extra=headers),
     )
-    return resp["json"]
+    return _map_email(resp["json"])
 
 
 def delete_draft(*, id, **params):
@@ -572,7 +955,7 @@ def set_vacation(*, enabled, subject=None, body=None, html_body=None,
 
 
 def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **params):
-    """Create a new Gmail label."""
+    """Create a new Gmail label, returned as a tag."""
     headers = _auth_header(params)
     payload = {
         "name": name,
@@ -580,7 +963,7 @@ def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **
         "messageListVisibility": show_in_message_list or "show",
     }
     resp = http.post(f"{BASE_URL}/labels", json=payload, **http.headers(accept="json", extra=headers))
-    return resp["json"]
+    return _map_label(resp["json"])
 
 
 def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list=None, **params):
@@ -595,7 +978,7 @@ def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list
         payload["messageListVisibility"] = show_in_message_list
 
     resp = http.patch(f"{BASE_URL}/labels/{id}", json=payload, **http.headers(accept="json", extra=headers))
-    return resp["json"]
+    return _map_label(resp["json"])
 
 
 def delete_label(*, id, **params):

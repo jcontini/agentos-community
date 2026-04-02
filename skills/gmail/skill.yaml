@@ -11,11 +11,23 @@ privacy_url: https://policies.google.com/privacy
 connections:
   gmail:
     base_url: "https://gmail.googleapis.com/gmail/v1/users/me"
+    domain: gmail.googleapis.com
     auth:
       type: oauth
       service: google
       scopes:
         - https://mail.google.com/
+
+  # Gmail sync protocol — cookie-authenticated, used for internal operations
+  # that aren't exposed through the public API (e.g. recording unsubscribe state).
+  # Uses the same Google session cookies as the Gmail web UI.
+  sync:
+    base_url: "https://mail.google.com"
+    domain: mail.google.com
+    auth:
+      type: cookies
+      domain: ".google.com"
+      names: ["SID", "HSID", "SSID", "OSID", "__Secure-1PSID", "__Secure-3PSID"]
 
 provides:
   - tool: web_read
@@ -113,6 +125,53 @@ operations:
       module: ./gmail.py
       function: get_conversation
       timeout: 30
+
+  # --- Unsubscribe ---
+  # RFC 8058 one-click: works when the email has both List-Unsubscribe and
+  # List-Unsubscribe-Post headers. No browser, cookies, or auth needed —
+  # the URL is a self-authenticating signed token.
+  #
+  # Note: Gmail's UI only shows "Unsubscribe" when SPF+DKIM+DMARC all pass
+  # with a strict policy (p=REJECT or p=QUARANTINE). Emails with SPF failures
+  # or weak DMARC (p=NONE) won't show the button in Gmail's UI, even if the
+  # headers are present. Our tool works regardless — we trust the headers
+  # since we're reading them from Gmail's own API.
+
+  unsubscribe_email:
+    description: "Unsubscribe from a mailing list using RFC 8058 one-click. Fetches the email headers, fires a POST — no browser needed. Falls back to returning the unsubscribe URL if one-click isn't supported. Call sync_unsubscribe after to record the state in Gmail's UI."
+    connection: gmail
+    params:
+      id: { type: string, required: true, description: "Message ID of the email to unsubscribe from" }
+      account: { type: string, description: "Gmail address" }
+    returns:
+      status: string
+      thread_id: string
+      message_id: string
+    python:
+      module: ./gmail.py
+      function: unsubscribe_email
+      timeout: 30
+
+  # Gmail sync protocol — records unsubscribe state in Gmail's internal system.
+  # This applies ^punsub and ^punsub_sat internal labels via the same endpoint
+  # Gmail's web UI uses. Makes the "You unsubscribed" banner appear and hides
+  # the Unsubscribe button on future emails from that sender.
+  # Requires browser cookies (sync connection), not OAuth.
+  sync_unsubscribe:
+    description: "Record an unsubscribe in Gmail's internal state. Call after unsubscribe_email — uses the thread_id, msg_id, and message_id from its response. Makes Gmail show 'You unsubscribed' and hide the Unsubscribe button."
+    connection: sync
+    params:
+      msg_id: { type: string, required: true, description: "Gmail message ID (from unsubscribe_email response or get_email)" }
+      thread_id: { type: string, required: true, description: "Thread ID (conversation_id from the email)" }
+      message_id_header: { type: string, description: "RFC 2822 Message-ID header value" }
+      label_ids: { type: array, description: "Gmail label IDs from the email (for smartlabel mapping)" }
+    returns:
+      status: string
+      thread_id: string
+    python:
+      module: ./gmail.py
+      function: sync_unsubscribe
+      timeout: 15
 
   # --- Sending ---
 
@@ -245,16 +304,14 @@ operations:
   # --- Drafts ---
 
   list_drafts:
-    description: List drafts
+    description: List drafts with full email content
+    returns: email[]
     connection: gmail
     params:
       account: { type: string, description: "Gmail address" }
       query: { type: string, description: "Gmail search query to filter drafts" }
       limit: { type: integer, description: "Max results (default: 20)" }
       page_token: { type: string, description: "Token for next page of results" }
-    returns:
-      id: string
-      message: string
     python:
       module: ./gmail.py
       function: list_drafts
@@ -262,13 +319,11 @@ operations:
 
   get_draft:
     description: Get a draft with full message content
+    returns: email
     connection: gmail
     params:
       id: { type: string, required: true, description: "Draft ID from list_drafts" }
       account: { type: string, description: "Gmail address" }
-    returns:
-      id: string
-      message: string
     python:
       module: ./gmail.py
       function: get_draft
@@ -276,6 +331,7 @@ operations:
 
   create_draft:
     description: Create a new draft email
+    returns: email
     connection: gmail
     params:
       account: { type: string, description: "Gmail address" }
@@ -286,8 +342,6 @@ operations:
       cc: { type: string, description: "CC recipients (comma-separated)" }
       bcc: { type: string, description: "BCC recipients (comma-separated)" }
       thread_id: { type: string, description: "Thread ID to associate the draft with" }
-    returns:
-      id: string
     python:
       module: ./gmail.py
       function: create_draft
@@ -296,6 +350,7 @@ operations:
 
   update_draft:
     description: Update an existing draft
+    returns: email
     connection: gmail
     params:
       id: { type: string, required: true, description: "Draft ID to update" }
@@ -306,8 +361,6 @@ operations:
       html_body: { type: string, description: "HTML body (takes priority over body)" }
       cc: { type: string, description: "CC recipients (comma-separated)" }
       bcc: { type: string, description: "BCC recipients (comma-separated)" }
-    returns:
-      id: string
     python:
       module: ./gmail.py
       function: update_draft
@@ -316,13 +369,11 @@ operations:
 
   send_draft:
     description: Send an existing draft
+    returns: email
     connection: gmail
     params:
       id: { type: string, required: true, description: "Draft ID to send" }
       account: { type: string, description: "Gmail address" }
-    returns:
-      id: string
-      threadId: string
     python:
       module: ./gmail.py
       function: send_draft
@@ -361,13 +412,10 @@ operations:
 
   list_labels:
     description: List all Gmail labels (system labels and user-created labels)
+    returns: tag[]
     connection: gmail
     params:
       account: { type: string, description: "Gmail address" }
-    returns:
-      id: string
-      name: string
-      type: string
     python:
       module: ./gmail.py
       function: list_labels
@@ -375,15 +423,13 @@ operations:
       timeout: 15
 
   get_attachment:
-    description: "Download an email attachment (returns base64url-encoded data). Use email.get to find attachment IDs in data.attachments."
+    description: "Download an email attachment as a file with base64url-encoded content. Use email.get to find attachment IDs in data.attachments."
+    returns: file
     connection: gmail
     params:
       message_id: { type: string, required: true, description: "Message ID the attachment belongs to" }
-      attachment_id: { type: string, required: true, description: "Attachment ID from email.get's data.attachments[].attachment_id" }
+      attachment_id: { type: string, required: true, description: "Attachment ID from email.get's data.attachments[].id" }
       account: { type: string, description: "Gmail address" }
-    returns:
-      data: string
-      size: integer
     python:
       module: ./gmail.py
       function: get_attachment
@@ -463,16 +509,13 @@ operations:
 
   create_label:
     description: Create a new Gmail label
+    returns: tag
     connection: gmail
     params:
       account: { type: string, description: "Gmail address" }
       name: { type: string, required: true, description: "Label name (use / for nesting, e.g. 'Projects/AgentOS')" }
       show_in_label_list: { type: string, description: "Visibility in label list: labelShow (default), labelShowIfUnread, labelHide" }
       show_in_message_list: { type: string, description: "Visibility in message list: show (default), hide" }
-    returns:
-      id: string
-      name: string
-      type: string
     python:
       module: ./gmail.py
       function: create_label
@@ -481,6 +524,7 @@ operations:
 
   update_label:
     description: Update a Gmail label (name, visibility)
+    returns: tag
     connection: gmail
     params:
       id: { type: string, required: true, description: "Label ID" }
@@ -488,9 +532,6 @@ operations:
       name: { type: string, description: "New label name" }
       show_in_label_list: { type: string, description: "labelShow, labelShowIfUnread, or labelHide" }
       show_in_message_list: { type: string, description: "show or hide" }
-    returns:
-      id: string
-      name: string
     python:
       module: ./gmail.py
       function: update_label

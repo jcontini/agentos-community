@@ -67,6 +67,7 @@ operations:
 
   screenshot_window:
     description: Capture a screenshot of a specific application window by window_id
+    returns: image
     params:
       window_id:
         type: integer
@@ -75,12 +76,6 @@ operations:
       path:
         type: string
         description: Optional output path for the PNG file
-    returns:
-      window_id: integer
-      app_name: string
-      title: string
-      path: string
-      captured_at: string
     python:
       module: ./macos_control.py
       function: screenshot_window
@@ -88,6 +83,7 @@ operations:
 
   screenshot_display:
     description: Capture a screenshot of a display by display_id or display_index
+    returns: image
     params:
       display_id:
         type: string
@@ -98,11 +94,6 @@ operations:
       path:
         type: string
         description: Optional output path for the PNG file
-    returns:
-      display_id: string
-      display_index: integer
-      path: string
-      captured_at: string
     python:
       module: ./macos_control.py
       function: screenshot_display

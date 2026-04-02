@@ -7,7 +7,9 @@ conversation:
     is_group:          boolean
     is_archived:       boolean
     unread_count:      integer
+    message_count:     integer   # number of messages in the thread
     account_email:     string    # which account this conversation belongs to
+    history_id:        string    # Gmail history ID for incremental sync
   relations:
     platform:          product
     participant:       account[]
