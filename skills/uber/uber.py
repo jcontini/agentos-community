@@ -680,28 +680,40 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
     exact catalog item data from getStoreV1. We pass it through with minimal
     additions (shoppingCartItemUuid, storeUuid). See overview.md "Write operations".
     """
-    raw = product.get("_raw") or {}
+    raw = product.get("_raw")
+    if not raw:
+        raise RuntimeError(
+            f"Cart item '{product.get('name', '?')}' has no _raw catalog data. "
+            "Products must come from get_store() which preserves raw getStoreV1 data. "
+            "RE principle: replay, don't reconstruct — never build write payloads from partial data."
+        )
+
     quantity = product.get("quantity", 1)
 
-    # RE principle: replay, don't reconstruct.
-    # The raw catalog item from getStoreV1 has the exact field names (lowercase):
-    #   sectionUuid (NOT sectionUUID), subsectionUuid, imageUrl, price
-    # And purchase info nested under purchaseInfo.purchaseOptions[0]
-    purchase = ((raw.get("purchaseInfo") or {}).get("purchaseOptions") or [{}])[0] if raw else {}
+    # Validate required fields — fail loudly, no silent fallbacks.
+    # Every field here comes from the raw catalog item. If it's missing,
+    # something is wrong with the catalog data, not with our code.
+    for required in ("uuid", "sectionUuid", "title", "price", "imageUrl"):
+        if not raw.get(required):
+            raise RuntimeError(
+                f"Catalog item '{raw.get('title', '?')}' missing required field '{required}'. "
+                f"Available keys: {list(raw.keys())}. "
+                "Check getStoreV1 response shape — field names are case-sensitive."
+            )
+
+    purchase = ((raw.get("purchaseInfo") or {}).get("purchaseOptions") or [{}])[0]
     pricing = (raw.get("purchaseInfo") or {}).get("pricingInfo") or {}
 
     item = {
-        "uuid": raw.get("uuid") or product["uuid"],
+        "uuid": raw["uuid"],
         "shoppingCartItemUuid": str(uuid_mod.uuid4()),
         "storeUuid": store_uuid,
-        # sectionUuid comes from the catalog item itself (lowercase 'u')
-        "sectionUuid": raw.get("sectionUuid") or product.get("_parent_section_uuid", ""),
-        # subsectionUuid is the parent HORIZONTAL_GRID section UUID
-        "subsectionUuid": raw.get("subsectionUuid") or product.get("_parent_section_uuid", ""),
-        "title": raw.get("title") or product.get("name", ""),
-        "price": raw.get("price") or product.get("price_cents", 0),
+        "sectionUuid": raw["sectionUuid"],
+        "subsectionUuid": raw.get("subsectionUuid", ""),
+        "title": raw["title"],
+        "price": raw["price"],
         "quantity": quantity,
-        "imageURL": raw.get("imageUrl") or product.get("image", ""),
+        "imageURL": raw["imageUrl"],
         "specialInstructions": "",
         "customizations": {},
         "fulfillmentIssueAction": {
