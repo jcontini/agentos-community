@@ -37,11 +37,20 @@ This is NOT GraphQL. It's an RPC-style API — each operation has its own URL pa
 
 ### Auth
 
-Cookie domain: `.ubereats.com` (different from `.uber.com` for rides — may need a separate connection in skill.yaml)
+Cookie domain: `.ubereats.com` (separate connection from `.uber.com` rides — `eats` connection in skill.yaml)
 
-Required headers:
+**CRITICAL: Always use `http.headers(waf="cf", accept="json", extra={...})` for all requests.**
+The engine sets zero headers by default. Without browser-grade UA/sec-ch-* headers, some endpoints
+(notably `getReceiptByWorkflowUuidV1`) return 500. We are acting as Brave — send what Brave sends.
+See `agentos-community/docs/skills/sdk.md` for `http.headers()` documentation.
+
+Required Eats-specific headers (pass via `extra=`):
 ```
-x-csrf-token: x
+x-csrf-token: x                        # literal string "x", same as rides
+```
+
+Additional headers the browser sends (optional for basic reads, may be needed for writes):
+```
 x-uber-session-id: <from uev2.id.session cookie>
 x-uber-target-location-latitude: 30.271044
 x-uber-target-location-longitude: -97.695755
@@ -56,6 +65,7 @@ Notes:
 - `x-uber-client-gitref` is a version hash — may need periodic updating
 - `x-uber-ciid` appears to be a client-generated UUID (stable per session?)
 - `x-uber-request-id` is a fresh UUID per request
+- `getPastOrdersV1` works with just `x-csrf-token` but `getReceiptByWorkflowUuidV1` needs full browser headers
 
 ### Discovered endpoints
 
@@ -165,17 +175,47 @@ This is the KEY endpoint for item-level order data. Not listed in the initial ca
 }
 ```
 
-**Item extraction from receipt HTML:**
+**Item extraction from receipt HTML (confirmed 2026-04-02):**
 
-Items are in divs with `data-testid="shoppingCart_item_title_{uuid}"`. Prices in `data-testid="shoppingCart_item_amount_{uuid}"` (often empty for completed orders).
+Three `data-testid` patterns per item, keyed by item UUID:
 
-Parse with CSS selectors:
+| Selector pattern | Content | Notes |
+|-----------------|---------|-------|
+| `shoppingCart_item_title_{uuid}` | Item name | Always populated |
+| `shoppingCart_item_quantity_{uuid}` | Quantity (e.g. "2") | Always populated |
+| `shoppingCart_item_amount_{uuid}` | Per-item price | **Empty for completed orders** — prices only visible during active delivery |
+
+Fare breakdown selectors (always populated):
+
+| Selector | Content | Example |
+|----------|---------|---------|
+| `total_fare_amount` | Total | "$214.50" |
+| `fare_line_item_amount_item_subtotal` | Subtotal | "$179.32" |
+| `fare_line_item_amount_delivery_fee` | Delivery fee | "$1.89" |
+| `fare_line_item_amount_service_fee` | Service fee | "$12.55" |
+| `fare_line_item_amount_tip` | Tip | "$11.62" |
+| `fare_line_item_amount_delivery_discount` | Discount | "-$1.89" |
+
+Parse with lxml + cssselect (per skill standards — no BS4, no regex on HTML):
 ```python
 from lxml import html as lhtml
+
 doc = lhtml.fromstring(receipt_html)
+
+# Extract items with quantities
 items = []
 for el in doc.cssselect('[data-testid^="shoppingCart_item_title_"]'):
-    items.append({"name": el.text_content().strip()})
+    uid = el.get("data-testid").replace("shoppingCart_item_title_", "")
+    qty_el = doc.cssselect(f'[data-testid="shoppingCart_item_quantity_{uid}"]')
+    items.append({
+        "name": el.text_content().strip(),
+        "quantity": int(qty_el[0].text_content().strip()) if qty_el else 1,
+        "item_uuid": uid,
+    })
+
+# Extract fare breakdown
+total_el = doc.cssselect('[data-testid="total_fare_amount"]')
+total = total_el[0].text_content().strip() if total_el else None
 ```
 
 **Sample items from Costco order (18 items):**
@@ -198,14 +238,50 @@ for el in doc.cssselect('[data-testid^="shoppingCart_item_title_"]'):
 - MALK Organic Almond Milk, Unsweetened (2 x 48 fl oz)
 - Kirkland Signature Rotisserie Chicken
 
-#### `getOrderEntitiesV1` — order entities
+#### `getOrderEntitiesV1` — order entities (active orders only)
 ```json
-// Request
-{}
+// Request — tested with multiple param shapes (2026-04-02)
+{"orderUuids": ["91bc1502-..."]}  // returns null for completed orders
+{"workflowUuid": "91bc1502-..."}  // same — null for completed orders
+{}                                 // returns null without context
 
-// Response — returns null/empty when called without context.
-// May need order UUID param. Currently not the right endpoint for item data.
-// Use getReceiptByWorkflowUuidV1 instead.
+// Response (always empty for completed orders):
+{
+  "status": "success",
+  "data": {
+    "orderEntities": null,
+    "orderEntitiesView": []
+  }
+}
+// Verdict: only useful during active delivery, not for order history.
+```
+
+#### `getOrderEntityByUuidV1` — single order entity (ACTIVE ORDERS ONLY)
+```json
+// Request — tested 2026-04-02 with completed order UUIDs
+{"orderUuid": "10a31bc0-..."}     // 404: "active workflow not found"
+{"workflowUuid": "91bc1502-..."}  // 404: "active internal order not found from workflow"
+
+// Response for completed orders:
+{
+  "status": "failure",
+  "data": {
+    "message": "status code error",
+    "code": 404,
+    "meta": {
+      "info": {
+        "statusCode": "404",
+        "body": {
+          "code": "not_found.error",
+          "message": "NotFoundError{Info: ErrorInfo{Message: active workflow not found}}"
+        }
+      }
+    }
+  }
+}
+// Verdict: ONLY works for in-progress orders. For completed order items,
+// use getReceiptByWorkflowUuidV1 and parse the HTML.
+// Will be useful in Phase 2 (live tracking) but NOT for Phase 1 (history).
 ```
 
 #### `getActiveOrdersV1` — live orders
@@ -336,8 +412,9 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | Endpoint | Purpose | Status |
 |----------|---------|--------|
 | `getPastOrdersV1` | Order history with store, fare, timestamps | **Captured** — full response shape documented |
-| `getReceiptByWorkflowUuidV1` | Receipt HTML with item names | **Captured** — HTML parsing needed (fragile) |
-| `getOrderEntityByUuidV1` | **Structured order detail by UUID** | **Not yet captured** — likely the JSON version of item data. Try this before HTML parsing. |
+| `getReceiptByWorkflowUuidV1` | Receipt HTML with item names, quantities, fare breakdown | **Captured + parsed** — lxml selectors confirmed working. Item prices empty on completed orders. |
+| `getOrderEntityByUuidV1` | Order entity for **active orders only** | **Tested** — returns 404 for completed orders. Only useful during live delivery (Phase 2). |
+| `getOrderEntitiesV1` | Order entities for **active orders only** | **Tested** — returns null/empty for completed orders. Only useful during live delivery (Phase 2). |
 | `getActiveOrdersV1` | Live order status/tracking | **Captured** — returns feed cards, order phase |
 | `getStoreV1` | Store details | Not yet captured |
 | `getPaginatedStoresV1` | Store browsing with pagination | Not yet captured |
@@ -348,7 +425,7 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getEaterMessagingContentV1` | Driver messages/chat | Not yet captured |
 | `getOriginalCartV1` | Cart before substitutions | Not yet captured |
 | `getDraftOrderByUuidV1` / `V2` | Draft order details | Not yet captured |
-| `getOrderEntitiesV1` | Order entities (returns null without context) | **Captured** — empty response |
+| `getOrderEntitiesV1` | Order entities (active only — see above) | **Tested** — null for completed, useful in Phase 2 |
 | `getUserV1` | User profile | **Captured** |
 | `getProfilesForUserV1` | User profiles list | **Captured** |
 | `getCartsViewForEaterUuidV1` | Current cart state | **Captured** |
@@ -373,14 +450,30 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `createEaterFavoritesV1` | Add to favorites |
 | `deleteEaterFavoritesV1` | Remove from favorites |
 
-**Key insight:** The Eats API is NOT GraphQL — it's protobuf-style RPC over JSON at `/_p/api/`. The `_p` likely stands for "protobuf" or "protocol". All endpoints follow the pattern `{verb}{Entity}V{version}`. This is a stable, versioned API surface — much better than HTML parsing.
+**Key insight:** The Eats API is NOT GraphQL — it's protobuf-style RPC over JSON at `/_p/api/`. The `_p` likely stands for "protobuf" or "protocol". All endpoints follow the pattern `{verb}{Entity}V{version}`. This is a stable, versioned API surface.
 
-**Priority:** Try `getOrderEntityByUuidV1` before falling back to HTML receipt parsing. If it returns structured item data as JSON, we avoid the fragile `data-testid` CSS selector approach entirely.
+**Completed order items:** `getOrderEntityByUuidV1` and `getOrderEntitiesV1` both return 404/null for completed orders — they only work during active delivery. For completed order history, `getReceiptByWorkflowUuidV1` is the **only** path to item-level data. The HTML is stable (uses `data-testid` attributes) and parseable with lxml. Per-item prices are empty on completed orders, but totals/fees are always present.
+
+**Active order items:** During a live delivery, `getOrderEntityByUuidV1` should return structured JSON item data (untested — need a live order). This will be the Phase 2 path.
 
 ### Next steps
 
-1. **Call `getOrderEntityByUuidV1`** with an order UUID — this is likely the structured JSON for order items
-2. **Capture Costco store page** — `browse capture` on a Costco store URL to discover `getStoreV1` and menu endpoints
-3. **Add Eats connection** — `.ubereats.com` cookie domain, separate from `.uber.com` rides connection
-4. **Build `list_deliveries`** — backed by `getPastOrdersV1`
-5. **Build `get_delivery`** — backed by `getOrderEntityByUuidV1` (preferred) or `getReceiptByWorkflowUuidV1` (fallback)
+1. ~~Call `getOrderEntityByUuidV1`~~ **Done** — only works for active orders, 404 for completed
+2. ~~Add Eats connection~~ **Done** — `.ubereats.com` in skill.yaml
+3. **Build `list_deliveries`** — backed by `getPastOrdersV1`
+4. **Build `get_delivery`** — backed by `getReceiptByWorkflowUuidV1` (items via HTML) + `getPastOrdersV1` (metadata)
+5. **Capture Costco store page** — `browse capture` on a Costco store URL to discover `getStoreV1` and menu endpoints
+6. **Build `list_stores`** — backed by `getFeedV1` or `getPaginatedStoresV1`
+7. **Test `getOrderEntityByUuidV1` during a live order** — may return structured items for Phase 2
+
+### Agent DX notes
+
+**CDP authenticated requests:** To call Uber Eats API endpoints through CDP:
+1. Browser must be on an `ubereats.com` page (CORS — `credentials: 'include'` only sends cookies for same-origin)
+2. Navigate first: `Page.navigate` to `https://www.ubereats.com/`, wait ~5s
+3. Use `Runtime.evaluate` with an async IIFE that calls `fetch()` — cookies are sent automatically
+4. The `x-csrf-token: x` header is required, other headers (session-id, location, etc.) are optional for basic reads
+
+**Cookie encryption:** Brave's SQLite cookie DB stores encrypted values (`encrypted_value` column). You cannot extract cookies by reading the DB directly — use CDP `Network.getCookies` or the agentOS engine's auth resolver instead.
+
+**Python websocket library:** Use `websocket` (installed), NOT `websockets` (not installed). Import: `import websocket`, then `websocket.create_connection(url)`. Synchronous API — no asyncio needed.

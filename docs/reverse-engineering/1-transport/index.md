@@ -34,6 +34,21 @@ with http.client(cookies=cookie_header) as c:
 
 All HTTP goes through the Rust engine via `agentos.http`. The engine handles transport mechanics (HTTP/2, cookie jars, decompression, timeouts, logging). **Headers are built in Python** via `http.headers()` — the engine sets zero default headers.
 
+> **Default rule: ALWAYS use `http.headers()`.** Never construct headers dicts manually.
+> We are acting as a real browser (Brave/Chrome). There is no reason to NOT send proper
+> browser headers. Without `http.headers()`, you get no User-Agent, no sec-ch-*, no
+> Sec-Fetch-* — and some APIs silently reject you with 500 or 403. Pass service-specific
+> headers (CSRF tokens, session IDs) via the `extra=` parameter.
+>
+> ```python
+> # WRONG — no browser headers, will fail on strict endpoints
+> http.post(url, cookies=cookies, headers={"x-csrf-token": "x"}, json=body)
+>
+> # RIGHT — browser-grade headers + service-specific extras
+> http.post(url, cookies=cookies, json=body,
+>           **http.headers(waf="cf", accept="json", extra={"x-csrf-token": "x"}))
+> ```
+
 ### TLS fingerprinting — why the engine uses wreq with BoringSSL
 
 AWS WAF, Cloudflare, and other CDNs compute a **JA3/JA4 fingerprint** from every TLS ClientHello and compare it to the claimed User-Agent. If the UA says "Chrome 131" but the TLS fingerprint says "rustls" or "urllib3," the request gets flagged as a bot. Sensitive pages (Amazon orders, Chase banking, account settings) have higher anomaly thresholds than product pages — so the homepage works but the orders page redirects to login.

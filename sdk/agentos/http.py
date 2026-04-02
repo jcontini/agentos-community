@@ -174,11 +174,25 @@ def cookies(domain: str, account: str | None = None) -> str:
 # ---------------------------------------------------------------------------
 # Header composition — independent knobs, no engine profiles
 # ---------------------------------------------------------------------------
+# Chrome version: MUST match the engine's wreq TLS emulation and the Rust
+# BROWSER_DEFAULT_UA/SEC_CH_UA constants in executor.rs.
+#
+# UPDATE TOGETHER when bumping Chrome version:
+#   1. _UA["chrome-desktop"] and _UA["chrome-mobile"] — version in UA string
+#   2. _WAF["cf"]["hints"]["Sec-CH-UA"] — version in client hints
+#   3. _MODE["navigate"]["Sec-CH-UA-Full-Version-List"] — full version
+#   4. Rust: executor.rs BROWSER_DEFAULT_UA, BROWSER_DEFAULT_SEC_CH_UA,
+#      and wreq_util::Emulation::ChromeNNN
+#
+# As of 2026-04-02: Brave is Chromium 146, wreq supports up to Chrome 145.
+# ---------------------------------------------------------------------------
 
+_CHROME_VERSION = "145"
+_CHROME_FULL_VERSION = "145.0.7493.92"
 
 _UA = {
-    "chrome-desktop": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "chrome-mobile": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.0.0 Mobile/15E148 Safari/604.1",
+    "chrome-desktop": f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{_CHROME_VERSION}.0.0.0 Safari/537.36",
+    "chrome-mobile": f"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/{_CHROME_VERSION}.0.0.0 Mobile/15E148 Safari/604.1",
     "safari-desktop": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
 }
 
@@ -186,7 +200,7 @@ _WAF = {
     "cf": {
         # Covers CloudFront (AWS) and Cloudflare — same signals today.
         "hints": {
-            "Sec-CH-UA": '"Chromium";v="131", "Not:A-Brand";v="99"',
+            "Sec-CH-UA": f'"Chromium";v="{_CHROME_VERSION}", "Not:A-Brand";v="99"',
             "Sec-CH-UA-Mobile": "?0",
             "Sec-CH-UA-Platform": '"macOS"',
         },
@@ -221,7 +235,7 @@ _MODE = {
         # Structured client hints — Amazon Lightsaber checks these
         "Sec-CH-Device-Memory": "8",
         "Sec-CH-DPR": "2",
-        "Sec-CH-UA-Full-Version-List": '"Chromium";v="131.0.6778.109", "Not:A-Brand";v="99.0.0.0"',
+        "Sec-CH-UA-Full-Version-List": f'"Chromium";v="{_CHROME_FULL_VERSION}", "Not:A-Brand";v="99.0.0.0"',
     },
 }
 

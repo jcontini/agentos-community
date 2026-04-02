@@ -33,7 +33,12 @@ Cookie auth against `.uber.com`. The rides API uses a single GraphQL endpoint:
 POST https://riders.uber.com/graphql
 ```
 
-Headers:
+**IMPORTANT:** Always use `http.headers(waf="cf", accept="json", extra={...})` for all HTTP
+requests in this skill. The engine sets zero default headers — without `http.headers()`, you
+get no User-Agent, no sec-ch-*, no Sec-Fetch-* — and some Uber endpoints reject the request.
+We are acting as Brave, so always send what Brave sends. See `docs/skills/sdk.md`.
+
+Rides-specific headers (pass via `extra=`):
 - `x-csrf-token: x` (literal string, not a real CSRF token)
 - `x-uber-rv-session-type: desktop_session`
 
@@ -96,9 +101,9 @@ See [Uber Eats E2E spec](../../../docs/specs/uber-eats-e2e.md) for the full plan
 
 Phase 1 (read):
 - `list_deliveries` — Eats order history via `getPastOrdersV1`
-- `get_delivery` — Full delivery details via `getOrderEntitiesV1`
-- `list_stores` — Browse stores via `getSearchHomeV2`
-- `get_menu` — Store menu/items
+- `get_delivery` — Full delivery details: `getReceiptByWorkflowUuidV1` for items (HTML parse with lxml), `getPastOrdersV1` for metadata. Note: `getOrderEntityByUuidV1` only works for active orders (404 for completed).
+- `list_stores` — Browse stores via `getSearchHomeV2` or `getFeedV1`
+- `get_menu` — Store menu/items via `getStoreV1` (not yet captured)
 
 Phase 2 (tracking):
 - `track_delivery` — Live driver location via real-time events
@@ -151,3 +156,48 @@ This revealed 32 endpoints (22 read, 10 write) that weren't visible from a singl
 Use `agentos browse request` or direct `curl` to test specific endpoints. The auth headers and cookie domain are documented in [requirements.md](./requirements.md).
 
 See [Reverse Engineering overview](../../docs/reverse-engineering/overview.md) for the full methodology and [Browse Toolkit spec](../../../docs/specs/browse-toolkit.md) for tool documentation.
+
+### CDP tips for testing Eats endpoints
+
+**Making authenticated API calls via CDP:**
+```python
+import json, urllib.request, websocket
+
+# Connect to Brave (must be running with --remote-debugging-port=9222)
+tabs = json.loads(urllib.request.urlopen("http://127.0.0.1:9222/json").read())
+ws = websocket.create_connection(tabs[0]["webSocketDebuggerUrl"], timeout=15)
+
+# IMPORTANT: Navigate to ubereats.com first — fetch with credentials: 'include'
+# only sends cookies for same-origin requests
+ws.send(json.dumps({"id": 1, "method": "Page.navigate",
+    "params": {"url": "https://www.ubereats.com/"}}))
+import time; time.sleep(5)  # wait for page load
+
+# Call any /_p/api/ endpoint
+js = """
+(async () => {
+    const r = await fetch('https://www.ubereats.com/_p/api/getPastOrdersV1', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/json', 'x-csrf-token': 'x'},
+        body: JSON.stringify({"lastWorkflowUUID": ""})
+    });
+    return await r.text();
+})()
+"""
+ws.send(json.dumps({"id": 2, "method": "Runtime.evaluate",
+    "params": {"expression": js, "awaitPromise": True, "returnByValue": True}}))
+
+# Read response (skip any navigation events)
+for _ in range(20):
+    resp = json.loads(ws.recv())
+    if resp.get("id") == 2:
+        data = json.loads(resp["result"]["result"]["value"])
+        break
+```
+
+**Key gotchas:**
+- Use `websocket` module (installed), NOT `websockets` (not installed). Synchronous API, no asyncio.
+- Brave's cookie DB is encrypted — can't extract cookies from SQLite directly. Use CDP `Network.getCookies` or the agentOS engine's auth resolver.
+- The `x-csrf-token: x` header is required. Other Eats headers (`x-uber-session-id`, `x-uber-target-location-*`) are optional for basic reads — the browser sends them automatically via cookies.
+- When reading CDP responses, check `resp.get("id")` to match your request — navigation and other events arrive on the same websocket.

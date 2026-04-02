@@ -1,6 +1,6 @@
 id: uber
 name: Uber
-description: Ride history, trip details, receipts, and account info from Uber
+description: Ride history, trip details, Eats order history, and account info from Uber
 color: "#000000"
 
 website: https://uber.com
@@ -16,6 +16,17 @@ connections:
         check: check_session
     label: "Uber Rider"
     help_url: "https://riders.uber.com"
+
+  eats:
+    description: "Uber Eats — requires cookies from a logged-in ubereats.com browser session"
+    base_url: "https://www.ubereats.com"
+    auth:
+      type: cookies
+      domain: ".ubereats.com"
+      account:
+        check: check_eats_session
+    label: "Uber Eats"
+    help_url: "https://www.ubereats.com"
 
 operations:
   check_session:
@@ -98,4 +109,58 @@ operations:
     python:
       module: ./uber.py
       function: whoami
+      timeout: 30
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # EATS — uses "eats" connection (.ubereats.com cookies)
+  # API docs: requirements.md | E2E spec: docs/specs/uber-eats-e2e.md
+  # ─────────────────────────────────────────────────────────────────────────
+
+  check_eats_session:
+    description: "Validate Uber Eats session cookies and return account identity"
+    returns:
+      authenticated: boolean
+      identifier: string
+      display: string
+      domain: string
+    connection: eats
+    python:
+      module: ./uber.py
+      function: check_eats_session
+      timeout: 30
+
+  list_deliveries:
+    description: "List Uber Eats order history — stores, totals, timestamps. Supports pagination via cursor."
+    returns:
+      deliveries: array
+      next_cursor: string
+      count: integer
+    params:
+      cursor:
+        type: string
+        description: "Pagination cursor from a previous response (next_cursor)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: list_deliveries
+      timeout: 30
+
+  get_delivery:
+    description: "Get full Uber Eats delivery details — items, quantities, and fare breakdown from receipt"
+    returns:
+      id: string
+      items: array
+      item_count: integer
+      fare: json
+      timestamp: string
+      receipts: array
+    params:
+      order_uuid:
+        type: string
+        required: true
+        description: "Order UUID (from list_deliveries)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_delivery
       timeout: 30

@@ -1,13 +1,38 @@
-"""Uber skill — ride history, trip details, and account info via GraphQL."""
+"""Uber skill — rides (GraphQL) and Eats (RPC) via browser session cookies."""
 
 from agentos import http, get_cookies, require_cookies
 
+# ---------------------------------------------------------------------------
+# Rides API — GraphQL at riders.uber.com
+# ---------------------------------------------------------------------------
+
 GRAPHQL_URL = "https://riders.uber.com/graphql"
 
-HEADERS = {
-    "Accept": "*/*",
+# Rides-specific headers merged via http.headers(extra=...).
+# ALWAYS use http.headers() for the base — it provides browser-grade UA, sec-ch-*,
+# and Sec-Fetch-* headers. Without these, some endpoints return 500.
+# See agentos-community/docs/skills/sdk.md for http.headers() docs.
+RIDES_EXTRA_HEADERS = {
     "x-csrf-token": "x",
     "x-uber-rv-session-type": "desktop_session",
+}
+
+# ---------------------------------------------------------------------------
+# Eats API — RPC at www.ubereats.com/_p/api/
+# Completely separate from rides: different domain, different auth, different protocol.
+# Auth: .ubereats.com cookies (via "eats" connection in skill.yaml)
+# Required header: x-csrf-token: x (literal string, same as rides)
+# ---------------------------------------------------------------------------
+
+EATS_API_BASE = "https://www.ubereats.com/_p/api"
+
+# Eats headers: x-csrf-token is required. Other browser headers (UA, sec-ch-*)
+# are needed for some endpoints (e.g. getReceiptByWorkflowUuidV1 returns 500 without them).
+# Use http.headers(waf="cf", accept="json") to get proper browser headers,
+# then merge Eats-specific headers via extra=.
+# See agentos-community/docs/skills/sdk.md for http.headers() docs.
+EATS_EXTRA_HEADERS = {
+    "x-csrf-token": "x",
 }
 
 # ---------------------------------------------------------------------------
@@ -174,16 +199,20 @@ query GetTrip($tripUUID: String!) {
 # ---------------------------------------------------------------------------
 
 def _gql(cookie_header: str, operation_name: str, query: str, variables: dict | None = None) -> dict:
-    """Execute a GraphQL query against riders.uber.com."""
+    """Execute a GraphQL query against riders.uber.com.
+
+    Uses http.headers() for browser-grade headers — we're acting as Brave,
+    so we should always send what Brave sends. See docs/skills/sdk.md.
+    """
     resp = http.post(
         GRAPHQL_URL,
         cookies=cookie_header,
-        headers=HEADERS,
         json={
             "operationName": operation_name,
             "query": query,
             "variables": variables or {},
         },
+        **http.headers(waf="cf", accept="json", extra=RIDES_EXTRA_HEADERS),
     )
 
     status = resp.get("status") or 0
@@ -347,4 +376,195 @@ def get_trip(trip_id: str, **params) -> dict:
         "is_reserve": trip.get("isUberReserve", False),
         "marketplace": trip.get("marketplace"),
         "organization": (result.get("organization") or {}).get("name"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Eats helpers
+# ---------------------------------------------------------------------------
+# Eats API docs: agentos-community/skills/uber/requirements.md
+# E2E spec: docs/specs/uber-eats-e2e.md
+# Connection docs: agentos-community/docs/skills/connections.md
+# ---------------------------------------------------------------------------
+
+def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None) -> dict:
+    """POST to Uber Eats RPC API. Endpoint is just the operation name (e.g. 'getPastOrdersV1').
+
+    Uses http.headers() for proper browser UA/sec-ch-* headers — some Eats endpoints
+    (notably getReceiptByWorkflowUuidV1) return 500 without them.
+    See docs/skills/sdk.md for http.headers() knobs.
+    """
+    resp = http.post(
+        f"{EATS_API_BASE}/{endpoint}",
+        cookies=cookie_header,
+        json=body or {},
+        **http.headers(waf="cf", accept="json", extra=EATS_EXTRA_HEADERS),
+    )
+
+    status = resp.get("status") or 0
+    body_str = resp.get("body") or ""
+    url_final = resp.get("url") or ""
+
+    if status != 200:
+        if "auth.uber.com" in body_str or "auth.uber.com" in url_final:
+            raise RuntimeError("SESSION_EXPIRED: Uber Eats redirected to login — cookies expired.")
+        raise RuntimeError(f"Uber Eats HTTP {status} endpoint={endpoint} body={body_str[:300]}")
+
+    data = resp.get("json")
+    if not data or not isinstance(data, dict):
+        raise RuntimeError(f"Uber Eats non-JSON: status={status} body={body_str[:300]}")
+
+    if data.get("status") == "failure":
+        err = data.get("data", {})
+        meta = err.get("meta", {}).get("info", {})
+        msg = err.get("message", "") or meta.get("body", {}).get("message", "")
+        code = err.get("code", "") or meta.get("statusCode", "")
+        # Include raw response for debugging — the Eats API sometimes returns empty error messages
+        raise RuntimeError(f"Uber Eats API error: {msg} code={code} endpoint={endpoint} raw={body_str[:500]}")
+
+    return data.get("data", {})
+
+
+# ---------------------------------------------------------------------------
+# Eats operations
+# ---------------------------------------------------------------------------
+# These use the "eats" connection (.ubereats.com cookies).
+# See skill.yaml for connection definition.
+# See requirements.md for full API shape documentation.
+# ---------------------------------------------------------------------------
+
+def check_eats_session(**params) -> dict:
+    """Validate Uber Eats session cookies."""
+    cookie_header = get_cookies(params)
+    if not cookie_header:
+        return {"authenticated": False, "error": "no cookies"}
+
+    try:
+        data = _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
+    except RuntimeError as e:
+        return {"authenticated": False, "error": str(e)}
+
+    # getUserV1 returns user profile data — if we get here, session is valid
+    user = data.get("user", data)
+    name = user.get("name") or user.get("firstName", "")
+    email = user.get("email", "")
+
+    return {
+        "authenticated": True,
+        "domain": "ubereats.com",
+        "identifier": email or name or "unknown",
+        "display": name or email,
+    }
+
+
+def list_deliveries(cursor: str = "", **params) -> dict:
+    """List Uber Eats order history. Returns orders with store, total, status, timestamps.
+
+    Backed by getPastOrdersV1. See requirements.md for full response shape.
+    """
+    cookie_header = require_cookies(params, "list_deliveries")
+
+    data = _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": cursor})
+
+    order_uuids = data.get("orderUuids") or []
+    orders_map = data.get("ordersMap") or {}
+    pagination = data.get("paginationData") or {}
+
+    deliveries = []
+    for uuid in order_uuids:
+        order = orders_map.get(uuid, {})
+        base = order.get("baseEaterOrder") or {}
+        store = order.get("storeInfo") or {}
+        fare = order.get("fareInfo") or {}
+        location = store.get("location") or {}
+        address = location.get("address") or {}
+
+        # Prices are in cents
+        total_cents = fare.get("totalPrice", 0)
+
+        deliveries.append({
+            "id": uuid,
+            "name": store.get("title", "Unknown store"),
+            "store_uuid": store.get("uuid"),
+            "store_image": store.get("heroImageUrl"),
+            "store_address": address.get("eaterFormattedAddress"),
+            "total": f"${total_cents / 100:.2f}" if total_cents else None,
+            "total_cents": total_cents,
+            "is_completed": base.get("isCompleted", False),
+            "is_cancelled": base.get("isCancelled", False),
+            "completed_at": base.get("completedAt"),
+            "datePublished": base.get("completedAt") or base.get("lastStateChangeAt"),
+            "fare_breakdown": [
+                {"label": item.get("label"), "amount": item.get("rawValue"), "key": item.get("key")}
+                for item in (fare.get("checkoutInfo") or [])
+            ],
+        })
+
+    result = {"deliveries": deliveries, "count": len(deliveries)}
+    next_cursor = pagination.get("nextCursor")
+    if next_cursor:
+        result["next_cursor"] = next_cursor
+    return result
+
+
+def get_delivery(order_uuid: str, **params) -> dict:
+    """Get full delivery details including items, quantities, and fare breakdown.
+
+    Uses getReceiptByWorkflowUuidV1 for item data (HTML parsing with lxml).
+    Note: getOrderEntityByUuidV1 only works for ACTIVE orders — returns 404 for
+    completed ones. See requirements.md for selector documentation.
+    """
+    cookie_header = require_cookies(params, "get_delivery")
+
+    # timestamp: null is how the browser sends it, but the SDK may serialize differently.
+    # If this endpoint returns 500, check that the JSON body matches what the browser sends.
+    # See requirements.md for the captured request shape.
+    data = _eats_post(cookie_header, "getReceiptByWorkflowUuidV1", {
+        "contentType": "WEB_HTML",
+        "workflowUuid": order_uuid,
+    })
+
+    receipt_html = data.get("receiptData", "")
+    receipts = data.get("receiptsForJob") or []
+    timestamp = data.get("timestamp")
+
+    # Parse items from receipt HTML using lxml + cssselect
+    # Selectors documented in requirements.md under "Item extraction from receipt HTML"
+    items = []
+    fare = {}
+
+    if receipt_html:
+        from lxml import html as lhtml
+        doc = lhtml.fromstring(receipt_html)
+
+        # Items: data-testid="shoppingCart_item_title_{uuid}"
+        for el in doc.cssselect('[data-testid^="shoppingCart_item_title_"]'):
+            uid = el.get("data-testid").replace("shoppingCart_item_title_", "")
+            qty_els = doc.cssselect(f'[data-testid="shoppingCart_item_quantity_{uid}"]')
+            qty = int(qty_els[0].text_content().strip()) if qty_els else 1
+            items.append({
+                "name": el.text_content().strip(),
+                "quantity": qty,
+                "item_uuid": uid,
+            })
+
+        # Fare breakdown
+        total_el = doc.cssselect('[data-testid="total_fare_amount"]')
+        fare["total"] = total_el[0].text_content().strip() if total_el else None
+
+        for key in ("item_subtotal", "delivery_fee", "service_fee", "tip", "delivery_discount", "tax"):
+            el = doc.cssselect(f'[data-testid="fare_line_item_amount_{key}"]')
+            if el:
+                fare[key] = el[0].text_content().strip()
+
+    return {
+        "id": order_uuid,
+        "items": items,
+        "item_count": len(items),
+        "fare": fare,
+        "timestamp": timestamp,
+        "receipts": [
+            {"timestamp": r.get("timestamp"), "type": r.get("type")}
+            for r in receipts
+        ],
     }
