@@ -582,6 +582,9 @@ def get_store(store_uuid: str, **params) -> dict:
 
     data = _eats_post(cookie_header, "getStoreV1", {"storeUuid": store_uuid})
 
+    if not data.get("title"):
+        raise RuntimeError(f"getStoreV1 returned no store data for {store_uuid} — session may be stale")
+
     # Extract products from catalogSectionsMap
     # Items are nested: sections → HORIZONTAL_GRID items → payload → standardItemsPayload → catalogItems
     # See requirements.md "getStoreV1" section for the full structure.
@@ -604,6 +607,10 @@ def get_store(store_uuid: str, **params) -> dict:
                     continue  # items appear in multiple sections — deduplicate
                 seen_uuids.add(uid)
                 price_cents = ci.get("price", 0)
+                # RE principle: preserve raw catalog item for write operations.
+                # add_to_cart needs the EXACT fields the API returned — sectionUUID,
+                # sellingOption, imageUrl, etc. Don't reconstruct, replay.
+                # See docs/reverse-engineering/overview.md "Write operations"
                 products.append({
                     "name": ci.get("title", ""),
                     "uuid": uid,
@@ -613,9 +620,9 @@ def get_store(store_uuid: str, **params) -> dict:
                     "text": ci.get("itemDescription"),
                     "category": section_title,
                     "is_available": ci.get("isAvailable", True),
-                    # Section UUIDs needed by add_to_cart — see requirements.md addItemsToDraftOrderV2
-                    "_section_uuid": ci.get("sectionUUID") or item.get("catalogSectionUUID", ""),
-                    "_subsection_uuid": item.get("catalogSectionUUID", ""),
+                    # Raw catalog item — passed through to add_to_cart verbatim
+                    "_raw": ci,
+                    "_parent_section_uuid": item.get("catalogSectionUUID", ""),
                 })
 
     location = data.get("location") or {}
@@ -667,50 +674,91 @@ def search_store(store_uuid: str, query: str, **params) -> dict:
 # ---------------------------------------------------------------------------
 
 def _build_cart_item(product: dict, store_uuid: str) -> dict:
-    """Build the item shape that addItemsToDraftOrderV2 / createDraftOrderV2 expects.
+    """Build cart item from a product returned by get_store.
 
-    Product dict should have: uuid, name, price_cents, image, category (section uuid).
-    Shape documented in requirements.md under addItemsToDraftOrderV2.
+    RE principle: REPLAY, don't reconstruct. The product's _raw field has the
+    exact catalog item data from getStoreV1. We pass it through with minimal
+    additions (shoppingCartItemUuid, storeUuid). See overview.md "Write operations".
     """
-    return {
-        "uuid": product["uuid"],
+    raw = product.get("_raw") or {}
+    quantity = product.get("quantity", 1)
+
+    # Start with the raw catalog item — has sectionUUID, imageUrl, price,
+    # sellingOption, and everything else the API needs
+    item = {
+        "uuid": raw.get("uuid") or product["uuid"],
         "shoppingCartItemUuid": str(uuid_mod.uuid4()),
         "storeUuid": store_uuid,
-        "sectionUuid": product.get("_section_uuid", ""),
-        "subsectionUuid": product.get("_subsection_uuid", ""),
-        "price": product.get("price_cents", 0),
-        "title": product.get("name", ""),
-        "quantity": product.get("quantity", 1),
-        "customizations": {},
-        "imageURL": product.get("image", ""),
+        "sectionUuid": raw.get("sectionUUID") or product.get("_parent_section_uuid", ""),
+        "subsectionUuid": product.get("_parent_section_uuid", ""),
+        "title": raw.get("title") or product.get("name", ""),
+        "price": raw.get("price") or product.get("price_cents", 0),
+        "quantity": quantity,
+        "imageURL": raw.get("imageUrl") or product.get("image", ""),
         "specialInstructions": "",
+        "customizations": {},
         "fulfillmentIssueAction": {
             "type": "STORE_REPLACE_ITEM",
             "itemSubstitutes": None,
             "selectionSource": "UBER_SUGGESTED",
         },
-        "pricedByUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT"},
-        "soldByUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT"},
     }
 
+    # Pass through sellingOption and measurement info from raw catalog if available
+    if raw.get("sellingOption"):
+        item["sellingOption"] = raw["sellingOption"]
+    if raw.get("pricedByUnit"):
+        item["pricedByUnit"] = raw["pricedByUnit"]
+    if raw.get("itemQuantity"):
+        item["itemQuantity"] = raw["itemQuantity"]
+    elif quantity:
+        item["itemQuantity"] = {
+            "inSellableUnit": {
+                "value": {"coefficient": quantity, "exponent": 0},
+                "measurementUnit": {"measurementType": "MEASUREMENT_TYPE_COUNT",
+                                    "length": None, "weight": None, "volume": None},
+                "measurementUnitAbbreviationText": None,
+            },
+            "inPriceableUnit": None,
+        }
 
-def _get_or_create_draft(cookie_header: str, store_uuid: str, first_item: dict) -> dict:
-    """Get existing draft order for this store, or create a new one with the first item.
+    return item
 
-    Returns the draft order data dict (with uuid, shoppingCart, etc).
-    See requirements.md for createDraftOrderV2 / getDraftOrdersByEaterUuidV1 shapes.
+
+def add_to_cart(store_uuid: str, items: list, **params) -> dict:
+    """Add items to an Uber Eats cart for a store.
+
+    items: list of product dicts from get_store (must include _raw field).
+    Each item can have an optional "quantity" field (default 1).
+
+    Discards any existing draft for this store and creates a fresh one with
+    ALL items inline via createDraftOrderV2 — the same pattern the browser uses
+    for the Reorder button. This avoids addItemsToDraftOrderV2 which needs
+    additional session state we don't have.
+
+    RE principle: replay, don't reconstruct. See overview.md "Write operations".
+    This is a WRITE operation — it modifies cart state.
     """
-    # Check for existing draft for this store
+    cookie_header = require_cookies(params, "add_to_cart")
+
+    if not items:
+        return {"error": "no items to add"}
+
+    # Discard any existing draft for this store so we start clean
     drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
     for draft in (drafts_data.get("draftOrders") or []):
         if draft.get("storeUuid") == store_uuid:
-            return draft
+            _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft["uuid"]})
 
-    # No existing draft — create one with the first item inline
-    # This is how the browser does it: createDraftOrderV2 includes shoppingCartItems
+    # Build cart items from raw catalog data (replay, don't reconstruct)
+    cart_items = [_build_cart_item(item, store_uuid) for item in items]
+
+    # Create draft order with ALL items inline — this is what the browser does
+    # for the Reorder button. One call, all items, correct catalog data.
     create_body = {
-        "removeAdapters": True,
         "isMulticart": True,
+        "shoppingCartItems": cart_items,
+        "removeAdapters": True,
         "useCredits": True,
         "extraPaymentProfiles": [],
         "promotionOptions": {
@@ -726,60 +774,20 @@ def _get_or_create_draft(cookie_header: str, store_uuid: str, first_item: dict) 
         "actionMeta": {"isQuickAdd": True},
         "analyticsRelevantData": {"profileSource": ""},
         "businessDetails": {},
-        "shoppingCartItems": [first_item],
     }
     data = _eats_post(cookie_header, "createDraftOrderV2", create_body)
-    return data
 
-
-def add_to_cart(store_uuid: str, items: list, **params) -> dict:
-    """Add items to an Uber Eats cart for a store.
-
-    items: list of dicts with at minimum {uuid, name, price_cents, quantity}.
-    Extra fields (image, _section_uuid, _subsection_uuid) improve fidelity.
-
-    Creates a new draft order if none exists for this store.
-    This is a WRITE operation — it modifies cart state.
-    """
-    cookie_header = require_cookies(params, "add_to_cart")
-
-    if not items:
-        return {"error": "no items to add"}
-
-    # Build cart items
-    cart_items = [_build_cart_item(item, store_uuid) for item in items]
-
-    # Get or create draft order (first item goes into create call if new)
-    draft = _get_or_create_draft(cookie_header, store_uuid, cart_items[0])
+    # Extract result from the create response
+    draft = data.get("draftOrder", data)
     draft_uuid = draft.get("uuid", "")
-    cart_uuid = (draft.get("shoppingCart") or {}).get("uuid", "")
-
-    added = [cart_items[0]["title"]]  # first item was in create or already existed
-
-    # Add remaining items via addItemsToDraftOrderV2
-    for cart_item in cart_items[1:]:
-        add_body = {
-            "items": [cart_item],
-            "cartUUID": cart_uuid,
-            "draftOrderUUID": draft_uuid,
-            "storeUUID": store_uuid,
-            "actionMeta": {"isQuickAdd": True},
-            "shouldUpdateDraftOrderMetadata": True,
-            "isNewCartAbstraction": True,
-            "locationType": "GROCERY_STORE",
-        }
-        _eats_post(cookie_header, "addItemsToDraftOrderV2", add_body)
-        added.append(cart_item["title"])
-
-    # Get final cart state
-    final_draft = _eats_post(cookie_header, "getDraftOrderByUuidV1", {"draftOrderUuid": draft_uuid})
-    final_items = (final_draft.get("shoppingCart") or {}).get("items") or []
+    cart = draft.get("shoppingCart") or {}
+    final_items = cart.get("items") or []
 
     return {
         "draft_order_uuid": draft_uuid,
         "store_uuid": store_uuid,
-        "added": added,
-        "added_count": len(added),
+        "added": [ci["title"] for ci in cart_items],
+        "added_count": len(cart_items),
         "cart_items": [
             {"name": i.get("title"), "quantity": i.get("quantity"), "price": f"${i.get('price', 0)/100:.2f}"}
             for i in final_items
