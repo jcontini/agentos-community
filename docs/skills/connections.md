@@ -108,20 +108,89 @@ connections:
 
 ### Resolution algorithm
 
-All auth types follow the same resolution order:
+Cookie auth uses **timestamp-based resolution** — all sources are checked, and the one with the newest cookies wins. There is no fixed priority order and no TTL-based expiry.
+
+#### Sources
+
+Three sources of cookies exist, each with different freshness characteristics:
+
+| Source | What it is | Freshness |
+|--------|-----------|-----------|
+| **In-memory cache** | Cookies from the last extraction, updated by `Set-Cookie` responses from our own HTTP requests (writeback). Lives in engine process memory. | Can be *newer* than the browser — when a server rotates a session token via `Set-Cookie` in response to our request, the cache has the new value before the browser does. |
+| **Browser providers** (Brave, Firefox) | Fresh extraction from the browser's local cookie database. | Reflects the user's latest browsing — if they just visited Amazon and got a fresh session, the browser has the newest cookies. |
+| **Credential store** (`credentials.sqlite`) | Persistent copy of cookies, also updated by writeback. Survives engine restart. | Same data as the cache, but persistent. Staler than the cache if writeback updated the cache since last store write. |
+
+#### How it works
 
 ```
-1. Check credential store (credentials.sqlite)
-2. Check provider skills (find_auth_providers)
-   - Score providers: has_all_required names → live session (Playwright) →
-     newest creation timestamp → cookie count
-3. If optional → skip auth; else → error with help_url
-4. On SESSION_EXPIRED or 401/403 → exclude failed provider, retry with next-best
+1. Gather candidates from ALL sources:
+   a. In-memory cache           (instant — HashMap lookup)
+   b. Browser providers          (~20ms — local SQLite reads)
+   c. Credential store           (~1ms — local SQLite read)
+
+2. Score each candidate:
+   - Filter expired cookies
+   - Build cookie header string
+   - Compute newest_cookie_at (latest per-cookie timestamp)
+
+3. Pick the candidate with the highest newest_cookie_at.
+   On ties, the first candidate (cache) wins.
+
+4. If winner is from cache → return immediately (identity already known)
+   If winner is from a provider → run account_check for identity, persist to store + cache
+   If winner is from store → return as-is (fallback)
+
+5. If no candidates → error with help_url
+6. On SESSION_EXPIRED or 401/403 → exclude failed provider, retry
 ```
 
-Stored session cookies from `__secrets__` are found before falling back to browser
-providers. On auth failure, the executor automatically retries with the next-best
-provider (one retry only).
+#### Per-cookie timestamps
+
+Every cookie carries a timestamp tracking when it was last set:
+
+- **Browser cookies** have a `created` field (Unix seconds with sub-second precision) from the browser's cookie database. Brave and Firefox both provide this.
+- **Writeback cookies** (from `Set-Cookie` responses to our HTTP requests) get stamped with `now()` when the engine processes the response. This is how our cache becomes *newer* than the browser after a server-side token rotation.
+- **Store cookies** carry a `cookie_timestamps` map in the value blob, updated on writeback via `merge_cookie_header`.
+
+The `newest_cookie_at` for a candidate is the maximum timestamp across all its cookies. This single number determines who wins.
+
+#### Example: why timestamps matter
+
+```
+Call 1 (cold start — no cache):
+  Cache:    empty
+  Brave:    session_token created at 1712019700.5    ← winner (only candidate)
+  Store:    empty
+  → Extracts from Brave, runs account_check, persists to store + cache
+
+Call 2 (cache populated):
+  Cache:    session_token at 1712019700.5
+  Brave:    session_token at 1712019700.5             (same — user hasn't browsed)
+  Store:    session_token at 1712019700.5
+  → Tie — cache wins (first candidate). No account_check needed. ~58ms.
+
+Call 3 (server rotated token via Set-Cookie):
+  Cache:    session_token at 1712019800.0              ← winner (writeback stamped now())
+  Brave:    session_token at 1712019700.5
+  Store:    session_token at 1712019800.0
+  → Cache wins. The server gave US the new token; the browser doesn't have it yet.
+
+Call 4 (user browsed Amazon, got fresh cookies):
+  Cache:    session_token at 1712019800.0
+  Brave:    session_token at 1712019900.3              ← winner (user's browsing is newest)
+  Store:    session_token at 1712019800.0
+  → Brave wins. Fresh extraction, account_check runs, cache + store updated.
+```
+
+#### Why no TTL?
+
+Previous versions used a 5-minute TTL on the cache — entries older than 5 minutes were treated as stale. This was arbitrary and wrong in both directions: too aggressive when writeback kept the cache genuinely fresh, too lenient when the browser got new cookies 30 seconds later.
+
+Timestamps replace TTL entirely. A cache entry from 10 minutes ago still wins if its cookies are genuinely newer than what the browser has. A cache entry from 1 second ago loses if the browser has fresher cookies. The timestamp is the only arbiter.
+
+#### Playwright
+
+Playwright (live browser session via CDP) is **always skipped** unless explicitly requested via the `provider` parameter. It launches a visible Chrome window — too expensive and disruptive for automatic resolution. Use it for reverse engineering and login flows, not for runtime auth.
 
 ### Cookie format contract for Python
 
@@ -303,18 +372,20 @@ The engine retries **once** on auth failure, with the failing provider excluded:
 
 ## Cookie provider selection
 
-When multiple cookie providers are installed (Brave, Firefox, Playwright), the
-engine selects the best one using a scoring heuristic:
+When multiple browser cookie providers are installed (Brave, Firefox), they all
+run as candidates alongside the cache and store. The winner is determined by
+`newest_cookie_at` — the latest per-cookie timestamp across all cookies.
+
+Within the provider tier (when comparing two browser providers against each other),
+the scoring heuristic breaks ties:
 
 1. **Required cookie names** — providers that have all cookies listed in the
-   connection's `names` field score highest (selection hint only — all cookies
-   are still passed to the skill)
-2. **Playwright preference** — Playwright (live browser session) is preferred
-   over database-extracted cookies when no timestamps are available
-3. **Creation timestamp** — the provider whose cookies were created most recently
-   wins. This is the key fix for stale-session problems: Playwright cookies from
-   today beat Brave cookies from last week, even if Brave has more cookies.
-4. **Cookie count** — final tiebreaker when all else is equal
+   connection's `names` field score highest
+2. **Creation timestamp** — the provider whose cookies were created most recently
+   wins
+3. **Cookie count** — final tiebreaker when all else is equal
+
+Playwright is always skipped unless explicitly requested (see above).
 
 ### Explicit provider override
 

@@ -171,10 +171,10 @@ def run_search_people(*, query: str = "", limit: int = 10, **params) -> list[dic
 
 
 def _resolve_user_id(user_id: str, params: dict) -> str:
-    """Resolve user_id: explicit param → account.identifier from check_session."""
+    """Resolve user_id: explicit param → auth.identifier from check_session."""
     uid = str(user_id).strip() if user_id else ""
     if not uid:
-        uid = (params.get("account") or {}).get("identifier", "")
+        uid = (params.get("auth") or {}).get("identifier", "")
     if not uid:
         raise ValueError("user_id required — provide it or ensure check_session has run")
     return uid
