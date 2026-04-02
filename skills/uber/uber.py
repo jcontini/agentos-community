@@ -748,6 +748,11 @@ def get_store(store_uuid: str, **params) -> dict:
                             weight = at
                             break
 
+                # Check if priced by weight
+                purchase = ci.get("purchaseInfo", {})
+                pricing = purchase.get("pricingInfo", {}).get("pricedByUnit", {})
+                sold_by_weight = pricing.get("measurementType", "") != "MEASUREMENT_TYPE_COUNT"
+
                 product = {
                     # Standard fields
                     "id": uid,
@@ -759,13 +764,21 @@ def get_store(store_uuid: str, **params) -> dict:
                     "currency": store_currency,
                     "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
                     "categories": [section_title] if section_title else [],
+                    "aisle": section_title or None,
+                    "sku": uid,
                     # Raw catalog item — passed through to add_to_cart verbatim.
                     # RE principle: preserve raw data for write operations.
                     "_raw": ci,
                     "_parent_section_uuid": item.get("catalogSectionUUID", ""),
                 }
+                if sold_by_weight:
+                    product["sold_by_weight"] = True
                 if weight:
                     product["weight"] = weight
+                    wm = _re.match(r'(\d+(?:\.\d+)?)\s*(.+)', weight)
+                    if wm:
+                        product["weight_value"] = float(wm.group(1))
+                        product["weight_unit"] = wm.group(2).strip().lower()
                 products.append(product)
 
     location = data.get("location") or {}
@@ -907,6 +920,23 @@ def search_products(store_uuid: str, query: str, **params) -> list:
                     ]
                 if weight:
                     product["weight"] = weight
+                    wm = _re.match(r'(\d+(?:\.\d+)?)\s*(.+)', weight)
+                    if wm:
+                        product["weight_value"] = float(wm.group(1))
+                        product["weight_unit"] = wm.group(2).strip().lower()
+
+                # Aisle from section title
+                if section_title:
+                    product["aisle"] = section_title
+
+                # Sold by weight
+                purchase = ci.get("purchaseInfo", {})
+                pricing = purchase.get("pricingInfo", {}).get("pricedByUnit", {})
+                if pricing.get("measurementType", "") != "MEASUREMENT_TYPE_COUNT":
+                    product["sold_by_weight"] = True
+
+                product["sku"] = uid
+
                 if ci.get("hasCustomizations"):
                     product["has_customizations"] = True
                 # Preserve raw for add_to_cart
