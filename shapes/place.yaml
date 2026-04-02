@@ -54,6 +54,7 @@ place:
     google_place_id:   string
   relations:
     brand:             organization  # the company this location belongs to
+    offers:            product[]     # products available at this location (store catalog)
   display:
     title: name
     subtitle: full_address

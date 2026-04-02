@@ -736,7 +736,16 @@ def get_store(store_uuid: str, **params) -> dict:
                 # sellingOption, imageUrl, etc. Don't reconstruct, replay.
                 # See docs/reverse-engineering/overview.md "Write operations"
                 # Product shape: standard fields + product-specific fields
-                products.append({
+                # Extract weight/size from thumbnail labels (e.g. "12 oz", "32 oz")
+                weight = None
+                for te in (ci.get("itemThumbnailElements") or []):
+                    at = (te.get("payload", {}).get("labelPayload", {})
+                          .get("label", {}).get("accessibilityText", ""))
+                    if at and not at.startswith("$") and at != ci.get("title", ""):
+                        weight = at
+                        break
+
+                product = {
                     # Standard fields
                     "id": uid,
                     "name": ci.get("title", ""),
@@ -751,7 +760,10 @@ def get_store(store_uuid: str, **params) -> dict:
                     # RE principle: preserve raw data for write operations.
                     "_raw": ci,
                     "_parent_section_uuid": item.get("catalogSectionUUID", ""),
-                })
+                }
+                if weight:
+                    product["weight"] = weight
+                products.append(product)
 
     location = data.get("location") or {}
     raw_addr = location.get("address") or {}
@@ -777,7 +789,7 @@ def get_store(store_uuid: str, **params) -> dict:
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
         "feature_type": "poi",
-        "categories": [c.get("name") for c in (data.get("categories") or []) if c.get("name")],
+        "categories": [c if isinstance(c, str) else c.get("name", "") for c in (data.get("categories") or []) if c],
         "phone": data.get("phoneNumber"),
         "hours": data.get("hours"),
         "business_status": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
@@ -792,8 +804,8 @@ def get_store(store_uuid: str, **params) -> dict:
         "brand": {
             "name": data.get("title", ""),
         },
-        # Products as product-shaped entities
-        "products": products,
+        # Products — place.offers→product[] relation creates linked product nodes
+        "offers": products,
         "product_count": len(products),
     }
 
@@ -807,7 +819,7 @@ def search_store(store_uuid: str, query: str, **params) -> dict:
     """
     store = get_store(store_uuid=store_uuid, **params)
     query_lower = query.lower()
-    matches = [p for p in store["products"] if query_lower in p["name"].lower()]
+    matches = [p for p in store["offers"] if query_lower in p["name"].lower()]
     return {
         "store_name": store["name"],
         "query": query,
