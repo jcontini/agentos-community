@@ -34,22 +34,15 @@ with http.client(cookies=cookie_header) as c:
 
 All HTTP goes through the Rust engine via `agentos.http`. The engine handles transport mechanics (HTTP/2, cookie jars, decompression, timeouts, logging). **Headers are built in Python** via `http.headers()` — the engine sets zero default headers.
 
-### Why `requests` fails against modern CDNs
+### TLS fingerprinting — why the engine uses wreq with BoringSSL
 
-`requests` (backed by `urllib3`) only advertises `http/1.1` in its TLS ALPN extension.
-Modern CDNs including **AWS CloudFront** and **Cloudflare** use **JA4 fingerprinting**,
-which includes the ALPN value as a primary field. Since ~98% of real browser traffic
-is HTTP/2+, an `ALPN=http/1.1` client is immediately flagged as a bot.
+AWS WAF, Cloudflare, and other CDNs compute a **JA3/JA4 fingerprint** from every TLS ClientHello and compare it to the claimed User-Agent. If the UA says "Chrome 131" but the TLS fingerprint says "rustls" or "urllib3," the request gets flagged as a bot. Sensitive pages (Amazon orders, Chase banking, account settings) have higher anomaly thresholds than product pages — so the homepage works but the orders page redirects to login.
 
-`httpx` with `http2=True` advertises `["h2", "http/1.1"]`, producing a JA4 fingerprint
-that matches browsers and passes WAF checks.
+The engine uses **wreq** (a reqwest fork) backed by **BoringSSL** — the same TLS library Chrome uses. With `Emulation::Chrome131`, every request produces an authentic Chrome JA4 fingerprint (`t13d1516h2_8daaf6152771`), including correct HTTP/2 SETTINGS frames, pseudo-header order, and WINDOW_UPDATE values. This is not string-matching — wreq constructs the same ClientHello Chrome would, using the same library, and the fingerprint falls out naturally.
 
-Additionally, `requests`/urllib3 has a well-known, publicly blocklisted JA3 hash
-(`8d9f7747675e24454cd9b7ed35c58707`) — many WAFs block this hash outright.
+**Verified (2026-04-01):** Same cookies from Brave Browser. reqwest (rustls) → Amazon redirects to signin. wreq (BoringSSL, Chrome 131) → Amazon returns 7 orders. The only difference was the TLS fingerprint.
 
-**AWS WAF added JA4 fingerprinting in March 2025.** If you're seeing `400` or `403`
-from a CloudFront-fronted API that works fine in the browser, TLS fingerprinting is
-the most likely cause.
+Python clients (`requests`, `httpx`) have similar issues — `requests`/urllib3 has a blocklisted JA3 hash (`8d9f7747675e24454cd9b7ed35c58707`). Skills don't hit this because all HTTP goes through the engine's wreq client, not Python libraries directly.
 
 ### When to use `http2=False` (Vercel)
 
@@ -120,25 +113,9 @@ at a time.** During Exa testing, we created a matrix of `http2=True/False` x
 setting mattered. Cookies and headers were completely irrelevant to the
 Vercel checkpoint. This prevented unnecessary complexity in the skill code.
 
-### If `httpx` isn't enough
+### You don't need `curl_cffi` or `httpx`
 
-For the strictest Cloudflare Bot Management (Akamai-level h2 frame fingerprinting):
-
-```python
-from curl_cffi import requests as cffi_requests
-
-resp = cffi_requests.get(url, impersonate="chrome124", headers=headers)
-```
-
-`curl_cffi` emits Chrome's exact TLS cipher suites, GREASE values, extension ordering,
-ALPN, and HTTP/2 `SETTINGS` frames — the full fingerprint. Use this as the nuclear option.
-
-### Installation
-
-```bash
-pip install "httpx[http2]"     # for httpx + HTTP/2 support
-pip install curl_cffi           # for full Chrome fingerprint impersonation (rarely needed)
-```
+The engine's wreq client already emits Chrome's exact TLS cipher suites, GREASE values, extension ordering, ALPN, and HTTP/2 SETTINGS frames. Skills should never use `httpx`, `requests`, or `curl_cffi` directly — `agentos.http` handles all of this automatically.
 
 ### All I/O through SDK modules
 
@@ -292,7 +269,7 @@ This is a silent failure. The HTTP status is 200, the headers look normal, and `
 
 ### How `agentos.http` handles it
 
-The Rust HTTP engine uses reqwest with `gzip`, `brotli`, `deflate`, and `zstd` feature flags enabled. Decompression is automatic and transparent — `resp["body"]` is always plaintext.
+The Rust HTTP engine uses wreq with `gzip`, `brotli`, `deflate`, and `zstd` feature flags enabled. Decompression is automatic and transparent — `resp["body"]` is always plaintext.
 
 ### Why this matters
 
@@ -308,7 +285,7 @@ If your response body contains non-UTF-8 bytes, starts with garbled characters, 
 2. Verify your HTTP client has decompression enabled
 3. In agentOS: `agentos.http` handles this automatically. If you're using raw `urllib.request`, it does NOT decompress brotli
 
-Reference: `Cargo.toml` reqwest features — `gzip`, `brotli`, `deflate`, `zstd`.
+Reference: `Cargo.toml` wreq features — `gzip`, `brotli`, `deflate`, `zstd`.
 
 ---
 
@@ -466,11 +443,45 @@ This is automatic — skills don't need to do anything. The filtering happens in
 
 ---
 
+## Cookie Resolution — `http.cookies()`
+
+Skills can resolve cookies for any domain without knowing which browser provides them:
+
+```python
+from agentos import http
+
+# Resolve cookies — provider discovery is automatic
+cookie_header = http.cookies(domain=".uber.com")
+resp = http.post(url, cookies=cookie_header, **http.headers(accept="json"))
+
+# Specific account (multiple people logged in on different browsers)
+cookie_header = http.cookies(domain=".uber.com", account="uber@contini.co")
+```
+
+`http.cookies()` uses the same auth resolver as connection-based auth: it tries all installed cookie providers (brave-browser, firefox, etc.), picks the best one, and returns a cookie header string. No hardcoded provider names in skill code.
+
+### Playwright integration
+
+`capture_network` accepts a `cookie_domain` param that resolves cookies automatically:
+
+```python
+# One step — no manual cookie extraction needed
+run(skill="playwright", tool="capture_network", params={
+    "url": "https://riders.uber.com/trips",
+    "cookie_domain": ".uber.com",
+    "pattern": "**graphql**",
+})
+```
+
+This replaces the old 3-step flow (extract from provider → reformat → inject).
+
+---
+
 ## Debugging 400/403 Errors
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `403` from CloudFront with a bot-detection HTML page | JA3/JA4 fingerprint blocked | Use `waf="cf"` (sets http2=True + client hints) |
+| `403` from CloudFront with a bot-detection HTML page | JA3/JA4 fingerprint blocked | Shouldn't happen with wreq — if it does, check that the engine is running the wreq build |
 | `400` from CloudFront, body is `"Forbidden"` or short string | WAF rule triggered (header order, ALPN) | Use `waf="cf"` + check `mode=` |
 | `400`, body looks like `"404"` | API Gateway can't route the request — usually a missing tenant/auth header | Find and add the missing header via `extra=` |
 | `403` for a same-origin API (e.g. `claude.ai`) | Missing `Sec-Fetch-*` headers | Use `waf="cf"` — sets Sec-Fetch-* automatically |
@@ -521,7 +532,7 @@ a new endpoint, figure out a new header, or resolve a mystery.
 
 | Skill | Service | Transport config | Key learnings |
 |---|---|---|---|
-| `skills/amazon/` | Amazon (Lightsaber) | `waf="cf", mode="navigate", accept="html"` | Full device hints required, `skip_cookies=` for Siege encryption, session warming |
+| `skills/amazon/` | Amazon (Lightsaber) | `waf="cf", mode="navigate", accept="html"` | Full device hints required, `skip_cookies=` for Siege encryption, session warming. Chrome TLS fingerprint (wreq) required for orders page — Amazon's WAF uses JA4 + OpenID `max_auth_age=0` per-feature auth gates. |
 | `skills/austin-boulder-project/` | Tilefive / approach.app | `accept="json"` + auth header | CloudFront, `Authorization` = namespace string |
 | `skills/claude/` | claude.ai (Cloudflare) | `waf="cf", accept="json"`, http2=False override | Custom Sec-CH-UA (Brave v146), Cloudflare bypass needs Sec-Fetch-* |
 | `skills/exa/` | dashboard.exa.ai (Vercel) | `waf="vercel", accept="json"` | Vercel checkpoint is purely TLS — cookies and headers irrelevant |
