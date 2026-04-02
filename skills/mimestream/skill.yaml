@@ -23,14 +23,9 @@ provides:
     service: google
     via: credential_get
     account_param: account
-    scopes:
-      - https://mail.google.com/
-      - https://www.googleapis.com/auth/contacts
-      - https://www.googleapis.com/auth/contacts.other.readonly
-      - https://www.googleapis.com/auth/calendar.events
-      - https://www.googleapis.com/auth/directory.readonly
-      - https://www.googleapis.com/auth/gmail.settings.basic
-      - https://www.googleapis.com/auth/userinfo.profile
+    # Scopes are discovered at runtime from the token response —
+    # no hardcoded list. The engine parses the "scope" field returned
+    # by oauth.exchange() and stores the actual granted scopes.
 
 # ==============================================================================
 # OPERATIONS
