@@ -90,6 +90,12 @@ shape and throw away the original.
 **5. Hook BOTH fetch AND XHR.** Some sites use `fetch()` for reads but `XMLHttpRequest` for writes
 (Uber Eats does this). If you only hook one, you'll miss the write calls entirely.
 
+**6. No silent fallbacks on writes.** Never use `raw.get("X") or alternative_source` for fields
+in write operations. If the field is missing, fail loudly — the error message will reveal the
+actual bug (wrong casing, wrong nesting, missing data). The `or` pattern is fine for display
+but poison for writes: the API silently accepts wrong data and you don't find out until the
+UI shows "unavailable" or grayed-out images.
+
 ### Real example: Uber Eats cart bug
 
 We captured `addItemsToDraftOrderV2` and built item payloads ourselves. The API returned 200,
