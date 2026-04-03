@@ -505,15 +505,75 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: linear-gradient(90deg, #8fb0de 0%, #7fa4d8 20%, #6f98d0 50%, #7fa4d8 80%, #8fb0de 100%);
 }
 
+/* Scrollbar buttons — beige face with CSS triangle arrows.
+   XP has 4 buttons: up/down on vertical, left/right on horizontal. */
 .window ::-webkit-scrollbar-button {
   background: var(--xp-btn-face);
-  border: 1px solid #aca899;
+  border: 1px solid #fff;
   height: 17px;
   width: 17px;
+  display: block;
+}
+
+/* Up arrow — vertical decrement */
+.window ::-webkit-scrollbar-button:vertical:decrement {
+  background:
+    linear-gradient(135deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(225deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+  background-size: 5px 4px, 5px 4px, 100% 100%;
+  background-position: 4px 6px, 7px 6px, 0 0;
+  background-repeat: no-repeat;
+  border-color: #fff #aca899 #aca899 #fff;
+  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
+}
+
+/* Down arrow — vertical increment */
+.window ::-webkit-scrollbar-button:vertical:increment {
+  background:
+    linear-gradient(315deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(45deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+  background-size: 5px 4px, 5px 4px, 100% 100%;
+  background-position: 4px 7px, 7px 7px, 0 0;
+  background-repeat: no-repeat;
+  border-color: #fff #aca899 #aca899 #fff;
+  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
+}
+
+/* Left arrow — horizontal decrement */
+.window ::-webkit-scrollbar-button:horizontal:decrement {
+  background:
+    linear-gradient(225deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(315deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+  background-size: 4px 5px, 4px 5px, 100% 100%;
+  background-position: 6px 4px, 6px 7px, 0 0;
+  background-repeat: no-repeat;
+  border-color: #fff #aca899 #aca899 #fff;
+  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
+}
+
+/* Right arrow — horizontal increment */
+.window ::-webkit-scrollbar-button:horizontal:increment {
+  background:
+    linear-gradient(45deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(135deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+  background-size: 4px 5px, 4px 5px, 100% 100%;
+  background-position: 7px 4px, 7px 7px, 0 0;
+  background-repeat: no-repeat;
+  border-color: #fff #aca899 #aca899 #fff;
+  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
 .window ::-webkit-scrollbar-button:hover {
-  background: #e8e4d8;
+  filter: brightness(1.05);
+}
+
+.window ::-webkit-scrollbar-button:active {
+  border-color: #aca899 #fff #fff #aca899 !important;
+  box-shadow: inset -1px -1px 0 #f1efe2, inset 1px 1px 0 #716f64 !important;
 }
 
 .window ::-webkit-scrollbar-corner {
@@ -665,9 +725,17 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   border-bottom: 1px solid #d8d2bd !important;
 }
 
-/* Status bar at bottom */
+/* Status bar at bottom — XP warm beige with top bevel.
+   Reference: Reborn XP statusbar gradient + top highlight. */
 .window .border-t {
-  border-color: var(--xp-btn-shadow) !important;
+  border-color: #959386 !important;
+}
+
+.window .shrink-0.border-t {
+  background: linear-gradient(to bottom, #efece0, #e7e4d0) !important;
+  border-top: 1px solid #959386 !important;
+  box-shadow: inset 0 1px 1px #d7d8c8, inset 0 -1px 4px #ded8c8;
+  color: var(--xp-text) !important;
 }
 
 /* DataTable header */
