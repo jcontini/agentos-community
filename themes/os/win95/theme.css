@@ -1,0 +1,412 @@
+/*
+ * Windows 95 Theme
+ *
+ * Classic Win95 3D beveled look. Silver chrome, navy title bars,
+ * teal desktop, pixel-perfect bevels via inset box-shadows.
+ *
+ * The key Win95 trick: every raised surface has a 2px bevel —
+ * white top-left, dark gray bottom-right, with an extra dark
+ * shadow on the outer edge. Pressed/inset surfaces invert this.
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   CSS Custom Properties
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Win95 System Colors */
+  --win95-bg: #c0c0c0;
+  --win95-text: #000000;
+  --win95-highlight: #000080;
+  --win95-highlight-text: #ffffff;
+  --win95-window: #ffffff;
+  --win95-btn-face: #c0c0c0;
+  --win95-btn-highlight: #ffffff;
+  --win95-btn-shadow: #808080;
+  --win95-btn-dark-shadow: #000000;
+  --win95-btn-light: #dfdfdf;
+  --win95-inactive-title: #808080;
+  --win95-inactive-title-text: #c0c0c0;
+  --win95-active-title: #000080;
+  --win95-active-title-text: #ffffff;
+  --win95-desktop: #008080;
+
+  /* Map to chrome system variables */
+  --desktop-bg: var(--win95-desktop);
+  --window-frame-bg: var(--win95-bg);
+  --window-bg: var(--win95-window);
+  --window-fg: var(--win95-text);
+  --window-border: var(--win95-btn-dark-shadow);
+  --chrome-border: var(--win95-btn-dark-shadow);
+  --chrome-border-light: var(--win95-btn-highlight);
+  --chrome-border-medium: var(--win95-btn-shadow);
+  --chrome-border-dark: var(--win95-btn-shadow);
+  --chrome-border-darker: var(--win95-btn-dark-shadow);
+  --chrome-shadow: var(--win95-btn-shadow);
+  --primary-2: var(--win95-highlight);
+
+  /* Content area variables */
+  --highlight: var(--win95-highlight);
+  --highlight-text: var(--win95-highlight-text);
+  --surface: var(--win95-bg);
+  --surface-muted: #d4d0c8;
+
+  /* Font */
+  --font-system: "Microsoft Sans Serif", "MS Sans Serif", "Segoe UI", Tahoma, Geneva, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Win95 Bevel Mixins (via box-shadow)
+
+   Raised: white top-left inside, gray bottom-right inside,
+           light gray top-left outside, black bottom-right outside
+   Sunken: inverted
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   Desktop
+   ═══════════════════════════════════════════════════════════════ */
+
+.desktop {
+  background: var(--win95-desktop) !important;
+  font-family: var(--font-system);
+  font-size: 11px;
+}
+
+/* Desktop icons */
+.desktop .icon {
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.desktop .icon .icon-label {
+  color: #ffffff;
+  text-shadow: 1px 1px 1px #000;
+  font-size: 11px;
+}
+
+.desktop .icon[aria-selected="true"] .icon-label {
+  background: var(--win95-highlight);
+  color: var(--win95-highlight-text);
+  text-shadow: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Window Frame
+   ═══════════════════════════════════════════════════════════════ */
+
+.window {
+  background: var(--win95-bg) !important;
+  border: none !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow) !important;
+  font-family: var(--font-system);
+  font-size: 11px;
+}
+
+.window.active {
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Title Bar
+   ═══════════════════════════════════════════════════════════════ */
+
+.title-bar {
+  background: var(--win95-inactive-title) !important;
+  color: var(--win95-inactive-title-text) !important;
+  padding: 2px 3px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  font-weight: bold;
+  font-size: 11px;
+  margin: 3px 3px 0 3px;
+}
+
+.window.active > .title-bar {
+  background: linear-gradient(90deg, #000080, #1084d0) !important;
+  color: var(--win95-active-title-text) !important;
+}
+
+.title-bar-text {
+  font-weight: bold !important;
+  font-size: 11px !important;
+  justify-content: flex-start !important;
+  padding-left: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Title Bar Buttons (Win95 style — raised 3D squares)
+   ═══════════════════════════════════════════════════════════════ */
+
+.title-bar-close,
+.title-bar-zoom {
+  width: 16px !important;
+  height: 14px !important;
+  background: var(--win95-btn-face) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow) !important;
+  cursor: default;
+  visibility: visible !important;
+  position: relative;
+}
+
+.title-bar-close:active,
+.title-bar-zoom:active {
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-dark-shadow),
+    inset -1px -1px 0 var(--win95-btn-highlight),
+    inset 2px 2px 0 var(--win95-btn-shadow),
+    inset -2px -2px 0 var(--win95-btn-light) !important;
+}
+
+/* Close button X mark */
+.title-bar-close::after {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: #000;
+  line-height: 1;
+}
+
+/* Maximize button □ mark */
+.title-bar-zoom::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #000;
+  border-top-width: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Window Body
+   ═══════════════════════════════════════════════════════════════ */
+
+.window-body {
+  background: var(--win95-window) !important;
+  color: var(--win95-text) !important;
+  border: none !important;
+  margin: 0 3px 3px 3px;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-shadow),
+    inset -1px -1px 0 var(--win95-btn-highlight),
+    inset 2px 2px 0 var(--win95-btn-dark-shadow),
+    inset -2px -2px 0 var(--win95-btn-light) !important;
+}
+
+.window.active > .window-body {
+  background: var(--win95-window) !important;
+  color: var(--win95-text) !important;
+  border: none !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-shadow),
+    inset -1px -1px 0 var(--win95-btn-highlight),
+    inset 2px 2px 0 var(--win95-btn-dark-shadow),
+    inset -2px -2px 0 var(--win95-btn-light) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Menu Bar
+   ═══════════════════════════════════════════════════════════════ */
+
+.menu-bar {
+  background: var(--win95-bg) !important;
+  border-bottom: 1px solid var(--win95-btn-shadow) !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  font-family: var(--font-system);
+  font-size: 11px;
+  padding: 0 2px !important;
+  box-shadow: none !important;
+}
+
+.menu-bar::after {
+  display: none !important;
+}
+
+.menu-bar-left > li {
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+}
+
+.menu-bar-left > li:hover,
+.menu-bar-left > li:focus,
+.menu-bar-left > li[aria-expanded="true"] {
+  background: var(--win95-highlight) !important;
+  color: var(--win95-highlight-text) !important;
+}
+
+.menu-bar-left > li:hover::after,
+.menu-bar-left > li:focus::after,
+.menu-bar-left > li[aria-expanded="true"]::after {
+  display: none !important;
+}
+
+/* Menu bar clock */
+.menu-bar-clock {
+  font-family: var(--font-system) !important;
+  font-size: 11px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Dropdown Menus + Context Menus
+   ═══════════════════════════════════════════════════════════════ */
+
+ul[role="menu"] {
+  background: var(--win95-bg) !important;
+  border: none !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow),
+    2px 2px 0 rgba(0, 0, 0, 0.3) !important;
+  padding: 2px !important;
+  font-family: var(--font-system);
+  font-size: 11px;
+}
+
+ul[role="menu"] li[role="menuitem"] {
+  padding: 3px 24px 3px 8px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  color: var(--win95-text) !important;
+}
+
+ul[role="menu"] li[role="menuitem"]:hover,
+ul[role="menu"] li[role="menuitem"]:focus {
+  background: var(--win95-highlight) !important;
+  color: var(--win95-highlight-text) !important;
+}
+
+ul[role="menu"] li[role="menuitem"][aria-disabled] {
+  color: var(--win95-btn-shadow) !important;
+}
+
+ul[role="menu"] li[role="menuitem"][aria-disabled]:hover,
+ul[role="menu"] li[role="menuitem"][aria-disabled]:focus {
+  background: transparent !important;
+  color: var(--win95-btn-shadow) !important;
+}
+
+/* Separator */
+ul[role="menu"] li[role="separator"] {
+  height: 0 !important;
+  margin: 3px 2px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--win95-btn-shadow) !important;
+  border-bottom: 1px solid var(--win95-btn-highlight) !important;
+}
+
+/* Shortcut hint */
+ul[role="menu"] li[data-shortcut]::after {
+  color: var(--win95-text) !important;
+  font-size: 11px !important;
+}
+
+ul[role="menu"] li[data-shortcut]:hover::after,
+ul[role="menu"] li[data-shortcut]:focus::after {
+  color: var(--win95-highlight-text) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Resize Handle
+   ═══════════════════════════════════════════════════════════════ */
+
+.window-resize-handle {
+  background: var(--win95-bg) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Scrollbars (Win95 style)
+   ═══════════════════════════════════════════════════════════════ */
+
+.window ::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+.window ::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(#c0c0c0 0% 25%, #fff 0% 50%) 50% / 2px 2px;
+}
+
+.window ::-webkit-scrollbar-thumb {
+  background: var(--win95-bg);
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow);
+}
+
+.window ::-webkit-scrollbar-button {
+  background: var(--win95-bg);
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow);
+  height: 16px;
+  width: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Content area overrides — make inner content work with white bg
+   ═══════════════════════════════════════════════════════════════ */
+
+.window .bg-surface-inset {
+  background: var(--win95-window) !important;
+}
+
+.window .border-border {
+  border-color: var(--win95-btn-shadow) !important;
+}
+
+.window .bg-surface-muted,
+.window .bg-surface {
+  background: var(--win95-bg) !important;
+}
+
+.window input[type="text"],
+.window input[type="search"] {
+  background: var(--win95-window) !important;
+  border: none !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-shadow),
+    inset -1px -1px 0 var(--win95-btn-highlight) !important;
+  font-family: var(--font-system);
+  font-size: 11px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   App Switcher (Alt+Tab)
+   ═══════════════════════════════════════════════════════════════ */
+
+.app-switcher {
+  background: var(--win95-bg) !important;
+  box-shadow:
+    inset 1px 1px 0 var(--win95-btn-highlight),
+    inset -1px -1px 0 var(--win95-btn-dark-shadow),
+    inset 2px 2px 0 var(--win95-btn-light),
+    inset -2px -2px 0 var(--win95-btn-shadow) !important;
+}

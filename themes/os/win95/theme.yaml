@@ -1,0 +1,25 @@
+id: win95
+name: Windows 95
+type: os
+description: Classic Windows 95 appearance with 3D beveled chrome
+family: windows
+color-scheme: light
+
+default_wallpaper: ~
+
+credits:
+  inspired_by:
+    - name: RY-OS
+      url: https://github.com/ryokun6/ryos
+      author: Ryo Lu (Head of Design, Cursor)
+    - name: XP.css
+      url: https://botoxparty.github.io/XP.css/
+      author: Adam Hammad
+
+chrome:
+  titlebar_buttons: right
+  titlebar_height: 22
+  window_border: 3
+  corner_radius: 0
+  has_taskbar: false
+  has_menubar: true
