@@ -506,7 +506,8 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* Scrollbar buttons — XP 3D-beveled face + SVG arrow glyphs.
-   SVG arrows are 7x4 (horizontal) or 4x7 (vertical) dark triangles. */
+   WebKit renders 2 buttons at each end by default — hide the extras
+   so we get one up-arrow at top, one down-arrow at bottom. */
 .window ::-webkit-scrollbar-button {
   display: block;
   height: 17px;
@@ -515,28 +516,38 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   border-style: solid;
   border-width: 1px;
   box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
+  background: linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
 }
 
-/* Up arrow ▲ */
-.window ::-webkit-scrollbar-button:vertical:decrement {
+/* Hide the duplicate buttons: WebKit puts decrement+increment at BOTH ends.
+   :single-button means "only show if this is the sole button at this end". */
+.window ::-webkit-scrollbar-button:vertical:start:increment,
+.window ::-webkit-scrollbar-button:vertical:end:decrement,
+.window ::-webkit-scrollbar-button:horizontal:start:increment,
+.window ::-webkit-scrollbar-button:horizontal:end:decrement {
+  display: none;
+}
+
+/* Up arrow ▲ — at top of vertical scrollbar */
+.window ::-webkit-scrollbar-button:vertical:start:decrement {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M3.5 0L7 4H0z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
 }
 
-/* Down arrow ▼ */
-.window ::-webkit-scrollbar-button:vertical:increment {
+/* Down arrow ▼ — at bottom of vertical scrollbar */
+.window ::-webkit-scrollbar-button:vertical:end:increment {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M0 0h7L3.5 4z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
 }
 
-/* Left arrow ◄ */
-.window ::-webkit-scrollbar-button:horizontal:decrement {
+/* Left arrow ◄ — at start of horizontal scrollbar */
+.window ::-webkit-scrollbar-button:horizontal:start:decrement {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M4 0v7L0 3.5z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
 }
 
-/* Right arrow ► */
-.window ::-webkit-scrollbar-button:horizontal:increment {
+/* Right arrow ► — at end of horizontal scrollbar */
+.window ::-webkit-scrollbar-button:horizontal:end:increment {
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M0 0l4 3.5L0 7z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
 }
