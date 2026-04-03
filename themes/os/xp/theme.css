@@ -584,6 +584,87 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: var(--xp-btn-face) !important;
 }
 
+/* ── XP Explorer-style toolbar / navigation chrome ──
+   Targets the search bar + view-switcher area in app views like GraphBrowser.
+   Reference: Reborn XP appnavigation — warm beige horizontal gradient,
+   separator lines, address-bar combobox style. */
+
+/* Toolbar container — the shrink-0 div with border-b that holds search + buttons.
+   XP address-bar row: warm beige gradient, top highlight, bottom separator. */
+.window .shrink-0.border-b {
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
+  border-top: 1px solid #fff !important;
+  border-bottom: 1px solid #d8d2bd !important;
+  padding: 3px 4px !important;
+}
+
+/* Also target app-toolbar-bar if present */
+.window .app-toolbar-bar {
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
+  border-top: 1px solid #fff !important;
+  border-bottom: 1px solid #d8d2bd !important;
+  color: var(--xp-text) !important;
+  padding: 3px 4px !important;
+}
+
+/* Search input inside toolbar — XP address-bar combobox:
+   slim, white, flat corners, inset shadow on top-left */
+.window .shrink-0.border-b input[type="text"],
+.window .shrink-0.border-b input[type="search"] {
+  background: #fff !important;
+  border: 1px solid var(--xp-input-border) !important;
+  box-shadow: inset 1px 1px 0 #a4b0be !important;
+  border-radius: 0 !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  height: 21px !important;
+  padding: 1px 4px !important;
+}
+
+/* View mode switcher — transparent container, no wrapper chrome */
+.window .shrink-0.border-b .bg-surface-muted {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  gap: 0;
+  overflow: visible !important;
+}
+
+/* Individual view mode buttons — XP toolbar icon buttons */
+.window .shrink-0.border-b .bg-surface-muted button {
+  background: linear-gradient(180deg, #fff 0%, #ece9d8 89%, #d6d0bf 100%) !important;
+  border: 1px solid var(--xp-btn-shadow) !important;
+  border-radius: 0 !important;
+  padding: 2px 5px !important;
+  min-height: 21px;
+  font-size: 11px !important;
+}
+
+/* Adjacent buttons share a border */
+.window .shrink-0.border-b .bg-surface-muted button + button {
+  border-left: none !important;
+}
+
+.window .shrink-0.border-b .bg-surface-muted button:hover {
+  border-color: #d8d2bd !important;
+  background: linear-gradient(180deg, #f9f9f5, #f1f1ea) !important;
+  box-shadow: inset 0 1px 2px #fefefd, inset 0 -1px 2px #d7d2c6, inset -1px 0 1px #e8e5dc !important;
+}
+
+/* Active view mode — XP pressed/selected look */
+.window .shrink-0.border-b .bg-surface-muted button.bg-surface {
+  background: linear-gradient(180deg, #e0dfd7, #e7e5e0) !important;
+  border: 1px solid #9d9d92 !important;
+  box-shadow: inset 1px 1px 1px #dcdad1, inset 0 -1px 1px #ebeae5 !important;
+}
+
+/* URL bar / entity filter bar — same beige treatment */
+.window .url-bar,
+.window .entity-filter-bar {
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
+  border-bottom: 1px solid #d8d2bd !important;
+}
+
 /* Status bar at bottom */
 .window .border-t {
   border-color: var(--xp-btn-shadow) !important;
