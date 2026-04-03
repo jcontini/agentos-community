@@ -627,7 +627,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 .window nav[role="listbox"] {
   background: linear-gradient(to bottom, #7ba2e7 0%, #6375d6 100%) !important;
   border-right: 1px solid #4a5ec0 !important;
-  padding: 6px !important;
+  padding: 2px !important;
 }
 
 /* Each item in the sidebar — sits on a white panel background */
