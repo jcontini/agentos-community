@@ -852,6 +852,11 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   filter: saturate(0.2) !important;
 }
 
+/* Nav icon images — contain fit, no inline style needed */
+.xp-nav-icon {
+  object-fit: contain;
+}
+
 /* Text labels next to nav icons */
 .window .graph-nav-label {
   font-family: var(--xp-font) !important;
@@ -1135,12 +1140,24 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 1px 4px !important;
 }
 
-/* Address input inside combo — override generic input styling */
-.window .graph-address-combo .graph-address-input {
+/* Address input inside combo — kill ALL borders, rings, shadows.
+   The combo container provides the single outer border. */
+.window .graph-address-combo .graph-address-input,
+.window .graph-address-combo .graph-address-input:focus,
+.window .graph-address-combo .graph-address-input:hover,
+.window .graph-address-combo input[type="text"],
+.window .graph-address-combo input {
   border: none !important;
+  border-width: 0 !important;
   box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-color: transparent !important;
+  ring: 0 !important;
   height: 19px !important;
   background: transparent !important;
+  padding: 0 2px !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
