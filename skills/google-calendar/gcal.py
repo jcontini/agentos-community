@@ -410,7 +410,7 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
 
 def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
                  location=None, description=None, attendees=None,
-                 recurrence=None, timezone=None, **params):
+                 recurrence=None, timezone=None, meet=False, **params):
     """Create a new calendar event."""
     headers = _auth_header(params)
 
@@ -443,9 +443,21 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
         body["attendees"] = [{"email": e} for e in attendees]
     if recurrence:
         body["recurrence"] = recurrence
+    if meet:
+        import uuid
+        body["conferenceData"] = {
+            "createRequest": {
+                "requestId": uuid.uuid4().hex,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
+        }
+
+    url = f"{BASE_URL}/calendars/{calendar_id}/events"
+    if meet:
+        url += "?conferenceDataVersion=1"
 
     resp = http.post(
-        f"{BASE_URL}/calendars/{calendar_id}/events",
+        url,
         json=body, **http.headers(accept="json", extra=headers),
     )
     return _map_event(resp["json"])

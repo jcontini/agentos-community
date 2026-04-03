@@ -106,6 +106,7 @@ operations:
       attendees: { type: array, description: "List of attendee email addresses" }
       recurrence: { type: array, description: "RRULE strings, e.g. ['RRULE:FREQ=WEEKLY;BYDAY=MO']" }
       timezone: { type: string, description: "IANA timezone (e.g. America/Chicago). Defaults to calendar timezone." }
+      meet: { type: boolean, description: "Attach a Google Meet video conference link" }
     python:
       module: ./gcal.py
       function: create_event
