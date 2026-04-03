@@ -104,9 +104,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .window {
-  /* Blue frame — background-color IS the frame. Title bar + body sit inside with margin. */
-  background-color: #6582f5 !important;
-  border: none !important;
+  /* Authentic XP Luna: 1px blue border per side, deep blue bg peeks between
+     title bar and body. Matches Reborn XP / quenq.com reference. */
+  background-color: #6d74cd !important;
+  border: 1px solid !important;
+  border-color: #688de0 #5b5ec5 #4f53bc #5b68cd !important;
   border-radius: 8px 8px 0 0 !important;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.25) !important;
   font-family: var(--xp-font);
@@ -115,7 +117,8 @@
 }
 
 .window.active {
-  background-color: #0831d9 !important;
+  background-color: #0021a9 !important;
+  border-color: #0059e8 #00138c #00138c #0019cf !important;
   box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -124,55 +127,62 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .title-bar {
-  /* Multi-stop vertical gradient — from OnlineWinXP reference */
+  /* Authentic XP Luna title bar gradient + side chrome via inset box-shadows.
+     Matches Reborn XP appheader styling. */
   background: linear-gradient(
     180deg,
-    #0058ee 0%,
-    #3593ff 4%,
-    #288eff 6%,
-    #127dff 8%,
-    #036ffc 10%,
-    #0262ee 14%,
-    #0057e5 20%,
-    #0054e3 24%,
-    #0055eb 56%,
-    #005bf5 66%,
-    #026afe 76%,
-    #0062ef 86%,
-    #0052d6 92%,
-    #0040ab 94%,
-    #003092 100%
+    #3d95ff 0%,
+    #2b90ff 7%,
+    #0372ff 9%,
+    #0054e3 18%,
+    #0054e3 19%,
+    #0058ee 50%,
+    #026afe 80%,
+    #026afe 90%,
+    #0065fd 93%,
+    #71aaff 96%,
+    #c4d6ff 100%
   ) !important;
+  box-shadow:
+    inset -1px -1px 1px rgba(0, 38, 172, 0.67),
+    inset -2px -1px 1px rgba(0, 32, 200, 0.67),
+    inset -3px -1px 1px rgba(0, 59, 224, 0.67),
+    inset 1px -1px 1px rgba(0, 32, 200, 0.67),
+    inset 2px -1px 1px rgba(0, 56, 216, 0.67),
+    inset 3px -1px 1px rgba(0, 70, 228, 0.67) !important;
   color: #ffffff !important;
-  text-shadow: 1px 1px #000;
+  text-shadow: 1px 1px #0a1883;
   padding: 3px 5px 3px 8px !important;
   height: 28px !important;
   min-height: 28px !important;
   font-weight: bold;
   font-size: 12px;
-  border-radius: 3px 3px 0 0 !important;
-  margin: 3px 3px 0 3px;
+  border-radius: 0 !important;
+  margin: 0;
   letter-spacing: 0.5px;
 }
 
-/* Inactive title bar — lighter, desaturated gradient */
+/* Inactive title bar — lighter, desaturated gradient with side chrome */
 .window:not(.active) > .title-bar {
   background: linear-gradient(
     180deg,
-    #7697e7 0%,
-    #7e9ee3 3%,
-    #94afe8 6%,
-    #97b4e9 8%,
-    #82a5e4 14%,
-    #7c9fe2 17%,
-    #7996de 25%,
-    #7b99e1 56%,
-    #82a9e9 81%,
-    #80a5e7 89%,
-    #7b96e1 94%,
-    #7a93df 97%,
-    #abbae3 100%
+    #9ab4e9 0%,
+    #9db9eb 7%,
+    #8bb0e9 9%,
+    #7b9de1 18%,
+    #7996de 19%,
+    #7a96e0 50%,
+    #7fa2e6 80%,
+    #80a5e6 90%,
+    #7fa2e5 91%,
+    #7b99e1 94%,
+    #778edb 100%
   ) !important;
+  box-shadow:
+    inset 2px 0 0 rgba(116, 124, 213, 0.33),
+    inset 1px 0 0 #747cd5,
+    inset -2px 0 0 rgba(110, 109, 197, 0.33),
+    inset -1px 0 0 #6e6dc5 !important;
   color: #d8e4f8 !important;
   text-shadow: none;
 }
@@ -339,16 +349,25 @@
 .window-body {
   background: var(--xp-window-bg) !important;
   color: var(--xp-text) !important;
-  border: none !important;
-  margin: 0 3px 3px 3px;
-  box-shadow: none !important;
+  border: 1px solid !important;
+  border-color: #778edb #7586dc #7586dc #758cdc !important;
+  margin: 0;
+  box-shadow:
+    -1px 0 0 #758cdd,
+    1px 0 0 #7588de,
+    0 1px 0 #6d74cd !important;
 }
 
 .window.active > .window-body {
   background: var(--xp-window-bg) !important;
   color: var(--xp-text) !important;
-  border: none !important;
-  box-shadow: none !important;
+  border: 1px solid !important;
+  border-color: #0144d0 #003ddc #0048f1 #0855dd !important;
+  margin: 0;
+  box-shadow:
+    -1px 0 2px 0 #5d8aee,
+    1px 0 2px 1px #003ddc,
+    0 1px 2px 1px #003ddc !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
