@@ -922,6 +922,97 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   max-height: 2.4em !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   List View — XP Explorer compact list (small icon + name)
+   ═══════════════════════════════════════════════════════════════ */
+
+.window .graph-list-view {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.window .graph-list-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  padding: 1px 4px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  color: var(--xp-text) !important;
+  text-align: left !important;
+  box-shadow: none !important;
+  min-height: 18px !important;
+}
+
+.window .graph-list-item:hover {
+  background: rgba(49, 106, 197, 0.08) !important;
+}
+
+.window .graph-list-item.selected {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
+.window .graph-list-item-name {
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.window .graph-list-item-sub {
+  flex-shrink: 0 !important;
+  color: var(--content-fg-muted) !important;
+  font-size: 11px !important;
+  margin-left: 8px !important;
+}
+
+.window .graph-list-item.selected .graph-list-item-sub {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Views Dropdown Popup — flat rectangular XP menu items
+   ═══════════════════════════════════════════════════════════════ */
+
+.window .graph-views-popup {
+  border: 1px solid #9d9da1 !important;
+  background: #fff !important;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25) !important;
+  padding: 2px 0 !important;
+  border-radius: 0 !important;
+}
+
+.window .graph-views-popup-item {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 2px 8px 2px 6px !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  color: var(--xp-text) !important;
+  min-height: 18px !important;
+  box-shadow: none !important;
+  line-height: 18px !important;
+}
+
+.window .graph-views-popup-item:hover {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.window .graph-views-popup-item.bg-highlight {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
 /* URL bar / entity filter bar — same beige treatment */
 .window .url-bar,
 .window .entity-filter-bar {
