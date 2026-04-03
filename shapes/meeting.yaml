@@ -1,13 +1,15 @@
 # A calendar meeting — an event with virtual meeting details and transcripts.
 # Querying by "event" returns meetings too.
 #
-# Sources: Apple Calendar, Granola
+# Sources: Google Calendar, Apple Calendar, Granola
 meeting:
   also: [event]
   fields:
-    calendar_link:     url
-    is_virtual:        boolean
-    meeting_url:       url       # Zoom/Meet/Teams link
+    calendar_link:       url
+    is_virtual:          boolean
+    meeting_url:         url       # Zoom/Meet/Teams link
+    conference_provider: string    # "Google Meet", "Zoom", "Microsoft Teams"
+    phone_dial_in:       string    # phone entry point URI (tel:+1-...)
   relations:
     transcribe:        transcript # meeting recording transcript
   display:

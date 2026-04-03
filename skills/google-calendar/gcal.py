@@ -13,6 +13,14 @@ from agentos import http
 
 BASE_URL = "https://www.googleapis.com/calendar/v3"
 
+VIRTUAL_PATTERNS = [
+    (r'https?://meet\.google\.com/[a-z]{3}-[a-z]{4}-[a-z]{3}', 'Google Meet'),
+    (r'https?://(?:[a-z0-9]+\.)?zoom\.us/(?:j|my)/\S+', 'Zoom'),
+    (r'https?://teams\.microsoft\.com/l/meetup-join/\S+', 'Microsoft Teams'),
+    (r'https?://(?:[a-z0-9]+\.)?webex\.com/(?:meet|join)/\S+', 'WebEx'),
+    (r'https?://(?:[a-z0-9]+\.)?goto\.(?:com|meeting)/\S+', 'GoTo Meeting'),
+]
+
 
 # ==============================================================================
 # Internal helpers
@@ -28,48 +36,261 @@ def _auth_header(params):
     return {"Authorization": f"Bearer {token}"}
 
 
+def _clean_html(text):
+    """Convert HTML description to plain text via lxml."""
+    if not text or "<" not in text:
+        return text or ""
+    try:
+        from lxml import html as lxml_html
+        from lxml import etree
+        doc = lxml_html.fromstring(text)
+        # Insert newlines after block elements so text_content() doesn't merge them
+        for el in doc.iter():
+            if el.tag in ('p', 'div', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                          'li', 'tr', 'blockquote', 'pre', 'hr'):
+                if el.tail is None:
+                    el.tail = '\n'
+                elif not el.tail.startswith('\n'):
+                    el.tail = '\n' + el.tail
+        result = doc.text_content()
+        # Collapse multiple blank lines, strip
+        lines = [line.strip() for line in result.splitlines()]
+        return '\n'.join(line for line in lines if line).strip()
+    except Exception:
+        return text
+
+
+def _map_location(location_str):
+    """Parse location string into a place shape."""
+    if not location_str:
+        return None
+    # Check for virtual meeting URL
+    for pattern, provider in VIRTUAL_PATTERNS:
+        if re.search(pattern, location_str, re.IGNORECASE):
+            return None  # virtual-only, not a physical place
+    parts = location_str.split(",", 1)
+    name = parts[0].strip()
+    has_numbers = bool(re.search(r'\d', name))
+    return {
+        "name": name,
+        "full_address": location_str if len(parts) > 1 else None,
+        "feature_type": "address" if has_numbers else "poi",
+    }
+
+
+def _derive_name_from_email(email):
+    """Derive a display name from an email local part."""
+    if not email:
+        return ""
+    local = email.split("@")[0]
+    return local.replace(".", " ").replace("_", " ").replace("-", " ").title()
+
+
+def _map_attendee(att):
+    """Map a Google Calendar attendee to a person with RSVP metadata."""
+    if not att:
+        return None
+    email = att.get("email", "")
+    name = att.get("displayName") or _derive_name_from_email(email)
+    parts = name.split(None, 1) if name else []
+    return {
+        "name": name,
+        "handle": email,
+        "first_name": parts[0] if parts else None,
+        "last_name": parts[1] if len(parts) > 1 else None,
+        "rsvp": att.get("responseStatus"),
+        "is_self": att.get("self", False),
+        "is_optional": att.get("optional", False),
+        "is_organizer": att.get("organizer", False),
+        "is_resource": att.get("resource", False),
+        "rsvp_comment": att.get("comment"),
+        "additional_guests": att.get("additionalGuests", 0),
+    }
+
+
+def _map_person_from_gcal(person):
+    """Map organizer/creator dict to a person shape with name derivation."""
+    if not person:
+        return None
+    email = person.get("email", "")
+    name = person.get("displayName") or _derive_name_from_email(email)
+    parts = name.split(None, 1) if name else []
+    return {
+        "name": name,
+        "handle": email,
+        "first_name": parts[0] if parts else None,
+        "last_name": parts[1] if len(parts) > 1 else None,
+        "is_self": person.get("self", False),
+    }
+
+
+def _derive_show_as(event):
+    """Derive availability status from event fields."""
+    etype = event.get("eventType", "default")
+    transp = event.get("transparency", "opaque")
+    if etype == "outOfOffice":
+        return "out_of_office"
+    if etype == "focusTime":
+        return "busy"
+    if etype == "workingLocation":
+        return "working_elsewhere"
+    if transp == "transparent":
+        return "free"
+    status = event.get("status", "confirmed")
+    if status == "tentative":
+        return "tentative"
+    return "busy"
+
+
+def _map_conference(event):
+    """Extract all conference entry points — video, phone, SIP, access codes."""
+    cd = event.get("conferenceData")
+    if not cd:
+        return None, None, None, []
+
+    meeting_url = None
+    phone_dial_in = None
+    entry_points = []
+
+    for ep in cd.get("entryPoints", []):
+        entry = {
+            "type": ep.get("entryPointType"),
+            "uri": ep.get("uri"),
+            "label": ep.get("label"),
+            "pin": ep.get("pin"),
+            "access_code": ep.get("accessCode"),
+        }
+        entry_points.append(entry)
+        if ep.get("entryPointType") == "video":
+            meeting_url = ep.get("uri")
+        elif ep.get("entryPointType") == "phone":
+            phone_dial_in = ep.get("uri")
+
+    solution = cd.get("conferenceSolution", {})
+    provider = solution.get("name")  # "Google Meet", "Zoom", etc.
+
+    return meeting_url, provider, phone_dial_in, entry_points
+
+
+def _map_attachments(event):
+    """Map attachments to file shapes (Drive) and webpage shapes (external URLs)."""
+    raw = event.get("attachments", [])
+    if not raw:
+        return None, None
+    attachments = []
+    links = []
+    for a in raw:
+        if a.get("fileId"):
+            attachments.append({
+                "filename": a.get("title"),
+                "mime_type": a.get("mimeType"),
+                "url": a.get("fileUrl"),
+            })
+        else:
+            links.append({
+                "name": a.get("title"),
+                "url": a.get("fileUrl"),
+            })
+    return attachments or None, links or None
+
+
 def _map_event(event):
     """Map Google Calendar event to agentOS meeting shape."""
     start = event.get("start", {})
     end = event.get("end", {})
-    return {
+    attendees = event.get("attendees", [])
+    etype = event.get("eventType", "default")
+
+    # Conference
+    meeting_url, conference_provider, phone_dial_in, conference_entry_points = _map_conference(event)
+
+    # Attachments
+    attachments, links = _map_attachments(event)
+
+    # Source provenance
+    source = event.get("source")
+
+    # Recurrence — full list, not just first rule
+    recurrence_rules = event.get("recurrence")
+
+    # Reminders
+    reminders_data = event.get("reminders", {})
+    reminders = reminders_data.get("overrides") if not reminders_data.get("useDefault") else None
+
+    out = {
         "id": event.get("id"),
         "name": event.get("summary", "(No title)"),
-        "text": event.get("description", ""),
+        "text": _clean_html(event.get("description", "")),
         "url": event.get("htmlLink"),
         "start_date": start.get("dateTime") or start.get("date"),
         "end_date": end.get("dateTime") or end.get("date"),
         "timezone": start.get("timeZone"),
         "all_day": "date" in start and "dateTime" not in start,
-        "location": event.get("location"),
+        "location": _map_location(event.get("location")),
         "calendar_link": event.get("htmlLink"),
+        # Conference (R8)
         "is_virtual": bool(event.get("conferenceData")),
-        "meeting_url": _extract_meeting_url(event),
-        "recurrence": (event.get("recurrence") or [None])[0],
-        "organizer": _map_person(event.get("organizer")),
-        "involves": [_map_person(a) for a in event.get("attendees", [])],
+        "meeting_url": meeting_url,
+        "conference_provider": conference_provider,
+        "phone_dial_in": phone_dial_in,
+        "conference_entry_points": conference_entry_points or None,
+        # Recurrence (R10)
+        "recurrence": recurrence_rules,
+        "recurring_event_id": event.get("recurringEventId"),
+        "original_start_time": (event.get("originalStartTime") or {}).get("dateTime"),
+        # Relations
+        "organizer": _map_person_from_gcal(event.get("organizer")),
+        "author": _map_person_from_gcal(event.get("creator")),
+        "involves": [_map_attendee(a) for a in attendees if not a.get("resource")],
+        # Status & type (R4-R5)
+        "status": event.get("status"),
+        "event_type": etype,
+        "visibility": event.get("visibility"),
+        "show_as": _derive_show_as(event),
+        # Timestamps (R6)
+        "datePublished": event.get("created"),
+        "date_updated": event.get("updated"),
+        # Identity (R14)
+        "ical_uid": event.get("iCalUID"),
+        "etag": event.get("etag"),
+        # Source provenance (R9)
+        "source_url": source.get("url") if source else None,
+        "source_title": source.get("title") if source else None,
+        # Reminders (R11)
+        "reminders": reminders,
+        # Attachments (R12)
+        "attachments": attachments,
+        "links": links,
+        # Permissions (R18)
+        "guests_can_modify": event.get("guestsCanModify"),
+        "guests_can_invite": event.get("guestsCanInviteOthers"),
+        "guests_can_see_others": event.get("guestsCanSeeOtherGuests"),
     }
 
+    # Birthday → life event (R13)
+    if etype == "birthday":
+        bp = event.get("birthdayProperties", {})
+        out["birthday_contact_id"] = bp.get("contact")
+        out["birthday_type"] = bp.get("type")
 
-def _map_person(person):
-    if not person:
-        return None
-    return {
-        "handle": person.get("email"),
-        "platform": "email",
-        "display_name": person.get("displayName", ""),
-    }
+    # Focus time properties (R16)
+    if etype == "focusTime":
+        fp = event.get("focusTimeProperties", {})
+        out["auto_decline"] = fp.get("autoDeclineMode")
+        out["chat_status"] = fp.get("chatStatus")
 
+    # Out of office properties (R16)
+    if etype == "outOfOffice":
+        ooo = event.get("outOfOfficeProperties", {})
+        out["auto_decline"] = ooo.get("autoDeclineMode")
+        out["decline_message"] = ooo.get("declineMessage")
 
-def _extract_meeting_url(event):
-    """Pull video conference URL from conferenceData."""
-    cd = event.get("conferenceData")
-    if not cd:
-        return None
-    for ep in cd.get("entryPoints", []):
-        if ep.get("entryPointType") == "video":
-            return ep.get("uri")
-    return None
+    # Working location properties (R16)
+    if etype == "workingLocation":
+        wl = event.get("workingLocationProperties", {})
+        out["working_location_type"] = wl.get("type")
+
+    return out
 
 
 def _is_date_only(s):

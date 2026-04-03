@@ -1,13 +1,20 @@
 # A calendar — container for events.
 #
-# Sources: Apple Calendar, Google Calendar
+# Sources: Google Calendar, Apple Calendar
 calendar:
   fields:
-    color:             string
+    calendar_id:       string    # provider's calendar ID (Google: email-like string)
+    color:             string    # display color (hex)
+    background_color:  string    # hex color for background
+    foreground_color:  string    # hex color for text
     is_primary:        boolean
     is_readonly:       boolean
+    access_role:       string    # owner, writer, reader, freeBusyReader
     source:            string    # e.g., "iCloud", "Google"
     timezone:          string
+  relations:
+    owner:             person    # who owns this calendar
+    events:            event[]   # events in this calendar
   display:
     title: name
     subtitle: source

@@ -7,7 +7,7 @@ website: https://calendar.google.com
 privacy_url: https://policies.google.com/privacy
 
 connections:
-  gcal:
+  api:
     base_url: "https://www.googleapis.com/calendar/v3"
     auth:
       type: oauth
@@ -32,7 +32,7 @@ operations:
   list_calendars:
     description: List all calendars the user can see (name, color, timezone, access role)
     returns: calendar[]
-    connection: gcal
+    connection: api
     params:
       account: { type: string, description: "Google account email" }
     python:
@@ -42,8 +42,8 @@ operations:
 
   list_events:
     description: "List calendar events within a date range, optionally filtered by search query. Expands recurring events into individual instances."
-    returns: meeting[]
-    connection: gcal
+    returns: event[]
+    connection: api
     params:
       account: { type: string, description: "Google account email" }
       calendar_id: { type: string, description: "Calendar ID (default: 'primary')" }
@@ -60,8 +60,8 @@ operations:
 
   get_event:
     description: Get full details of a specific calendar event
-    returns: meeting
-    connection: gcal
+    returns: event
+    connection: api
     params:
       id: { type: string, description: "Event ID — optional if url is a calendar.google.com link" }
       url: { type: string, description: "Google Calendar web URL (web_read); extracts event ID from eid param" }
@@ -74,8 +74,8 @@ operations:
 
   search_events:
     description: "Search events across all calendars by free-text query (title, description, location, attendees)"
-    returns: meeting[]
-    connection: gcal
+    returns: event[]
+    connection: api
     params:
       query: { type: string, required: true, description: "Search text" }
       account: { type: string, description: "Google account email" }
@@ -92,8 +92,8 @@ operations:
 
   create_event:
     description: Create a new calendar event with optional attendees, location, and recurrence
-    returns: meeting
-    connection: gcal
+    returns: event
+    connection: api
     params:
       account: { type: string, description: "Google account email" }
       calendar_id: { type: string, description: "Calendar ID (default: 'primary')" }
@@ -113,8 +113,8 @@ operations:
 
   update_event:
     description: Update an existing calendar event (partial update — only provided fields change)
-    returns: meeting
-    connection: gcal
+    returns: event
+    connection: api
     params:
       id: { type: string, required: true, description: "Event ID" }
       account: { type: string, description: "Google account email" }
@@ -133,7 +133,7 @@ operations:
   delete_event:
     description: Delete a calendar event (moves to trash)
     returns: void
-    connection: gcal
+    connection: api
     params:
       id: { type: string, required: true, description: "Event ID" }
       account: { type: string, description: "Google account email" }
