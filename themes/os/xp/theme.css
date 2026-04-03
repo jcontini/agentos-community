@@ -485,24 +485,39 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   height: 17px;
 }
 
-.window ::-webkit-scrollbar-track {
-  background: var(--xp-scrollbar-track);
-  border-left: 1px solid #d6d2c2;
+/* Scrollbar track — XP Luna gradient (left edge slightly darker). */
+.window ::-webkit-scrollbar-track:vertical {
+  background: linear-gradient(to right, #f3f1ec, #fefefb);
+  box-shadow: inset 1px 0 #eeede5, inset -1px 0 #eeede5;
 }
 
+.window ::-webkit-scrollbar-track:horizontal {
+  background: linear-gradient(to bottom, #f3f1ec, #fefefb);
+  box-shadow: inset 0 1px #eeede5, inset 0 -1px #eeede5;
+}
+
+/* Scrollbar thumb — XP Luna blue gradient with grip marks.
+   White border, inner blue bevel, horizontal grip lines via SVG. */
 .window ::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #b9d4f6 0%, #a4c3ee 20%, #91b5e6 50%, #a4c3ee 80%, #b9d4f6 100%);
-  border: 1px solid #6f99c4;
+  background-color: #c8d6fb;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='8'%3E%3Cpath stroke='%23eef4fe' d='M0 0h6M0 2h6M0 4h6M0 6h6'/%3E%3Cpath stroke='%238cb0f8' d='M1 1h6M1 3h6M1 5h6M1 7h6'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 7px;
+  border: 1px solid #fff;
   border-radius: 2px;
-  min-height: 24px;
+  box-shadow: inset -3px 0 #bad1fc, inset 1px 1px #b7caf5;
+  min-height: 28px;
 }
 
 .window ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #c8ddf8 0%, #b4d0f2 20%, #a0c0ea 50%, #b4d0f2 80%, #c8ddf8 100%);
+  background-color: #d8e8ff;
+  box-shadow: inset -3px 0 #c5dfff, inset 1px 1px #c0d5ff;
 }
 
 .window ::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(90deg, #8fb0de 0%, #7fa4d8 20%, #6f98d0 50%, #7fa4d8 80%, #8fb0de 100%);
+  background-color: #a9bef6;
+  box-shadow: inset -3px 0 #99b9fa, inset 1px 1px #93acf2;
 }
 
 /* Scrollbar buttons — full SVG images (16x17) for each arrow direction.
