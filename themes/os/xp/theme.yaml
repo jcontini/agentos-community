@@ -5,10 +5,18 @@ description: Windows XP Luna Blue — the iconic warm blue and beige desktop
 family: windows
 color-scheme: light
 
-default_wallpaper: ~
+default_wallpaper: windows/bliss.jpg
 
 credits:
   inspired_by:
+    - name: Reborn XP
+      url: https://xp.quenq.com/
+      author: quenq
+      note: Taskbar/tray gradients, start button images, tab styling, Bliss wallpaper
+    - name: OnlineWinXP
+      url: https://github.com/proxy-m/OnlineWinXP
+      author: proxy-m
+      note: Radial gradient buttons, title bar gradients, window frame approach
     - name: XP.css
       url: https://botoxparty.github.io/XP.css/
       author: Adam Hammad
@@ -21,5 +29,5 @@ chrome:
   titlebar_height: 28
   window_border: 4
   corner_radius: 8
-  has_taskbar: false
-  has_menubar: true
+  has_taskbar: true
+  has_menubar: false

@@ -92,32 +92,20 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .window {
-  background: var(--xp-btn-face) !important;
+  /* Blue frame — background-color IS the frame, content sits inside with margin.
+     OnlineWinXP approach: inactive = #6582f5, active = #0831d9 */
+  background-color: #6582f5 !important;
   border: none !important;
   border-radius: 8px 8px 0 0 !important;
-  /* 6-layer blue frame — the XP signature */
-  box-shadow:
-    inset -1px -1px #00138c,
-    inset 1px 1px #0831d9,
-    inset -2px -2px #001ea0,
-    inset 2px 2px #166aee,
-    inset -3px -3px #003bda,
-    inset 3px 3px #0855dd,
-    2px 2px 10px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.25) !important;
   font-family: var(--xp-font);
   font-size: 11px;
   overflow: hidden !important;
 }
 
 .window.active {
-  box-shadow:
-    inset -1px -1px #00138c,
-    inset 1px 1px #0831d9,
-    inset -2px -2px #001ea0,
-    inset 2px 2px #166aee,
-    inset -3px -3px #003bda,
-    inset 3px 3px #0855dd,
-    2px 2px 12px rgba(0, 0, 0, 0.3) !important;
+  background-color: #0831d9 !important;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -125,38 +113,54 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .title-bar {
-  /* The iconic XP title bar gradient — 7 stops for that glossy look */
+  /* Multi-stop vertical gradient — from OnlineWinXP reference */
   background: linear-gradient(
     180deg,
-    #0997ff 0%,
-    #0053ee 8%,
-    #0050ee 40%,
-    #0066ff 88%,
-    #0066ff 93%,
-    #005bff 95%,
-    #003dd7 96%
+    #0058ee 0%,
+    #3593ff 4%,
+    #288eff 6%,
+    #127dff 8%,
+    #036ffc 10%,
+    #0262ee 14%,
+    #0057e5 20%,
+    #0054e3 24%,
+    #0055eb 56%,
+    #005bf5 66%,
+    #026afe 76%,
+    #0062ef 86%,
+    #0052d6 92%,
+    #0040ab 94%,
+    #003092 100%
   ) !important;
   color: #ffffff !important;
-  text-shadow: 1px 1px var(--xp-title-text-shadow);
+  text-shadow: 1px 1px #000;
   padding: 3px 5px 3px 8px !important;
   height: 28px !important;
   min-height: 28px !important;
   font-weight: bold;
-  font-size: 13px;
-  border-top: 1px solid #0831d9;
+  font-size: 12px;
   border-radius: 8px 8px 0 0;
   margin: 0;
+  letter-spacing: 0.5px;
 }
 
-/* Inactive title bar — desaturated blue */
+/* Inactive title bar — lighter, desaturated gradient */
 .window:not(.active) > .title-bar {
   background: linear-gradient(
     180deg,
-    #7a96df 0%,
-    #6f8ad5 8%,
-    #7a96df 40%,
-    #a6c3f1 70%,
-    #7a96df 100%
+    #7697e7 0%,
+    #7e9ee3 3%,
+    #94afe8 6%,
+    #97b4e9 8%,
+    #82a5e4 14%,
+    #7c9fe2 17%,
+    #7996de 25%,
+    #7b99e1 56%,
+    #82a9e9 81%,
+    #80a5e7 89%,
+    #7b96e1 94%,
+    #7a93df 97%,
+    #abbae3 100%
   ) !important;
   color: #d8e4f8 !important;
   text-shadow: none;
@@ -185,8 +189,8 @@
 .title-bar-close,
 .title-bar-minimize,
 .title-bar-zoom {
-  width: 21px !important;
-  height: 21px !important;
+  width: 22px !important;
+  height: 22px !important;
   border-radius: 3px !important;
   border: none !important;
   cursor: default;
@@ -194,163 +198,127 @@
   position: relative;
   margin-left: 2px;
   flex-shrink: 0 !important;
+  /* Use SVG data URIs for glyphs instead of pseudo-elements */
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
-/* Close button — red */
+/* 2px gap before close button — XP groups min+max, then a gap, then close */
 .title-bar-close {
-  background: linear-gradient(
-    180deg,
-    #e8a598 0%,
-    #d46a56 5%,
-    #c5402f 30%,
-    #d64b3f 50%,
-    #cf4738 70%,
-    #b22a1c 95%,
-    #9c1d12 100%
+  margin-left: 4px !important;
+}
+
+/* ─── Title Bar Buttons ───
+   Key insight from OnlineWinXP: use radial-gradient with light source
+   at top-left (circle at 90% 90% = light appears at top-left because
+   the dark center is at bottom-right). This creates the glossy orb look.
+   Close is orange-red, not pure red. */
+
+/* Shared radial gradient base for min/max (blue orbs) */
+.title-bar-minimize,
+.title-bar-zoom {
+  background-image: radial-gradient(
+    circle at 90% 90%,
+    #0054e9 0%,
+    #2263d5 55%,
+    #4479e4 70%,
+    #a3bbec 90%,
+    white 100%
   ) !important;
-  box-shadow:
-    inset -1px -1px #8c1a0e,
-    inset 1px 1px #f0a898,
-    0 0 0 1px #3d3d3d !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: inset 0 -1px 2px 1px #4646ff !important;
+}
+
+.title-bar-minimize:hover,
+.title-bar-zoom:hover {
+  filter: brightness(120%);
+}
+
+.title-bar-minimize:active,
+.title-bar-zoom:active {
+  filter: brightness(90%);
+}
+
+/* Close button — orange-red orb, not flat red */
+.title-bar-close {
+  background-image: radial-gradient(
+    circle at 90% 90%,
+    #cc4600 0%,
+    #dc6527 55%,
+    #cd7546 70%,
+    #ffccb2 90%,
+    white 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: inset 0 -1px 2px 1px #da4600 !important;
 }
 
 .title-bar-close:hover {
-  background: linear-gradient(
-    180deg,
-    #f0b8aa 0%,
-    #e07060 5%,
-    #d64b3f 40%,
-    #e8594d 60%,
-    #d64b3f 95%
-  ) !important;
+  filter: brightness(120%);
 }
 
 .title-bar-close:active {
-  background: linear-gradient(
-    180deg,
-    #a02018 0%,
-    #c03828 40%,
-    #b83020 100%
-  ) !important;
+  filter: brightness(90%);
 }
 
-/* Close X mark */
+/* Close X — two rotated white bars (CSS pseudo-elements, like OnlineWinXP) */
+.title-bar-close::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 2px;
+  transform: rotate(45deg);
+  height: 16px;
+  width: 2px;
+  background-color: white;
+}
+
 .title-bar-close::after {
-  content: "✕";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-  color: #ffffff;
-  text-shadow: 1px 1px rgba(0, 0, 0, 0.3);
-  line-height: 1;
-}
-
-/* Maximize/zoom button — blue matching frame */
-.title-bar-zoom {
-  background: linear-gradient(
-    180deg,
-    #6ebbff 0%,
-    #1a6ee0 5%,
-    #0d52c1 30%,
-    #1665d8 50%,
-    #0f5bce 70%,
-    #0840a0 95%,
-    #063885 100%
-  ) !important;
-  box-shadow:
-    inset -1px -1px #063885,
-    inset 1px 1px #6ebbff,
-    0 0 0 1px #3d3d3d !important;
-}
-
-.title-bar-zoom:hover {
-  background: linear-gradient(
-    180deg,
-    #88ccff 0%,
-    #2a7ee8 5%,
-    #1665d8 40%,
-    #2878e8 60%,
-    #1665d8 95%
-  ) !important;
-}
-
-.title-bar-zoom:active {
-  background: linear-gradient(
-    180deg,
-    #063885 0%,
-    #0d52c1 40%,
-    #0840a0 100%
-  ) !important;
-}
-
-/* Minimize _ mark */
-.title-bar-minimize {
-  background: linear-gradient(
-    180deg,
-    #6ebbff 0%,
-    #1a6ee0 5%,
-    #0d52c1 30%,
-    #1665d8 50%,
-    #0f5bce 70%,
-    #0840a0 95%,
-    #063885 100%
-  ) !important;
-  box-shadow:
-    inset -1px -1px #063885,
-    inset 1px 1px #6ebbff,
-    0 0 0 1px #3d3d3d !important;
-}
-
-.title-bar-minimize:hover {
-  background: linear-gradient(
-    180deg,
-    #88ccff 0%,
-    #2a7ee8 5%,
-    #1665d8 40%,
-    #2878e8 60%,
-    #1665d8 95%
-  ) !important;
-}
-
-.title-bar-minimize:active {
-  background: linear-gradient(
-    180deg,
-    #063885 0%,
-    #0d52c1 40%,
-    #0840a0 100%
-  ) !important;
-}
-
-.title-bar-minimize::after {
   content: "";
   position: absolute;
-  bottom: 5px;
-  left: 5px;
+  left: 9px;
+  top: 2px;
+  transform: rotate(-45deg);
+  height: 16px;
+  width: 2px;
+  background-color: white;
+}
+
+/* Minimize — white bar at bottom-left */
+.title-bar-minimize::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 13px;
+  height: 3px;
   width: 8px;
-  height: 0;
-  border-bottom: 2px solid #fff;
+  background-color: white;
 }
 
-/* Maximize □ mark */
-.title-bar-zoom::after {
+/* Clear any ::after from generic button styles */
+.title-bar-minimize::after { display: none; }
+
+/* Maximize — white box with thick top border (via box-shadow trick) */
+.title-bar-zoom::before {
   content: "";
   position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid #fff;
-  border-top-width: 2.5px;
+  display: block;
+  left: 4px;
+  top: 4px;
+  box-shadow: inset 0 3px white, inset 0 0 0 1px white;
+  height: 12px;
+  width: 12px;
 }
 
-/* Hide buttons on inactive windows */
+/* Clear any ::after from generic button styles */
+.title-bar-zoom::after { display: none; }
+
+/* Muted buttons on inactive windows — XP shows them all, just desaturated */
 .window:not(.active) > .title-bar > .title-bar-close,
+.window:not(.active) > .title-bar > .title-bar-minimize,
 .window:not(.active) > .title-bar > .title-bar-zoom {
-  opacity: 0.6;
+  opacity: 0.55;
+  filter: saturate(0.5);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -528,21 +496,32 @@ ul[role="menu"] li[data-shortcut]:focus::after {
    ═══════════════════════════════════════════════════════════════ */
 
 .window input[type="text"],
-.window input[type="search"] {
+.window input[type="search"],
+.window input[type="number"],
+.window textarea,
+.window select {
   background: var(--xp-window-bg) !important;
   border: 1px solid var(--xp-input-border) !important;
-  box-shadow: none !important;
+  box-shadow:
+    inset 1px 1px 0 #a4b0be !important;
   font-family: var(--xp-font);
   font-size: 11px;
   height: 21px;
   padding: 2px 4px;
-  border-radius: 0;
+  border-radius: 0 !important;
+  color: var(--xp-text) !important;
 }
 
 .window input[type="text"]:focus,
-.window input[type="search"]:focus {
+.window input[type="search"]:focus,
+.window input[type="number"]:focus,
+.window textarea:focus,
+.window select:focus {
   outline: none;
-  border-color: #0066cc !important;
+  border-color: var(--xp-selection) !important;
+  box-shadow:
+    inset 1px 1px 0 #7fa4d8,
+    0 0 0 1px rgba(49, 106, 197, 0.2) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -592,6 +571,70 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   XP Buttons — raised 3D look with subtle gradient
+   ═══════════════════════════════════════════════════════════════ */
+
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom) {
+  background: linear-gradient(180deg, #ffffff 0%, #ece9d8 89%, #d6d0bf 100%) !important;
+  border: 1px solid var(--xp-btn-shadow) !important;
+  border-radius: 3px !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  padding: 1px 8px !important;
+  cursor: default;
+  color: var(--xp-text) !important;
+  box-shadow: none !important;
+  min-height: 21px;
+}
+
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):hover {
+  border-color: var(--xp-selection) !important;
+  box-shadow: 0 0 0 1px rgba(49, 106, 197, 0.3) !important;
+}
+
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):active {
+  background: linear-gradient(180deg, #d6d0bf 0%, #ece9d8 100%) !important;
+  border-color: var(--xp-btn-dark-shadow) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Tabs — XP style tab strip
+   ═══════════════════════════════════════════════════════════════ */
+
+.window [role="tablist"] {
+  background: var(--xp-btn-face) !important;
+}
+
+.window [role="tab"] {
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  border-radius: 2px !important;
+}
+
+.window [role="tab"][aria-selected="true"] {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Selection / Highlights
+   ═══════════════════════════════════════════════════════════════ */
+
+.window ::selection {
+  background: var(--xp-selection);
+  color: var(--xp-selection-text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Window bottom frame — ensure blue border is visible at bottom
+   ═══════════════════════════════════════════════════════════════ */
+
+.window-body {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    App Switcher (Alt+Tab)
    ═══════════════════════════════════════════════════════════════ */
 
@@ -600,4 +643,353 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   border: 2px solid var(--xp-frame-outer) !important;
   border-radius: 4px !important;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Taskbar — the iconic XP bottom bar
+
+   Anatomy: [Start ▸] | [tab] [tab] [tab] ...  | [tray 🕐]
+
+   The taskbar is a blue gradient strip pinned to the bottom of the
+   screen. The Start button is green with italic white text. Window
+   tabs are raised buttons that depress when active. The system tray
+   sits in a sunken well on the right with a clock.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Reserve space — desktop icons and windows stay above the taskbar */
+.desktop.has-taskbar {
+  padding-bottom: 30px;
+}
+
+/* The bar itself — gradient from Reborn XP (quenq.com) */
+.taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30px;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(
+    180deg,
+    #3168d5 2%,
+    #4993e6 8%,
+    #245dd7 17%,
+    #2257d5 30%,
+    #2663e0 89%,
+    #1941a5 98%
+  );
+  font-family: var(--xp-font);
+  font-size: 11px;
+  padding: 0;
+  gap: 0;
+}
+
+/* ─── Start Button ───
+   Uses the actual XP start button image for pixel-perfect rendering.
+   The CSS-only version can't match the gradient/text/flag details. */
+
+.taskbar-start {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: 97px;
+  height: 30px;
+  padding: 0 !important;
+  display: block !important;
+  cursor: default;
+  min-height: 0 !important;
+  box-shadow: none !important;
+  flex-shrink: 0;
+  filter: drop-shadow(1px 1px 1px #307fe8);
+}
+
+.taskbar-start:hover {
+  /* Swap to hover image via CSS — img src stays the same,
+     but we overlay with the hover version */
+  filter: drop-shadow(1px 1px 1px #307fe8) brightness(105%);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.taskbar-start:active,
+.taskbar-start.active {
+  filter: drop-shadow(1px 1px 1px #307fe8) brightness(90%);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Hide the text/logo spans — the image IS the button */
+.taskbar-start-logo,
+.taskbar-start-text {
+  display: none;
+}
+
+/* ─── Divider ─── */
+
+.taskbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.2) 100%);
+}
+
+/* ─── Window Tabs ─── */
+
+.taskbar-tabs {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0; /* Allow shrinking */
+  padding: 0 2px;
+  overflow: hidden;
+}
+
+.taskbar-tab {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px;
+  height: 22px;
+  min-width: 0;
+  max-width: 150px;
+  flex: 1;
+  padding: 0 8px !important;
+  border-radius: 0 !important;
+  cursor: default;
+  font-family: var(--xp-font);
+  font-size: 11px !important;
+  font-weight: normal;
+  font-style: normal;
+  color: #ffffff !important;
+  text-shadow: none;
+  /* Raised tab — from Reborn XP */
+  background: linear-gradient(180deg, #3a80f3, #3980f4) !important;
+  box-shadow:
+    inset 1px 1px 2px #68a7f7,
+    inset 0 -2px 2px #316fe8,
+    inset 1px 0 0 #6da4f6 !important;
+  border: 1px solid !important;
+  border-color: #3172da #2653b8 #2653b8 #3172da !important;
+  flex-shrink: 1;
+  min-height: 0 !important;
+  position: relative;
+}
+
+.taskbar-tab:hover {
+  background: linear-gradient(180deg, #59a4ff, #55a0ff) !important;
+  box-shadow:
+    inset 1px 1px 3px #8bc0ff,
+    inset 1px 0 0 #9fccff,
+    inset -1px -1px 3px #2a81ff !important;
+  border: 1px solid !important;
+  border-color: #2e60b3 #1f408c #1f408c #2e60b3 !important;
+}
+
+/* Active/focused tab — pressed/sunken dark blue */
+.taskbar-tab.active {
+  height: 22px;
+  background: linear-gradient(180deg, #1951b9, #1a50b8) !important;
+  box-shadow:
+    inset 1px 1px 0 #1848a6,
+    inset 0 -2px 2px #2156b7,
+    0 -1px 0 #2266d5 !important;
+  border: 1px solid #123d94 !important;
+  border-left: 1px solid #082970 !important;
+  font-weight: bold;
+}
+
+.taskbar-tab.active:hover {
+  background: linear-gradient(180deg, #326fea, #326ee9) !important;
+  box-shadow:
+    inset 1px 1px 1px #1b5bd3,
+    inset 2px 2px 2px #3f7ae8,
+    0 -1px 0 #2266d5 !important;
+  border: 1px solid !important;
+  border-color: #1c51c2 #0c3cae #0c3cae #1c51c2 !important;
+}
+
+/* Minimized — same styling as unfocused */
+.taskbar-tab.minimized {
+  opacity: 0.8;
+}
+
+.taskbar-tab-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.taskbar-tab-icon-fallback {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.taskbar-tab-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── System Tray ─── */
+
+.taskbar-tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+  /* Lighter blue gradient — from Reborn XP */
+  background: linear-gradient(
+    180deg,
+    #095bc9 2%,
+    #19b8f3 8%,
+    #1290e8 17%,
+    #1290e9 30%,
+    #0f9eef 89%,
+    #095bc9 98%
+  );
+  box-shadow: inset 2px 0 0 rgba(0, 197, 255, 0.53), -1px 0 0 #0b3051;
+}
+
+.taskbar-clock {
+  color: #ffffff;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+/* ─── Start Menu ─── */
+
+.start-menu {
+  position: fixed;
+  left: 0;
+  bottom: 30px;
+  width: 280px;
+  background: var(--xp-window-bg);
+  border: 2px solid var(--xp-frame-outer);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 2px -2px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--xp-font);
+}
+
+/* Blue header banner with user name */
+.start-menu-banner {
+  background: linear-gradient(
+    180deg,
+    #0d6ee0 0%,
+    #0856b8 50%,
+    #064499 100%
+  );
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-menu-username {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* App list */
+.start-menu-items {
+  padding: 4px 0;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--xp-window-bg);
+}
+
+.start-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-family: var(--xp-font);
+  font-size: 11px !important;
+  color: var(--xp-text) !important;
+  cursor: default;
+  text-align: left;
+  min-height: 0 !important;
+}
+
+.start-menu-item:hover {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
+.start-menu-item-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.start-menu-item-icon-placeholder {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--xp-btn-shadow);
+  background: var(--xp-btn-face);
+  border-radius: 3px;
+  border: 1px solid var(--xp-btn-shadow);
+  flex-shrink: 0;
+}
+
+/* Footer bar (settings, etc.) */
+.start-menu-footer {
+  background: var(--xp-btn-face);
+  border-top: 1px solid var(--xp-btn-shadow);
+  padding: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Global text — ensure Tahoma everywhere in the window
+   ═══════════════════════════════════════════════════════════════ */
+
+.window,
+.window * {
+  font-family: var(--xp-font);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Links
+   ═══════════════════════════════════════════════════════════════ */
+
+.window a {
+  color: var(--xp-selection);
+}
+
+.window a:hover {
+  color: #1a4d94;
 }
