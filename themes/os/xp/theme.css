@@ -1092,6 +1092,8 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   align-content: flex-start !important;
 }
 
+/* Icon cards: NO button chrome. Just icon + text on white background.
+   In real XP, only the label gets a blue highlight on selection — not the whole card. */
 .window .graph-icon-card {
   display: flex !important;
   flex-direction: column !important;
@@ -1099,31 +1101,39 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   gap: 3px !important;
   width: 76px !important;
   padding: 6px 4px 4px !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
+  background: none !important;
+  border: none !important;
   border-radius: 0 !important;
-  cursor: pointer !important;
+  cursor: default !important;
   font-family: var(--xp-font) !important;
   font-size: 11px !important;
   color: var(--xp-text) !important;
   text-align: center !important;
   box-shadow: none !important;
+  outline: none !important;
   word-break: break-word !important;
 }
 
+/* Hover: no card chrome — just a subtle dotted border around the label */
 .window .graph-icon-card:hover {
-  background: rgba(49, 106, 197, 0.12) !important;
-  border-color: rgba(49, 106, 197, 0.4) !important;
+  background: none !important;
+  border: none !important;
 }
 
+.window .graph-icon-card:hover .graph-icon-card-label {
+  text-decoration: underline !important;
+}
+
+/* Selected: only the label gets blue highlight — like real XP */
 .window .graph-icon-card.selected {
-  background: var(--xp-selection) !important;
-  color: var(--xp-selection-text) !important;
-  border-color: var(--xp-selection) !important;
+  background: none !important;
+  border: none !important;
 }
 
 .window .graph-icon-card.selected .graph-icon-card-label {
+  background: var(--xp-selection) !important;
   color: var(--xp-selection-text) !important;
+  padding: 0 2px !important;
 }
 
 .window .graph-icon-card-image {
@@ -1159,26 +1169,28 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   flex-direction: column !important;
 }
 
+/* List items: flat, no chrome. Selection = full row highlight. */
 .window .graph-list-item {
   display: flex !important;
   align-items: center !important;
   gap: 4px !important;
   width: 100% !important;
   padding: 1px 4px !important;
-  background: transparent !important;
+  background: none !important;
   border: none !important;
   border-radius: 0 !important;
-  cursor: pointer !important;
+  cursor: default !important;
   font-family: var(--xp-font) !important;
   font-size: 11px !important;
   color: var(--xp-text) !important;
   text-align: left !important;
   box-shadow: none !important;
+  outline: none !important;
   min-height: 18px !important;
 }
 
-.window .graph-list-item:hover {
-  background: rgba(49, 106, 197, 0.08) !important;
+.window .graph-list-item:hover:not(.selected) {
+  background: none !important;
 }
 
 .window .graph-list-item.selected {
@@ -1882,29 +1894,29 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 0 8px;
 }
 
+/* Root view items: no button chrome, just icon + text. Like real XP My Computer. */
 .files-root-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding: 8px 12px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  background: transparent;
-  cursor: pointer;
+  border: none;
+  background: none;
+  cursor: default;
   width: 100px;
   gap: 4px;
   font-size: 11px;
   color: var(--fg);
+  outline: none;
 }
 
-.files-root-item:hover {
-  background: rgba(49, 106, 197, 0.08);
-  border-color: rgba(49, 106, 197, 0.3);
+.files-root-item:hover .files-root-label {
+  text-decoration: underline;
 }
 
 .files-root-item:active {
-  background: rgba(49, 106, 197, 0.15);
+  background: none;
 }
 
 .files-root-icon {

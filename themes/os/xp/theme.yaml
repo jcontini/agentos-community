@@ -63,9 +63,10 @@ icons:
   desktop:         icons/desktop
   #
   # Entity/shape icons — used in file browser, graph, detail views
-  folder:          icons/folder
-  folder-open:     icons/folder-open
-  file:            icons/notepad           # generic file
+  # folder/file from shell32.dll (bartekl1/windows-ui-assets), rest from marchmountain CC0
+  folder:          icons/folder            # classic yellow closed folder (shell32 #4)
+  folder-open:     icons/folder-open       # open folder (shell32 #5)
+  file:            icons/file              # blank document (shell32 #1)
   volume:          icons/local-disk
   drive:           icons/local-disk
   email:           icons/email
