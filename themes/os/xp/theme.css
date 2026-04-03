@@ -599,8 +599,14 @@ ul[role="menu"] li[data-shortcut]:focus::after {
    Resize Handle
    ═══════════════════════════════════════════════════════════════ */
 
+/* Resize grip — XP diagonal lines in bottom-right corner */
 .window-resize-handle {
   background: transparent !important;
+  width: 16px !important;
+  height: 16px !important;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='14' y1='4' x2='4' y2='14' stroke='%23fff' stroke-width='1'/%3E%3Cline x1='14' y1='5' x2='5' y2='14' stroke='%23aca899' stroke-width='1'/%3E%3Cline x1='14' y1='8' x2='8' y2='14' stroke='%23fff' stroke-width='1'/%3E%3Cline x1='14' y1='9' x2='9' y2='14' stroke='%23aca899' stroke-width='1'/%3E%3Cline x1='14' y1='12' x2='12' y2='14' stroke='%23fff' stroke-width='1'/%3E%3Cline x1='14' y1='13' x2='13' y2='14' stroke='%23aca899' stroke-width='1'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: bottom right !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -762,6 +768,10 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   border-top: 1px solid #959386 !important;
   box-shadow: inset 0 1px 1px #d7d8c8, inset 0 -1px 4px #ded8c8;
   color: var(--xp-text) !important;
+  padding: 1px 4px !important;
+  font-size: 11px !important;
+  min-height: 0 !important;
+  height: auto !important;
 }
 
 /* DataTable header */
