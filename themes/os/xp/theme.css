@@ -139,7 +139,7 @@
   min-height: 28px !important;
   font-weight: bold;
   font-size: 12px;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0 !important; /* Window overflow:hidden clips the top corners */
   margin: 0;
   letter-spacing: 0.5px;
 }
@@ -331,7 +331,6 @@
   border: none !important;
   margin: 0 3px 3px 3px;
   box-shadow: none !important;
-  border-top: 1px solid #0831d9;
 }
 
 .window.active > .window-body {
@@ -1081,4 +1080,33 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 .dp-color-picker {
   border-color: var(--xp-input-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Help Browser — XP-specific overrides
+   ═══════════════════════════════════════════════════════════════ */
+
+.help-toolbar {
+  background: var(--xp-btn-face);
+  border-color: var(--xp-btn-shadow);
+}
+
+.help-nav-btn {
+  border-color: var(--xp-btn-shadow);
+  background: var(--xp-btn-face);
+}
+
+.help-sidebar {
+  background: var(--xp-window-bg);
+  border-color: var(--xp-btn-shadow);
+}
+
+.help-toc-item:hover,
+.help-toc-item.active {
+  background: var(--xp-selection);
+  color: var(--xp-selection-text);
+}
+
+.help-content {
+  background: var(--xp-window-bg);
 }
