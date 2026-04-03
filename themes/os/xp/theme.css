@@ -62,7 +62,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .desktop {
-  background: var(--xp-desktop) !important;
+  background-color: var(--xp-desktop) !important;
   font-family: var(--xp-font);
   font-size: 11px;
 }
@@ -992,4 +992,77 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 .window a:hover {
   color: #1a4d94;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Settings View — XP Display Properties style
+   ═══════════════════════════════════════════════════════════════ */
+
+.settings-sidebar {
+  background: var(--xp-btn-face);
+  border-right: 1px solid var(--xp-btn-shadow);
+}
+
+.settings-sidebar-item {
+  color: var(--xp-text);
+  font-family: var(--xp-font);
+  font-size: 11px;
+}
+
+.settings-sidebar-item:hover {
+  background: var(--xp-btn-light);
+}
+
+.settings-sidebar-item.active {
+  background: var(--xp-window-bg);
+  font-weight: 700;
+  border-right: 2px solid var(--xp-window-bg);
+  margin-right: -1px;
+}
+
+.settings-content {
+  background: var(--xp-window-bg);
+}
+
+.settings-fieldset {
+  border-color: var(--xp-btn-shadow);
+}
+
+.settings-fieldset legend {
+  color: var(--xp-frame-outer);
+}
+
+.settings-theme-item:hover {
+  background: var(--xp-btn-light);
+}
+
+.settings-theme-item.active {
+  border-color: var(--xp-selection);
+  background: #e8f0fc;
+}
+
+.settings-radio.active .settings-radio-label {
+  color: var(--xp-selection);
+  font-weight: 600;
+}
+
+.settings-wallpaper-preview {
+  border: 2px inset var(--xp-btn-shadow);
+}
+
+.settings-wallpaper-none:hover {
+  background: var(--xp-btn-light);
+}
+
+.settings-wallpaper-none.active {
+  border-color: var(--xp-selection);
+  background: #e8f0fc;
+}
+
+.settings-wallpaper-thumb:hover {
+  border-color: var(--xp-btn-shadow);
+}
+
+.settings-wallpaper-thumb.active {
+  border-color: var(--xp-selection);
 }
