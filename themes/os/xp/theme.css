@@ -53,6 +53,18 @@
   --surface: var(--xp-btn-face);
   --surface-muted: var(--xp-btn-face);
 
+  /* Map to content system tokens (Tailwind: bg-surface, text-fg, border-border) */
+  --content-bg: var(--xp-window-bg);
+  --content-bg-subtle: var(--xp-btn-light);
+  --content-bg-muted: var(--xp-btn-face);
+  --content-bg-inset: var(--xp-btn-face);
+  --content-fg: var(--xp-text);
+  --content-fg-secondary: #555;
+  --content-fg-muted: var(--xp-btn-dark-shadow);
+  --content-border: var(--xp-btn-shadow);
+  --content-border-subtle: var(--xp-btn-shadow);
+  --content-border-strong: var(--xp-btn-dark-shadow);
+
   /* Font — Tahoma is THE XP font */
   --xp-font: "Tahoma", "Segoe UI", Geneva, sans-serif;
 }
@@ -139,8 +151,8 @@
   min-height: 28px !important;
   font-weight: bold;
   font-size: 12px;
-  border-radius: 0 !important; /* Window overflow:hidden clips the top corners */
-  margin: 0;
+  border-radius: 5px 5px 0 0 !important;
+  margin: 3px 3px 0 3px;
   letter-spacing: 0.5px;
 }
 
