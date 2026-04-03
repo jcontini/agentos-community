@@ -505,60 +505,42 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: linear-gradient(90deg, #8fb0de 0%, #7fa4d8 20%, #6f98d0 50%, #7fa4d8 80%, #8fb0de 100%);
 }
 
-/* Scrollbar buttons — XP 3D-beveled face + SVG arrow glyphs.
-   WebKit renders 2 buttons at each end by default — hide the extras
-   so we get one up-arrow at top, one down-arrow at bottom. */
+/* Scrollbar buttons — full SVG images (16x17) for each arrow direction.
+   Matches XP.css approach: entire button face + 3D bevel + arrow glyph
+   baked into one SVG. Only show one button per end. */
 .window ::-webkit-scrollbar-button {
-  display: block;
-  height: 17px;
-  width: 17px;
-  border-color: #fff #aca899 #aca899 #fff;
-  border-style: solid;
-  border-width: 1px;
-  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
-  background: linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
-}
-
-/* Hide the duplicate buttons: WebKit puts decrement+increment at BOTH ends.
-   :single-button means "only show if this is the sole button at this end". */
-.window ::-webkit-scrollbar-button:vertical:start:increment,
-.window ::-webkit-scrollbar-button:vertical:end:decrement,
-.window ::-webkit-scrollbar-button:horizontal:start:increment,
-.window ::-webkit-scrollbar-button:horizontal:end:decrement {
   display: none;
 }
 
-/* Up arrow ▲ — at top of vertical scrollbar */
+.window ::-webkit-scrollbar-button:horizontal:end:increment,
+.window ::-webkit-scrollbar-button:horizontal:start:decrement,
+.window ::-webkit-scrollbar-button:vertical:end:increment,
 .window ::-webkit-scrollbar-button:vertical:start:decrement {
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M3.5 0L7 4H0z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
-    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+  display: block;
 }
 
-/* Down arrow ▼ — at bottom of vertical scrollbar */
-.window ::-webkit-scrollbar-button:vertical:end:increment {
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M0 0h7L3.5 4z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
-    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+/* Up arrow ▲ */
+.window ::-webkit-scrollbar-button:vertical:start {
+  height: 17px;
+  background-image: url("data:image/svg+xml,%3Csvg width='17' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 0H0v16h1V1h15V0z' fill='%23F1EFE2'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h13V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M17 17H0v-1h16V0h1v17z' fill='%23716F64'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 1h-1v14H1v1h15V1z' fill='%23ACA899'/%3E%3Cpath fill='%23ECE9D8' d='M2 2h13v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M9 6H8v1H7v1H6v1H5v1h7V9h-1V8H9V7h1V6H9z' fill='%23404040'/%3E%3C/svg%3E");
 }
 
-/* Left arrow ◄ — at start of horizontal scrollbar */
-.window ::-webkit-scrollbar-button:horizontal:start:decrement {
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M4 0v7L0 3.5z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
-    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+/* Down arrow ▼ */
+.window ::-webkit-scrollbar-button:vertical:end {
+  height: 17px;
+  background-image: url("data:image/svg+xml,%3Csvg width='17' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 0H0v16h1V1h15V0z' fill='%23F1EFE2'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h13V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M17 17H0v-1h16V0h1v17z' fill='%23716F64'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 1h-1v14H1v1h15V1z' fill='%23ACA899'/%3E%3Cpath fill='%23ECE9D8' d='M2 2h13v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12 7H5v1h1v1h1v1h1v1h1v-1h1V9h1V8h1V7z' fill='%23404040'/%3E%3C/svg%3E");
 }
 
-/* Right arrow ► — at end of horizontal scrollbar */
-.window ::-webkit-scrollbar-button:horizontal:end:increment {
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M0 0l4 3.5L0 7z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
-    linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
+/* Left arrow ◄ */
+.window ::-webkit-scrollbar-button:horizontal:start {
+  width: 17px;
+  background-image: url("data:image/svg+xml,%3Csvg width='17' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 0H0v16h1V1h15V0z' fill='%23F1EFE2'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h13V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M17 17H0v-1h16V0h1v17z' fill='%23716F64'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 1h-1v14H1v1h15V1z' fill='%23ACA899'/%3E%3Cpath fill='%23ECE9D8' d='M2 2h13v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M10 5H9v1H8v1H7v1H6v1h1v1h1v1h1v1h1V5z' fill='%23404040'/%3E%3C/svg%3E");
 }
 
-.window ::-webkit-scrollbar-button:hover {
-  filter: brightness(1.05);
-}
-
-.window ::-webkit-scrollbar-button:active {
-  border-color: #aca899 #fff #fff #aca899 !important;
-  box-shadow: inset -1px -1px 0 #f1efe2, inset 1px 1px 0 #716f64 !important;
+/* Right arrow ► */
+.window ::-webkit-scrollbar-button:horizontal:end {
+  width: 17px;
+  background-image: url("data:image/svg+xml,%3Csvg width='17' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 0H0v16h1V1h15V0z' fill='%23F1EFE2'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h13V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M17 17H0v-1h16V0h1v17z' fill='%23716F64'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 1h-1v14H1v1h15V1z' fill='%23ACA899'/%3E%3Cpath fill='%23ECE9D8' d='M2 2h13v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 5H6v7h1v-1h1v-1h1V9h1V8H9V7H8V6H7V5z' fill='%23404040'/%3E%3C/svg%3E");
 }
 
 .window ::-webkit-scrollbar-corner {
