@@ -605,9 +605,53 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: var(--xp-btn-face) !important;
 }
 
-/* Sidebar — slightly different beige */
-.window [class*="SidebarNav"],
-.window nav {
+/* ── XP Explorer sidebar — blue gradient with white list panel ──
+   Reference: Reborn XP sidebar — linear-gradient(to bottom, #7ba2e7, #6375d6)
+   with white grouped panels. Items in white panel, selected = XP blue. */
+
+.window nav[role="listbox"] {
+  background: linear-gradient(to bottom, #7ba2e7 0%, #6375d6 100%) !important;
+  border-right: 1px solid #4a5ec0 !important;
+  padding: 6px !important;
+}
+
+/* Each item in the sidebar — sits on a white panel background */
+.window nav[role="listbox"] [role="option"] {
+  background: #d6dff7 !important;
+  border-radius: 0 !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  color: #215dc6 !important;
+}
+
+/* First item gets rounded top, last gets rounded bottom */
+.window nav[role="listbox"] [role="option"]:first-child {
+  border-radius: 3px 3px 0 0 !important;
+}
+
+.window nav[role="listbox"] [role="option"]:last-child {
+  border-radius: 0 0 3px 3px !important;
+}
+
+/* Selected item — XP Explorer blue highlight */
+.window nav[role="listbox"] [role="option"][aria-selected="true"] {
+  background: var(--xp-selection) !important;
+  color: #fff !important;
+}
+
+/* Hover */
+.window nav[role="listbox"] [role="option"]:hover:not([aria-selected="true"]) {
+  background: #e8edfa !important;
+}
+
+/* Badge count — subtle */
+.window nav[role="listbox"] [role="option"] .text-xs {
+  color: inherit !important;
+}
+
+/* Other nav elements — keep beige */
+.window nav:not([role="listbox"]) {
   background: var(--xp-btn-face) !important;
 }
 
