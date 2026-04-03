@@ -879,7 +879,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   position: fixed;
   left: 0;
   bottom: 30px;
-  width: 280px;
+  width: 380px;
   background: var(--xp-window-bg);
   border: 2px solid var(--xp-frame-outer);
   border-bottom: none;
@@ -892,33 +892,64 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   font-family: var(--xp-font);
 }
 
-/* Blue header banner with user name */
+/* Blue header banner with avatar + user name */
 .start-menu-banner {
   background: linear-gradient(
     180deg,
-    #0d6ee0 0%,
-    #0856b8 50%,
+    #1f63cf 0%,
+    #2b71d7 15%,
+    #0d5cbd 50%,
     #064499 100%
   );
-  padding: 8px 12px;
+  padding: 6px 10px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.start-menu-username {
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: bold;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+.start-menu-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, #6b9fd4 0%, #3a6ea5 100%);
+  flex-shrink: 0;
 }
 
-/* App list */
-.start-menu-items {
+.start-menu-username {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Two-column body */
+.start-menu-body {
+  display: flex;
+  min-height: 200px;
+}
+
+.start-menu-left {
+  flex: 1;
   padding: 4px 0;
-  max-height: 360px;
-  overflow-y: auto;
   background: var(--xp-window-bg);
+  border-right: 1px solid var(--xp-btn-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.start-menu-right {
+  width: 150px;
+  padding: 4px 0;
+  background: var(--xp-btn-light);
+  display: flex;
+  flex-direction: column;
+}
+
+.start-menu-separator {
+  height: 0;
+  margin: 4px 8px;
+  border-top: 1px solid var(--xp-btn-shadow);
 }
 
 .start-menu-item {
@@ -926,7 +957,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   align-items: center !important;
   gap: 8px;
   width: 100%;
-  padding: 5px 12px !important;
+  padding: 5px 10px !important;
   background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
@@ -942,6 +973,12 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 .start-menu-item:hover {
   background: var(--xp-selection) !important;
   color: var(--xp-selection-text) !important;
+}
+
+/* Right column items are bolder */
+.start-menu-right .start-menu-item {
+  font-weight: 700 !important;
+  font-size: 11px !important;
 }
 
 .start-menu-item-icon {
@@ -966,11 +1003,33 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   flex-shrink: 0;
 }
 
-/* Footer bar (settings, etc.) */
+/* "All Programs" row */
+.start-menu-all-programs {
+  justify-content: space-between !important;
+  margin-top: auto;
+}
+
+.start-menu-arrow {
+  font-size: 8px;
+  opacity: 0.6;
+}
+
+/* Orange-ish footer bar */
 .start-menu-footer {
-  background: var(--xp-btn-face);
-  border-top: 1px solid var(--xp-btn-shadow);
-  padding: 4px 0;
+  background: linear-gradient(
+    180deg,
+    #4178be 0%,
+    #2e6ab5 50%,
+    #1a58a0 100%
+  );
+  padding: 5px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.start-menu-footer-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 9px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -995,74 +1054,31 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Settings View — XP Display Properties style
+   Display Properties — XP-specific overrides
    ═══════════════════════════════════════════════════════════════ */
 
-.settings-sidebar {
+.dp {
   background: var(--xp-btn-face);
-  border-right: 1px solid var(--xp-btn-shadow);
 }
 
-.settings-sidebar-item {
-  color: var(--xp-text);
-  font-family: var(--xp-font);
-  font-size: 11px;
+.dp-body {
+  background: var(--xp-btn-face);
 }
 
-.settings-sidebar-item:hover {
-  background: var(--xp-btn-light);
-}
-
-.settings-sidebar-item.active {
-  background: var(--xp-window-bg);
-  font-weight: 700;
-  border-right: 2px solid var(--xp-window-bg);
-  margin-right: -1px;
-}
-
-.settings-content {
+.dp-select {
+  border-color: var(--xp-input-border);
   background: var(--xp-window-bg);
 }
 
-.settings-fieldset {
-  border-color: var(--xp-btn-shadow);
+.dp-wallpaper-card.active,
+.dp-chip.active {
+  border-color: var(--xp-selection);
 }
 
-.settings-fieldset legend {
-  color: var(--xp-frame-outer);
-}
-
-.settings-theme-item:hover {
+.dp-chip {
   background: var(--xp-btn-light);
 }
 
-.settings-theme-item.active {
-  border-color: var(--xp-selection);
-  background: #e8f0fc;
-}
-
-.settings-radio.active .settings-radio-label {
-  color: var(--xp-selection);
-  font-weight: 600;
-}
-
-.settings-wallpaper-preview {
-  border: 2px inset var(--xp-btn-shadow);
-}
-
-.settings-wallpaper-none:hover {
-  background: var(--xp-btn-light);
-}
-
-.settings-wallpaper-none.active {
-  border-color: var(--xp-selection);
-  background: #e8f0fc;
-}
-
-.settings-wallpaper-thumb:hover {
-  border-color: var(--xp-btn-shadow);
-}
-
-.settings-wallpaper-thumb.active {
-  border-color: var(--xp-selection);
+.dp-color-picker {
+  border-color: var(--xp-input-border);
 }
