@@ -1289,9 +1289,13 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 /* ═══════════════════════════════════════════════════════════════
    XP Buttons — raised 3D look with subtle gradient
+   OPT-IN only: use .xp-btn or .xp-dialog-btn class.
+   Do NOT style all <button> elements — most interactive elements
+   in XP (toolbar, sidebar, icon cards) have NO button chrome.
    ═══════════════════════════════════════════════════════════════ */
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag) {
+.window .xp-btn,
+.window .xp-dialog-btn {
   background: linear-gradient(180deg, #ffffff 0%, #ece9d8 89%, #d6d0bf 100%) !important;
   border: 1px solid var(--xp-btn-shadow) !important;
   border-radius: 3px !important;
@@ -1304,12 +1308,14 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   min-height: 21px;
 }
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag):hover {
+.window .xp-btn:hover,
+.window .xp-dialog-btn:hover {
   border-color: var(--xp-selection) !important;
   box-shadow: 0 0 0 1px rgba(49, 106, 197, 0.3) !important;
 }
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag):active {
+.window .xp-btn:active,
+.window .xp-dialog-btn:active {
   background: linear-gradient(180deg, #d6d0bf 0%, #ece9d8 100%) !important;
   border-color: var(--xp-btn-dark-shadow) !important;
 }
