@@ -23,6 +23,15 @@ credits:
     - name: RY-OS
       url: https://github.com/ryokun6/ryos
       author: Ryo Lu (Head of Design, Cursor)
+    - name: Windows XP High Resolution Icon Pack
+      url: https://github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack
+      author: marchmountain
+      license: CC0 (Public Domain)
+      note: 1024x1024 PNG recreations of XP icons, resized to 48/32/16px
+    - name: windows-ui-assets
+      url: https://github.com/bartekl1/windows-ui-assets
+      author: bartekl1
+      note: Reference archive of Windows UI assets (icons, sounds, cursors)
 
 chrome:
   titlebar_buttons: right
@@ -31,6 +40,45 @@ chrome:
   corner_radius: 8
   has_taskbar: true
   has_menubar: false
+
+icons:
+  # Name-based icon system: apps/shapes declare an icon name, theme maps to file.
+  # Each icon has 3 sizes: -48 (desktop/explorer), -32 (toolbar), -16 (list view).
+  # Source: marchmountain Windows XP High Resolution Icon Pack (CC0 Public Domain)
+  # https://github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack
+  #
+  # App icons
+  files:           icons/my-computer       # My Computer / Files app
+  graph:           icons/explorer          # Graph browser
+  help:            icons/help              # Help and Support
+  settings:        icons/address-book      # Settings (placeholder)
+  calendar:        icons/my-documents      # Calendar (placeholder until calendar icon added)
+  #
+  # Desktop icons
+  my-computer:     icons/my-computer
+  my-documents:    icons/my-documents
+  recycle-bin:     icons/recycle-bin-empty
+  recycle-bin-full: icons/recycle-bin-full
+  network:         icons/network
+  desktop:         icons/desktop
+  #
+  # Entity/shape icons — used in file browser, graph, detail views
+  folder:          icons/folder
+  folder-open:     icons/folder-open
+  file:            icons/notepad           # generic file
+  volume:          icons/local-disk
+  drive:           icons/local-disk
+  email:           icons/email
+  search:          icons/search
+  shared-folder:   icons/shared-folder
+  network-drive:   icons/network-drive
+  network-folder:  icons/network-folder
+  internet:        icons/internet
+  dvd:             icons/dvd
+  zip:             icons/zip-folder
+  my-music:        icons/my-music
+  my-pictures:     icons/my-pictures
+  my-videos:       icons/my-videos
 
 sounds:
   startup: sounds/startup.wav

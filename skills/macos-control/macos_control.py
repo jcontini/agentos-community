@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 
+import base64
+import grp
 import json
 import math
+import mimetypes
 import os
+import pwd
+import stat
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from agentos import shell
@@ -586,6 +592,365 @@ def iso_now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+# ---------------------------------------------------------------------------
+# Filesystem operations
+# ---------------------------------------------------------------------------
+
+TEXT_EXTENSIONS = {
+    ".md", ".mdx", ".txt", ".csv", ".log", ".json", ".yaml", ".yml", ".toml",
+    ".py", ".rs", ".ts", ".tsx", ".js", ".jsx", ".css", ".html", ".htm",
+    ".sh", ".bash", ".zsh", ".sql", ".xml", ".ini", ".cfg", ".conf",
+    ".env", ".gitignore", ".dockerignore", ".editorconfig",
+}
+
+MAX_TEXT_BYTES = 1024 * 1024       # 1 MB
+MAX_BINARY_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _stat_to_iso(ts):
+    """Convert a stat timestamp to ISO 8601."""
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
+def _mime_for_path(path):
+    """Guess MIME type from file extension."""
+    mime, _ = mimetypes.guess_type(path)
+    return mime or "application/octet-stream"
+
+
+def _is_text_file(path):
+    """Check if a file is likely text based on extension."""
+    return Path(path).suffix.lower() in TEXT_EXTENSIONS
+
+
+def _format_size(size_bytes):
+    """Human-readable file size."""
+    if size_bytes is None:
+        return None
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if abs(size_bytes) < 1024:
+            return f"{size_bytes:.1f} {unit}" if unit != "B" else f"{size_bytes} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} PB"
+
+
+def _entry_from_direntry(entry):
+    """Build a shape-compatible dict from an os.DirEntry."""
+    try:
+        st = entry.stat(follow_symlinks=False)
+    except OSError:
+        return None
+
+    is_dir = entry.is_dir(follow_symlinks=True)
+    is_symlink = entry.is_symlink()
+
+    result = {
+        "name": entry.name,
+        "tags": "folder" if is_dir else "file",
+        "kind": "dir" if is_dir else ("symlink" if is_symlink else "file"),
+        "path": entry.path,
+        "size": st.st_size if not is_dir else None,
+        "modified": _stat_to_iso(st.st_mtime),
+    }
+
+    if not is_dir:
+        result["mime_type"] = _mime_for_path(entry.name)
+        ext = Path(entry.name).suffix.lower()
+        if ext:
+            result["format"] = ext.lstrip(".").upper()
+
+    return result
+
+
+SORT_KEYS = {
+    "name": lambda e: (e["kind"] != "dir", e["name"].lower()),
+    "size": lambda e: (e["kind"] != "dir", -(e["size"] or 0), e["name"].lower()),
+    "modified": lambda e: (e["kind"] != "dir", e["modified"] or "", e["name"].lower()),
+    "kind": lambda e: (e["kind"], e["name"].lower()),
+}
+
+
+def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
+    """List contents of a directory. Returns file and folder shapes."""
+    resolved = os.path.expanduser(path or "~")
+    resolved = os.path.abspath(resolved)
+
+    if not os.path.isdir(resolved):
+        raise ValueError(f"Not a directory: {resolved}")
+
+    entries = []
+    with os.scandir(resolved) as scanner:
+        for entry in scanner:
+            if not show_hidden and entry.name.startswith("."):
+                continue
+            item = _entry_from_direntry(entry)
+            if item:
+                entries.append(item)
+
+    sort_fn = SORT_KEYS.get(sort or "name", SORT_KEYS["name"])
+    entries.sort(key=sort_fn)
+
+    return {
+        "path": resolved,
+        "entries": entries,
+        "count": len(entries),
+    }
+
+
+def read_file(*, path, **_kwargs):
+    """Read file contents. Text as UTF-8 string, binary as base64."""
+    resolved = os.path.expanduser(path)
+    resolved = os.path.abspath(resolved)
+
+    if not os.path.isfile(resolved):
+        raise ValueError(f"Not a file: {resolved}")
+
+    file_size = os.path.getsize(resolved)
+    is_text = _is_text_file(resolved)
+
+    if is_text and file_size > MAX_TEXT_BYTES:
+        raise ValueError(f"File too large for text read: {_format_size(file_size)} (max {_format_size(MAX_TEXT_BYTES)})")
+    if not is_text and file_size > MAX_BINARY_BYTES:
+        raise ValueError(f"File too large for binary read: {_format_size(file_size)} (max {_format_size(MAX_BINARY_BYTES)})")
+
+    if is_text:
+        with open(resolved, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+        encoding = "utf-8"
+    else:
+        with open(resolved, "rb") as f:
+            content = base64.b64encode(f.read()).decode("ascii")
+        encoding = "base64"
+
+    return {
+        "name": os.path.basename(resolved),
+        "path": resolved,
+        "content": content,
+        "encoding": encoding,
+        "mime_type": _mime_for_path(resolved),
+        "size": file_size,
+    }
+
+
+def _get_volumes():
+    """Get mounted volumes via diskutil."""
+    try:
+        result = shell.run("diskutil", ["list", "-plist"])
+        if result["exit_code"] != 0:
+            return _get_volumes_fallback()
+
+        import plistlib
+        data = plistlib.loads(result["stdout"].encode("utf-8"))
+        disk_ids = data.get("AllDisksAndPartitions", [])
+
+        volumes = []
+        for disk in disk_ids:
+            # Check partitions within each disk
+            for part in disk.get("Partitions", []) + disk.get("APFSVolumes", []):
+                mount_point = part.get("MountPoint")
+                if not mount_point:
+                    continue
+                vol_name = part.get("VolumeName") or os.path.basename(mount_point) or "Untitled"
+                size = part.get("Size", 0)
+
+                # Get free space from statvfs
+                try:
+                    sv = os.statvfs(mount_point)
+                    free_bytes = sv.f_bavail * sv.f_frsize
+                    total_bytes = sv.f_blocks * sv.f_frsize
+                except OSError:
+                    free_bytes = 0
+                    total_bytes = size
+
+                fs_type = part.get("FilesystemType") or part.get("Content", "")
+
+                volumes.append({
+                    "name": vol_name,
+                    "tags": "volume",
+                    "path": mount_point,
+                    "total_bytes": total_bytes,
+                    "free_bytes": free_bytes,
+                    "used_bytes": total_bytes - free_bytes,
+                    "filesystem": fs_type.lower() if fs_type else None,
+                    "volume_type": "internal" if not mount_point.startswith("/Volumes/") else "external",
+                    "removable": mount_point.startswith("/Volumes/"),
+                    "read_only": False,
+                })
+
+        # Filter out macOS system volumes that users never interact with
+        SYSTEM_VOLUME_PREFIXES = ("/System/Volumes/",)
+        SYSTEM_VOLUME_NAMES = {"Preboot", "Update", "VM", "Data", "xART", "Hardware", "iSCPreboot"}
+        user_volumes = []
+        for v in volumes:
+            path = v["path"]
+            name = v["name"]
+            # Keep root and /Volumes/* mounts, skip system internals
+            if any(path.startswith(p) for p in SYSTEM_VOLUME_PREFIXES):
+                continue
+            if name in SYSTEM_VOLUME_NAMES:
+                continue
+            user_volumes.append(v)
+
+        # Deduplicate by mount point (keep first)
+        seen = set()
+        unique = []
+        for v in user_volumes:
+            if v["path"] not in seen:
+                seen.add(v["path"])
+                unique.append(v)
+
+        return unique if unique else _get_volumes_fallback()
+    except Exception:
+        return _get_volumes_fallback()
+
+
+def _get_volumes_fallback():
+    """Fallback volume detection using statvfs."""
+    volumes = []
+    # Always include root
+    try:
+        sv = os.statvfs("/")
+        volumes.append({
+            "name": "Macintosh HD",
+            "tags": "volume",
+            "path": "/",
+            "total_bytes": sv.f_blocks * sv.f_frsize,
+            "free_bytes": sv.f_bavail * sv.f_frsize,
+            "used_bytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
+            "filesystem": "apfs",
+            "volume_type": "internal",
+            "removable": False,
+            "read_only": False,
+        })
+    except OSError:
+        pass
+
+    # Check /Volumes/ for external drives
+    volumes_dir = "/Volumes"
+    if os.path.isdir(volumes_dir):
+        for name in os.listdir(volumes_dir):
+            mount = os.path.join(volumes_dir, name)
+            if not os.path.ismount(mount):
+                continue
+            try:
+                sv = os.statvfs(mount)
+                volumes.append({
+                    "name": name,
+                    "tags": "volume",
+                    "path": mount,
+                    "total_bytes": sv.f_blocks * sv.f_frsize,
+                    "free_bytes": sv.f_bavail * sv.f_frsize,
+                    "used_bytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
+                    "filesystem": None,
+                    "volume_type": "external",
+                    "removable": True,
+                    "read_only": False,
+                })
+            except OSError:
+                pass
+
+    return volumes
+
+
+def get_info(**_kwargs):
+    """Get filesystem info — home dir, special folders, volumes (as volume shapes)."""
+    home = os.path.expanduser("~")
+    username = os.path.basename(home)
+
+    special_folders = {}
+    for name in ("Desktop", "Documents", "Downloads"):
+        folder = os.path.join(home, name)
+        if os.path.isdir(folder):
+            special_folders[name.lower()] = folder
+
+    volumes = _get_volumes()
+
+    return {
+        "provider": "macos-control",
+        "provider_name": "This Computer",
+        "home": home,
+        "username": username,
+        "special_folders": special_folders,
+        "volumes": volumes,
+    }
+
+
+def get_file_info(*, path, **_kwargs):
+    """Get detailed file/folder properties — like XP Properties dialog."""
+    resolved = os.path.expanduser(path)
+    resolved = os.path.abspath(resolved)
+
+    if not os.path.exists(resolved):
+        raise ValueError(f"Path not found: {resolved}")
+
+    st = os.stat(resolved)
+    is_dir = stat.S_ISDIR(st.st_mode)
+    is_symlink = os.path.islink(resolved)
+
+    # Owner/group
+    try:
+        owner = pwd.getpwuid(st.st_uid).pw_name
+    except KeyError:
+        owner = str(st.st_uid)
+    try:
+        group = grp.getgrgid(st.st_gid).gr_name
+    except KeyError:
+        group = str(st.st_gid)
+
+    # Permissions as rwx string
+    mode = st.st_mode
+    perms = stat.filemode(mode)
+
+    # Size on disk (blocks * 512)
+    size_on_disk = st.st_blocks * 512 if hasattr(st, "st_blocks") else st.st_size
+
+    # Directory size: count immediate children, don't recurse (fast)
+    dir_item_count = None
+    if is_dir:
+        try:
+            dir_item_count = len(os.listdir(resolved))
+        except OSError:
+            dir_item_count = None
+
+    result = {
+        "name": os.path.basename(resolved),
+        "path": resolved,
+        "kind": "dir" if is_dir else ("symlink" if is_symlink else "file"),
+        "tags": "folder" if is_dir else "file",
+        "size": st.st_size,
+        "size_formatted": _format_size(st.st_size),
+        "size_on_disk": size_on_disk,
+        "size_on_disk_formatted": _format_size(size_on_disk),
+        "created": _stat_to_iso(st.st_birthtime) if hasattr(st, "st_birthtime") else _stat_to_iso(st.st_ctime),
+        "modified": _stat_to_iso(st.st_mtime),
+        "accessed": _stat_to_iso(st.st_atime),
+        "permissions": perms,
+        "owner": owner,
+        "group": group,
+        "hidden": os.path.basename(resolved).startswith("."),
+        "read_only": not os.access(resolved, os.W_OK),
+    }
+
+    if is_dir:
+        result["contains_count"] = dir_item_count
+        result["location"] = os.path.dirname(resolved)
+    else:
+        result["mime_type"] = _mime_for_path(resolved)
+        ext = Path(resolved).suffix.lower()
+        if ext:
+            result["format"] = ext.lstrip(".").upper()
+        result["location"] = os.path.dirname(resolved)
+
+    # Symlink target
+    if is_symlink:
+        try:
+            result["symlink_target"] = os.readlink(resolved)
+        except OSError:
+            pass
+
+    return result
+
+
 def main():
     if len(sys.argv) < 2:
         raise ValueError("operation is required")
@@ -599,6 +964,12 @@ def main():
         "list_windows": list_windows,
         "screenshot_display": screenshot_display,
         "screenshot_window": screenshot_window,
+        "clipboard_read": clipboard_read,
+        "clipboard_write": clipboard_write,
+        "list_directory": list_directory,
+        "read_file": read_file,
+        "get_info": get_info,
+        "get_file_info": get_file_info,
     }
     if operation not in handlers:
         raise ValueError(f"unknown operation: {operation}")

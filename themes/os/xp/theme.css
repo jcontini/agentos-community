@@ -783,33 +783,43 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   gap: 2px !important;
 }
 
-/* Navigation buttons (Back, Forward, Views) — icon + optional text label */
+/* Navigation buttons (Back, Forward, Views) — completely flat, no chrome.
+   In real XP these are just icon + text on the toolbar gradient. Border only on hover. */
 .window .graph-nav-btn {
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
-  background: transparent !important;
+  background: none !important;
   border: 1px solid transparent !important;
-  border-radius: 3px !important;
-  padding: 2px 4px !important;
+  border-radius: 0 !important;
+  padding: 2px 5px !important;
   cursor: pointer !important;
   color: var(--xp-text) !important;
   font-family: var(--xp-font) !important;
   font-size: 11px !important;
   min-height: 28px !important;
   box-shadow: none !important;
+  outline: none !important;
 }
 
+/* XP toolbar hover: subtle raised 3D border — highlight on top-left, shadow on bottom-right */
 .window .graph-nav-btn:hover:not(:disabled) {
-  border: 1px solid #d8d2bd !important;
-  background: linear-gradient(to bottom, #f9f9f5, #f1f1ea) !important;
-  box-shadow: inset 0 1px 0 #fefefd !important;
+  border-top-color: #fff !important;
+  border-left-color: #fff !important;
+  border-bottom-color: #a0987e !important;
+  border-right-color: #a0987e !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
+/* XP toolbar pressed: inverted 3D border — shadow on top-left, highlight on bottom-right */
 .window .graph-nav-btn:active:not(:disabled) {
-  background: linear-gradient(to bottom, #e8e5d8, #dedad0) !important;
-  border-color: #c0bba8 !important;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1) !important;
+  border-top-color: #a0987e !important;
+  border-left-color: #a0987e !important;
+  border-bottom-color: #fff !important;
+  border-right-color: #fff !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
 .window .graph-nav-btn:disabled {
@@ -1805,4 +1815,112 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 .help-content {
   background: var(--xp-window-bg);
+}
+
+/* ─── Files App (My Computer) ─────────────────────────────────────── */
+
+/* Sidebar — XP blue collapsible sections */
+.files-sidebar {
+  background: linear-gradient(180deg, #6b89d4 0%, #4e6fc0 8%, #3d5eb5 100%);
+  color: #fff;
+  font-size: 11px;
+}
+
+.files-sidebar-section {
+  padding: 4px 0;
+}
+
+.files-sidebar-header {
+  font-weight: bold;
+  font-size: 11px;
+  color: #fff;
+  padding: 6px 12px 4px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 2px;
+}
+
+.files-sidebar-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 3px 12px 3px 16px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.files-sidebar-item:hover {
+  color: #ffe080;
+}
+
+.files-sidebar-item.active {
+  font-weight: bold;
+  color: #ffe080;
+  text-decoration: none;
+}
+
+/* Root view — section headers like XP "Files Stored on This Computer" */
+.files-section-header {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--xp-titlebar-active-gradient-start, #1f4084);
+  border-bottom: 1px solid var(--xp-titlebar-active-gradient-start, #1f4084);
+  padding-bottom: 4px;
+  margin: 0 0 12px 0;
+}
+
+/* Root view — icon grid */
+.files-root-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0 8px;
+}
+
+.files-root-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  width: 100px;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--fg);
+}
+
+.files-root-item:hover {
+  background: rgba(49, 106, 197, 0.08);
+  border-color: rgba(49, 106, 197, 0.3);
+}
+
+.files-root-item:active {
+  background: rgba(49, 106, 197, 0.15);
+}
+
+.files-root-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.files-root-label {
+  font-size: 11px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.files-root-sub {
+  font-size: 10px;
+  color: var(--fg-muted);
+  line-height: 1.2;
 }

@@ -1,0 +1,25 @@
+# A storage volume — local disk, external drive, network share, or cloud drive.
+# Distinct from folder: volumes have capacity, filesystem type, and mount state.
+#
+# Sources: macos-control (local volumes), future: Google Drive, Dropbox, iCloud
+volume:
+  fields:
+    path:              string    # mount point (e.g. /, /Volumes/Backup)
+    total_bytes:       integer   # total capacity in bytes
+    free_bytes:        integer   # available space in bytes
+    used_bytes:        integer   # used space in bytes
+    filesystem:        string    # apfs, hfs+, ext4, ntfs, fat32, exfat
+    volume_type:       string    # internal, external, network, cloud
+    removable:         boolean   # ejectable media
+    read_only:         boolean
+  relations:
+    contains:          folder[]
+  display:
+    title: name
+    subtitle: path
+    columns:
+      - name:            Volume
+      - path:            Mount Point
+      - filesystem:      Filesystem
+      - total_bytes:     Total Size
+      - free_bytes:      Free Space
