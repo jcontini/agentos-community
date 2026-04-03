@@ -703,8 +703,9 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* ── Row 1: In-window menu bar (File, Edit, View...) ── */
+/* In real XP the menu bar is warm beige (#ECE9D8), same as toolbar — NOT white */
 .window .graph-menu-bar {
-  background: var(--xp-button-face) !important;
+  background: var(--xp-btn-face) !important;
   border-bottom: 1px solid #d8d2bd !important;
   height: 21px !important;
   padding: 0 2px !important;
@@ -873,9 +874,9 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   box-shadow: 1px 0 0 #fff;
 }
 
-/* Views dropdown container — push to right */
+/* Views dropdown container — left-aligned with other toolbar buttons (not pushed right) */
 .window .graph-views-dropdown {
-  margin-left: auto !important;
+  margin-left: 0 !important;
 }
 
 /* ── Row 3: Address bar ── */
@@ -899,18 +900,20 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   white-space: nowrap !important;
 }
 
-/* Address combo container — XP combobox with icon + input + dropdown button */
+/* Address combo container — XP combobox: white field with sunken border + dropdown button.
+   The combo and dropdown button share one outer border. No double borders. */
 .window .graph-address-combo {
   background: #fff !important;
-  border: 1px solid var(--xp-input-border) !important;
-  box-shadow: inset 1px 1px 0 #a4b0be !important;
+  border: 1px solid #7f9db9 !important;
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.08) !important;
   border-radius: 0 !important;
   height: 21px !important;
   display: flex !important;
   align-items: center !important;
+  flex: 1 !important;
 }
 
-/* Address input — sits inside the combo container */
+/* Address input — no borders, sits flush inside combo */
 .window .graph-address-input {
   background: transparent !important;
   border: none !important;
@@ -919,24 +922,31 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   font-family: var(--xp-font) !important;
   font-size: 11px !important;
   height: 19px !important;
-  padding: 0 4px !important;
+  padding: 0 2px !important;
+  outline: none !important;
 }
 
-/* Dropdown arrow button at right of address bar */
+/* Dropdown arrow button — inside the combo box, separated by a left border only.
+   No outer border — it's inside the combo container's border. */
 .window .graph-address-dropdown-btn {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 17px !important;
-  height: 19px !important;
-  background: linear-gradient(180deg, #fff 0%, #ece9d8 100%) !important;
+  height: 100% !important;
+  background: linear-gradient(180deg, #efefef 0%, #dddcd7 50%, #d1d0c9 100%) !important;
   border: none !important;
-  border-left: 1px solid var(--xp-input-border) !important;
+  border-left: 1px solid #7f9db9 !important;
   cursor: pointer !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
   box-shadow: none !important;
   min-height: 0 !important;
+  border-radius: 0 !important;
+}
+
+.window .graph-address-dropdown-btn:hover {
+  background: linear-gradient(180deg, #f5f5f2 0%, #e4e3de 50%, #d8d7d2 100%) !important;
 }
 
 /* Go button — XP style with icon + "Go" text */
@@ -1123,6 +1133,14 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   font-size: 11px !important;
   height: 21px !important;
   padding: 1px 4px !important;
+}
+
+/* Address input inside combo — override generic input styling */
+.window .graph-address-combo .graph-address-input {
+  border: none !important;
+  box-shadow: none !important;
+  height: 19px !important;
+  background: transparent !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
