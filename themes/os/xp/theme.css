@@ -77,6 +77,9 @@
   background-color: var(--xp-desktop) !important;
   font-family: var(--xp-font);
   font-size: 11px;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
 }
 
 .desktop .icon {
