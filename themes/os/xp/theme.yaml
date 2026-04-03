@@ -1,0 +1,25 @@
+id: xp
+name: Windows XP
+type: os
+description: Windows XP Luna Blue — the iconic warm blue and beige desktop
+family: windows
+color-scheme: light
+
+default_wallpaper: ~
+
+credits:
+  inspired_by:
+    - name: XP.css
+      url: https://botoxparty.github.io/XP.css/
+      author: Adam Hammad
+    - name: RY-OS
+      url: https://github.com/ryokun6/ryos
+      author: Ryo Lu (Head of Design, Cursor)
+
+chrome:
+  titlebar_buttons: right
+  titlebar_height: 28
+  window_border: 4
+  corner_radius: 8
+  has_taskbar: false
+  has_menubar: true

@@ -1,0 +1,529 @@
+/*
+ * Windows XP Luna Blue Theme
+ *
+ * The iconic warm blue and beige desktop. Gradient title bars with
+ * rounded top corners, blue window frames via 6-layer inset box-shadow,
+ * beige #ECE9D8 button face, and soft shadows.
+ *
+ * Color reference from XP.css (Adam Hammad) + original Windows XP.
+ * No third-party CSS — pure CSS custom properties.
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   CSS Custom Properties
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* XP Luna Blue System Colors */
+  --xp-frame-outer: #0831d9;
+  --xp-frame-inner: #166aee;
+  --xp-title-text-shadow: #0f1089;
+  --xp-btn-face: #ece9d8;
+  --xp-btn-highlight: #ffffff;
+  --xp-btn-shadow: #aca899;
+  --xp-btn-dark-shadow: #716f64;
+  --xp-btn-light: #f1efe2;
+  --xp-window-bg: #ffffff;
+  --xp-text: #222222;
+  --xp-selection: #316ac5;
+  --xp-selection-text: #ffffff;
+  --xp-desktop: #3a6ea5;
+  --xp-input-border: #7f9db9;
+  --xp-scrollbar-thumb: #c1d2ee;
+  --xp-scrollbar-track: #f1efe2;
+  --xp-menu-hover: #316ac5;
+  --xp-inactive-title-start: #7a96df;
+  --xp-inactive-title-end: #a6c3f1;
+  --xp-close-red: #c75050;
+  --xp-close-red-hover: #e04343;
+  --xp-disabled: #aca899;
+
+  /* Map to chrome system variables */
+  --desktop-bg: var(--xp-desktop);
+  --window-frame-bg: var(--xp-btn-face);
+  --window-bg: var(--xp-window-bg);
+  --window-fg: var(--xp-text);
+  --chrome-border: var(--xp-btn-dark-shadow);
+  --chrome-border-light: var(--xp-btn-highlight);
+  --chrome-border-dark: var(--xp-btn-shadow);
+  --chrome-shadow: var(--xp-btn-shadow);
+  --primary-2: var(--xp-selection);
+  --highlight: var(--xp-selection);
+  --highlight-text: var(--xp-selection-text);
+  --surface: var(--xp-btn-face);
+  --surface-muted: var(--xp-btn-face);
+
+  /* Font — Tahoma is THE XP font */
+  --xp-font: "Tahoma", "Segoe UI", Geneva, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Desktop
+   ═══════════════════════════════════════════════════════════════ */
+
+.desktop {
+  background: var(--xp-desktop) !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+}
+
+.desktop .icon {
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.desktop .icon .icon-label {
+  color: #ffffff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+  font-family: var(--xp-font);
+  font-size: 11px;
+}
+
+.desktop .icon[aria-selected="true"] .icon-label {
+  background: var(--xp-selection);
+  color: var(--xp-selection-text);
+  text-shadow: none;
+  border-radius: 2px;
+  padding: 1px 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Window Frame — the iconic blue border with rounded top
+   ═══════════════════════════════════════════════════════════════ */
+
+.window {
+  background: var(--xp-btn-face) !important;
+  border: none !important;
+  border-radius: 8px 8px 0 0 !important;
+  /* 6-layer blue frame — the XP signature */
+  box-shadow:
+    inset -1px -1px #00138c,
+    inset 1px 1px #0831d9,
+    inset -2px -2px #001ea0,
+    inset 2px 2px #166aee,
+    inset -3px -3px #003bda,
+    inset 3px 3px #0855dd,
+    2px 2px 10px rgba(0, 0, 0, 0.25) !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  overflow: hidden !important;
+}
+
+.window.active {
+  box-shadow:
+    inset -1px -1px #00138c,
+    inset 1px 1px #0831d9,
+    inset -2px -2px #001ea0,
+    inset 2px 2px #166aee,
+    inset -3px -3px #003bda,
+    inset 3px 3px #0855dd,
+    2px 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Title Bar — gradient blue with rounded top corners
+   ═══════════════════════════════════════════════════════════════ */
+
+.title-bar {
+  /* The iconic XP title bar gradient — 7 stops for that glossy look */
+  background: linear-gradient(
+    180deg,
+    #0997ff 0%,
+    #0053ee 8%,
+    #0050ee 40%,
+    #0066ff 88%,
+    #0066ff 93%,
+    #005bff 95%,
+    #003dd7 96%
+  ) !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px var(--xp-title-text-shadow);
+  padding: 3px 5px 3px 8px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-weight: bold;
+  font-size: 13px;
+  border-top: 1px solid #0831d9;
+  border-radius: 8px 8px 0 0;
+  margin: 0;
+}
+
+/* Inactive title bar — desaturated blue */
+.window:not(.active) > .title-bar {
+  background: linear-gradient(
+    180deg,
+    #7a96df 0%,
+    #6f8ad5 8%,
+    #7a96df 40%,
+    #a6c3f1 70%,
+    #7a96df 100%
+  ) !important;
+  color: #d8e4f8 !important;
+  text-shadow: none;
+}
+
+.title-bar-text {
+  font-weight: bold !important;
+  font-size: 13px !important;
+  justify-content: flex-start !important;
+  padding-left: 4px;
+  letter-spacing: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Title Bar Buttons — XP style rounded with gradients
+   ═══════════════════════════════════════════════════════════════ */
+
+.title-bar-close,
+.title-bar-zoom {
+  width: 21px !important;
+  height: 21px !important;
+  border-radius: 3px !important;
+  border: none !important;
+  cursor: default;
+  visibility: visible !important;
+  position: relative;
+  margin-left: 2px;
+  flex-shrink: 0 !important;
+}
+
+/* Close button — red */
+.title-bar-close {
+  background: linear-gradient(
+    180deg,
+    #e8a598 0%,
+    #d46a56 5%,
+    #c5402f 30%,
+    #d64b3f 50%,
+    #cf4738 70%,
+    #b22a1c 95%,
+    #9c1d12 100%
+  ) !important;
+  box-shadow:
+    inset -1px -1px #8c1a0e,
+    inset 1px 1px #f0a898,
+    0 0 0 1px #3d3d3d !important;
+}
+
+.title-bar-close:hover {
+  background: linear-gradient(
+    180deg,
+    #f0b8aa 0%,
+    #e07060 5%,
+    #d64b3f 40%,
+    #e8594d 60%,
+    #d64b3f 95%
+  ) !important;
+}
+
+.title-bar-close:active {
+  background: linear-gradient(
+    180deg,
+    #a02018 0%,
+    #c03828 40%,
+    #b83020 100%
+  ) !important;
+}
+
+/* Close X mark */
+.title-bar-close::after {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 1px 1px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+/* Maximize/zoom button — blue matching frame */
+.title-bar-zoom {
+  background: linear-gradient(
+    180deg,
+    #6ebbff 0%,
+    #1a6ee0 5%,
+    #0d52c1 30%,
+    #1665d8 50%,
+    #0f5bce 70%,
+    #0840a0 95%,
+    #063885 100%
+  ) !important;
+  box-shadow:
+    inset -1px -1px #063885,
+    inset 1px 1px #6ebbff,
+    0 0 0 1px #3d3d3d !important;
+}
+
+.title-bar-zoom:hover {
+  background: linear-gradient(
+    180deg,
+    #88ccff 0%,
+    #2a7ee8 5%,
+    #1665d8 40%,
+    #2878e8 60%,
+    #1665d8 95%
+  ) !important;
+}
+
+.title-bar-zoom:active {
+  background: linear-gradient(
+    180deg,
+    #063885 0%,
+    #0d52c1 40%,
+    #0840a0 100%
+  ) !important;
+}
+
+/* Maximize □ mark */
+.title-bar-zoom::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #fff;
+  border-top-width: 2.5px;
+}
+
+/* Hide buttons on inactive windows */
+.window:not(.active) > .title-bar > .title-bar-close,
+.window:not(.active) > .title-bar > .title-bar-zoom {
+  opacity: 0.6;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Window Body
+   ═══════════════════════════════════════════════════════════════ */
+
+.window-body {
+  background: var(--xp-window-bg) !important;
+  color: var(--xp-text) !important;
+  border: none !important;
+  margin: 0 3px 3px 3px;
+  box-shadow: none !important;
+  border-top: 1px solid #0831d9;
+}
+
+.window.active > .window-body {
+  background: var(--xp-window-bg) !important;
+  color: var(--xp-text) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Menu Bar — warm beige
+   ═══════════════════════════════════════════════════════════════ */
+
+.menu-bar {
+  background: var(--xp-btn-face) !important;
+  border-bottom: 1px solid var(--xp-btn-shadow) !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  padding: 0 4px !important;
+  box-shadow: none !important;
+}
+
+.menu-bar::after {
+  display: none !important;
+}
+
+.menu-bar-left > li {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  border-radius: 2px;
+}
+
+.menu-bar-left > li:hover,
+.menu-bar-left > li:focus,
+.menu-bar-left > li[aria-expanded="true"] {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
+.menu-bar-left > li:hover::after,
+.menu-bar-left > li:focus::after,
+.menu-bar-left > li[aria-expanded="true"]::after {
+  display: none !important;
+}
+
+.menu-bar-clock {
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Dropdown Menus + Context Menus
+   ═══════════════════════════════════════════════════════════════ */
+
+ul[role="menu"] {
+  background: var(--xp-window-bg) !important;
+  border: 1px solid var(--xp-btn-shadow) !important;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2) !important;
+  padding: 2px !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  border-radius: 0;
+}
+
+ul[role="menu"] li[role="menuitem"] {
+  padding: 4px 24px 4px 8px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  color: var(--xp-text) !important;
+  border-radius: 2px;
+}
+
+ul[role="menu"] li[role="menuitem"]:hover,
+ul[role="menu"] li[role="menuitem"]:focus {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+}
+
+ul[role="menu"] li[role="menuitem"][aria-disabled] {
+  color: var(--xp-disabled) !important;
+}
+
+ul[role="menu"] li[role="menuitem"][aria-disabled]:hover,
+ul[role="menu"] li[role="menuitem"][aria-disabled]:focus {
+  background: transparent !important;
+  color: var(--xp-disabled) !important;
+}
+
+/* Separator */
+ul[role="menu"] li[role="separator"] {
+  height: 0 !important;
+  margin: 3px 2px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-top: 1px solid var(--xp-btn-shadow) !important;
+  border-bottom: none !important;
+}
+
+/* Shortcut hint */
+ul[role="menu"] li[data-shortcut]::after {
+  color: var(--xp-text) !important;
+  font-size: 11px !important;
+}
+
+ul[role="menu"] li[data-shortcut]:hover::after,
+ul[role="menu"] li[data-shortcut]:focus::after {
+  color: var(--xp-selection-text) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Scrollbars — XP blue style
+   ═══════════════════════════════════════════════════════════════ */
+
+.window ::-webkit-scrollbar {
+  width: 17px;
+  height: 17px;
+}
+
+.window ::-webkit-scrollbar-track {
+  background: var(--xp-scrollbar-track);
+}
+
+.window ::-webkit-scrollbar-thumb {
+  background: var(--xp-scrollbar-thumb);
+  border: 1px solid #8cb0d1;
+  border-radius: 0;
+}
+
+.window ::-webkit-scrollbar-thumb:hover {
+  background: #a8c4e0;
+}
+
+.window ::-webkit-scrollbar-button {
+  background: var(--xp-scrollbar-track);
+  border: 1px solid #8cb0d1;
+  height: 17px;
+  width: 17px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Input Fields — white with blue-gray border
+   ═══════════════════════════════════════════════════════════════ */
+
+.window input[type="text"],
+.window input[type="search"] {
+  background: var(--xp-window-bg) !important;
+  border: 1px solid var(--xp-input-border) !important;
+  box-shadow: none !important;
+  font-family: var(--xp-font);
+  font-size: 11px;
+  height: 21px;
+  padding: 2px 4px;
+  border-radius: 0;
+}
+
+.window input[type="text"]:focus,
+.window input[type="search"]:focus {
+  outline: none;
+  border-color: #0066cc !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Resize Handle
+   ═══════════════════════════════════════════════════════════════ */
+
+.window-resize-handle {
+  background: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Content area overrides — make inner content harmonize
+   ═══════════════════════════════════════════════════════════════ */
+
+.window .bg-surface-inset {
+  background: var(--xp-window-bg) !important;
+}
+
+.window .border-border {
+  border-color: var(--xp-btn-shadow) !important;
+}
+
+.window .bg-surface-muted,
+.window .bg-surface {
+  background: var(--xp-btn-face) !important;
+}
+
+/* Sidebar — slightly different beige */
+.window [class*="SidebarNav"],
+.window nav {
+  background: var(--xp-btn-face) !important;
+}
+
+/* Status bar at bottom */
+.window .border-t {
+  border-color: var(--xp-btn-shadow) !important;
+}
+
+/* DataTable header */
+.window thead {
+  background: var(--xp-btn-face) !important;
+}
+
+/* Selected row — XP blue */
+.window tr[style*="highlight"] {
+  border-radius: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   App Switcher (Alt+Tab)
+   ═══════════════════════════════════════════════════════════════ */
+
+.app-switcher {
+  background: var(--xp-btn-face) !important;
+  border: 2px solid var(--xp-frame-outer) !important;
+  border-radius: 4px !important;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
