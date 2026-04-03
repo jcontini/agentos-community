@@ -51,8 +51,10 @@ icons:
   files:           icons/my-computer       # My Computer / Files app
   graph:           icons/explorer          # Graph browser
   help:            icons/help              # Help and Support
-  settings:        icons/address-book      # Settings (placeholder)
-  calendar:        icons/my-documents      # Calendar (placeholder until calendar icon added)
+  settings:        icons/settings          # Control Panel
+  calendar:        icons/calendar          # Date and Time
+  accounts:        icons/accounts          # User Accounts
+  store:           icons/store             # Add New Programs
   #
   # Desktop icons
   my-computer:     icons/my-computer
