@@ -676,18 +676,158 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: var(--xp-btn-face) !important;
 }
 
-/* ── XP Explorer-style toolbar / navigation chrome ──
-   Targets the search bar + view-switcher area in app views like GraphBrowser.
-   Reference: Reborn XP appnavigation — warm beige horizontal gradient,
-   separator lines, address-bar combobox style. */
+/* ═══════════════════════════════════════════════════════════════
+   XP Explorer 3-row Navigation Chrome
+   Reference: Reborn XP appnavigation — 3-row grid layout.
+   Row 2: Nav buttons (Back/Forward) + Views dropdown (39px)
+   Row 3: Address bar — "Address" label + combobox input (25px)
+   ═══════════════════════════════════════════════════════════════ */
 
-/* Toolbar container — the shrink-0 div with border-b that holds search + buttons.
-   XP address-bar row: warm beige gradient, top highlight, bottom separator. */
+/* Generic toolbar rows — warm beige gradient */
 .window .shrink-0.border-b {
   background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
   border-top: 1px solid #fff !important;
   border-bottom: 1px solid #d8d2bd !important;
   padding: 3px 4px !important;
+}
+
+/* ── Row 2: Navigation toolbar ── */
+.window .graph-nav-toolbar {
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
+  border-top: 1px solid #fff !important;
+  border-bottom: 1px solid #d8d2bd !important;
+  height: 36px !important;
+  padding: 3px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+/* Navigation buttons (Back, Forward, Views) — icon + optional text label */
+.window .graph-nav-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  padding: 2px 4px !important;
+  cursor: pointer !important;
+  color: var(--xp-text) !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  min-height: 28px !important;
+  box-shadow: none !important;
+}
+
+.window .graph-nav-btn:hover:not(:disabled) {
+  border: 1px solid #d8d2bd !important;
+  background: linear-gradient(to bottom, #f9f9f5, #f1f1ea) !important;
+  box-shadow: inset 0 1px 0 #fefefd !important;
+}
+
+.window .graph-nav-btn:active:not(:disabled) {
+  background: linear-gradient(to bottom, #e8e5d8, #dedad0) !important;
+  border-color: #c0bba8 !important;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+.window .graph-nav-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: default !important;
+}
+
+.window .graph-nav-btn:disabled svg circle {
+  fill: #c8c8be !important;
+  stroke: #a8a89e !important;
+}
+
+.window .graph-nav-btn:disabled svg path {
+  stroke: #e0e0d8 !important;
+}
+
+/* Disabled nav buttons get grayscale filter like real XP */
+.window .graph-nav-btn:disabled {
+  filter: saturate(0.2) !important;
+}
+
+/* Text labels next to nav icons */
+.window .graph-nav-label {
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  color: var(--xp-text) !important;
+}
+
+/* Small drop arrow */
+.window .graph-drop-arrow {
+  margin-left: 1px;
+  opacity: 0.7;
+}
+
+/* Vertical separator between button groups */
+.window .graph-nav-separator {
+  width: 1px !important;
+  height: 22px !important;
+  background: #cac6af !important;
+  margin: 0 4px !important;
+  box-shadow: 1px 0 0 #fff;
+}
+
+/* Views dropdown container — push to right */
+.window .graph-views-dropdown {
+  margin-left: auto !important;
+}
+
+/* ── Row 3: Address bar ── */
+.window .graph-address-bar {
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
+  border-top: none !important;
+  border-bottom: 1px solid #d8d2bd !important;
+  height: 24px !important;
+  padding: 2px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* "Address" text label */
+.window .graph-address-label {
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  color: var(--xp-text) !important;
+  padding: 0 4px !important;
+  white-space: nowrap !important;
+}
+
+/* Address input — XP combobox style */
+.window .graph-address-input {
+  background: #fff !important;
+  border: 1px solid var(--xp-input-border) !important;
+  box-shadow: inset 1px 1px 0 #a4b0be !important;
+  border-radius: 0 !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  height: 19px !important;
+  padding: 0 4px !important;
+}
+
+/* Go button */
+.window .graph-go-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  padding: 1px 3px !important;
+  cursor: pointer !important;
+  min-height: 19px !important;
+  box-shadow: none !important;
+}
+
+.window .graph-go-btn:hover {
+  border-color: #d8d2bd !important;
+  background: linear-gradient(to bottom, #f9f9f5, #f1f1ea) !important;
 }
 
 /* Also target app-toolbar-bar if present */
@@ -699,8 +839,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 3px 4px !important;
 }
 
-/* Search input inside toolbar — XP address-bar combobox:
-   slim, white, flat corners, inset shadow on top-left */
+/* Generic toolbar inputs fallback */
 .window .shrink-0.border-b input[type="text"],
 .window .shrink-0.border-b input[type="search"] {
   background: #fff !important;
@@ -713,41 +852,74 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 1px 4px !important;
 }
 
-/* View mode switcher — transparent container, no wrapper chrome */
-.window .shrink-0.border-b .bg-surface-muted {
+/* ═══════════════════════════════════════════════════════════════
+   Icons Grid View — XP Explorer-style card layout
+   ═══════════════════════════════════════════════════════════════ */
+
+.window .graph-icons-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 2px !important;
+  padding: 12px 8px !important;
+  align-content: flex-start !important;
+}
+
+.window .graph-icon-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: 76px !important;
+  padding: 6px 4px 4px !important;
   background: transparent !important;
-  border: none !important;
+  border: 1px solid transparent !important;
   border-radius: 0 !important;
-  gap: 0;
-  overflow: visible !important;
-}
-
-/* Individual view mode buttons — XP toolbar icon buttons */
-.window .shrink-0.border-b .bg-surface-muted button {
-  background: linear-gradient(180deg, #fff 0%, #ece9d8 89%, #d6d0bf 100%) !important;
-  border: 1px solid var(--xp-btn-shadow) !important;
-  border-radius: 0 !important;
-  padding: 2px 5px !important;
-  min-height: 21px;
+  cursor: pointer !important;
+  font-family: var(--xp-font) !important;
   font-size: 11px !important;
+  color: var(--xp-text) !important;
+  text-align: center !important;
+  box-shadow: none !important;
+  word-break: break-word !important;
 }
 
-/* Adjacent buttons share a border */
-.window .shrink-0.border-b .bg-surface-muted button + button {
-  border-left: none !important;
+.window .graph-icon-card:hover {
+  background: rgba(49, 106, 197, 0.12) !important;
+  border-color: rgba(49, 106, 197, 0.4) !important;
 }
 
-.window .shrink-0.border-b .bg-surface-muted button:hover {
-  border-color: #d8d2bd !important;
-  background: linear-gradient(180deg, #f9f9f5, #f1f1ea) !important;
-  box-shadow: inset 0 1px 2px #fefefd, inset 0 -1px 2px #d7d2c6, inset -1px 0 1px #e8e5dc !important;
+.window .graph-icon-card.selected {
+  background: var(--xp-selection) !important;
+  color: var(--xp-selection-text) !important;
+  border-color: var(--xp-selection) !important;
 }
 
-/* Active view mode — XP pressed/selected look */
-.window .shrink-0.border-b .bg-surface-muted button.bg-surface {
-  background: linear-gradient(180deg, #e0dfd7, #e7e5e0) !important;
-  border: 1px solid #9d9d92 !important;
-  box-shadow: inset 1px 1px 1px #dcdad1, inset 0 -1px 1px #ebeae5 !important;
+.window .graph-icon-card.selected .graph-icon-card-label {
+  color: var(--xp-selection-text) !important;
+}
+
+.window .graph-icon-card-image {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.window .graph-icon-card-image img {
+  max-width: 32px !important;
+  max-height: 32px !important;
+  object-fit: contain !important;
+}
+
+.window .graph-icon-card-label {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+  max-height: 2.4em !important;
 }
 
 /* URL bar / entity filter bar — same beige treatment */
