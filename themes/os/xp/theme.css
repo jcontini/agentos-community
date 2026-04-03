@@ -191,7 +191,8 @@
   font-weight: bold !important;
   font-size: 13px !important;
   justify-content: flex-start !important;
-  padding-left: 4px;
+  padding-left: 3px !important;
+  margin: 0 2px !important;
   letter-spacing: 0;
 }
 
@@ -691,6 +692,85 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 3px 4px !important;
 }
 
+/* ── Row 1: In-window menu bar (File, Edit, View...) ── */
+.window .graph-menu-bar {
+  background: var(--xp-button-face) !important;
+  border-bottom: 1px solid #d8d2bd !important;
+  height: 21px !important;
+  padding: 0 2px !important;
+  display: flex !important;
+  align-items: stretch !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+}
+
+.window .graph-menu-bar-item {
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 1px 7px !important;
+  margin: 0 !important;
+  cursor: default !important;
+  color: var(--xp-text) !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  white-space: nowrap !important;
+  line-height: 19px !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+
+.window .graph-menu-bar-item:hover,
+.window .graph-menu-bar-item.active {
+  background: var(--xp-selection) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.window .graph-menu-popup {
+  background: #fff !important;
+  border: 1px solid #808080 !important;
+  box-shadow: 2px 2px 3px rgba(0,0,0,0.2) !important;
+  padding: 2px 0 !important;
+  min-width: 160px !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+}
+
+.window .graph-menu-popup-item {
+  padding: 2px 24px 2px 24px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: none !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  line-height: 18px !important;
+  white-space: nowrap !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  cursor: default !important;
+}
+
+.window .graph-menu-popup-item:hover:not(:disabled) {
+  background: var(--xp-selection) !important;
+  color: #fff !important;
+}
+
+.window .graph-menu-popup-item:disabled {
+  color: #a0a0a0 !important;
+  cursor: default !important;
+}
+
+.window .graph-menu-separator {
+  border-top: 1px solid #d6d2c2 !important;
+  margin: 3px 2px !important;
+}
+
 /* ── Row 2: Navigation toolbar ── */
 .window .graph-nav-toolbar {
   background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
@@ -828,6 +908,144 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 .window .graph-go-btn:hover {
   border-color: #d8d2bd !important;
   background: linear-gradient(to bottom, #f9f9f5, #f1f1ea) !important;
+}
+
+/* ── XP Dialogs (confirm, progress) ── */
+.xp-dialog {
+  min-width: 380px !important;
+  max-width: 420px !important;
+  box-shadow: 4px 4px 10px rgba(0,0,0,0.35) !important;
+}
+
+.xp-dialog .window-body,
+.xp-dialog.window.active > .window-body,
+.xp-dialog-body {
+  padding: 20px 20px 16px !important;
+  background: #ece9d8 !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+}
+
+.xp-dialog-content {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.xp-dialog-icon {
+  flex-shrink: 0 !important;
+}
+
+.xp-dialog-message {
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  padding-top: 6px !important;
+}
+
+.xp-dialog-buttons {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #d5d2c4 !important;
+  margin-top: 4px !important;
+}
+
+.xp-dialog-btn {
+  min-width: 75px !important;
+  text-align: center !important;
+}
+
+/* First button (Yes) gets focus ring by default */
+.xp-dialog-btn:first-child {
+  border-color: var(--xp-selection) !important;
+  box-shadow: 0 0 0 1px var(--xp-selection) inset, 0 0 0 1px var(--xp-selection) !important;
+}
+
+/* ── XP Green Progress Bar ── */
+.xp-progress-track {
+  height: 16px !important;
+  background: #fff !important;
+  border: 1px solid #686868 !important;
+  border-radius: 4px !important;
+  padding: 1px 2px 1px 0 !important;
+  overflow: hidden !important;
+  box-shadow: inset 0 0 1px 0 #686868 !important;
+}
+
+.xp-progress-bar {
+  height: 100% !important;
+  border-radius: 2px !important;
+  background:
+    repeating-linear-gradient(90deg, #fff 0px, #fff 2px, transparent 2px, transparent 10px),
+    linear-gradient(180deg, #acedad 0%, #7be47d 14%, #4cda50 28%, #2ed330 42%, #42d845 57%, #76e275 71%, #8fe791 85%, #fff 100%) !important;
+  transition: width 0.15s ease-out !important;
+}
+
+/* ── Context menu (right-click) ── */
+.graph-context-menu {
+  background: #fff !important;
+  border: 1px solid #808080 !important;
+  box-shadow: 2px 2px 3px rgba(0,0,0,0.2) !important;
+  padding: 2px 0 !important;
+  min-width: 120px !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+}
+
+.graph-context-menu-item {
+  display: block !important;
+  width: 100% !important;
+  padding: 2px 24px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: none !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  line-height: 18px !important;
+  text-align: left !important;
+  cursor: default !important;
+  color: var(--xp-text) !important;
+  min-height: 0 !important;
+}
+
+.graph-context-menu-item:hover {
+  background: var(--xp-selection) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Welcome view tags ── */
+.window .graph-welcome-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 3px 8px !important;
+  min-height: 0 !important;
+  font-family: var(--xp-font) !important;
+  font-size: 11px !important;
+  color: var(--xp-link, #0066cc) !important;
+  cursor: pointer !important;
+  text-decoration: underline !important;
+}
+
+.window .graph-welcome-tag:hover {
+  color: var(--xp-selection) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.window .graph-welcome-tag .text-fg-muted {
+  color: var(--xp-text) !important;
+  text-decoration: none !important;
 }
 
 /* Also target app-toolbar-bar if present */
@@ -1051,7 +1269,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
    XP Buttons — raised 3D look with subtle gradient
    ═══════════════════════════════════════════════════════════════ */
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom) {
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag) {
   background: linear-gradient(180deg, #ffffff 0%, #ece9d8 89%, #d6d0bf 100%) !important;
   border: 1px solid var(--xp-btn-shadow) !important;
   border-radius: 3px !important;
@@ -1064,12 +1282,12 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   min-height: 21px;
 }
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):hover {
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag):hover {
   border-color: var(--xp-selection) !important;
   box-shadow: 0 0 0 1px rgba(49, 106, 197, 0.3) !important;
 }
 
-.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):active {
+.window button:not(.title-bar-close):not(.title-bar-minimize):not(.title-bar-zoom):not(.graph-menu-bar-item):not(.graph-menu-popup-item):not(.graph-context-menu-item):not(.graph-welcome-tag):active {
   background: linear-gradient(180deg, #d6d0bf 0%, #ece9d8 100%) !important;
   border-color: var(--xp-btn-dark-shadow) !important;
 }
