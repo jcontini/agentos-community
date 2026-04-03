@@ -104,8 +104,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .window {
-  /* Blue frame — background-color IS the frame, content sits inside with margin.
-     OnlineWinXP approach: inactive = #6582f5, active = #0831d9 */
+  /* Blue frame — background-color IS the frame. Title bar + body sit inside with margin. */
   background-color: #6582f5 !important;
   border: none !important;
   border-radius: 8px 8px 0 0 !important;
@@ -151,7 +150,7 @@
   min-height: 28px !important;
   font-weight: bold;
   font-size: 12px;
-  border-radius: 5px 5px 0 0 !important;
+  border-radius: 3px 3px 0 0 !important;
   margin: 3px 3px 0 3px;
   letter-spacing: 0.5px;
 }
