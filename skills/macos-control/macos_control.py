@@ -852,8 +852,74 @@ def _get_volumes_fallback():
     return volumes
 
 
+def _get_finder_favorites():
+    """Read Finder sidebar favorites from macOS shared file list."""
+    import plistlib as _plistlib
+
+    sfl_path = os.path.expanduser(
+        "~/Library/Application Support/com.apple.sharedfilelist/"
+        "com.apple.LSSharedFileList.FavoriteItems.sfl4"
+    )
+    if not os.path.exists(sfl_path):
+        return []
+
+    try:
+        with open(sfl_path, "rb") as f:
+            data = _plistlib.load(f)
+    except Exception:
+        return []
+
+    objects = data.get("$objects", [])
+    favorites = []
+
+    for obj in objects:
+        if not isinstance(obj, bytes) or len(obj) < 48:
+            continue
+
+        # Parse bookmark binary: extract null-terminated path segments
+        segments = []
+        current = b""
+        for byte_val in obj:
+            if byte_val == 0:
+                if len(current) > 1:
+                    try:
+                        s = current.decode("utf-8")
+                        if s.isascii() and not any(c < " " for c in s):
+                            segments.append(s)
+                    except (UnicodeDecodeError, ValueError):
+                        pass
+                current = b""
+            else:
+                current += bytes([byte_val])
+
+        # Reconstruct path: find 'Users' anchor, build forward
+        path_parts = []
+        found_anchor = False
+        for s in segments:
+            if s in ("Users", "Volumes"):
+                found_anchor = True
+                path_parts = [s]
+            elif found_anchor and len(s) < 100:
+                path_parts.append(s)
+                test = "/" + "/".join(path_parts)
+                if not os.path.exists(test):
+                    path_parts.pop()
+                    break
+
+        if path_parts:
+            resolved = "/" + "/".join(path_parts)
+            if os.path.exists(resolved):
+                favorites.append({
+                    "name": os.path.basename(resolved),
+                    "path": resolved,
+                    "tags": "folder",
+                })
+
+    return favorites
+
+
 def get_info(**_kwargs):
-    """Get filesystem info — home dir, special folders, volumes (as volume shapes)."""
+    """Get filesystem info — home dir, special folders, volumes, Finder favorites."""
     home = os.path.expanduser("~")
     username = os.path.basename(home)
 
@@ -864,6 +930,7 @@ def get_info(**_kwargs):
             special_folders[name.lower()] = folder
 
     volumes = _get_volumes()
+    favorites = _get_finder_favorites()
 
     return {
         "provider": "macos-control",
@@ -872,6 +939,7 @@ def get_info(**_kwargs):
         "username": username,
         "special_folders": special_folders,
         "volumes": volumes,
+        "favorites": favorites,
     }
 
 
