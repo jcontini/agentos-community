@@ -171,10 +171,19 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Title Bar Buttons — XP style rounded with gradients
+   Title Bar Button Layout — Windows style: all buttons on the right
+
+   HTML order: close, title-text, minimize, zoom
+   Visual order: title-text(1), minimize(2), zoom(3), close(4)
    ═══════════════════════════════════════════════════════════════ */
 
+.title-bar-text { order: 1 !important; flex: 1 !important; }
+.title-bar-minimize { order: 2 !important; display: block !important; }
+.title-bar-zoom { order: 3 !important; }
+.title-bar-close { order: 4 !important; }
+
 .title-bar-close,
+.title-bar-minimize,
 .title-bar-zoom {
   width: 21px !important;
   height: 21px !important;
@@ -276,6 +285,54 @@
     #0d52c1 40%,
     #0840a0 100%
   ) !important;
+}
+
+/* Minimize _ mark */
+.title-bar-minimize {
+  background: linear-gradient(
+    180deg,
+    #6ebbff 0%,
+    #1a6ee0 5%,
+    #0d52c1 30%,
+    #1665d8 50%,
+    #0f5bce 70%,
+    #0840a0 95%,
+    #063885 100%
+  ) !important;
+  box-shadow:
+    inset -1px -1px #063885,
+    inset 1px 1px #6ebbff,
+    0 0 0 1px #3d3d3d !important;
+}
+
+.title-bar-minimize:hover {
+  background: linear-gradient(
+    180deg,
+    #88ccff 0%,
+    #2a7ee8 5%,
+    #1665d8 40%,
+    #2878e8 60%,
+    #1665d8 95%
+  ) !important;
+}
+
+.title-bar-minimize:active {
+  background: linear-gradient(
+    180deg,
+    #063885 0%,
+    #0d52c1 40%,
+    #0840a0 100%
+  ) !important;
+}
+
+.title-bar-minimize::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  width: 8px;
+  height: 0;
+  border-bottom: 2px solid #fff;
 }
 
 /* Maximize □ mark */
@@ -420,7 +477,10 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Scrollbars — XP blue style
+   Scrollbars — XP Luna Blue style
+
+   XP scrollbars: blue thumb with raised 3D bevel on beige track.
+   Arrow buttons at each end with small triangles.
    ═══════════════════════════════════════════════════════════════ */
 
 .window ::-webkit-scrollbar {
@@ -430,23 +490,37 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 .window ::-webkit-scrollbar-track {
   background: var(--xp-scrollbar-track);
+  border-left: 1px solid #d6d2c2;
 }
 
 .window ::-webkit-scrollbar-thumb {
-  background: var(--xp-scrollbar-thumb);
-  border: 1px solid #8cb0d1;
-  border-radius: 0;
+  background: linear-gradient(90deg, #b9d4f6 0%, #a4c3ee 20%, #91b5e6 50%, #a4c3ee 80%, #b9d4f6 100%);
+  border: 1px solid #6f99c4;
+  border-radius: 2px;
+  min-height: 24px;
 }
 
 .window ::-webkit-scrollbar-thumb:hover {
-  background: #a8c4e0;
+  background: linear-gradient(90deg, #c8ddf8 0%, #b4d0f2 20%, #a0c0ea 50%, #b4d0f2 80%, #c8ddf8 100%);
+}
+
+.window ::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(90deg, #8fb0de 0%, #7fa4d8 20%, #6f98d0 50%, #7fa4d8 80%, #8fb0de 100%);
 }
 
 .window ::-webkit-scrollbar-button {
-  background: var(--xp-scrollbar-track);
-  border: 1px solid #8cb0d1;
+  background: var(--xp-btn-face);
+  border: 1px solid #aca899;
   height: 17px;
   width: 17px;
+}
+
+.window ::-webkit-scrollbar-button:hover {
+  background: #e8e4d8;
+}
+
+.window ::-webkit-scrollbar-corner {
+  background: var(--xp-scrollbar-track);
 }
 
 /* ═══════════════════════════════════════════════════════════════
