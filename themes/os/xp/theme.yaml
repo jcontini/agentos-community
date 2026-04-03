@@ -31,3 +31,13 @@ chrome:
   corner_radius: 8
   has_taskbar: true
   has_menubar: false
+
+sounds:
+  startup: sounds/startup.wav
+  shutdown: sounds/shutdown.wav
+  error: sounds/error.wav
+  notify: sounds/notify.wav
+  minimize: sounds/minimize.wav
+  restore: sounds/restore.wav
+  navigation: sounds/navigation.wav
+  ding: sounds/ding.wav
