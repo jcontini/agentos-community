@@ -505,66 +505,40 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   background: linear-gradient(90deg, #8fb0de 0%, #7fa4d8 20%, #6f98d0 50%, #7fa4d8 80%, #8fb0de 100%);
 }
 
-/* Scrollbar buttons — beige face with CSS triangle arrows.
-   XP has 4 buttons: up/down on vertical, left/right on horizontal. */
+/* Scrollbar buttons — XP 3D-beveled face + SVG arrow glyphs.
+   SVG arrows are 7x4 (horizontal) or 4x7 (vertical) dark triangles. */
 .window ::-webkit-scrollbar-button {
-  background: var(--xp-btn-face);
-  border: 1px solid #fff;
+  display: block;
   height: 17px;
   width: 17px;
-  display: block;
+  border-color: #fff #aca899 #aca899 #fff;
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
-/* Up arrow — vertical decrement */
+/* Up arrow ▲ */
 .window ::-webkit-scrollbar-button:vertical:decrement {
-  background:
-    linear-gradient(135deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
-    linear-gradient(225deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M3.5 0L7 4H0z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
-  background-size: 5px 4px, 5px 4px, 100% 100%;
-  background-position: 4px 6px, 7px 6px, 0 0;
-  background-repeat: no-repeat;
-  border-color: #fff #aca899 #aca899 #fff;
-  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
-/* Down arrow — vertical increment */
+/* Down arrow ▼ */
 .window ::-webkit-scrollbar-button:vertical:increment {
-  background:
-    linear-gradient(315deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
-    linear-gradient(45deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M0 0h7L3.5 4z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
-  background-size: 5px 4px, 5px 4px, 100% 100%;
-  background-position: 4px 7px, 7px 7px, 0 0;
-  background-repeat: no-repeat;
-  border-color: #fff #aca899 #aca899 #fff;
-  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
-/* Left arrow — horizontal decrement */
+/* Left arrow ◄ */
 .window ::-webkit-scrollbar-button:horizontal:decrement {
-  background:
-    linear-gradient(225deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
-    linear-gradient(315deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M4 0v7L0 3.5z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
-  background-size: 4px 5px, 4px 5px, 100% 100%;
-  background-position: 6px 4px, 6px 7px, 0 0;
-  background-repeat: no-repeat;
-  border-color: #fff #aca899 #aca899 #fff;
-  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
-/* Right arrow — horizontal increment */
+/* Right arrow ► */
 .window ::-webkit-scrollbar-button:horizontal:increment {
-  background:
-    linear-gradient(45deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
-    linear-gradient(135deg, transparent 45%, #3c3c3c 45%, #3c3c3c 55%, transparent 55%),
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M0 0l4 3.5L0 7z' fill='%23404040'/%3E%3C/svg%3E") no-repeat center,
     linear-gradient(to bottom, #f7f7f4 0%, #ece9d8 70%, #d6d0c5 100%);
-  background-size: 4px 5px, 4px 5px, 100% 100%;
-  background-position: 7px 4px, 7px 7px, 0 0;
-  background-repeat: no-repeat;
-  border-color: #fff #aca899 #aca899 #fff;
-  box-shadow: inset 1px 1px 0 #f1efe2, inset -1px -1px 0 #716f64;
 }
 
 .window ::-webkit-scrollbar-button:hover {
