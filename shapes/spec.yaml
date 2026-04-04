@@ -1,0 +1,24 @@
+# A spec — a design document describing work to be done.
+# Specs are markdown files with YAML frontmatter in docs/specs/.
+# State is derived from location: docs/specs/ = active, docs/specs/done/ = done.
+#
+# Sources: filesystem (docs/specs/)
+spec:
+  also: [task, file]
+  fields:
+    problem:           text
+    success_criteria:  text
+  relations:
+    depends_on:        spec[]
+    supersedes:        spec[]
+  display:
+    title: name
+    subtitle: state
+    description: problem
+    date: datePublished
+    columns:
+      - name:            Spec
+      - priority:        Priority
+      - state:           State
+      - labels:          Tags
+      - datePublished:   Updated
