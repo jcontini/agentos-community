@@ -9,6 +9,7 @@
 #
 # Sources: Google Calendar, Apple Calendar, Partiful, Luma, Austin Boulder Project
 event:
+  identity: [platform, id]
   subtitle: eventType
   fields:
     eventType:        string    # open vocabulary — subtypes define their own values
@@ -25,6 +26,7 @@ event:
     sourceTitle:      string    # display name of source ("Partiful", "Luma", "Gmail")
     icalUid:          string    # RFC 5545 UID for cross-system dedup
   relations:
+    platform:          product
     involves:          person[]  # people this event involves (many-to-many)
     location:          place     # where it happens
     organizer:         person    # who organized/hosts it

@@ -5,6 +5,7 @@
 # RFC headers (message_id, in_reply_to, references) enable threading.
 # Domain relations auto-extracted from sender/recipient addresses.
 email:
+  identity: [platform, id]
   subtitle: author
   also: [message]     # an email is also a message
   fields:

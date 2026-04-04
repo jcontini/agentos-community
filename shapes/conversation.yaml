@@ -3,6 +3,7 @@
 #
 # Sources: iMessage, WhatsApp, Gmail
 conversation:
+  identity: [platform, id]
   subtitle: text
   fields:
     isGroup:          boolean

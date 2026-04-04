@@ -3,6 +3,7 @@
 #
 # Sources: iMessage, WhatsApp; extended by email (Gmail, Mimestream)
 message:
+  identity: [platform, id]
   subtitle: author
   fields:
     conversationId:   string
