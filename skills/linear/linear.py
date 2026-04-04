@@ -63,12 +63,12 @@ def _map_task(node):
     result = {
         "id": node["id"],
         "name": node.get("title"),
-        "text": node.get("description"),
-        "remote_id": node.get("identifier"),
+        "content": node.get("description"),
+        "remoteId": node.get("identifier"),
         "url": node.get("url"),
-        "datePublished": node.get("createdAt"),
+        "published": node.get("createdAt"),
         "priority": node.get("priority") if node.get("priority") else None,
-        "target_date": node.get("dueDate"),
+        "targetDate": node.get("dueDate"),
     }
 
     # State
@@ -87,45 +87,45 @@ def _map_task(node):
     # Assignee as typed ref
     assignee = node.get("assignee")
     if assignee and assignee.get("id"):
-        result["assigned_to"] = {"person": {"id": assignee["id"], "name": assignee.get("name")}}
+        result["assigned_to"] = {"id": assignee["id"], "name": assignee.get("name")}
 
     # Project as typed ref
     project = node.get("project")
     if project and project.get("id"):
-        result["project"] = {"project": {"id": project["id"], "name": project.get("name")}}
+        result["project"] = {"id": project["id"], "name": project.get("name")}
 
     # Parent as typed ref
     parent = node.get("parent")
     if parent and parent.get("id"):
-        result["parent"] = {"task": {"id": parent["id"], "name": parent.get("identifier")}}
+        result["parent"] = {"id": parent["id"], "name": parent.get("identifier")}
 
     # Children as typed refs (only present in full queries)
     children_data = node.get("children") or {}
     children_nodes = children_data.get("nodes") or []
     if children_nodes:
-        result["children"] = {"task[]": [
+        result["children"] = [
             {"id": c["id"], "name": c.get("identifier") or c.get("title")}
             for c in children_nodes if c.get("id")
-        ]}
+        ]
 
     # Blocks/blocked_by as typed refs (only present in full queries)
     relations = node.get("relations") or {}
     rel_nodes = relations.get("nodes") or []
     blocks = [r["relatedIssue"] for r in rel_nodes if r.get("relatedIssue", {}).get("id")]
     if blocks:
-        result["blocks"] = {"task[]": [
+        result["blocks"] = [
             {"id": b["id"], "name": b.get("identifier") or b.get("title")}
             for b in blocks
-        ]}
+        ]
 
     inv_relations = node.get("inverseRelations") or {}
     inv_nodes = inv_relations.get("nodes") or []
     blocked_by = [r["issue"] for r in inv_nodes if r.get("issue", {}).get("id")]
     if blocked_by:
-        result["blocked_by"] = {"task[]": [
+        result["blocked_by"] = [
             {"id": b["id"], "name": b.get("identifier") or b.get("title")}
             for b in blocked_by
-        ]}
+        ]
 
     return result
 
@@ -336,7 +336,7 @@ def get_relations(*, id: str, **params) -> dict:
     issue = data["issue"]
     return {
         "blocks": issue["relations"]["nodes"],
-        "blocked_by": issue["inverseRelations"]["nodes"],
+        "blockedBy": issue["inverseRelations"]["nodes"],
     }
 
 

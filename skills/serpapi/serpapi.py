@@ -7,7 +7,7 @@ SEARCH_URL = "https://serpapi.com/search"
 
 def _auth_params(params: dict) -> dict:
     key = params.get("auth", {}).get("key", "")
-    return {"api_key": key} if key else {}
+    return {"apiKey": key} if key else {}
 
 
 def _map_offer(r: dict) -> dict:
@@ -42,56 +42,42 @@ def _map_offer(r: dict) -> dict:
         legs.append({
             "leg": {
                 "sequence": i + 1,
-                "departure_time": f_dep.get("time"),
-                "arrival_time": f_arr.get("time"),
-                "duration_minutes": f.get("duration"),
-                "flight_number": f.get("flight_number"),
-                "cabin_class": f.get("travel_class"),
-                "vehicle_type": f.get("airplane"),
-                "layover_minutes": layover_min,
-                "carbon_emissions": f.get("extensions"),
+                "departureTime": f_dep.get("time"),
+                "arrivalTime": f_arr.get("time"),
+                "durationMinutes": f.get("duration"),
+                "flightNumber": f.get("flight_number"),
+                "cabinClass": f.get("travel_class"),
+                "vehicleType": f.get("airplane"),
+                "layoverMinutes": layover_min,
+                "carbonEmissions": f.get("extensions"),
                 "origin": {
-                    "place": {
-                        "name": f_dep.get("name"),
-                        "id": f_dep.get("id"),
-                        "feature_type": "poi",
-                    }
+                    "name": f_dep.get("name"),
+                    "id": f_dep.get("id"),
+                    "featureType": "poi",
                 },
                 "destination": {
-                    "place": {
-                        "name": f_arr.get("name"),
-                        "id": f_arr.get("id"),
-                        "feature_type": "poi",
-                    }
+                    "name": f_arr.get("name"),
+                    "id": f_arr.get("id"),
+                    "featureType": "poi",
                 },
-                "carrier": {
-                    "organization": {"name": f.get("airline", "")}
-                } if f.get("airline") else None,
+                "carrier": {"name": f.get("airline", "")} if f.get("airline") else None,
             }
         })
 
     # Build trip (one direction of travel)
     trip = {
-        "trip": {
-            "trip_type": "flight",
-            "departure_time": dep.get("time"),
-            "arrival_time": (last.get("arrival_airport") or {}).get("time"),
-            "duration": f"{hrs}h {mins}m",
-            "duration_minutes": duration,
-            "stops": stops,
-            "cabin_class": first.get("travel_class"),
-            "carbon_emissions": r.get("carbon_emissions"),
-            "origin": {
-                "place": {"name": dep.get("name"), "id": dep_id, "feature_type": "poi"}
-            },
-            "destination": {
-                "place": {"name": arr.get("name"), "id": arr_id, "feature_type": "poi"}
-            },
-            "carrier": {
-                "organization": {"name": airline}
-            },
-            "legs": {"leg[]": legs} if legs else None,
-        }
+        "tripType": "flight",
+        "departureTime": dep.get("time"),
+        "arrivalTime": (last.get("arrival_airport") or {}).get("time"),
+        "duration": f"{hrs}h {mins}m",
+        "durationMinutes": duration,
+        "stops": stops,
+        "cabinClass": first.get("travel_class"),
+        "carbonEmissions": r.get("carbon_emissions"),
+        "origin": {"name": dep.get("name"), "id": dep_id, "featureType": "poi"},
+        "destination": {"name": arr.get("name"), "id": arr_id, "featureType": "poi"},
+        "carrier": {"name": airline},
+        "legs": legs if legs else None,
     }
 
     # Summary content
@@ -117,13 +103,13 @@ def _map_offer(r: dict) -> dict:
         "name": f"{dep_id} → {arr_id} · {airline} {stop_str} · ${price}",
         "price": price,
         "currency": "USD",
-        "offer_type": "flight",
+        "offerType": "flight",
         "image": r.get("airline_logo"),
-        "departure_token": r.get("departure_token"),
-        "booking_token": r.get("booking_token"),
+        "departureToken": r.get("departure_token"),
+        "bookingToken": r.get("booking_token"),
         "content": "\n".join(lines),
         # Typed reference: offer → trip
-        "trips": {"trip[]": [trip]},
+        "trips": [trip],
     }
 
 
@@ -136,23 +122,23 @@ def _flight_get(query: dict, **params) -> dict:
 def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, adults: int = 1, children: int = None, stops: int = None, max_price: int = None, sort_by: int = None, include_airlines: str = None, exclude_airlines: str = None, currency: str = "USD", hl: str = "en", gl: str = None, deep_search: bool = None, **params) -> list[dict]:
     q: dict = {
         "engine": "google_flights",
-        "departure_id": departure_id,
-        "arrival_id": arrival_id,
-        "outbound_date": outbound_date,
-        "return_date": return_date,
+        "departureId": departure_id,
+        "arrivalId": arrival_id,
+        "outboundDate": outbound_date,
+        "returnDate": return_date,
         "type": str(type) if type else None,
-        "travel_class": str(travel_class) if travel_class else None,
+        "travelClass": str(travel_class) if travel_class else None,
         "adults": str(adults) if adults else None,
         "children": str(children) if children is not None else None,
         "stops": str(stops) if stops is not None else None,
-        "max_price": str(max_price) if max_price is not None else None,
-        "sort_by": str(sort_by) if sort_by is not None else None,
-        "include_airlines": include_airlines,
-        "exclude_airlines": exclude_airlines,
+        "maxPrice": str(max_price) if max_price is not None else None,
+        "sortBy": str(sort_by) if sort_by is not None else None,
+        "includeAirlines": include_airlines,
+        "excludeAirlines": exclude_airlines,
         "currency": currency,
         "hl": hl,
         "gl": gl,
-        "deep_search": str(deep_search).lower() if deep_search is not None else None,
+        "deepSearch": str(deep_search).lower() if deep_search is not None else None,
     }
     data = _flight_get(q, **params)
     return [_map_offer(r) for r in (data.get("other_flights") or [])]
@@ -161,12 +147,12 @@ def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, ret
 def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
     q: dict = {
         "engine": "google_flights",
-        "departure_id": departure_id,
-        "arrival_id": arrival_id,
-        "outbound_date": outbound_date,
-        "return_date": return_date,
+        "departureId": departure_id,
+        "arrivalId": arrival_id,
+        "outboundDate": outbound_date,
+        "returnDate": return_date,
         "type": str(type),
-        "travel_class": str(travel_class),
+        "travelClass": str(travel_class),
         "currency": currency,
         "hl": hl,
     }
@@ -177,7 +163,7 @@ def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, retur
 def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
     q = {
         "engine": "google_flights",
-        "departure_token": departure_token,
+        "departureToken": departure_token,
         "currency": currency,
         "hl": hl,
     }
@@ -188,13 +174,13 @@ def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **
 def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = "en", **params) -> dict:
     q = {
         "engine": "google_flights",
-        "booking_token": booking_token,
+        "bookingToken": booking_token,
         "currency": currency,
         "hl": hl,
     }
     data = _flight_get(q, **params)
     return {
-        "booking_options": data.get("booking_options", []),
+        "bookingOptions": data.get("booking_options", []),
         "price": data.get("price"),
     }
 
@@ -202,10 +188,10 @@ def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = 
 def get_price_insights(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, currency: str = "USD", **params) -> dict:
     q: dict = {
         "engine": "google_flights",
-        "departure_id": departure_id,
-        "arrival_id": arrival_id,
-        "outbound_date": outbound_date,
-        "return_date": return_date,
+        "departureId": departure_id,
+        "arrivalId": arrival_id,
+        "outboundDate": outbound_date,
+        "returnDate": return_date,
         "type": str(type),
         "currency": currency,
     }

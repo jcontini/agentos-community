@@ -24,18 +24,18 @@ def _map_email(row):
         "id": row["id"],
         "name": row.get("subject"),
         "subject": row.get("subject"),
-        "text": row.get("snippet"),
+        "content": row.get("snippet"),
         "author": row.get("from_email"),
-        "datePublished": row.get("date_received"),
-        "is_unread": bool(row.get("is_unread")),
-        "is_starred": bool(row.get("is_flagged")),
-        "is_draft": bool(row.get("is_draft")),
-        "is_sent": bool(row.get("is_sent")),
-        "is_trash": bool(row.get("is_trash")),
-        "is_spam": bool(row.get("is_spam")),
-        "has_attachments": bool(row.get("has_attachments")),
-        "conversation_id": str(row["thread_id"]) if row.get("thread_id") else None,
-        "account_email": row.get("account_email"),
+        "published": row.get("date_received"),
+        "isUnread": bool(row.get("is_unread")),
+        "isStarred": bool(row.get("is_flagged")),
+        "isDraft": bool(row.get("is_draft")),
+        "isSent": bool(row.get("is_sent")),
+        "isTrash": bool(row.get("is_trash")),
+        "isSpam": bool(row.get("is_spam")),
+        "hasAttachments": bool(row.get("has_attachments")),
+        "conversationId": str(row["thread_id"]) if row.get("thread_id") else None,
+        "accountEmail": row.get("account_email"),
     }
 
     # Optional fields (only on get_email, not list)
@@ -63,7 +63,7 @@ def _map_email(row):
         from_name = row.get("from_name")
         if from_name:
             acct["display_name"] = from_name
-        result["from"] = {"account": acct}
+        result["from"] = acct
 
     return result
 
@@ -73,9 +73,9 @@ def _map_conversation(row):
     return {
         "id": str(row["id"]),
         "name": row.get("subject"),
-        "text": row.get("snippet"),
-        "datePublished": row.get("date_updated"),
-        "account_email": row.get("account_email"),
+        "content": row.get("snippet"),
+        "published": row.get("date_updated"),
+        "accountEmail": row.get("account_email"),
     }
 
 
@@ -131,7 +131,7 @@ def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **par
         LIMIT :limit
     """, db=DB_PATH, params={
         "account": account,
-        "is_unread": 1 if is_unread is True else (0 if is_unread is False else None),
+        "isUnread": 1 if is_unread is True else (0 if is_unread is False else None),
         "mailbox": mailbox,
         "limit": limit,
     })
@@ -348,9 +348,9 @@ def credential_get(*, account, **params):
 
     # Step 2: Parse plist — extract fields by $objects index
     fields = plist.parse(hex_data, extract={
-        "refresh_token": 32,
-        "client_id": 13,
-        "token_url": 10,
+        "refreshToken": 32,
+        "clientId": 13,
+        "tokenUrl": 10,
     })
 
     # Step 3: Exchange refresh token for access token
@@ -365,10 +365,10 @@ def credential_get(*, account, **params):
     )
 
     return {
-        "access_token": token_response.get("access_token"),
-        "expires_in": token_response.get("expires_in"),
+        "accessToken": token_response.get("access_token"),
+        "expiresIn": token_response.get("expires_in"),
         "scope": token_response.get("scope"),
-        "refresh_token": fields["refresh_token"],
-        "client_id": fields["client_id"],
-        "token_url": fields["token_url"],
+        "refreshToken": fields["refresh_token"],
+        "clientId": fields["client_id"],
+        "tokenUrl": fields["token_url"],
     }

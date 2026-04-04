@@ -35,8 +35,8 @@ def _map_conversation(row):
     result = {
         "id": row["id"],
         "name": row.get("name"),
-        "datePublished": row.get("updated_at"),
-        "is_group": row.get("type") == "group",
+        "published": row.get("updated_at"),
+        "isGroup": row.get("type") == "group",
     }
 
     # Participants as typed refs
@@ -49,7 +49,7 @@ def _map_conversation(row):
             if acct:
                 accounts.append(acct)
         if accounts:
-            result["participant"] = {"account[]": accounts}
+            result["participant"] = accounts
 
     return result
 
@@ -60,9 +60,9 @@ def _map_message(row):
         "id": row["id"],
         "name": row.get("conversation_name"),
         "content": row.get("content"),
-        "datePublished": row.get("timestamp"),
-        "conversation_id": row.get("conversation_id"),
-        "is_outgoing": bool(row.get("is_outgoing")),
+        "published": row.get("timestamp"),
+        "conversationId": row.get("conversation_id"),
+        "isOutgoing": bool(row.get("is_outgoing")),
     }
 
     # Sender as typed ref (only for incoming messages)
@@ -71,7 +71,7 @@ def _map_message(row):
         result["author"] = sender
         acct = _handle_to_account(sender)
         if acct:
-            result["from"] = {"account": acct}
+            result["from"] = acct
 
     return result
 
@@ -169,7 +169,7 @@ def op_list_messages(*, conversation_id, limit=200, **params):
         ORDER BY m.date DESC
         LIMIT :limit
     """, db=DB_PATH, params={
-        "conversation_id": conversation_id,
+        "conversationId": conversation_id,
         "limit": limit,
     })
     return [_map_message(r) for r in rows]

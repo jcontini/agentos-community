@@ -50,7 +50,7 @@ def _map_person(row):
     result = {
         "id": jid,
         "name": name,
-        "text": row.get("about"),
+        "content": row.get("about"),
         "nickname": row.get("username"),
     }
 
@@ -68,7 +68,7 @@ def _map_person(row):
                             or row.get("display_name"))
     if row.get("about"):
         acct["bio"] = row["about"]
-    result["accounts"] = {"account[]": [acct]}
+    result["accounts"] = [acct]
 
     return result
 
@@ -78,10 +78,10 @@ def _map_conversation(row):
     result = {
         "id": row["id"],
         "name": row.get("name"),
-        "datePublished": row.get("updated_at"),
-        "is_group": row.get("type") == "group",
-        "is_archived": bool(row.get("is_archived")),
-        "unread_count": row.get("unread_count"),
+        "published": row.get("updated_at"),
+        "isGroup": row.get("type") == "group",
+        "isArchived": bool(row.get("is_archived")),
+        "unreadCount": row.get("unread_count"),
     }
 
     # Participant as typed ref (for direct chats)
@@ -89,7 +89,7 @@ def _map_conversation(row):
     if contact_jid:
         acct = _jid_to_account(contact_jid, row.get("name"))
         if acct:
-            result["participant"] = {"account[]": [acct]}
+            result["participant"] = [acct]
 
     # Optional counts
     if row.get("participant_count") is not None:
@@ -107,9 +107,9 @@ def _map_message(row):
         "id": row["id"],
         "name": row.get("conversation_name"),
         "content": row.get("content"),
-        "datePublished": row.get("timestamp"),
-        "conversation_id": row.get("conversation_id"),
-        "is_outgoing": is_outgoing,
+        "published": row.get("timestamp"),
+        "conversationId": row.get("conversation_id"),
+        "isOutgoing": is_outgoing,
     }
 
     if is_outgoing:
@@ -123,7 +123,7 @@ def _map_message(row):
         if sender_jid:
             acct = _jid_to_account(sender_jid, sender_name)
             if acct:
-                result["from"] = {"account": acct}
+                result["from"] = acct
 
     # Starred
     if row.get("is_starred"):
@@ -131,7 +131,7 @@ def _map_message(row):
 
     # Reply
     if row.get("reply_to_id"):
-        result["replies_to"] = {"message": {"id": str(row["reply_to_id"])}}
+        result["replies_to"] = {"id": str(row["reply_to_id"])}
 
     return result
 
@@ -187,7 +187,7 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
         ORDER BY real_name, contact_name, display_name
         LIMIT :limit
     """, db=DB_PATH, params={
-        "conversation_id": conversation_id or "",
+        "conversationId": conversation_id or "",
         "limit": limit,
     }, attach={
         "contacts": CONTACTS_DB,
@@ -291,7 +291,7 @@ def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **param
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT :limit
     """, db=DB_PATH, params={
-        "conversation_id": conversation_id or "",
+        "conversationId": conversation_id or "",
         "unread": 1 if is_unread else 0,
         "limit": limit,
     })
