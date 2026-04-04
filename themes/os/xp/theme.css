@@ -703,9 +703,9 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* ── Row 1: In-window menu bar (File, Edit, View...) ── */
-/* In real XP the menu bar is warm beige (#ECE9D8), same as toolbar — NOT white */
+/* Same warm beige gradient as toolbar rows */
 .window .graph-menu-bar {
-  background: var(--xp-btn-face) !important;
+  background: linear-gradient(to right, #f2f4f2, #eeead6) !important;
   border-bottom: 1px solid #d8d2bd !important;
   height: 21px !important;
   padding: 0 2px !important;
@@ -931,15 +931,15 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   outline: none !important;
 }
 
-/* Dropdown arrow button — inside the combo box, separated by a left border only.
-   No outer border — it's inside the combo container's border. */
+/* Dropdown arrow button — XP combobox style: blue gradient with white arrow.
+   Inside the combo container, separated by a left border. */
 .window .graph-address-dropdown-btn {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 17px !important;
   height: 100% !important;
-  background: linear-gradient(180deg, #efefef 0%, #dddcd7 50%, #d1d0c9 100%) !important;
+  background: linear-gradient(180deg, #e8f0fb 0%, #c3d5ef 30%, #9dbbdf 70%, #7ba2d0 100%) !important;
   border: none !important;
   border-left: 1px solid #7f9db9 !important;
   cursor: pointer !important;
@@ -948,10 +948,11 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   box-shadow: none !important;
   min-height: 0 !important;
   border-radius: 0 !important;
+  color: #1a3c6e !important;
 }
 
 .window .graph-address-dropdown-btn:hover {
-  background: linear-gradient(180deg, #f5f5f2 0%, #e4e3de 50%, #d8d7d2 100%) !important;
+  background: linear-gradient(180deg, #d6e6f9 0%, #a8c5e8 30%, #7faad4 70%, #6090c4 100%) !important;
 }
 
 /* Go button — XP style with icon + "Go" text */
@@ -1127,9 +1128,9 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 3px 4px !important;
 }
 
-/* Generic toolbar inputs fallback */
-.window .shrink-0.border-b input[type="text"],
-.window .shrink-0.border-b input[type="search"] {
+/* Generic toolbar inputs fallback — exclude address combo inputs */
+.window .shrink-0.border-b input[type="text"]:not(.graph-address-input),
+.window .shrink-0.border-b input[type="search"]:not(.graph-address-input) {
   background: #fff !important;
   border: 1px solid var(--xp-input-border) !important;
   box-shadow: inset 1px 1px 0 #a4b0be !important;
@@ -1141,10 +1142,11 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 }
 
 /* Address input inside combo — kill ALL borders, rings, shadows.
-   The combo container provides the single outer border. */
-.window .graph-address-combo .graph-address-input,
-.window .graph-address-combo .graph-address-input:focus,
-.window .graph-address-combo .graph-address-input:hover,
+   The combo container provides the single outer border.
+   High specificity to beat .window input[type="text"] and toolbar fallback. */
+.window .graph-address-combo input[type="text"].graph-address-input,
+.window .graph-address-combo input[type="text"].graph-address-input:focus,
+.window .graph-address-combo input[type="text"].graph-address-input:hover,
 .window .graph-address-combo input[type="text"],
 .window .graph-address-combo input {
   border: none !important;
@@ -1938,9 +1940,9 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 /* Sidebar — XP blue gradient with collapsible white-panel sections.
    Reference: mydocuments.webp — rounded blue headers, chevron toggle, white body panels.
-   Gradient from Reborn XP sidebar. */
+   Gradient: #7AA2EA (top) → #6276D6 (bottom) per XP reference. */
 .files-sidebar {
-  background: linear-gradient(180deg, #6b89d4 0%, #4e6fc0 8%, #3d5eb5 100%);
+  background: linear-gradient(180deg, #7AA2EA 0%, #6276D6 100%);
   color: #fff;
   font-size: 11px;
   padding: 8px 8px !important;
@@ -1951,7 +1953,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 /* ── XP Sidebar collapsible section ── */
 .xp-sidebar-section {
-  border-radius: 5px;
+  border-radius: 3px 3px 0 0;
   overflow: hidden;
 }
 
@@ -1964,7 +1966,7 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 5px 10px !important;
   background: linear-gradient(180deg, #5f98e0 0%, #2f6ad4 50%, #2157c7 100%) !important;
   border: none !important;
-  border-radius: 5px 5px 0 0 !important;
+  border-radius: 3px 3px 0 0 !important;
   color: #fff !important;
   font-family: var(--xp-font) !important;
   font-size: 11px !important;
@@ -1981,10 +1983,10 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 /* Section body — white panel like real XP (reference: mydocuments.webp) */
 .xp-sidebar-section-body {
-  background: #fff !important;
+  background: #EEF2FF !important;
   padding: 6px 8px !important;
-  border-radius: 0 0 5px 5px !important;
-  border: 1px solid rgba(100, 130, 200, 0.3) !important;
+  border-radius: 0 !important;
+  border: 1px solid #fff !important;
   border-top: none !important;
 }
 
@@ -2079,15 +2081,20 @@ ul[role="menu"] li[data-shortcut]:focus::after {
 
 /* Root view — section headers like XP "Files Stored on This Computer" */
 .files-section-header {
-  font-size: 12px;
-  font-weight: normal;
-  color: var(--xp-titlebar-active-gradient-start, #1f4084);
-  border-bottom: 1px solid var(--xp-titlebar-active-gradient-start, #1f4084);
-  padding-bottom: 4px;
-  margin: 0 0 12px 0;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #000 !important;
+  border-bottom: none !important;
+  padding-bottom: 6px !important;
+  margin: 0 0 12px 0 !important;
+  padding-left: 1em !important;
+  background-image: linear-gradient(to right, #3D95FF, transparent) !important;
+  background-size: 100% 1px !important;
+  background-position: bottom left !important;
+  background-repeat: no-repeat !important;
 }
 
-/* Root view — icon grid */
+/* Root view — icon grid (legacy, kept for other views) */
 .files-root-grid {
   display: flex;
   flex-wrap: wrap;
@@ -2095,7 +2102,6 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   padding: 0 8px;
 }
 
-/* Root view items: no button chrome, just icon + text. Like real XP My Computer. */
 .files-root-item {
   display: flex;
   flex-direction: column;
@@ -2116,10 +2122,6 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   text-decoration: underline;
 }
 
-.files-root-item:active {
-  background: none;
-}
-
 .files-root-icon {
   width: 48px;
   height: 48px;
@@ -2132,8 +2134,47 @@ ul[role="menu"] li[data-shortcut]:focus::after {
   word-break: break-word;
 }
 
-.files-root-sub {
-  font-size: 10px;
-  color: var(--fg-muted);
+/* Root view — list layout (default My Computer view) */
+.files-root-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 1em;
+}
+
+.files-root-list-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  cursor: default;
+  font-size: 11px;
+  color: var(--fg);
+  outline: none;
+  text-align: left;
+}
+
+.files-root-list-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.files-root-list-label {
+  font-size: 11px;
   line-height: 1.2;
+  padding: 1px 4px;
+}
+
+.files-root-list-item.selected .files-root-list-label {
+  background: var(--xp-selection, #316ac5);
+  color: #fff;
+}
+
+.files-root-list-item:focus .files-root-list-label {
+  outline: 1px dotted #000;
+  outline-offset: 0;
 }
