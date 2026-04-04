@@ -10,7 +10,6 @@ file:
     size:              integer   # file size in bytes
     path:              string    # file path within repository, workspace, or filesystem
     format:            string    # human-readable format (e.g. "PDF", "DOCX")
-    language:          string    # programming language (source code files)
     encoding:          string    # content encoding (e.g. base64, utf-8)
     line_count:        integer   # line count (text files)
     kind:              string    # file, dir, symlink, submodule

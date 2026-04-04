@@ -1,0 +1,29 @@
+# A document — any human-readable text content with structure and authorship.
+# Base type for reports, manuscripts, briefs, whitepapers, analyses.
+# article, note, and webpage are siblings (not children) for now; they may
+# gain also: [document] in a future migration once the shape stabilizes.
+#
+# Sources: filesystem, agent output, skill results
+document:
+  also: [file]
+  fields:
+    content_type:      string    # markdown, html, pdf, plaintext, rst
+    language:          string    # ISO 639-1 (e.g. en, es, ja)
+    word_count:        integer
+    abstract:          text      # short summary of the document's contents
+    table_of_contents: text      # section headings, one per line
+  relations:
+    author:            actor     # person or agent who produced this
+    references:        document[]  # documents this document cites
+    cited_by:          document[]  # documents that cite this one
+  display:
+    title: name
+    subtitle: author
+    description: abstract
+    date: datePublished
+    columns:
+      - name:            Title
+      - author:          Author
+      - content_type:    Format
+      - word_count:      Words
+      - datePublished:   Date
