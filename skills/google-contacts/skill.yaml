@@ -1,0 +1,128 @@
+id: google-contacts
+name: Google Contacts
+description: Read, search, create, and update Google Contacts via the People API
+color: "#4285F4"
+
+website: https://contacts.google.com
+privacy_url: https://policies.google.com/privacy
+
+connections:
+  api:
+    base_url: "https://people.googleapis.com/v1"
+    auth:
+      type: oauth
+      service: google
+      scopes:
+        - https://www.googleapis.com/auth/contacts
+
+# ==============================================================================
+# OPERATIONS
+# ==============================================================================
+
+operations:
+
+  # --- Reading ---
+
+  list_contacts:
+    description: List contacts sorted by last modified, with optional limit
+    returns: person[]
+    connection: api
+    params:
+      account: { type: string, description: "Google account email" }
+      limit: { type: integer, description: "Max results (default: 100, max: 1000)" }
+      page_token: { type: string, description: "Pagination token from previous response" }
+    python:
+      module: ./google_contacts.py
+      function: list_contacts
+      timeout: 30
+    test:
+      params:
+        limit: 5
+
+  get_contact:
+    description: Get full details of a specific contact by resource name
+    returns: person
+    connection: api
+    params:
+      id: { type: string, required: true, description: "Resource name (e.g. 'people/c1234567890')" }
+      account: { type: string, description: "Google account email" }
+    python:
+      module: ./google_contacts.py
+      function: get_contact
+      timeout: 15
+
+  search_contacts:
+    description: Search contacts by name, email, phone, or any text
+    returns: person[]
+    connection: api
+    params:
+      query: { type: string, required: true, description: "Search text" }
+      account: { type: string, description: "Google account email" }
+      limit: { type: integer, description: "Max results (default: 30, max: 30)" }
+    python:
+      module: ./google_contacts.py
+      function: search_contacts
+      timeout: 15
+    test:
+      params:
+        query: a
+        limit: 5
+
+  # --- Writing ---
+
+  create_contact:
+    description: Create a new contact
+    returns: person
+    connection: api
+    params:
+      account: { type: string, description: "Google account email" }
+      first_name: { type: string, description: "First/given name" }
+      last_name: { type: string, description: "Last/family name" }
+      organization: { type: string, description: "Company or organization" }
+      job_title: { type: string, description: "Job title" }
+      department: { type: string, description: "Department" }
+      emails: { type: array, description: "Email addresses [{value, type}] — type: home, work, other" }
+      phones: { type: array, description: "Phone numbers [{value, type}] — type: mobile, home, work, other" }
+      addresses: { type: array, description: "Addresses [{streetAddress, city, region, postalCode, country, type}]" }
+      urls: { type: array, description: "URLs [{value, type}] — type: homePage, blog, profile, work, other" }
+      birthday: { type: string, description: "Birthday as YYYY-MM-DD" }
+      notes: { type: string, description: "Free-text notes" }
+    python:
+      module: ./google_contacts.py
+      function: create_contact
+      timeout: 15
+
+  update_contact:
+    description: Update an existing contact (partial update — only provided fields change)
+    returns: person
+    connection: api
+    params:
+      id: { type: string, required: true, description: "Resource name (e.g. 'people/c1234567890')" }
+      account: { type: string, description: "Google account email" }
+      first_name: { type: string, description: "First/given name" }
+      last_name: { type: string, description: "Last/family name" }
+      organization: { type: string, description: "Company or organization" }
+      job_title: { type: string, description: "Job title" }
+      department: { type: string, description: "Department" }
+      emails: { type: array, description: "Email addresses [{value, type}] — replaces existing" }
+      phones: { type: array, description: "Phone numbers [{value, type}] — replaces existing" }
+      addresses: { type: array, description: "Addresses [{streetAddress, city, region, postalCode, country, type}]" }
+      urls: { type: array, description: "URLs [{value, type}] — replaces existing" }
+      birthday: { type: string, description: "Birthday as YYYY-MM-DD" }
+      notes: { type: string, description: "Free-text notes" }
+    python:
+      module: ./google_contacts.py
+      function: update_contact
+      timeout: 15
+
+  delete_contact:
+    description: Delete a contact permanently
+    returns: void
+    connection: api
+    params:
+      id: { type: string, required: true, description: "Resource name (e.g. 'people/c1234567890')" }
+      account: { type: string, description: "Google account email" }
+    python:
+      module: ./google_contacts.py
+      function: delete_contact
+      timeout: 15
