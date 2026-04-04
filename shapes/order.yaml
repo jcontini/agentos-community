@@ -3,7 +3,11 @@
 #
 # Sources: Amazon, Uber Eats
 order:
+  identity: [platform, orderId]
+  subtitle: total
   fields:
+    orderId:           string    # platform order ID (e.g. "112-0527810-3136239")
+    orderDate:        datetime  # when the order was placed
     total:             string    # formatted total (e.g. "$42.99")
     totalAmount:      number    # numeric total for math
     originalTotal:    string    # pre-discount total (before membership/promo savings)
@@ -20,6 +24,7 @@ order:
     summary:           string
     fareBreakdown:    json      # line items: [{label, amount, key}]
   relations:
+    platform:          platform    # which platform this order is from
     contains:          product[]
     shippingAddress:  place
     store:             place         # store/restaurant LOCATION (place with feature_type: poi)

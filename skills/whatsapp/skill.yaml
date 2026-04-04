@@ -2,8 +2,13 @@ id: whatsapp
 name: WhatsApp
 description: Read WhatsApp messages from local macOS database
 color: "#2CD46B"
-
 website: https://www.whatsapp.com/
+
+product:
+  name: WhatsApp
+  website: https://whatsapp.com
+  tags: [platform]
+  developer: Meta Platforms, Inc.
 
 connections:
   db:

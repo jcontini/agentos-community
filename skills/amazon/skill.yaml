@@ -2,8 +2,13 @@ id: amazon
 name: Amazon
 description: Search products, get details, and access your Amazon account
 color: "#FF9900"
-
 website: https://www.amazon.com
+
+product:
+  name: Amazon
+  website: https://amazon.com
+  tags: [platform]
+  developer: Amazon.com, Inc.
 connections:
   public:
     description: "Public Amazon pages and autocomplete API — no auth needed"

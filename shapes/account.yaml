@@ -1,11 +1,18 @@
 # A user's presence on a platform — their GitHub handle, Gmail address, etc.
 # Created by most skills. Links a person to their platform-specific identity.
 #
+# Identity: [issuer, identifier] — one node per platform+handle combo.
+# issuer = platform domain (e.g. "github.com", "gmail.com")
+# identifier = platform-specific handle (e.g. "joecontini", "joe@adavia.com")
+#
 # Sources: GitHub, Gmail, WhatsApp, iMessage, Reddit, Hacker News, Chase, Copilot Money, PostHog
 account:
-  subtitle: handle
+  identity: [issuer, identifier]
+  subtitle: identifier
   fields:
-    handle:            string
+    issuer:            string    # platform domain: github.com, gmail.com, chase.com
+    identifier:        string    # unique handle on that platform: username, email, user ID
+    handle:            string    # display handle (may differ from identifier)
     displayName:      string
     email:             string
     phone:             string

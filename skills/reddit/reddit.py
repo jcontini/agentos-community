@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from agentos import http
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; AgentOS/1.0)",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "application/json",
 }
 
@@ -60,7 +60,14 @@ def _map_community(d: dict) -> dict:
 
 def _get_json(path: str, params: dict | None = None) -> dict:
     resp = http.get(f"https://www.reddit.com{path}", headers=HEADERS, params=params)
-    return resp["json"]
+    status = resp.get("status")
+    if status == 403:
+        raise RuntimeError("Reddit 403 — blocked by bot detection. Reddit now requires browser cookies for reliable access.")
+    data = resp["json"]
+    if data is None:
+        body_preview = (resp.get("body") or "")[:200]
+        raise RuntimeError(f"Reddit returned non-JSON (status {status}) for {path}: {body_preview}")
+    return data
 
 
 def search_posts(query: str, limit: int = 25, sort: str = "relevance") -> list[dict]:

@@ -598,7 +598,9 @@ def _parse_order_history(
         items = _parse_order_items(card)
 
         orders.append({
+            "id": order_id,
             "orderId": order_id,
+            "name": f"Order {order_id}",
             "orderDate": order_date,
             "total": total,
             "totalAmount": _parse_price(total),
@@ -1073,7 +1075,9 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
     items = _parse_order_items(container, detail_page=True)
 
     return {
+        "id": order_id,
         "orderId": order_id,
+        "name": f"Order {order_id}",
         "orderDate": order_date,
         "total": total,
         "totalAmount": _parse_price(total),

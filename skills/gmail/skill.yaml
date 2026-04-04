@@ -2,8 +2,13 @@ id: gmail
 name: Gmail
 description: Full-featured Gmail — read, search, send, reply, forward, label, archive, draft, attachments, filters, and batch operations. Auth can use the shared `google` OAuth capability when a provider integration is available.
 color: "#EA4335"
-
 website: https://mail.google.com
+
+product:
+  name: Gmail
+  website: https://mail.google.com
+  tags: [platform]
+  developer: Google LLC
 privacy_url: https://policies.google.com/privacy
 
 # No client_id or client_secret in this YAML when another integration already provides

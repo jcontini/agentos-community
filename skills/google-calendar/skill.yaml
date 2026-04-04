@@ -2,8 +2,13 @@ id: google-calendar
 name: Google Calendar
 description: Read, create, update, and delete Google Calendar events — replaces apple-calendar with Google API + OAuth
 color: "#4285F4"
-
 website: https://calendar.google.com
+
+product:
+  name: Google Calendar
+  website: https://calendar.google.com
+  tags: [platform]
+  developer: Google LLC
 privacy_url: https://policies.google.com/privacy
 
 connections:

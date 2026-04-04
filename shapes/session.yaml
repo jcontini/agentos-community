@@ -1,16 +1,20 @@
-# A bounded interaction session — an MCP session, a coding session, a browsing
-# session, a phone call. Has a start time, optional end time, and a participant.
+# An MCP session — a client connected, made some calls, disconnected.
+# One node per unique client+project+branch combo, updated on reconnection.
 #
-# Sources: agentOS engine (MCP sessions), OpenCode, Claude
+# Sources: agentOS engine (MCP session registration)
 session:
-  subtitle: sessionType
+  identity: [client, projectId, gitBranch]
+  subtitle: client
+  icon: terminal
   fields:
-    sessionType:      string    # mcp, coding, browsing, call, etc.
+    client:           string    # claude-code, agentos-call, cursor, opencode
+    projectId:        string    # org/repo or folder name
+    gitBranch:        string
+    sessionType:      string    # mcp, http, cli
     startedAt:        datetime
     endedAt:          datetime
-    messageCount:     integer   # messages exchanged in this session
-    tokenCount:       integer   # tokens used (for AI sessions)
+    messageCount:     integer
+    tokenCount:       integer
   relations:
-    participant:       actor     # who was in this session (person, agent)
-    project:           project   # what was being worked on
-    folder:            folder    # working directory (for coding sessions)
+    participant:       actor
+    folder:            folder

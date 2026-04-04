@@ -130,6 +130,18 @@
       },
       "additionalProperties": false
     },
+    "product": {
+      "type": "object",
+      "description": "Product this skill connects to. Engine seeds a product node at load time.",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "Product display name (e.g. Gmail, Amazon)" },
+        "website": { "type": "string", "format": "uri", "description": "Product website URL" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Shape tags (e.g. platform, software)" },
+        "developer": { "type": "string", "description": "Developer/company name" }
+      },
+      "additionalProperties": false
+    },
     "provides": {
       "type": "array",
       "description": "Typed provides: auth supply (cookies, oauth, api_key) or discoverable tools.",
