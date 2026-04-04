@@ -3,13 +3,7 @@
 # Sources: YouTube
 channel:
   fields:
-    subscriber_count:  integer
+    subscriberCount:  integer
     banner:            url       # channel banner/header image
   relations:
     platform:          product
-  display:
-    title: name
-    image: image
-    columns:
-      - name:            Channel
-      - subscriber_count: Subscribers

@@ -8,11 +8,5 @@ highlight:
     position:          string    # location in source (page number, timestamp, percentage)
     color:             string    # highlight color (yellow, green, blue, etc.)
   relations:
-    extracted_from:    book      # or article, webpage — the source work
-    created_by:        person    # who highlighted it
-  display:
-    title: name
-    description: content
-    columns:
-      - name:            Highlight
-      - position:        Position
+    extractedFrom:    book      # or article, webpage — the source work
+    createdBy:        person    # who highlighted it

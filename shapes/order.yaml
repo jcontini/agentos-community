@@ -5,31 +5,23 @@
 order:
   fields:
     total:             string    # formatted total (e.g. "$42.99")
-    total_amount:      number    # numeric total for math
-    original_total:    string    # pre-discount total (before membership/promo savings)
-    original_total_amount: number
+    totalAmount:      number    # numeric total for math
+    originalTotal:    string    # pre-discount total (before membership/promo savings)
+    originalTotalAmount: number
     savings:           number    # total discount amount (membership + promotions)
     currency:          string
     status:            string    # draft, placed, confirmed, delivering, completed, cancelled
-    delivery_date:     datetime  # actual or estimated delivery
+    deliveryDate:     datetime  # actual or estimated delivery
     eta:               string    # estimated time range (e.g. "11:33-11:53 AM")
     subtotal:          number
-    tip_amount:        number
-    delivery_fee:      number
+    tipAmount:        number
+    deliveryFee:      number
     taxes:             number
     summary:           string
-    fare_breakdown:    json      # line items: [{label, amount, key}]
+    fareBreakdown:    json      # line items: [{label, amount, key}]
   relations:
     contains:          product[]
-    shipping_address:  place
+    shippingAddress:  place
     store:             place         # store/restaurant LOCATION (place with feature_type: poi)
     delivery:          trip          # delivery trip (Uber Eats: store → customer)
     tracking:          webpage       # carrier tracking page
-  display:
-    title: name
-    date: datePublished
-    columns:
-      - name:            Order
-      - status:          Status
-      - total:           Total
-      - delivery_date:   Delivery

@@ -3,22 +3,14 @@
 #
 # Sources: extracted from various skills (email domains, product manufacturers, etc.)
 organization:
+  subtitle: industry
   also: [actor]       # an organization is also an actor
   fields:
     industry:          string
-    employee_count:    integer
+    employeeCount:    integer
     founded:           datetime
   relations:
     member:            person[]
     domain:            domain
     website:           website
     headquarters:      place
-  display:
-    title: name
-    subtitle: industry
-    image: image
-    columns:
-      - name:            Name
-      - industry:        Industry
-      - employee_count:  Employees
-      - founded:         Founded

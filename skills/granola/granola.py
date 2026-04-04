@@ -10,10 +10,10 @@ Auth: reads ~/Library/Application Support/Granola/supabase.json
 
 Internal API (api.granola.ai):
   POST /v2/get-documents        {"limit": N, "offset": N}  → {"docs": [...]}
-  POST /v1/get-documents-batch  {"document_ids": [...]}    → {"docs": [...]}
-  POST /v1/get-document-transcript {"document_id": id}     → [utterance, ...]
-  POST /v1/get-document-panels  {"document_id": id}        → [panel, ...]
-  POST /v1/get-entity-set       {"entity_type": str}       → {"data": [{id, ...}]}
+  POST /v1/get-documents-batch  {"documentIds": [...]}    → {"docs": [...]}
+  POST /v1/get-document-transcript {"documentId": id}     → [utterance, ...]
+  POST /v1/get-document-panels  {"documentId": id}        → [panel, ...]
+  POST /v1/get-entity-set       {"entityType": str}       → {"data": [{id, ...}]}
   POST /v1/get-entity-batch     {"entity_type", "entity_ids"} → {"data": [full entities]}
 
 Q&A/chat: chat_thread (grouping_key "meeting:{doc_id}") links to document; chat_message has thread_id.
@@ -138,9 +138,9 @@ def format_transcript(utterances: list, meeting_start: datetime) -> tuple[list, 
         speaker = "You" if u.get("source") == "microphone" else "Other"
 
         segments.append({
-            "start_ms": offset_ms,
-            "end_ms": end_ms,
-            "text": text,
+            "startMs": offset_ms,
+            "endMs": end_ms,
+            "content": text,
             "speaker": speaker,
             "timestamp": u["start_timestamp"],
         })
@@ -169,24 +169,24 @@ def normalize_meeting(doc: dict) -> dict:
             "email": a["email"],
             "name": a_details.get("name", {}).get("fullName") or a.get("name"),
             "avatar": a_details.get("avatar"),
-            "job_title": (a_details.get("employment") or {}).get("title"),
+            "jobTitle": (a_details.get("employment") or {}).get("title"),
             "organization": ((a.get("details") or {}).get("company") or {}).get("name"),
         })
 
     return {
         "id": doc["id"],
         "title": doc.get("title") or "",
-        "created_at": doc.get("created_at"),
-        "updated_at": doc.get("updated_at"),
+        "createdAt": doc.get("created_at"),
+        "updatedAt": doc.get("updated_at"),
         "start": (cal.get("start") or {}).get("dateTime") or doc.get("created_at"),
         "end": (cal.get("end") or {}).get("dateTime") or doc.get("updated_at"),
         "location": cal.get("hangoutLink") or cal.get("location"),
-        "calendar_link": cal.get("htmlLink"),
-        "granola_url": f"https://app.granola.ai/docs/{doc['id']}",
-        "creation_source": doc.get("creation_source"),
-        "valid_meeting": doc.get("valid_meeting", True),
-        "organizer_email": creator.get("email"),
-        "organizer_name": creator_details.get("name", {}).get("fullName") or creator.get("name"),
+        "calendarLink": cal.get("htmlLink"),
+        "granolaUrl": f"https://app.granola.ai/docs/{doc['id']}",
+        "creationSource": doc.get("creation_source"),
+        "validMeeting": doc.get("valid_meeting", True),
+        "organizerEmail": creator.get("email"),
+        "organizerName": creator_details.get("name", {}).get("fullName") or creator.get("name"),
         "attendees": attendees,
     }
 
@@ -254,12 +254,12 @@ def cmd_list_conversations(token: str, document_id: str, con: dict | None = None
         threads.append({
             "id": t["id"],
             "title": (t.get("data") or {}).get("title"),
-            "created_at": t.get("created_at"),
-            "updated_at": t.get("updated_at"),
-            "document_id": document_id,
-            "notes_url": f"https://notes.granola.ai/t/{t['id']}",
+            "createdAt": t.get("created_at"),
+            "updatedAt": t.get("updated_at"),
+            "documentId": document_id,
+            "notesUrl": f"https://notes.granola.ai/t/{t['id']}",
         })
-    return sorted(threads, key=lambda x: (x["updated_at"] or ""), reverse=True)
+    return sorted(threads, key=lambda x: (x["updatedAt"] or ""), reverse=True)
 
 
 def cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) -> dict:
@@ -297,19 +297,19 @@ def cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) ->
                     break
             messages.append({
                 "role": role,
-                "text": text,
-                "turn_index": d.get("turn_index"),
-                "created_at": m.get("created_at"),
+                "content": text,
+                "turnIndex": d.get("turn_index"),
+                "createdAt": m.get("created_at"),
             })
 
     tdata = thread.get("data") or {}
     return {
         "id": thread["id"],
         "title": tdata.get("title"),
-        "grouping_key": tdata.get("grouping_key"),
-        "created_at": thread.get("created_at"),
-        "updated_at": thread.get("updated_at"),
-        "notes_url": f"https://notes.granola.ai/t/{thread_id}",
+        "groupingKey": tdata.get("grouping_key"),
+        "createdAt": thread.get("created_at"),
+        "updatedAt": thread.get("updated_at"),
+        "notesUrl": f"https://notes.granola.ai/t/{thread_id}",
         "messages": messages,
     }
 
@@ -334,7 +334,7 @@ def cmd_list_from_cache(limit: int = 20, page: int = 0, con: dict | None = None)
     if not docs:
         return []
     items = [normalize_meeting(d) for d in docs.values() if not d.get("deleted_at")]
-    items.sort(key=lambda x: (x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+    items.sort(key=lambda x: (x.get("updatedAt") or x.get("createdAt") or ""), reverse=True)
     start = page * limit
     return items[start : start + limit]
 
@@ -354,12 +354,12 @@ def cmd_list_conversations_from_cache(document_id: str, con: dict | None = None)
         out.append({
             "id": t["id"],
             "title": (t.get("data") or {}).get("title"),
-            "created_at": t.get("created_at"),
-            "updated_at": t.get("updated_at"),
-            "document_id": document_id,
-            "notes_url": f"https://notes.granola.ai/t/{t['id']}",
+            "createdAt": t.get("created_at"),
+            "updatedAt": t.get("updated_at"),
+            "documentId": document_id,
+            "notesUrl": f"https://notes.granola.ai/t/{t['id']}",
         })
-    return sorted(out, key=lambda x: (x["updated_at"] or ""), reverse=True)
+    return sorted(out, key=lambda x: (x["updatedAt"] or ""), reverse=True)
 
 
 def cmd_get_conversation_from_cache(thread_id: str, con: dict | None = None) -> dict:
@@ -383,18 +383,18 @@ def cmd_get_conversation_from_cache(thread_id: str, con: dict | None = None) -> 
                 break
         messages.append({
             "role": role,
-            "text": text,
-            "turn_index": d.get("turn_index"),
-            "created_at": m.get("created_at"),
+            "content": text,
+            "turnIndex": d.get("turn_index"),
+            "createdAt": m.get("created_at"),
         })
     tdata = thread.get("data") or {}
     return {
         "id": thread["id"],
         "title": tdata.get("title"),
-        "grouping_key": tdata.get("grouping_key"),
-        "created_at": thread.get("created_at"),
-        "updated_at": thread.get("updated_at"),
-        "notes_url": f"https://notes.granola.ai/t/{thread_id}",
+        "groupingKey": tdata.get("grouping_key"),
+        "createdAt": thread.get("created_at"),
+        "updatedAt": thread.get("updated_at"),
+        "notesUrl": f"https://notes.granola.ai/t/{thread_id}",
         "messages": messages,
         "source": "cache",
     }
@@ -480,7 +480,7 @@ if __name__ == "__main__":
                 die("Usage: granola.py get <doc_id>")
             token = get_token(None)
             result = cmd_get(token, sys.argv[2], None)
-        elif cmd == "list_conversations":
+        elif cmd == "listConversations":
             if len(sys.argv) < 3:
                 die("Usage: granola.py list_conversations <document_id> [api|cache]")
             doc_id = sys.argv[2]
@@ -490,7 +490,7 @@ if __name__ == "__main__":
             else:
                 token = get_token(None)
                 result = cmd_list_conversations(token, doc_id, None)
-        elif cmd == "get_conversation":
+        elif cmd == "getConversation":
             if len(sys.argv) < 3:
                 die("Usage: granola.py get_conversation <thread_id> [api|cache]")
             thread_id = sys.argv[2]

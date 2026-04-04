@@ -4,16 +4,7 @@
 #
 # Sources: Brave Search, Exa, Moltbook
 result:
+  subtitle: url
   fields:
-    indexed_at:        datetime  # when the search engine last crawled this
-    result_type:       string    # web, image, video, news, etc.
-  display:
-    title: name
-    subtitle: url
-    description: text
-    image: image
-    date: datePublished
-    columns:
-      - name:            Title
-      - url:             URL
-      - datePublished:   Date
+    indexedAt:        datetime  # when the search engine last crawled this
+    resultType:       string    # web, image, video, news, etc.

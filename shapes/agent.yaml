@@ -4,15 +4,9 @@
 #
 # Examples: Claude in Cursor, a background job agent, a scheduled task runner.
 agent:
+  subtitle: model
   also: [actor]       # an agent is also an actor (like person, organization)
   fields:
     model:             string    # model identifier (e.g. "claude-sonnet-4-5", "gpt-4o")
     provider:          string    # who runs the model (e.g. "anthropic", "openai")
-    session_id:        string    # groups related requests from this agent
-  display:
-    title: name
-    subtitle: model
-    columns:
-      - name:            Agent
-      - model:           Model
-      - provider:        Provider
+    sessionId:        string    # groups related requests from this agent

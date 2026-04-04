@@ -4,15 +4,8 @@
 # Sources: PostHog
 analytics_event:
   fields:
-    distinct_id:       string    # PostHog user identifier
+    distinctId:       string    # PostHog user identifier
     properties:        json      # arbitrary event properties
-    current_url:       url       # page URL where the action fired
+    currentUrl:       url       # page URL where the action fired
   relations:
     person:            person
-  display:
-    title: name
-    date: datePublished
-    columns:
-      - name:            Event
-      - datePublished:   Time
-      - distinct_id:     User

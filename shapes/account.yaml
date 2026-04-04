@@ -3,28 +3,21 @@
 #
 # Sources: GitHub, Gmail, WhatsApp, iMessage, Reddit, Hacker News, Chase, Copilot Money, PostHog
 account:
+  subtitle: handle
   fields:
     handle:            string
-    display_name:      string
+    displayName:      string
     email:             string
     phone:             string
     bio:               text
-    account_type:      string    # e.g. checking, savings, credit (financial); user, bot (social)
+    accountType:      string    # e.g. checking, savings, credit (financial); user, bot (social)
     color:             string
     karma:             integer   # platform reputation score (Reddit, HN)
-    is_active:         boolean
-    joined_date:       datetime
-    last_active:       datetime
+    isActive:         boolean
+    joinedDate:       datetime
+    lastActive:       datetime
   relations:
     platform:          product   # the service this account lives on
     owner:             person    # the real person behind this account
     follows:           account[]
     followers:         account[]
-  display:
-    title: name
-    subtitle: handle
-    image: image
-    columns:
-      - name:            Name
-      - handle:          Handle
-      - email:           Email

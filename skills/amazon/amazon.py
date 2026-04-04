@@ -177,9 +177,9 @@ def search_suggestions(
     suggestions = [
         {
             "value": s["value"],
-            "search_url": f"https://www.amazon.{tld}/s?k={quote_plus(s['value'])}",
+            "searchUrl": f"https://www.amazon.{tld}/s?k={quote_plus(s['value'])}",
             "strategy": s.get("strategyId", "organic"),
-            "ref_tag": s.get("refTag"),
+            "refTag": s.get("refTag"),
             "department": alias,
             "marketplace": (marketplace or "US").upper(),
         }
@@ -276,10 +276,10 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
             "asin": asin,
             "title": title,
             "price": price,
-            "price_amount": _parse_price(price),
+            "priceAmount": _parse_price(price),
             "rating": rating,
-            "ratings_count": ratings_count,
-            "image_url": image,
+            "ratingsCount": ratings_count,
+            "imageUrl": image,
             "url": f"https://www.amazon.{tld}/dp/{asin}",
             "prime": prime,
             "sponsored": sponsored,
@@ -384,12 +384,12 @@ def _parse_product_page(body: str, asin: str, tld: str) -> dict[str, Any]:
         "title": title,
         "description": description,
         "price": price,
-        "price_amount": _parse_price(price),
+        "priceAmount": _parse_price(price),
         "brand": brand,
         "rating": rating,
-        "ratings_count": ratings_count,
-        "review_count": ratings_count,
-        "image_url": main_image or (images[0] if images else None),
+        "ratingsCount": ratings_count,
+        "reviewCount": ratings_count,
+        "imageUrl": main_image or (images[0] if images else None),
         "images": images[:10],
         "url": f"https://www.amazon.{tld}/dp/{asin}",
         "availability": availability,
@@ -598,13 +598,13 @@ def _parse_order_history(
         items = _parse_order_items(card)
 
         orders.append({
-            "order_id": order_id,
-            "order_date": order_date,
+            "orderId": order_id,
+            "orderDate": order_date,
             "total": total,
-            "total_amount": _parse_price(total),
+            "totalAmount": _parse_price(total),
             "status": status,
-            "delivery_date": delivery_date,
-            "item_count": len(items),
+            "deliveryDate": delivery_date,
+            "itemCount": len(items),
             "items": items,
             "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
         })
@@ -616,10 +616,10 @@ def _parse_order_history(
     return {
         "orders": orders,
         "page": page,
-        "per_page": 10,
-        "total_orders": total_orders,
-        "total_pages": total_pages,
-        "has_next": has_next,
+        "perPage": 10,
+        "totalOrders": total_orders,
+        "totalPages": total_pages,
+        "hasNext": has_next,
         "filter": order_filter,
     }
 
@@ -666,9 +666,9 @@ def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[
                 "asin": asin,
                 "title": title,
                 "url": f"{BASE}/dp/{asin}",
-                "image_url": str(image_url) if image_url else None,
+                "imageUrl": str(image_url) if image_url else None,
                 "price": price,
-                "price_amount": _parse_price(price),
+                "priceAmount": _parse_price(price),
                 "quantity": quantity,
             })
         return items
@@ -697,9 +697,9 @@ def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[
             "asin": asin,
             "title": title,
             "url": f"{BASE}/dp/{asin}",
-            "image_url": str(image_url) if image_url else None,
+            "imageUrl": str(image_url) if image_url else None,
             "price": price,
-            "price_amount": _parse_price(price),
+            "priceAmount": _parse_price(price),
             "quantity": 1,
         })
 
@@ -729,9 +729,9 @@ def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[
                 "asin": asin,
                 "title": title,
                 "url": f"{BASE}/dp/{asin}",
-                "image_url": asin_images.get(asin),
+                "imageUrl": asin_images.get(asin),
                 "price": None,
-                "price_amount": None,
+                "priceAmount": None,
                 "quantity": 1,
             })
 
@@ -793,9 +793,9 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
             "asin": asin,
             "title": title,
             "url": f"{BASE}/dp/{asin}",
-            "image_url": image_url,
+            "imageUrl": image_url,
             "price": price,
-            "price_amount": _parse_price(price),
+            "priceAmount": _parse_price(price),
             "prime": prime,
             "badge": badge,
         })
@@ -848,9 +848,9 @@ def subscriptions(**params) -> dict[str, Any]:
 
             if date_text:
                 deliveries.append({
-                    "delivery_date": date_text,
-                    "edit_deadline": edit_deadline,
-                    "item_count": item_count,
+                    "deliveryDate": date_text,
+                    "editDeadline": edit_deadline,
+                    "itemCount": item_count,
                 })
 
         savings = None
@@ -879,10 +879,10 @@ def subscriptions(**params) -> dict[str, Any]:
                 items = _parse_subscriptions(ajax_resp["body"])
 
     return {
-        "total_savings": savings,
-        "upcoming_deliveries": deliveries,
+        "totalSavings": savings,
+        "upcomingDeliveries": deliveries,
         "subscriptions": items,
-        "subscription_count": len(items),
+        "subscriptionCount": len(items),
     }
 
 
@@ -947,13 +947,13 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
         price = _text(price_el)
 
         items.append({
-            "subscription_id": sub_id,
+            "subscriptionId": sub_id,
             "title": title,
-            "image_url": str(image_url) if image_url else None,
-            "next_delivery": next_delivery,
+            "imageUrl": str(image_url) if image_url else None,
+            "nextDelivery": next_delivery,
             "frequency": frequency,
             "price": price,
-            "price_amount": _parse_price(price),
+            "priceAmount": _parse_price(price),
         })
 
     return items
@@ -1073,16 +1073,16 @@ def _parse_order_detail(body: str, order_id: str) -> dict[str, Any]:
     items = _parse_order_items(container, detail_page=True)
 
     return {
-        "order_id": order_id,
-        "order_date": order_date,
+        "orderId": order_id,
+        "orderDate": order_date,
         "total": total,
-        "total_amount": _parse_price(total),
+        "totalAmount": _parse_price(total),
         "status": status,
-        "delivery_date": delivery_date,
-        "shipping_address": shipping_address,
-        "tracking_url": tracking_url,
+        "deliveryDate": delivery_date,
+        "shippingAddress": shipping_address,
+        "trackingUrl": tracking_url,
         "summary": summary or None,
-        "item_count": len(items),
+        "itemCount": len(items),
         "items": items,
         "url": f"{BASE}/gp/your-account/order-details?orderID={order_id}",
     }
@@ -1175,12 +1175,12 @@ def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
                 list_type = m.group(1)
 
         lists.append({
-            "list_id": link_id,
+            "listId": link_id,
             "name": name,
             "url": f"{BASE}/hz/wishlist/ls/{link_id}",
             "privacy": privacy,
-            "is_default": is_default,
-            "list_type": list_type or "WishList",
+            "isDefault": is_default,
+            "listType": list_type or "WishList",
         })
 
     return lists
@@ -1270,12 +1270,12 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
             soup = ajax_soup
 
     return {
-        "list_id": list_id,
+        "listId": list_id,
         "name": list_name,
         "url": f"{BASE}/hz/wishlist/ls/{list_id}",
         "privacy": list_privacy,
-        "list_type": list_type,
-        "item_count": len(all_items),
+        "listType": list_type,
+        "itemCount": len(all_items),
         "items": all_items,
     }
 
@@ -1358,13 +1358,13 @@ def _parse_list_items(soup: HtmlElement) -> list[dict[str, Any]]:
             "asin": asin,
             "title": molt(title),
             "url": f"{BASE}/dp/{asin}",
-            "image_url": image_url,
+            "imageUrl": image_url,
             "byline": molt(byline),
             "price": price,
-            "price_amount": _parse_price(price),
+            "priceAmount": _parse_price(price),
             "rating": _parse_rating(rating_text),
-            "ratings_count": review_count,
-            "date_added": date_added,
+            "ratingsCount": review_count,
+            "dateAdded": date_added,
             "priority": priority,
             "comment": comment if comment else None,
         })
@@ -1393,7 +1393,7 @@ def whoami(**params) -> dict[str, Any]:
         resp = c.get(f"{BASE}/gp/css/homepage.html")
 
         if resp["status"] != 200:
-            return {"authenticated": False, "status_code": resp["status"]}
+            return {"authenticated": False, "statusCode": resp["status"]}
 
         body = resp["body"]
 
@@ -1430,11 +1430,11 @@ def whoami(**params) -> dict[str, Any]:
         "authenticated": True,
         "domain": "amazon.com",
         "identifier": email or customer_id or display,
-        "customer_id": customer_id,
+        "customerId": customer_id,
         "display": display,
         "email": email,
-        "marketplace_id": marketplace_id,
-        "is_prime": prime_match is not None,
+        "marketplaceId": marketplace_id,
+        "isPrime": prime_match is not None,
     }
 
 
@@ -1456,21 +1456,21 @@ def main() -> None:
 
     cmd = sys.argv[1]
 
-    if cmd == "search_suggestions":
+    if cmd == "searchSuggestions":
         query = sys.argv[2] if len(sys.argv) > 2 else "wireless headphones"
         dept = sys.argv[3] if len(sys.argv) > 3 else None
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
         result = search_suggestions(query, department=dept, marketplace=mkt)
         print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    elif cmd == "search_products":
+    elif cmd == "searchProducts":
         query = sys.argv[2] if len(sys.argv) > 2 else "usb c cable"
         dept = sys.argv[3] if len(sys.argv) > 3 else None
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
         result = search_products(query, department=dept, marketplace=mkt)
         print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    elif cmd == "get_product":
+    elif cmd == "getProduct":
         asin_val = sys.argv[2] if len(sys.argv) > 2 else "B0BQPNMXQV"
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
         result = get_product(asin_val, marketplace=mkt)

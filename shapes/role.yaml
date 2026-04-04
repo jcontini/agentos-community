@@ -3,21 +3,13 @@
 #
 # Sources: Apple Contacts, LinkedIn (via enrichment)
 role:
+  subtitle: name
   fields:
     title:             string
     department:        string
-    role_type:         string    # employment, board, advisor, contractor, etc.
-    start_date:        datetime
-    end_date:          datetime
+    roleType:         string    # employment, board, advisor, contractor, etc.
+    startDate:        datetime
+    endDate:          datetime
   relations:
     person:            person
     organization:      organization
-  display:
-    title: title
-    subtitle: name
-    date: start_date
-    columns:
-      - title:           Title
-      - name:            Organization
-      - start_date:      From
-      - end_date:        To

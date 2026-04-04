@@ -2,22 +2,14 @@
 #
 # Sources: SerpAPI (flight search)
 aircraft:
+  subtitle: model
   also: [product]     # an aircraft is also a product
   fields:
     model:             string
     variant:           string
-    seat_capacity:     integer
-    range_km:          integer
-    iata_code:         string    # 3-letter type code (e.g. 738, 77W)
-    icao_code:         string    # 4-letter type code (e.g. B738, B77W)
+    seatCapacity:     integer
+    rangeKm:          integer
+    iataCode:         string    # 3-letter type code (e.g. 738, 77W)
+    icaoCode:         string    # 4-letter type code (e.g. B738, B77W)
   relations:
     manufacturer:      organization
-  display:
-    title: name
-    subtitle: model
-    image: image
-    columns:
-      - name:            Aircraft
-      - model:           Model
-      - seat_capacity:   Seats
-      - range_km:        Range

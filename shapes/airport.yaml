@@ -2,23 +2,16 @@
 #
 # Sources: SerpAPI (flight search)
 airport:
+  subtitle: iataCode
   fields:
-    iata_code:         string    # 3-letter code (e.g. LAX, JFK, SFO)
-    icao_code:         string    # 4-letter code (e.g. KLAX, KJFK, KSFO)
+    iataCode:         string    # 3-letter code (e.g. LAX, JFK, SFO)
+    icaoCode:         string    # 4-letter code (e.g. KLAX, KJFK, KSFO)
     city:              string
     country:           string
-    country_code:      string    # ISO 3166-1 alpha-2 (e.g. US, GB)
+    countryCode:      string    # ISO 3166-1 alpha-2 (e.g. US, GB)
     timezone:          string    # IANA timezone (e.g. America/Los_Angeles)
-    elevation_ft:      integer
-    terminal_count:    integer
+    elevationFt:      integer
+    terminalCount:    integer
   relations:
     location:          place
     operator:          organization
-  display:
-    title: name
-    subtitle: iata_code
-    columns:
-      - name:            Airport
-      - iata_code:       IATA
-      - city:            City
-      - country:         Country

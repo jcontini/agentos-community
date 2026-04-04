@@ -4,21 +4,11 @@
 #
 # Sources: filesystem (docs/specs/)
 spec:
+  subtitle: state
   also: [task, file]
   fields:
     problem:           text
-    success_criteria:  text
+    successCriteria:  text
   relations:
-    depends_on:        spec[]
+    dependsOn:        spec[]
     supersedes:        spec[]
-  display:
-    title: name
-    subtitle: state
-    description: problem
-    date: datePublished
-    columns:
-      - name:            Spec
-      - priority:        Priority
-      - state:           State
-      - labels:          Tags
-      - datePublished:   Updated

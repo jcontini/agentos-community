@@ -7,12 +7,4 @@ image:
     width:             integer   # pixels
     height:            integer   # pixels
     format:            string    # PNG, JPEG, WebP, SVG, etc.
-    alt_text:          string    # accessibility description
-  display:
-    title: name
-    image: image
-    columns:
-      - name:            Image
-      - width:           Width
-      - height:          Height
-      - format:          Format
+    altText:          string    # accessibility description

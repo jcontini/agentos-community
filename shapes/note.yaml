@@ -8,17 +8,9 @@
 # Sources: future PKM integrations (Obsidian, Apple Notes, Google Keep)
 note:
   fields:
-    note_type:         string    # fleeting, literature, permanent, journal, draft
-    is_pinned:         boolean
+    noteType:         string    # fleeting, literature, permanent, journal, draft
+    isPinned:         boolean
   relations:
-    created_by:        person
+    createdBy:        person
     references:        note[]    # links to other notes
-    extracted_from:    webpage   # source material this note was taken from
-  display:
-    title: name
-    description: content
-    date: datePublished
-    columns:
-      - name:            Note
-      - note_type:       Type
-      - datePublished:   Date
+    extractedFrom:    webpage   # source material this note was taken from

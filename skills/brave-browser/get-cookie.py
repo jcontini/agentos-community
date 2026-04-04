@@ -95,10 +95,15 @@ def get_cookies(domain: str, names: list[str] | None = None,
     password = get_master_key()
     key_hex = derive_key(password)
 
-    # Copy to temp to avoid lock conflicts with running Brave
+    # Copy to temp to avoid lock conflicts with running Brave.
+    # Also copy journal/WAL files so SQLite can replay uncommitted writes.
     tmp_dir = tempfile.mkdtemp()
     tmp_db = os.path.join(tmp_dir, "Cookies")
     shutil.copy2(cookies_db, tmp_db)
+    for suffix in ("-journal", "-wal", "-shm"):
+        aux = cookies_db + suffix
+        if os.path.exists(aux):
+            shutil.copy2(aux, tmp_db + suffix)
 
     try:
         # Always query by domain (broad TLD match) to get all cookies.

@@ -6,20 +6,12 @@ offer:
   fields:
     price:             number
     currency:          string    # ISO 4217 (e.g. USD, EUR)
-    offer_type:        string
+    offerType:        string
     availability:      string
-    valid_from:        datetime
-    valid_until:       datetime
-    booking_token:     string    # opaque token for completing a booking
+    validFrom:        datetime
+    validUntil:       datetime
+    bookingToken:     string    # opaque token for completing a booking
   relations:
     for:               product   # what this offer is selling
-    offered_by:        organization
+    offeredBy:        organization
     trips:             trip[]    # the trip(s) this offer books (flights: outbound + return)
-  display:
-    title: name
-    description: content
-    columns:
-      - name:            Offer
-      - price:           Price
-      - currency:        Currency
-      - offer_type:      Type

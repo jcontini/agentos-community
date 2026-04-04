@@ -24,11 +24,11 @@ def read_webpage(*, url: str, wait_for_js: int = 0, timeout: int = 30000, **para
     return {
         "id": meta.get("sourceURL") or meta.get("url") or url,
         "name": meta.get("title") or meta.get("ogTitle"),
-        "text": data.get("markdown") or meta.get("description"),
+        "content": data.get("markdown") or meta.get("description"),
         "url": meta.get("sourceURL") or meta.get("url") or url,
         "image": meta.get("ogImage") or meta.get("image") or meta.get("og:image"),
         "author": meta.get("author") or meta.get("article:author"),
-        "datePublished": (
+        "published": (
             meta.get("publishedTime")
             or meta.get("publishedDate")
             or meta.get("article:published_time")

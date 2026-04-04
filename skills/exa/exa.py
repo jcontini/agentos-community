@@ -212,22 +212,22 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
         "__secrets__": [{
             "domain": "exa.ai",
             "identifier": email,
-            "item_type": "cookie",
+            "itemType": "cookie",
             "label": "Exa Dashboard Session",
             "source": "exa",
             "value": cookies,
             "metadata": {
                 "masked": {"next-auth.session-token": "••••(JWT)"},
-                "dashboard_url": DASHBOARD_BASE,
-                "user_id": session["user"].get("id"),
-                "team_id": session["user"].get("currentTeamId"),
+                "dashboardUrl": DASHBOARD_BASE,
+                "userId": session["user"].get("id"),
+                "teamId": session["user"].get("currentTeamId"),
             },
         }],
         "__result__": {
             "status": "authenticated",
             "email": email,
             "team": session["user"].get("currentTeamName", "unknown"),
-            "user_id": session["user"].get("id"),
+            "userId": session["user"].get("id"),
         },
     }
 
@@ -254,22 +254,22 @@ def store_session_cookies(*, email: str, session_token: str, cf_clearance: str =
         "__secrets__": [{
             "domain": "exa.ai",
             "identifier": email,
-            "item_type": "cookie",
+            "itemType": "cookie",
             "label": "Exa Dashboard Session",
             "source": "exa",
             "value": cookies,
             "metadata": {
                 "masked": {"next-auth.session-token": "••••(JWT)"},
-                "dashboard_url": DASHBOARD_BASE,
-                "user_id": session["user"].get("id"),
-                "team_id": session["user"].get("currentTeamId"),
+                "dashboardUrl": DASHBOARD_BASE,
+                "userId": session["user"].get("id"),
+                "teamId": session["user"].get("currentTeamId"),
             },
         }],
         "__result__": {
             "status": "authenticated",
             "identifier": email,
             "domain": "exa.ai",
-            "user_id": session["user"].get("id"),
+            "userId": session["user"].get("id"),
             "team": session["user"].get("teams", [{}])[0].get("name"),
         },
     }
@@ -318,13 +318,13 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
 
     result = {
         "__result__": {
-            "api_keys": [
+            "apiKeys": [
                 {
                     "name": k["name"],
                     "enabled": k["enabled"],
-                    "created_at": k["createdAt"],
-                    "rate_limit": k.get("rateLimit"),
-                    "masked_key": k["id"][:6] + "••••••••",
+                    "createdAt": k["createdAt"],
+                    "rateLimit": k.get("rateLimit"),
+                    "maskedKey": k["id"][:6] + "••••••••",
                 }
                 for k in keys
             ],
@@ -337,14 +337,14 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
         result["__secrets__"] = [{
             "domain": "exa.ai",
             "identifier": email,
-            "item_type": "api_key",
+            "itemType": "api_key",
             "label": f"Exa API Key ({key['name']})",
             "source": "exa",
             "value": {"key": key["id"]},
             "metadata": {
                 "masked": {"key": key["id"][:6] + "••••••••"},
-                "dashboard_url": f"{DASHBOARD_BASE}/api-keys",
-                "key_name": key["name"],
+                "dashboardUrl": f"{DASHBOARD_BASE}/api-keys",
+                "keyName": key["name"],
             },
         }]
 
@@ -371,12 +371,12 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
                     "id": t["id"],
                     "name": t["name"],
                     "role": t.get("role"),
-                    "rate_limit": t.get("customRateLimit"),
-                    "max_results": t.get("customNumResults"),
-                    "credits_cents": t.get("totalAppliedCreditsCents"),
-                    "usage_limit": t.get("usageLimit"),
-                    "monthly_usage": t.get("monthlyUsage"),
-                    "is_enterprise": t.get("isEnterprise"),
+                    "rateLimit": t.get("customRateLimit"),
+                    "maxResults": t.get("customNumResults"),
+                    "creditsCents": t.get("totalAppliedCreditsCents"),
+                    "usageLimit": t.get("usageLimit"),
+                    "monthlyUsage": t.get("monthlyUsage"),
+                    "isEnterprise": t.get("isEnterprise"),
                     "users": [
                         {"email": u["email"], "role": u["role"]}
                         for u in t.get("users", [])
@@ -416,21 +416,21 @@ def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> 
         "__secrets__": [{
             "domain": "exa.ai",
             "identifier": email or "unknown",
-            "item_type": "api_key",
+            "itemType": "api_key",
             "label": f"Exa API Key ({name})",
             "source": "exa",
             "value": {"key": api_key},
             "metadata": {
                 "masked": {"key": masked},
-                "dashboard_url": f"{DASHBOARD_BASE}/api-keys",
-                "key_name": name,
+                "dashboardUrl": f"{DASHBOARD_BASE}/api-keys",
+                "keyName": name,
             },
         }],
         "__result__": {
             "status": "created",
-            "key_name": name,
+            "keyName": name,
             "domain": "exa.ai",
-            "masked_key": masked,
+            "maskedKey": masked,
         },
     }
 
@@ -442,11 +442,11 @@ def _map_result(r: dict) -> dict:
     return {
         "id": r.get("url"),
         "name": r.get("title"),
-        "text": text,
+        "content": text,
         "url": r.get("url"),
         "image": r.get("image") or r.get("favicon"),
         "author": r.get("author"),
-        "datePublished": r.get("publishedDate"),
+        "published": r.get("publishedDate"),
     }
 
 

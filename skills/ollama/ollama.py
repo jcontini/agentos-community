@@ -223,15 +223,15 @@ def op_chat(
     return {
         "content": msg.get("content") or None,
         "thinking": msg.get("thinking") or None,
-        "tool_calls": _normalize_tool_calls(raw_tools),
-        "stop_reason": (
+        "toolCalls": _normalize_tool_calls(raw_tools),
+        "stopReason": (
             "tool_use" if done_reason == "tool_calls"
             else "max_tokens" if done_reason == "length"
             else "end_turn"
         ),
         "usage": {
-            "input_tokens": resp.get("prompt_eval_count", 0),
-            "output_tokens": resp.get("eval_count", 0),
+            "inputTokens": resp.get("prompt_eval_count", 0),
+            "outputTokens": resp.get("eval_count", 0),
         },
     }
 
@@ -260,9 +260,9 @@ def _chat_via_cli(
     return {
         "content": result["stdout"].strip(),
         "thinking": None,
-        "tool_calls": [],
-        "stop_reason": "end_turn",
-        "usage": {"input_tokens": 0, "output_tokens": 0},
+        "toolCalls": [],
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 0, "outputTokens": 0},
     }
 
 
@@ -296,8 +296,8 @@ def op_generate(
     return {
         "response": resp.get("response", ""),
         "usage": {
-            "input_tokens": resp.get("prompt_eval_count", 0),
-            "output_tokens": resp.get("eval_count", 0),
+            "inputTokens": resp.get("prompt_eval_count", 0),
+            "outputTokens": resp.get("eval_count", 0),
         },
     }
 
@@ -341,7 +341,7 @@ def _parse_list_text(text: str) -> list:
         models.append({
             "name": parts[0],
             "size": parts[2] if len(parts) > 2 else None,
-            "modified_at": " ".join(parts[3:]) if len(parts) > 3 else None,
+            "modifiedAt": " ".join(parts[3:]) if len(parts) > 3 else None,
         })
     return models
 
@@ -426,29 +426,29 @@ def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
         "name": model,
         "format": details.get("format"),
         "family": details.get("family"),
-        "parameter_size": details.get("parameter_size"),
-        "quantization_level": details.get("quantization_level"),
-        "context_length": context_length,
+        "parameterSize": details.get("parameter_size"),
+        "quantizationLevel": details.get("quantization_level"),
+        "contextLength": context_length,
         "template": resp.get("template"),
-        "system_prompt": resp.get("system"),
+        "systemPrompt": resp.get("system"),
     }
 
 
 # ── Shape-native list/ps ─────────────────────────────────────────────────────
 
 def list_models(connection: dict | None = None, **params) -> list[dict]:
-    """List downloaded models, shape-native (id=name, datePublished, size, details)."""
+    """List downloaded models, shape-native (id=name, published, size, details)."""
     raw = op_list_models(connection)
     return [
         {
             "id": m.get("name"),
-            "datePublished": m.get("modified_at"),
+            "published": m.get("modified_at"),
             "size": m.get("size"),
             "digest": m.get("digest"),
             "format": (m.get("details") or {}).get("format"),
             "family": (m.get("details") or {}).get("family"),
-            "parameter_size": (m.get("details") or {}).get("parameter_size"),
-            "quantization_level": (m.get("details") or {}).get("quantization_level"),
+            "parameterSize": (m.get("details") or {}).get("parameter_size"),
+            "quantizationLevel": (m.get("details") or {}).get("quantization_level"),
         }
         for m in (raw or [])
     ]
@@ -460,13 +460,13 @@ def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
     return [
         {
             "id": m.get("name"),
-            "datePublished": m.get("modified_at"),
+            "published": m.get("modified_at"),
             "size": m.get("size"),
             "digest": m.get("digest"),
             "format": (m.get("details") or {}).get("format"),
             "family": (m.get("details") or {}).get("family"),
-            "parameter_size": (m.get("details") or {}).get("parameter_size"),
-            "quantization_level": (m.get("details") or {}).get("quantization_level"),
+            "parameterSize": (m.get("details") or {}).get("parameter_size"),
+            "quantizationLevel": (m.get("details") or {}).get("quantization_level"),
         }
         for m in (raw or [])
     ]
@@ -482,8 +482,8 @@ def ps(connection: dict | None = None, **params) -> list[dict]:
             "id": m.get("name"),
             "size": m.get("size"),
             "digest": m.get("digest"),
-            "expires_at": m.get("expires_at"),
-            "size_vram": m.get("size_vram"),
+            "expiresAt": m.get("expires_at"),
+            "sizeVram": m.get("size_vram"),
         }
         for m in (resp.get("models") or [])
     ]

@@ -3,22 +3,13 @@
 #
 # Sources: Google Calendar, Apple Calendar, Granola
 meeting:
+  subtitle: location
   also: [event]
   fields:
-    calendar_link:       url
-    is_virtual:          boolean
-    meeting_url:         url       # Zoom/Meet/Teams link
-    conference_provider: string    # "Google Meet", "Zoom", "Microsoft Teams"
-    phone_dial_in:       string    # phone entry point URI (tel:+1-...)
+    calendarLink:       url
+    isVirtual:          boolean
+    meetingUrl:         url       # Zoom/Meet/Teams link
+    conferenceProvider: string    # "Google Meet", "Zoom", "Microsoft Teams"
+    phoneDialIn:       string    # phone entry point URI (tel:+1-...)
   relations:
     transcribe:        transcript # meeting recording transcript
-  display:
-    title: name
-    subtitle: location
-    description: text
-    date: start_date
-    columns:
-      - name:            Meeting
-      - location:        Location
-      - start_date:      Start
-      - end_date:        End

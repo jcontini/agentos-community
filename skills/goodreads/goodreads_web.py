@@ -128,7 +128,7 @@ def check_session(**params) -> dict[str, Any]:
 
     resp = http.get(BASE, cookies=cookie_header, **_H)
     if resp["status"] != 200:
-        return {"authenticated": False, "status_code": resp["status"]}
+        return {"authenticated": False, "statusCode": resp["status"]}
 
     body = resp["body"]
 
@@ -393,7 +393,7 @@ def get_person(
                     "id": bid,
                     "name": btitle,
                     "url": f"{BASE}/book/show/{bid}",
-                    "date_added": date_added,
+                    "dateAdded": date_added,
                 }
                 if author_name:
                     entry["author"] = author_name
@@ -421,13 +421,13 @@ def get_person(
         "website": molt(website),
         "about": molt(about),
         "interests": molt(interests),
-        "joined_date": joined_date,
-        "last_active": last_active,
-        "ratings_count": ratings_count,
-        "avg_rating": avg_rating,
-        "reviews_count": reviews_count,
-        "friends_count": friends_count,
-        "favorite_genres": favorite_genres if favorite_genres else None,
+        "joinedDate": joined_date,
+        "lastActive": last_active,
+        "ratingsCount": ratings_count,
+        "avgRating": avg_rating,
+        "reviewsCount": reviews_count,
+        "friendsCount": friends_count,
+        "favoriteGenres": favorite_genres if favorite_genres else None,
         "accounts": [{
             "id": uid,
             "name": name,
@@ -538,8 +538,8 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
             "image": photo_url,
             "url": f"{BASE}/user/show/{uid}",
             "location": location,
-            "books_count": books_count,
-            "friends_count": friends_count,
+            "booksCount": books_count,
+            "friendsCount": friends_count,
         }
         if currently_reading:
             friend["currently_reading"] = currently_reading
@@ -736,8 +736,8 @@ def resolve_email(
             "image": photo_url,
             "url": f"{BASE}/user/show/{uid}",
             "location": location,
-            "books_count": parse_int(books_m.group(1)) if books_m else None,
-            "friends_count": parse_int(friends_m.group(1)) if friends_m else None,
+            "booksCount": parse_int(books_m.group(1)) if books_m else None,
+            "friendsCount": parse_int(friends_m.group(1)) if friends_m else None,
             "email": email,
         })
 
@@ -784,7 +784,7 @@ def list_shelves(
         shelves.append({
             "id": f"{user_id}:{shelf_id}",
             "name": name or shelf_id,
-            "book_count": book_count,
+            "bookCount": book_count,
             "url": _abs_url(href),
         })
 
@@ -919,15 +919,15 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
             entry: dict[str, Any] = {
                 "id": review_id,
                 "name": f"Review of {title}" if title else "Review",
-                "text": review_text,
+                "content": review_text,
                 "url": f"{BASE}/review/show/{review_id}" if review_id else None,
                 "author": author,
-                "datePublished": date_read or date_added,
+                "published": date_read or date_added,
                 "rating": rating,
-                "date_read": date_read,
-                "date_started": date_started,
-                "date_added": date_added,
-                "shelf_name": shelf,
+                "dateRead": date_read,
+                "dateStarted": date_started,
+                "dateAdded": date_added,
+                "shelfName": shelf,
             }
             if written_by:
                 entry["written_by"] = written_by
@@ -948,13 +948,13 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
                 "author": author,
                 "isbn": isbn,
                 "isbn13": isbn13,
-                "user_rating": rating,
-                "average_rating": avg_rating,
+                "userRating": rating,
+                "averageRating": avg_rating,
                 "pages": parse_int(num_pages),
-                "datePublished": date_pub,
-                "date_added": date_added,
-                "date_read": date_read,
-                "date_started": date_started,
+                "published": date_pub,
+                "dateAdded": date_added,
+                "dateRead": date_read,
+                "dateStarted": date_started,
                 "shelf": shelf,
             }
             if written_by:
@@ -1099,8 +1099,8 @@ def list_groups(
             "name": name,
             "image": image_url,
             "url": _abs_url(f"/group/show/{gid}"),
-            "member_count": members,
-            "last_active": last_active,
+            "memberCount": members,
+            "lastActive": last_active,
         })
 
     return groups
@@ -1288,7 +1288,7 @@ def list_quotes(
             quote: dict[str, Any] = {
                 "id": qid,
                 "name": text[:80],
-                "text": text,
+                "content": text,
                 "author": author_name,
             }
             if author_id or author_name:

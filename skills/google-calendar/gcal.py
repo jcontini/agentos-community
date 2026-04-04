@@ -73,8 +73,8 @@ def _map_location(location_str):
     has_numbers = bool(re.search(r'\d', name))
     return {
         "name": name,
-        "full_address": location_str if len(parts) > 1 else None,
-        "feature_type": "address" if has_numbers else "poi",
+        "fullAddress": location_str if len(parts) > 1 else None,
+        "featureType": "address" if has_numbers else "poi",
     }
 
 
@@ -96,15 +96,15 @@ def _map_attendee(att):
     return {
         "name": name,
         "handle": email,
-        "first_name": parts[0] if parts else None,
-        "last_name": parts[1] if len(parts) > 1 else None,
+        "firstName": parts[0] if parts else None,
+        "lastName": parts[1] if len(parts) > 1 else None,
         "rsvp": att.get("responseStatus"),
-        "is_self": att.get("self", False),
-        "is_optional": att.get("optional", False),
-        "is_organizer": att.get("organizer", False),
-        "is_resource": att.get("resource", False),
-        "rsvp_comment": att.get("comment"),
-        "additional_guests": att.get("additionalGuests", 0),
+        "isSelf": att.get("self", False),
+        "isOptional": att.get("optional", False),
+        "isOrganizer": att.get("organizer", False),
+        "isResource": att.get("resource", False),
+        "rsvpComment": att.get("comment"),
+        "additionalGuests": att.get("additionalGuests", 0),
     }
 
 
@@ -118,9 +118,9 @@ def _map_person_from_gcal(person):
     return {
         "name": name,
         "handle": email,
-        "first_name": parts[0] if parts else None,
-        "last_name": parts[1] if len(parts) > 1 else None,
-        "is_self": person.get("self", False),
+        "firstName": parts[0] if parts else None,
+        "lastName": parts[1] if len(parts) > 1 else None,
+        "isSelf": person.get("self", False),
     }
 
 
@@ -158,7 +158,7 @@ def _map_conference(event):
             "uri": ep.get("uri"),
             "label": ep.get("label"),
             "pin": ep.get("pin"),
-            "access_code": ep.get("accessCode"),
+            "accessCode": ep.get("accessCode"),
         }
         entry_points.append(entry)
         if ep.get("entryPointType") == "video":
@@ -183,7 +183,7 @@ def _map_attachments(event):
         if a.get("fileId"):
             attachments.append({
                 "filename": a.get("title"),
-                "mime_type": a.get("mimeType"),
+                "mimeType": a.get("mimeType"),
                 "url": a.get("fileUrl"),
             })
         else:
@@ -220,51 +220,51 @@ def _map_event(event):
     out = {
         "id": event.get("id"),
         "name": event.get("summary", "(No title)"),
-        "text": _clean_html(event.get("description", "")),
+        "content": _clean_html(event.get("description", "")),
         "url": event.get("htmlLink"),
-        "start_date": start.get("dateTime") or start.get("date"),
-        "end_date": end.get("dateTime") or end.get("date"),
+        "startDate": start.get("dateTime") or start.get("date"),
+        "endDate": end.get("dateTime") or end.get("date"),
         "timezone": start.get("timeZone"),
-        "all_day": "date" in start and "dateTime" not in start,
+        "allDay": "date" in start and "dateTime" not in start,
         "location": _map_location(event.get("location")),
-        "calendar_link": event.get("htmlLink"),
+        "calendarLink": event.get("htmlLink"),
         # Conference (R8)
-        "is_virtual": bool(event.get("conferenceData")),
-        "meeting_url": meeting_url,
-        "conference_provider": conference_provider,
-        "phone_dial_in": phone_dial_in,
-        "conference_entry_points": conference_entry_points or None,
+        "isVirtual": bool(event.get("conferenceData")),
+        "meetingUrl": meeting_url,
+        "conferenceProvider": conference_provider,
+        "phoneDialIn": phone_dial_in,
+        "conferenceEntryPoints": conference_entry_points or None,
         # Recurrence (R10)
         "recurrence": recurrence_rules,
-        "recurring_event_id": event.get("recurringEventId"),
-        "original_start_time": (event.get("originalStartTime") or {}).get("dateTime"),
+        "recurringEventId": event.get("recurringEventId"),
+        "originalStartTime": (event.get("originalStartTime") or {}).get("dateTime"),
         # Relations
         "organizer": _map_person_from_gcal(event.get("organizer")),
         "author": _map_person_from_gcal(event.get("creator")),
         "involves": [_map_attendee(a) for a in attendees if not a.get("resource")],
         # Status & type (R4-R5)
         "status": event.get("status"),
-        "event_type": etype,
+        "eventType": etype,
         "visibility": event.get("visibility"),
-        "show_as": _derive_show_as(event),
+        "showAs": _derive_show_as(event),
         # Timestamps (R6)
-        "datePublished": event.get("created"),
-        "date_updated": event.get("updated"),
+        "published": event.get("created"),
+        "dateUpdated": event.get("updated"),
         # Identity (R14)
-        "ical_uid": event.get("iCalUID"),
+        "icalUid": event.get("iCalUID"),
         "etag": event.get("etag"),
         # Source provenance (R9)
-        "source_url": source.get("url") if source else None,
-        "source_title": source.get("title") if source else None,
+        "sourceUrl": source.get("url") if source else None,
+        "sourceTitle": source.get("title") if source else None,
         # Reminders (R11)
         "reminders": reminders,
         # Attachments (R12)
         "attachments": attachments,
         "links": links,
         # Permissions (R18)
-        "guests_can_modify": event.get("guestsCanModify"),
-        "guests_can_invite": event.get("guestsCanInviteOthers"),
-        "guests_can_see_others": event.get("guestsCanSeeOtherGuests"),
+        "guestsCanModify": event.get("guestsCanModify"),
+        "guestsCanInvite": event.get("guestsCanInviteOthers"),
+        "guestsCanSeeOthers": event.get("guestsCanSeeOtherGuests"),
     }
 
     # Birthday → life event (R13)
@@ -346,8 +346,8 @@ def list_calendars(*, account=None, **params):
             "id": c.get("id"),
             "name": c.get("summary"),
             "color": c.get("backgroundColor"),
-            "is_readonly": c.get("accessRole") in ("freeBusyReader", "reader"),
-            "is_primary": c.get("primary", False),
+            "isReadonly": c.get("accessRole") in ("freeBusyReader", "reader"),
+            "isPrimary": c.get("primary", False),
             "timezone": c.get("timeZone"),
         }
         for c in items

@@ -2,17 +2,11 @@
 #
 # Examples: MacBook Pro, iPhone, Arduino, server rack
 hardware:
+  subtitle: author
   also: [product]     # hardware is also a product
   fields:
-    model_number:      string
-    serial_number:     string
+    modelNumber:      string
+    serialNumber:     string
     specs:             json      # technical specifications
   relations:
     manufacturer:      organization
-  display:
-    title: name
-    subtitle: author
-    image: image
-    columns:
-      - name:            Hardware
-      - model_number:    Model

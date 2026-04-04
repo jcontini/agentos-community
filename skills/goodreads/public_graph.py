@@ -115,8 +115,8 @@ def parse_review_id(review: dict[str, Any]) -> str | None:
 
 def _make_runtime(endpoint: str, api_key: str, source: str) -> dict[str, Any]:
     return {
-        "graphql_endpoint": endpoint,
-        "x_api_key": api_key,
+        "graphqlEndpoint": endpoint,
+        "xApiKey": api_key,
         "source": source,
         "headers": {
             "User-Agent": USER_AGENT,
@@ -213,8 +213,8 @@ def _wrap_result(result: Any, runtime: dict[str, Any], was_cached: bool) -> Any:
         return result
     return {
         "__cache__": {
-            "graphql_endpoint": runtime["graphql_endpoint"],
-            "x_api_key": runtime["x_api_key"],
+            "graphqlEndpoint": runtime["graphql_endpoint"],
+            "xApiKey": runtime["x_api_key"],
             "source": runtime.get("source", "discovered"),
         },
         "__result__": result,
@@ -290,14 +290,14 @@ def load_book_page(book_id: str) -> dict[str, Any]:
     return {
         "url": url,
         "html": html_text,
-        "next_data": next_data,
-        "page_props": page_props,
+        "nextData": next_data,
+        "pageProps": page_props,
         "apollo": apollo,
-        "root_query": root_query,
+        "rootQuery": root_query,
         "book": book,
         "work": work,
-        "work_details": work_details,
-        "work_stats": work_stats,
+        "workDetails": work_details,
+        "workStats": work_stats,
     }
 
 
@@ -319,10 +319,10 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
             continue
         contributors.append(
             {
-                "author_id": contributor.get("legacyId"),
+                "authorId": contributor.get("legacyId"),
                 "name": contributor.get("name"),
                 "url": contributor.get("webUrl"),
-                "image_url": contributor.get("profileImageUrl"),
+                "imageUrl": contributor.get("profileImageUrl"),
                 "role": edge.get("role"),
             }
         )
@@ -376,26 +376,26 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
     result = {
         "id": book.get("legacyId"),
         "name": book.get("title"),
-        "text": book.get('description({"stripped":true})') or book.get("description"),
+        "content": book.get('description({"stripped":true})') or book.get("description"),
         "url": book.get("webUrl") or (f"https://goodreads.com/book/show/{book.get('legacyId')}" if book.get("legacyId") else None),
         "image": book.get("imageUrl"),
         "author": author_name,
         "isbn": details.get("isbn"),
         "isbn13": details.get("isbn13"),
-        "datePublished": iso_from_ms(details.get("publicationTime") or work_details.get("publicationTime")),
-        "average_rating": work_stats.get("averageRating"),
-        "ratings_count": work_stats.get("ratingsCount"),
-        "review_count": work_stats.get("textReviewsCount"),
+        "published": iso_from_ms(details.get("publicationTime") or work_details.get("publicationTime")),
+        "averageRating": work_stats.get("averageRating"),
+        "ratingsCount": work_stats.get("ratingsCount"),
+        "reviewCount": work_stats.get("textReviewsCount"),
         "pages": details.get("numPages"),
         "genres": genres,
         "series": series[0] if series else None,
         "publisher": {"id": details.get("publisher"), "name": details.get("publisher")} if details.get("publisher") else None,
         "format": details.get("format"),
         "language": ((details.get("language") or {}).get("name")),
-        "work_url": work_details.get("webUrl"),
-        "original_title": work_details.get("originalTitle"),
-        "currently_reading_count": social_counts.get("CURRENTLY_READING"),
-        "to_read_count": social_counts.get("TO_READ"),
+        "workUrl": work_details.get("webUrl"),
+        "originalTitle": work_details.get("originalTitle"),
+        "currentlyReadingCount": social_counts.get("CURRENTLY_READING"),
+        "toReadCount": social_counts.get("TO_READ"),
     }
     if author_id or author_name:
         result["written_by"] = {
@@ -432,17 +432,17 @@ def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: d
         entry: dict[str, Any] = {
             "id": review_id,
             "name": f"Review of {book_title}" if book_title else "Review",
-            "text": review.get("text"),
+            "content": review.get("text"),
             "url": shelving.get("webUrl") or (f"https://goodreads.com/review/show/{review_id}" if review_id else None),
             "author": reviewer_name,
-            "datePublished": iso_from_ms(review.get("createdAt")),
+            "published": iso_from_ms(review.get("createdAt")),
             "engagement": {
                 "rating": review.get("rating"),
                 "likes": review.get("likeCount"),
             },
-            "comment_count": review.get("commentCount"),
+            "commentCount": review.get("commentCount"),
             "tags": tags,
-            "shelf_name": shelf.get("name"),
+            "shelfName": shelf.get("name"),
         }
         if reviewer_id or reviewer_name:
             entry["posted_by"] = {
@@ -450,8 +450,8 @@ def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: d
                 "name": reviewer_name,
                 "url": creator.get("webUrl") or (f"https://goodreads.com/user/show/{reviewer_id}" if reviewer_id else None),
                 "image": creator.get("imageUrlSquare"),
-                "followers_count": creator.get("followersCount"),
-                "reviews_count": creator.get("textReviewsCount"),
+                "followersCount": creator.get("followersCount"),
+                "reviewsCount": creator.get("textReviewsCount"),
             }
         if book_id or book_title:
             entry["references"] = {
@@ -764,7 +764,7 @@ def parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict
         shelves.append({
             "id": f"{user_id}:{html.unescape(shelf_name)}",
             "name": molt(label),
-            "book_count": parse_int(count),
+            "bookCount": parse_int(count),
             "url": absolute_url(href),
         })
         if len(shelves) >= limit:
@@ -823,10 +823,10 @@ def get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
         "url": f"https://goodreads.com/user/show/{uid}" if uid else None,
         "image": photo_url,
         "location": title_match.group(3) if title_match else None,
-        "books_count": parse_int(title_match.group(4) if title_match else None),
-        "ratings_count": ratings_count,
-        "avg_rating": float(avg_rating) if avg_rating else None,
-        "reviews_count": reviews_count,
+        "booksCount": parse_int(title_match.group(4) if title_match else None),
+        "ratingsCount": ratings_count,
+        "avgRating": float(avg_rating) if avg_rating else None,
+        "reviewsCount": reviews_count,
         "website": website,
     }
     favorite_books = parse_profile_favorite_books(html_text, limit)
@@ -891,16 +891,16 @@ def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
     result: dict[str, Any] = {
         "id": aid,
         "name": name,
-        "text": bio,
+        "content": bio,
         "url": f"https://goodreads.com/author/show/{aid}" if aid else None,
         "image": photo_url,
         "location": location,
-        "average_rating": float(average_rating) if average_rating else None,
-        "works_count": works_count,
+        "averageRating": float(average_rating) if average_rating else None,
+        "worksCount": works_count,
         "website": website,
         "twitter": twitter,
-        "member_since": member_since,
-        "followers_count": followers_count,
+        "memberSince": member_since,
+        "followersCount": followers_count,
     }
     books = parse_author_books(author_id, limit)
     if books:
@@ -987,13 +987,13 @@ def main() -> None:
         )
 
     mode = sys.argv[1]
-    if mode == "discover_runtime":
+    if mode == "discoverRuntime":
         page_url = sys.argv[2] if len(sys.argv) > 2 else None
         runtime, _was_cached = discover_runtime(page_url=page_url)
         emit_json(runtime)
         return
 
-    if mode == "search_books":
+    if mode == "searchBooks":
         if len(sys.argv) not in {3, 4}:
             raise SystemExit("Usage: public_graph.py search_books <query> [limit]")
         query = sys.argv[2]
@@ -1006,13 +1006,13 @@ def main() -> None:
             raise SystemExit(f"Usage: public_graph.py {mode} <book_id> [limit]")
         book_id = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) == 4 else 10
-        if mode == "get_public_book":
+        if mode == "getPublicBook":
             emit_json(get_public_book(book_id))
             return
-        if mode == "list_book_reviews":
+        if mode == "listBookReviews":
             emit_json(list_book_reviews(book_id, limit))
             return
-        if mode == "list_series_books":
+        if mode == "listSeriesBooks":
             emit_json(list_series_books(book_id, limit))
             return
         emit_json(list_similar_books(book_id, limit))
@@ -1023,10 +1023,10 @@ def main() -> None:
             raise SystemExit(f"Usage: public_graph.py {mode} <id> [limit]")
         entity_id = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) == 4 else 10
-        if mode == "get_public_profile":
+        if mode == "getPublicProfile":
             emit_json(get_public_profile(entity_id, limit))
             return
-        if mode == "get_public_author":
+        if mode == "getPublicAuthor":
             emit_json(get_public_author(entity_id, limit))
             return
         emit_json(parse_author_books(entity_id, limit))

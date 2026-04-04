@@ -15,12 +15,12 @@ def _map_task(t: dict) -> dict:
     return {
         "id": t.get("id"),
         "name": t.get("content"),
-        "text": t.get("description"),
+        "content": t.get("description"),
         "priority": 5 - priority_raw,
         "target": {"date": due.get("date")} if due.get("date") else None,
-        "datePublished": t.get("added_at"),
-        "project_id": t.get("project_id"),
-        "parent_id": t.get("parent_id"),
+        "published": t.get("added_at"),
+        "projectId": t.get("project_id"),
+        "parentId": t.get("parent_id"),
         "labels": t.get("labels", []),
         "url": t.get("url"),
     }
@@ -31,7 +31,7 @@ def _map_project(p: dict) -> dict:
         "id": p.get("id"),
         "name": p.get("name"),
         "color": p.get("color"),
-        "parent_id": p.get("parent_id"),
+        "parentId": p.get("parent_id"),
     }
 
 

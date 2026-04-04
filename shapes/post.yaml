@@ -4,29 +4,19 @@
 #
 # Sources: Reddit, Hacker News, YouTube, Moltbook
 post:
+  subtitle: author
   fields:
-    external_url:      url       # linked URL (for link posts)
-    post_type:         string    # story, comment, job, poll, etc.
+    externalUrl:      url       # linked URL (for link posts)
+    postType:         string    # story, comment, job, poll, etc.
     score:         integer    # upvotes/points
-    comment_count: integer
+    commentCount: integer
     likes:         integer
-    view_count:    integer
+    viewCount:    integer
     replies:       post[]     # nested comment tree (comments are posts)
   relations:
-    posted_by:         account   # who posted it
+    postedBy:         account   # who posted it
     publish:           community # subreddit, group, or channel it was posted to
-    replies_to:        post      # parent post (makes this a "comment")
+    repliesTo:        post      # parent post (makes this a "comment")
     contains:          video[]   # embedded videos
     media:             image[]   # embedded images
     attachment:        file[]    # attached files
-  display:
-    title: name
-    subtitle: author
-    description: text
-    date: datePublished
-    columns:
-      - name:            Title
-      - author:          Author
-      - score:         Score
-      - comment_count: Comments
-      - datePublished:   Date

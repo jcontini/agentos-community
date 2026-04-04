@@ -17,13 +17,13 @@ def _map_person(p: dict) -> dict:
         "id": p.get("uuid"),
         "name": props.get("name") or props.get("email") or (distinct_ids[0] if distinct_ids else None) or "Unknown",
         "email": props.get("email"),
-        "datePublished": p.get("created_at"),
-        "distinct_ids": distinct_ids,
-        "last_seen_at": p.get("last_seen_at"),
+        "published": p.get("created_at"),
+        "distinctIds": distinct_ids,
+        "lastSeenAt": p.get("last_seen_at"),
         "browser": props.get("$browser"),
         "os": props.get("$os"),
-        "initial_referrer": props.get("$initial_referrer"),
-        "initial_utm_source": props.get("$initial_utm_source"),
+        "initialReferrer": props.get("$initial_referrer"),
+        "initialUtmSource": props.get("$initial_utm_source"),
     }
 
 
@@ -32,11 +32,11 @@ def _map_event(e: dict) -> dict:
     return {
         "id": e.get("id"),
         "name": e.get("event"),
-        "datePublished": e.get("timestamp"),
-        "text": ", ".join(props.keys()),
-        "distinct_id": e.get("distinct_id"),
+        "published": e.get("timestamp"),
+        "content": ", ".join(props.keys()),
+        "distinctId": e.get("distinct_id"),
         "properties": props,
-        "current_url": props.get("$current_url"),
+        "currentUrl": props.get("$current_url"),
         "person": e.get("person"),
     }
 

@@ -2,19 +2,11 @@
 #
 # Sources: Reddit, Facebook
 community:
+  subtitle: text
   fields:
-    member_count:      integer
-    subscriber_count:  integer
+    memberCount:      integer
+    subscriberCount:  integer
     privacy:           string    # public, private, closed
-    allow_crypto:      boolean   # subreddit-specific: allows cryptocurrency discussion
+    allowCrypto:      boolean   # subreddit-specific: allows cryptocurrency discussion
   relations:
     platform:          product
-  display:
-    title: name
-    subtitle: text
-    image: image
-    columns:
-      - name:            Community
-      - member_count:    Members
-      - subscriber_count: Subscribers
-      - privacy:         Privacy

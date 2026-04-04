@@ -2,26 +2,17 @@
 #
 # Sources: git skill
 git_commit:
+  subtitle: author
   fields:
     sha:               string    # full 40-char SHA hash
-    short_hash:        string    # abbreviated SHA (7-char)
+    shortHash:        string    # abbreviated SHA (7-char)
     message:           text      # commit message
     additions:         integer   # lines added
     deletions:         integer   # lines deleted
-    files_changed:     integer
-    committed_at:      datetime
+    filesChanged:     integer
+    committedAt:      datetime
   relations:
     author:            account   # who authored the commit
     committer:         account   # who committed (may differ from author)
     repository:        repository
     parent:            git_commit   # parent commit(s)
-  display:
-    title: name
-    subtitle: author
-    description: message
-    date: committed_at
-    columns:
-      - name:            Commit
-      - author:          Author
-      - committed_at:    Date
-      - files_changed:   Files

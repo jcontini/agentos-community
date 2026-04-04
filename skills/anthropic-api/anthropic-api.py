@@ -13,9 +13,9 @@ def _map_model(m: dict) -> dict:
     return {
         "id": m.get("id"),
         "name": m.get("display_name"),
-        "datePublished": m.get("created_at"),
+        "published": m.get("created_at"),
         "provider": "anthropic",
-        "model_type": "llm",
+        "modelType": "llm",
     }
 
 
@@ -62,8 +62,8 @@ def chat(*, model: str, messages: list, tools: list = None,
     blocks = data.get("content", [])
     return {
         "content": next((b["text"] for b in blocks if b.get("type") == "text"), None),
-        "tool_calls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
+        "toolCalls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
                        for b in blocks if b.get("type") == "tool_use"],
-        "stop_reason": data.get("stop_reason"),
+        "stopReason": data.get("stop_reason"),
         "usage": data.get("usage"),
     }

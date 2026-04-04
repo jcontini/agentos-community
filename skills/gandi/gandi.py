@@ -19,8 +19,8 @@ def _map_domain(d: dict) -> dict:
         "url": f"https://{fqdn}" if fqdn else None,
         "status": d.get("status"),
         "registrar": "gandi",
-        "expires_at": dates.get("registry_ends_at"),
-        "auto_renew": d.get("autorenew"),
+        "expiresAt": dates.get("registry_ends_at"),
+        "autoRenew": d.get("autorenew"),
         "nameservers": nameserver.get("current"),
     }
 
@@ -34,10 +34,10 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
     return {
         "id": f"{domain}:{rr_name}:{r.get('rrset_type', '')}",
         "name": name,
-        "text": f"{r.get('rrset_type', '')} {', '.join(r.get('rrset_values') or [])}",
+        "content": f"{r.get('rrset_type', '')} {', '.join(r.get('rrset_values') or [])}",
         "domain": domain,
-        "record_name": rr_name,
-        "record_type": r.get("rrset_type"),
+        "recordName": rr_name,
+        "recordType": r.get("rrset_type"),
         "ttl": r.get("rrset_ttl"),
         "values": r.get("rrset_values"),
     }

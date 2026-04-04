@@ -30,8 +30,8 @@ def _map_webpage(row):
         "id": row["url"],
         "name": row.get("title") or row["url"],
         "url": row["url"],
-        "visit_count": row.get("visit_count"),
-        "last_visit_unix": row.get("last_visit_unix"),
+        "visitCount": row.get("visit_count"),
+        "lastVisitUnix": row.get("last_visit_unix"),
     }
 
 

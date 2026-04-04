@@ -3,17 +3,12 @@
 #
 # Sources: agentOS engine (session working directories), filesystem
 folder:
+  identity: path
+  subtitle: path
   fields:
     path:              string    # absolute filesystem path
-    workspace_type:    string    # git, node, python, rust, etc.
-    has_readme:        boolean
+    workspaceType:    string    # git, node, python, rust, etc.
+    hasReadme:        boolean
   relations:
     repository:        repository  # git repo at this path
     contains:          file[]
-  display:
-    title: name
-    subtitle: path
-    columns:
-      - name:            Folder
-      - path:            Path
-      - workspace_type:  Type

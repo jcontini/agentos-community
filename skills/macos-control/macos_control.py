@@ -35,12 +35,12 @@ let result = screens.enumerated().map { (index, screen) -> [String: Any] in
     let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
     let displayId = UInt32(number?.uint32Value ?? 0)
     return [
-        "display_id": String(displayId),
-        "display_index": index + 1,
-        "is_primary": displayId == mainId,
+        "displayId": String(displayId),
+        "displayIndex": index + 1,
+        "isPrimary": displayId == mainId,
         "scale": Double(screen.backingScaleFactor),
         "frame": rectDict(screen.frame),
-        "visible_frame": rectDict(screen.visibleFrame)
+        "visibleFrame": rectDict(screen.visibleFrame)
     ]
 }
 
@@ -56,16 +56,16 @@ import CoreGraphics
 let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
 let result = list.map { info -> [String: Any] in
     [
-        "window_id": info[kCGWindowNumber as String] ?? 0,
-        "owner_name": info[kCGWindowOwnerName as String] ?? "",
-        "owner_pid": info[kCGWindowOwnerPID as String] ?? 0,
+        "windowId": info[kCGWindowNumber as String] ?? 0,
+        "ownerName": info[kCGWindowOwnerName as String] ?? "",
+        "ownerPid": info[kCGWindowOwnerPID as String] ?? 0,
         "title": info[kCGWindowName as String] ?? "",
         "layer": info[kCGWindowLayer as String] ?? 0,
         "alpha": info[kCGWindowAlpha as String] ?? 0,
         "bounds": info[kCGWindowBounds as String] ?? [:],
-        "memory_bytes": info[kCGWindowMemoryUsage as String] ?? 0,
-        "sharing_state": info[kCGWindowSharingState as String] ?? 0,
-        "is_onscreen": info[kCGWindowIsOnscreen as String] ?? false
+        "memoryBytes": info[kCGWindowMemoryUsage as String] ?? 0,
+        "sharingState": info[kCGWindowSharingState as String] ?? 0,
+        "isOnscreen": info[kCGWindowIsOnscreen as String] ?? false
     ]
 }
 
@@ -161,8 +161,8 @@ def load_display_names():
                 "name": display.get("_name"),
                 "resolution": display.get("spdisplays_resolution"),
                 "pixels": display.get("_spdisplays_pixels"),
-                "is_primary": display.get("spdisplays_main") == "spdisplays_yes",
-                "refresh_rate": display.get("_spdisplays_resolution"),
+                "isPrimary": display.get("spdisplays_main") == "spdisplays_yes",
+                "refreshRate": display.get("_spdisplays_resolution"),
             }
     return names
 
@@ -182,17 +182,17 @@ def load_displays():
         visible_frame = normalize_frame(display["visible_frame"])
         is_primary = bool(display.get("is_primary") or extra.get("is_primary"))
         result = {
-            "display_id": display_id,
-            "display_index": int(display["display_index"]),
+            "displayId": display_id,
+            "displayIndex": int(display["display_index"]),
             "name": extra.get("name") or f"Display {display_id}",
-            "is_primary": is_primary,
+            "isPrimary": is_primary,
             "scale": float(display.get("scale", 1.0)),
             "frame": frame,
-            "visible_frame": visible_frame,
+            "visibleFrame": visible_frame,
             "width": frame["width"],
             "height": frame["height"],
-            "origin_x": frame["x"],
-            "origin_y": frame["y"],
+            "originX": frame["x"],
+            "originY": frame["y"],
             "resolution": extra.get("resolution"),
             "pixels": extra.get("pixels"),
         }
@@ -227,10 +227,10 @@ def list_apps(*, limit=None, **params):
                 "name": name,
                 "path": path,
                 "version": item.get("version"),
-                "obtained_from": item.get("obtained_from"),
-                "last_modified": item.get("lastModified"),
+                "obtainedFrom": item.get("obtained_from"),
+                "lastModified": item.get("lastModified"),
                 "arch": item.get("arch_kind"),
-                "signed_by": item.get("signed_by") or [],
+                "signedBy": item.get("signed_by") or [],
             }
         )
 
@@ -268,12 +268,12 @@ def list_processes(*, limit=None, **params):
                 "pid": int(pid),
                 "ppid": int(ppid),
                 "user": user,
-                "cpu_percent": float(cpu),
-                "memory_percent": float(mem),
-                "rss_kb": int(rss),
-                "rss_bytes": int(rss) * 1024,
+                "cpuPercent": float(cpu),
+                "memoryPercent": float(mem),
+                "rssKb": int(rss),
+                "rssBytes": int(rss) * 1024,
                 "state": state,
-                "started_at": started_at,
+                "startedAt": started_at,
                 "command": command,
                 "name": os.path.basename(command),
             }
@@ -322,28 +322,28 @@ def list_windows(*, limit=None, **params):
             display_id = display_for_frame(frame, displays)
             normalized.append(
                 {
-                    "window_id": matched.get("window_id") if matched else None,
-                    "app_name": app_name,
+                    "windowId": matched.get("window_id") if matched else None,
+                    "appName": app_name,
                     "pid": pid,
                     "title": window.get("title") or "",
                     "frame": frame,
-                    "display_id": display_id,
-                    "is_minimized": bool(window.get("minimized")),
-                    "is_fullscreen": bool(window.get("fullscreen")),
-                    "is_main": bool(window.get("is_main")),
-                    "is_focused": bool(window.get("is_focused")),
-                    "is_hidden": hidden,
-                    "is_frontmost_app": frontmost,
-                    "role_description": window.get("role_description"),
+                    "displayId": display_id,
+                    "isMinimized": bool(window.get("minimized")),
+                    "isFullscreen": bool(window.get("fullscreen")),
+                    "isMain": bool(window.get("is_main")),
+                    "isFocused": bool(window.get("is_focused")),
+                    "isHidden": hidden,
+                    "isFrontmostApp": frontmost,
+                    "roleDescription": window.get("role_description"),
                     "subrole": window.get("subrole"),
-                    "capture_eligible": bool(
+                    "captureEligible": bool(
                         matched
                         and matched.get("is_onscreen")
                         and matched.get("sharing_state", 0) != 0
                         and not hidden
                         and not window.get("minimized")
                     ),
-                    "cg_window_name": matched.get("title") if matched else None,
+                    "cgWindowName": matched.get("title") if matched else None,
                 }
             )
 
@@ -395,12 +395,12 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
         "filename": resolved_path.rsplit("/", 1)[-1],
         "path": resolved_path,
         "format": "PNG",
-        "mime_type": "image/png",
+        "mimeType": "image/png",
         "width": target.get("width"),
         "height": target.get("height"),
-        "display_id": target["display_id"],
-        "display_index": target["display_index"],
-        "datePublished": iso_now(),
+        "displayId": target["display_id"],
+        "displayIndex": target["display_index"],
+        "published": iso_now(),
     }
 
 
@@ -423,12 +423,12 @@ def screenshot_window(*, window_id, path=None, **params):
         "filename": resolved_path.rsplit("/", 1)[-1],
         "path": resolved_path,
         "format": "PNG",
-        "mime_type": "image/png",
+        "mimeType": "image/png",
         "width": frame.get("width"),
         "height": frame.get("height"),
-        "window_id": target_window_id,
-        "app_name": target.get("app_name"),
-        "datePublished": iso_now(),
+        "windowId": target_window_id,
+        "appName": target.get("app_name"),
+        "published": iso_now(),
     }
 
 
@@ -509,10 +509,10 @@ def match_cg_window(app_name, pid, title, frame, cg_windows):
         if score > best_score:
             best_score = score
             best = {
-                "window_id": int(candidate["window_id"]),
+                "windowId": int(candidate["window_id"]),
                 "title": candidate.get("title") or "",
-                "is_onscreen": bool(candidate.get("is_onscreen")),
-                "sharing_state": int(candidate.get("sharing_state", 0)),
+                "isOnscreen": bool(candidate.get("is_onscreen")),
+                "sharingState": int(candidate.get("sharing_state", 0)),
             }
 
     if best_score < 10:
@@ -577,7 +577,7 @@ def resolve_output_path(value, label):
 def clipboard_read(**_kwargs):
     """Read the current macOS clipboard contents."""
     result = shell.run("pbpaste", [])
-    return {"text": result["stdout"]}
+    return {"content": result["stdout"]}
 
 
 def clipboard_write(*, text, **_kwargs):
@@ -727,7 +727,7 @@ def read_file(*, path, **_kwargs):
         "path": resolved,
         "content": content,
         "encoding": encoding,
-        "mime_type": _mime_for_path(resolved),
+        "mimeType": _mime_for_path(resolved),
         "size": file_size,
     }
 
@@ -768,13 +768,13 @@ def _get_volumes():
                     "name": vol_name,
                     "tags": "volume",
                     "path": mount_point,
-                    "total_bytes": total_bytes,
-                    "free_bytes": free_bytes,
-                    "used_bytes": total_bytes - free_bytes,
+                    "totalBytes": total_bytes,
+                    "freeBytes": free_bytes,
+                    "usedBytes": total_bytes - free_bytes,
                     "filesystem": fs_type.lower() if fs_type else None,
-                    "volume_type": "internal" if not mount_point.startswith("/Volumes/") else "external",
+                    "volumeType": "internal" if not mount_point.startswith("/Volumes/") else "external",
                     "removable": mount_point.startswith("/Volumes/"),
-                    "read_only": False,
+                    "readOnly": False,
                 })
 
         # Filter out macOS system volumes that users never interact with
@@ -814,13 +814,13 @@ def _get_volumes_fallback():
             "name": "Macintosh HD",
             "tags": "volume",
             "path": "/",
-            "total_bytes": sv.f_blocks * sv.f_frsize,
-            "free_bytes": sv.f_bavail * sv.f_frsize,
-            "used_bytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
+            "totalBytes": sv.f_blocks * sv.f_frsize,
+            "freeBytes": sv.f_bavail * sv.f_frsize,
+            "usedBytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
             "filesystem": "apfs",
-            "volume_type": "internal",
+            "volumeType": "internal",
             "removable": False,
-            "read_only": False,
+            "readOnly": False,
         })
     except OSError:
         pass
@@ -838,13 +838,13 @@ def _get_volumes_fallback():
                     "name": name,
                     "tags": "volume",
                     "path": mount,
-                    "total_bytes": sv.f_blocks * sv.f_frsize,
-                    "free_bytes": sv.f_bavail * sv.f_frsize,
-                    "used_bytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
+                    "totalBytes": sv.f_blocks * sv.f_frsize,
+                    "freeBytes": sv.f_bavail * sv.f_frsize,
+                    "usedBytes": (sv.f_blocks - sv.f_bavail) * sv.f_frsize,
                     "filesystem": None,
-                    "volume_type": "external",
+                    "volumeType": "external",
                     "removable": True,
-                    "read_only": False,
+                    "readOnly": False,
                 })
             except OSError:
                 pass
@@ -934,10 +934,10 @@ def get_info(**_kwargs):
 
     return {
         "provider": "macos-control",
-        "provider_name": "This Computer",
+        "providerName": "This Computer",
         "home": home,
         "username": username,
-        "special_folders": special_folders,
+        "specialFolders": special_folders,
         "volumes": volumes,
         "favorites": favorites,
     }
@@ -986,9 +986,9 @@ def get_file_info(*, path, **_kwargs):
         "kind": "dir" if is_dir else ("symlink" if is_symlink else "file"),
         "tags": "folder" if is_dir else "file",
         "size": st.st_size,
-        "size_formatted": _format_size(st.st_size),
-        "size_on_disk": size_on_disk,
-        "size_on_disk_formatted": _format_size(size_on_disk),
+        "sizeFormatted": _format_size(st.st_size),
+        "sizeOnDisk": size_on_disk,
+        "sizeOnDiskFormatted": _format_size(size_on_disk),
         "created": _stat_to_iso(st.st_birthtime) if hasattr(st, "st_birthtime") else _stat_to_iso(st.st_ctime),
         "modified": _stat_to_iso(st.st_mtime),
         "accessed": _stat_to_iso(st.st_atime),
@@ -996,7 +996,7 @@ def get_file_info(*, path, **_kwargs):
         "owner": owner,
         "group": group,
         "hidden": os.path.basename(resolved).startswith("."),
-        "read_only": not os.access(resolved, os.W_OK),
+        "readOnly": not os.access(resolved, os.W_OK),
     }
 
     if is_dir:
@@ -1026,18 +1026,18 @@ def main():
     params = read_params()
     operation = sys.argv[1]
     handlers = {
-        "list_apps": list_apps,
-        "list_processes": list_processes,
-        "list_displays": list_displays,
-        "list_windows": list_windows,
-        "screenshot_display": screenshot_display,
-        "screenshot_window": screenshot_window,
-        "clipboard_read": clipboard_read,
-        "clipboard_write": clipboard_write,
-        "list_directory": list_directory,
-        "read_file": read_file,
-        "get_info": get_info,
-        "get_file_info": get_file_info,
+        "listApps": list_apps,
+        "listProcesses": list_processes,
+        "listDisplays": list_displays,
+        "listWindows": list_windows,
+        "screenshotDisplay": screenshot_display,
+        "screenshotWindow": screenshot_window,
+        "clipboardRead": clipboard_read,
+        "clipboardWrite": clipboard_write,
+        "listDirectory": list_directory,
+        "readFile": read_file,
+        "getInfo": get_info,
+        "getFileInfo": get_file_info,
     }
     if operation not in handlers:
         raise ValueError(f"unknown operation: {operation}")

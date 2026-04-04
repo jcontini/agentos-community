@@ -5,57 +5,47 @@
 # RFC headers (message_id, in_reply_to, references) enable threading.
 # Domain relations auto-extracted from sender/recipient addresses.
 email:
+  subtitle: author
   also: [message]     # an email is also a message
   fields:
-    draft_id:          string    # Gmail draft ID (present only for drafts)
+    draftId:          string    # Gmail draft ID (present only for drafts)
     subject:           string    # email subject line
-    message_id:        string    # RFC 2822 Message-ID header
-    in_reply_to:       string    # RFC 2822 In-Reply-To header
-    is_unread:         boolean
-    is_starred:        boolean
-    is_draft:          boolean
-    is_sent:           boolean   # true if sent by the user
-    is_trash:          boolean
-    is_spam:           boolean
-    has_attachments:   boolean
-    label_ids:         string[]  # Gmail label IDs
-    account_email:     string    # which account received this
-    size_estimate:     integer   # bytes
+    messageId:        string    # RFC 2822 Message-ID header
+    inReplyTo:       string    # RFC 2822 In-Reply-To header
+    isUnread:         boolean
+    isStarred:        boolean
+    isDraft:          boolean
+    isSent:           boolean   # true if sent by the user
+    isTrash:          boolean
+    isSpam:           boolean
+    hasAttachments:   boolean
+    labelIds:         string[]  # Gmail label IDs
+    accountEmail:     string    # which account received this
+    sizeEstimate:     integer   # bytes
     references:        string    # RFC 2822 References header chain
-    reply_to:          string    # Reply-To header
-    delivered_to:      string    # Delivered-To header
+    replyTo:          string    # Reply-To header
+    deliveredTo:      string    # Delivered-To header
     attachments:       json      # attachment metadata array (file-shaped objects)
-    to_raw:            string    # raw To header (unparsed)
-    cc_raw:            string    # raw Cc header (unparsed)
-    bcc_raw:           string    # raw Bcc header (unparsed)
+    toRaw:            string    # raw To header (unparsed)
+    ccRaw:            string    # raw Cc header (unparsed)
+    bccRaw:           string    # raw Bcc header (unparsed)
     unsubscribe:       string    # List-Unsubscribe URL or mailto (RFC 2369)
-    unsubscribe_one_click: boolean # true if RFC 8058 one-click POST works
-    manage_subscription: string  # subscription preferences URL (from body or headers)
-    list_id:           string    # List-Id header (RFC 2919) — mailing list identifier
-    is_automated:      boolean   # true if Auto-Submitted header present (not "no")
+    unsubscribeOneClick: boolean # true if RFC 8058 one-click POST works
+    manageSubscription: string  # subscription preferences URL (from body or headers)
+    listId:           string    # List-Id header (RFC 2919) — mailing list identifier
+    isAutomated:      boolean   # true if Auto-Submitted header present (not "no")
     precedence:        string    # Precedence header: bulk, list, junk
     mailer:            string    # X-Mailer or User-Agent — what sent the email
-    return_path:       string    # Return-Path — envelope sender for bounces
-    auth_results:      string    # Authentication-Results: spf/dkim/dmarc verdicts
-    feedback_id:       string    # Feedback-ID — Google campaign/sender tracking
-    body_html:         text      # HTML body (can be large)
+    returnPath:       string    # Return-Path — envelope sender for bounces
+    authResults:      string    # Authentication-Results: spf/dkim/dmarc verdicts
+    feedbackId:       string    # Feedback-ID — Google campaign/sender tracking
+    bodyHtml:         text      # HTML body (can be large)
   relations:
     from:              account   # sender
     to:                account[] # recipients
     cc:                account[] # cc recipients
     bcc:               account[] # bcc recipients
     domain:            domain    # sender's email domain
-    to_domain:         domain[]  # recipient domains
-    cc_domain:         domain[]  # cc domains
+    toDomain:         domain[]  # recipient domains
+    ccDomain:         domain[]  # cc domains
     tag:               tag[]     # labels (Gmail), categories, flags
-  display:
-    title: subject
-    subtitle: author
-    description: text
-    date: datePublished
-    columns:
-      - subject:         Subject
-      - author:          From
-      - datePublished:   Date
-      - is_unread:       Unread
-      - is_starred:      Starred

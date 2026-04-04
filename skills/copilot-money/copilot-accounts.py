@@ -84,7 +84,7 @@ def load_accounts():
                 "mask": data.get("mask"),
                 "balance": data.get("balance"),
                 "limit": data.get("limit") or None,
-                "institution_id": data.get("institutionId"),
+                "institutionId": data.get("institutionId"),
                 "color": data.get("color"),
                 "tags": tags,
             })

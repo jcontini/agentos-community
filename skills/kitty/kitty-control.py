@@ -162,15 +162,15 @@ def normalize_os_window(os_window: dict) -> dict:
     active_tab = next((tab for tab in tabs if tab.get("is_active")), None)
     title_tab = focused_tab or active_tab or (tabs[0] if tabs else None)
     return {
-        "os_window_id": os_window.get("id"),
-        "platform_window_id": os_window.get("platform_window_id"),
+        "osWindowId": os_window.get("id"),
+        "platformWindowId": os_window.get("platform_window_id"),
         "title": title_tab.get("title") if title_tab else None,
-        "is_active": bool(os_window.get("is_active")),
-        "is_focused": bool(os_window.get("is_focused")),
-        "tab_count": len(tabs),
+        "isActive": bool(os_window.get("is_active")),
+        "isFocused": bool(os_window.get("is_focused")),
+        "tabCount": len(tabs),
         "tabs": [tab.get("id") for tab in tabs],
-        "active_tab_id": active_tab.get("id") if active_tab else None,
-        "focused_tab_id": focused_tab.get("id") if focused_tab else None,
+        "activeTabId": active_tab.get("id") if active_tab else None,
+        "focusedTabId": focused_tab.get("id") if focused_tab else None,
     }
 
 
@@ -178,15 +178,15 @@ def normalize_tab(os_window: dict, tab: dict) -> dict:
     windows = tab.get("windows", [])
     active = active_window(tab)
     return {
-        "tab_id": tab.get("id"),
-        "os_window_id": os_window.get("id"),
+        "tabId": tab.get("id"),
+        "osWindowId": os_window.get("id"),
         "title": tab.get("title"),
         "layout": tab.get("layout"),
-        "is_active": bool(tab.get("is_active")),
-        "is_focused": bool(tab.get("is_focused")),
-        "window_count": len(windows),
-        "window_ids": [window.get("id") for window in windows],
-        "active_window_id": active.get("id") if active else None,
+        "isActive": bool(tab.get("is_active")),
+        "isFocused": bool(tab.get("is_focused")),
+        "windowCount": len(windows),
+        "windowIds": [window.get("id") for window in windows],
+        "activeWindowId": active.get("id") if active else None,
     }
 
 
@@ -196,18 +196,18 @@ def normalize_window(os_window: dict, tab: dict, window: dict) -> dict:
     cmdline = process.get("cmdline") or window.get("cmdline") or []
     cwd = process.get("cwd") or window.get("cwd")
     return {
-        "window_id": window.get("id"),
-        "tab_id": tab.get("id"),
-        "os_window_id": os_window.get("id"),
+        "windowId": window.get("id"),
+        "tabId": tab.get("id"),
+        "osWindowId": os_window.get("id"),
         "title": window.get("title"),
         "cwd": cwd,
         "pid": window.get("pid"),
-        "is_active": bool(window.get("is_active")),
-        "is_focused": bool(window.get("is_focused")),
-        "at_prompt": bool(window.get("at_prompt")),
+        "isActive": bool(window.get("is_active")),
+        "isFocused": bool(window.get("is_focused")),
+        "atPrompt": bool(window.get("at_prompt")),
         "lines": window.get("lines"),
         "columns": window.get("columns"),
-        "last_cmd_exit_status": window.get("last_cmd_exit_status"),
+        "lastCmdExitStatus": window.get("last_cmd_exit_status"),
         "command": " ".join(cmdline) if isinstance(cmdline, list) else str(cmdline),
         "cmdline": cmdline,
     }
@@ -288,9 +288,9 @@ def command_launch_tab(*, socket=None, title=None, cwd=None, command=None, keep_
 
     return {
         "socket": socket,
-        "os_window_id": os_window.get("id"),
-        "tab_id": tab.get("id"),
-        "window_id": window_id,
+        "osWindowId": os_window.get("id"),
+        "tabId": tab.get("id"),
+        "windowId": window_id,
         "title": tab.get("title"),
     }
 
@@ -300,14 +300,14 @@ def command_focus_tab(*, socket=None, tab_id=None, **params) -> dict:
     if not socket:
         fail("Kitty is not running")
 
-    tab_id = require_int({"tab_id": tab_id}, "tab_id")
+    tab_id = require_int({"tabId": tab_id}, "tab_id")
     ls_data = kitty_ls(socket)
     tab = find_tab(ls_data, tab_id)
     if not tab:
         fail(f"No Kitty tab found with id {tab_id}")
 
     kitty_command(socket, "focus-tab", "--match", f"id:{tab_id}")
-    return {"ok": True, "socket": socket, "tab_id": tab_id}
+    return {"ok": True, "socket": socket, "tabId": tab_id}
 
 
 def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict:
@@ -315,7 +315,7 @@ def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict
     if not socket:
         fail("Kitty is not running")
 
-    os_window_id = require_int({"os_window_id": os_window_id}, "os_window_id")
+    os_window_id = require_int({"osWindowId": os_window_id}, "os_window_id")
     ls_data = kitty_ls(socket)
     os_window = find_os_window(ls_data, os_window_id)
     if not os_window:
@@ -335,9 +335,9 @@ def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict
     return {
         "ok": True,
         "socket": socket,
-        "os_window_id": os_window_id,
-        "window_id": window_id,
-        "tab_id": target_tab.get("id"),
+        "osWindowId": os_window_id,
+        "windowId": window_id,
+        "tabId": target_tab.get("id"),
     }
 
 
@@ -359,12 +359,12 @@ def command_send_text(*, socket=None, text=None, window_id=None, tab_id=None, pr
 
     ls_data = kitty_ls(socket)
     if window_id is not None:
-        window_id = require_int({"window_id": window_id}, "window_id")
+        window_id = require_int({"windowId": window_id}, "window_id")
         if not find_window(ls_data, window_id):
             fail(f"No Kitty window found with id {window_id}")
         args.extend(["--match", f"id:{window_id}"])
     elif tab_id is not None:
-        tab_id = require_int({"tab_id": tab_id}, "tab_id")
+        tab_id = require_int({"tabId": tab_id}, "tab_id")
         if not find_tab(ls_data, tab_id):
             fail(f"No Kitty tab found with id {tab_id}")
         args.extend(["--match-tab", f"id:{tab_id}"])
@@ -374,8 +374,8 @@ def command_send_text(*, socket=None, text=None, window_id=None, tab_id=None, pr
     return {
         "ok": True,
         "socket": socket,
-        "tab_id": tab_id,
-        "window_id": window_id,
+        "tabId": tab_id,
+        "windowId": window_id,
     }
 
 
@@ -391,7 +391,7 @@ def command_get_text(*, socket=None, window_id=None, extent="screen", ansi=False
         args.append("--ansi")
 
     if window_id is not None:
-        window_id = require_int({"window_id": window_id}, "window_id")
+        window_id = require_int({"windowId": window_id}, "window_id")
         if not find_window(kitty_ls(socket), window_id):
             fail(f"No Kitty window found with id {window_id}")
         args.extend(["--match", f"id:{window_id}"])
@@ -399,9 +399,9 @@ def command_get_text(*, socket=None, window_id=None, extent="screen", ansi=False
     text = kitty_command(socket, *args)
     return {
         "socket": socket,
-        "window_id": window_id,
+        "windowId": window_id,
         "extent": extent,
-        "text": text,
+        "content": text,
     }
 
 
@@ -410,24 +410,24 @@ def command_close_tab(*, socket=None, tab_id=None, **params) -> dict:
     if not socket:
         fail("Kitty is not running")
 
-    tab_id = require_int({"tab_id": tab_id}, "tab_id")
+    tab_id = require_int({"tabId": tab_id}, "tab_id")
     if not find_tab(kitty_ls(socket), tab_id):
         fail(f"No Kitty tab found with id {tab_id}")
 
     kitty_command(socket, "close-tab", "--match", f"id:{tab_id}", "--ignore-no-match")
-    return {"ok": True, "socket": socket, "tab_id": tab_id}
+    return {"ok": True, "socket": socket, "tabId": tab_id}
 
 
 COMMANDS = {
-    "list_os_windows": command_list_os_windows,
-    "list_tabs": command_list_tabs,
-    "list_panes": command_list_panes,
-    "launch_tab": command_launch_tab,
-    "focus_tab": command_focus_tab,
-    "focus_os_window": command_focus_os_window,
-    "send_text": command_send_text,
-    "get_text": command_get_text,
-    "close_tab": command_close_tab,
+    "listOsWindows": command_list_os_windows,
+    "listTabs": command_list_tabs,
+    "listPanes": command_list_panes,
+    "launchTab": command_launch_tab,
+    "focusTab": command_focus_tab,
+    "focusOsWindow": command_focus_os_window,
+    "sendText": command_send_text,
+    "getText": command_get_text,
+    "closeTab": command_close_tab,
 }
 
 

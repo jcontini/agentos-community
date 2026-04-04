@@ -82,9 +82,9 @@ def _build_conversation(uuid, workspace, messages, path=None):
     return {
         "id": uuid,
         "name": _derive_name(first_user),
-        "last_message": (" ".join((last_user or "").split()))[:200],
-        "last_message_at": last_message_at,
-        "message_count": user_count,
+        "lastMessage": (" ".join((last_user or "").split()))[:200],
+        "lastMessageAt": last_message_at,
+        "messageCount": user_count,
         "workspace": workspace,
         "transcript": transcript,
     }
@@ -384,14 +384,14 @@ def _parse_task_blob(blob_value):
         clean_result = clean_result[len("This is the last output of the subagent:"):].lstrip()
 
     return {
-        "result_text": clean_result,
-        "final_text": final_text,
-        "agent_id": po.get("agentId"),
-        "tool_call_id": item.get("toolCallId", ""),
-        "duration_ms": po.get("durationMs"),
+        "resultText": clean_result,
+        "finalText": final_text,
+        "agentId": po.get("agentId"),
+        "toolCallId": item.get("toolCallId", ""),
+        "durationMs": po.get("durationMs"),
         "steps": len(steps),
         "searches": searches,
-        "urls_fetched": urls_fetched,
+        "urlsFetched": urls_fetched,
     }
 
 
@@ -434,7 +434,7 @@ def _build_conversation_index():
                 convos[cid] = {
                     "name": c.get("name", ""),
                     "workspace": folder,
-                    "created_at": c.get("createdAt", 0),
+                    "createdAt": c.get("createdAt", 0),
                 }
         except (json.JSONDecodeError, Exception):
             pass
@@ -689,12 +689,12 @@ def op_pull_document():
                 "source": "cursor-subagent",
                 "date": date,
                 "searches": parsed["searches"],
-                "urls_fetched": parsed["urls_fetched"],
-                "conversation_steps": parsed["steps"],
-                "duration_ms": parsed["duration_ms"],
-                "agent_id": parsed["agent_id"],
+                "urlsFetched": parsed["urls_fetched"],
+                "conversationSteps": parsed["steps"],
+                "durationMs": parsed["duration_ms"],
+                "agentId": parsed["agent_id"],
                 "workspace": workspace,
-                "blob_key": blob_key,
+                "blobKey": blob_key,
             }
         )
 

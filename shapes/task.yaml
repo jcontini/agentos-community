@@ -3,28 +3,19 @@
 #
 # Sources: Linear, Todoist, GitHub
 task:
+  subtitle: state
   fields:
-    remote_id:         string    # source-specific ID (e.g. PROJ-123, #456)
+    remoteId:         string    # source-specific ID (e.g. PROJ-123, #456)
     priority:          integer   # 1 = highest (normalized across sources)
     state:             string
     labels:            string[]
-    started_at:        datetime
-    target_date:       datetime  # due date
+    startedAt:        datetime
+    targetDate:       datetime  # due date
   relations:
-    assigned_to:       person
+    assignedTo:       person
     project:           project
     repository:        repository
     parent:            task
     children:          task[]
-    blocked_by:        task[]
+    blockedBy:        task[]
     blocks:            task[]
-  display:
-    title: name
-    subtitle: state
-    description: text
-    date: datePublished
-    columns:
-      - name:            Task
-      - state:           State
-      - priority:        Priority
-      - datePublished:   Created

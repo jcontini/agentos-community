@@ -3,22 +3,14 @@
 #
 # Sources: here.now
 website:
+  subtitle: url
   fields:
     status:            string    # active, pending
-    version_id:        string    # current deployment version
-    expires_at:        datetime  # when an anonymous site auto-expires
+    versionId:        string    # current deployment version
+    expiresAt:        datetime  # when an anonymous site auto-expires
     anonymous:         boolean   # true if published without an account
-    claim_token:       string    # token to claim an anonymous site
-    claim_url:         url
+    claimToken:       string    # token to claim an anonymous site
+    claimUrl:         url
   relations:
     domain:            domain
-    owned_by:          organization
-  display:
-    title: name
-    subtitle: url
-    date: datePublished
-    columns:
-      - name:            Site
-      - url:             URL
-      - status:          Status
-      - datePublished:   Updated
+    ownedBy:          organization

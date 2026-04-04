@@ -15,10 +15,11 @@
 #
 # Sources: future (GTFS, flight timetables, Uber Eats store hours)
 route:
+  subtitle: routeNumber
   also: [schedule]      # a route is also a schedule
   fields:
-    route_type:        string    # bus, train, flight, ferry, delivery, ride
-    route_number:      string    # "29", "UA 1234", "Acela Express"
+    routeType:        string    # bus, train, flight, ferry, delivery, ride
+    routeNumber:      string    # "29", "UA 1234", "Acela Express"
     direction:         string    # inbound, outbound, northbound, etc.
     color:             string    # route color for display (hex, from GTFS)
   relations:
@@ -26,11 +27,3 @@ route:
     origin:            place     # first stop / departure point
     destination:       place     # last stop / arrival point
     operator:          organization  # transit agency, airline (overrides schedule.operator)
-  display:
-    title: name
-    subtitle: route_number
-    columns:
-      - name:            Route
-      - route_type:      Type
-      - route_number:    Number
-      - direction:       Direction

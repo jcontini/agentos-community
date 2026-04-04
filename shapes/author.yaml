@@ -3,24 +3,15 @@
 #
 # Sources: Goodreads
 author:
+  subtitle: location
   fields:
     location:          string
-    average_rating:    number    # Goodreads average across all works
-    works_count:       integer
-    birth_date:        string
+    averageRating:    number    # Goodreads average across all works
+    worksCount:       integer
+    birthDate:        string
     website:           url
     twitter:           string    # Twitter/X handle
-    member_since:      datetime  # Goodreads join date
-    followers_count:   integer
+    memberSince:      datetime  # Goodreads join date
+    followersCount:   integer
   relations:
     books:             book[]
-  display:
-    title: name
-    subtitle: location
-    image: image
-    description: text
-    columns:
-      - name:            Author
-      - works_count:     Works
-      - average_rating:  Rating
-      - followers_count: Followers

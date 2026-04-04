@@ -462,13 +462,13 @@ def _booking_to_entity(b: dict) -> dict:
     return {
         "id": b["id"],
         "name": b["name"],
-        "text": " — ".join(desc_parts),
+        "content": " — ".join(desc_parts),
         "startDT": b["startDT"],
         "endDT": b["endDT"],
-        "activity_type": activity_name,
+        "activityType": activity_name,
         "capacity": capacity,
-        "spots_remaining": spots,
-        "is_full": full,
+        "spotsRemaining": spots,
+        "isFull": full,
     }
 
 

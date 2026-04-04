@@ -44,10 +44,10 @@ def _parse_commit_block(block):
     return {
         "id": sha,
         "sha": sha,
-        "short_hash": lines[1],
+        "shortHash": lines[1],
         "name": lines[7],
         "content": lines[7],
-        "datePublished": lines[6],
+        "published": lines[6],
         "author": author_name,
         "committer": {
             "account": {
@@ -166,8 +166,8 @@ def list_branches(path):
             "id": name,
             "name": name,
             "upstream": upstream,
-            "is_remote": name.startswith("origin/"),
-            "is_current": head.strip() == "*",
+            "isRemote": name.startswith("origin/"),
+            "isCurrent": head.strip() == "*",
         })
     return branches
 
@@ -192,8 +192,8 @@ def get_branch(path, name):
             "id": branch_name,
             "name": branch_name,
             "upstream": upstream,
-            "is_remote": branch_name.startswith("origin/"),
-            "is_current": head.strip() == "*",
+            "isRemote": branch_name.startswith("origin/"),
+            "isCurrent": head.strip() == "*",
         }
     raise RuntimeError(f"Branch not found: {name}")
 
@@ -223,7 +223,7 @@ def get_repository(path):
         "id": full_name or repo_name,
         "name": repo_name,
         "url": remote,
-        "default_branch": branch,
+        "defaultBranch": branch,
     }
 
 
@@ -244,8 +244,8 @@ def list_tags(path):
             "id": tag_name,
             "name": tag_name,
             "hash": parts[1] if len(parts) > 1 else "",
-            "datePublished": parts[2] if len(parts) > 2 else "",
-            "text": parts[3] if len(parts) > 3 else "",
+            "published": parts[2] if len(parts) > 2 else "",
+            "content": parts[3] if len(parts) > 3 else "",
             "annotated": (parts[4] == "tag") if len(parts) > 4 else False,
         })
     return tags
@@ -267,8 +267,8 @@ def get_tag(path, name):
         "id": tag_name,
         "name": tag_name,
         "hash": parts[1] if len(parts) > 1 else "",
-        "datePublished": parts[2] if len(parts) > 2 else "",
-        "text": parts[3] if len(parts) > 3 else "",
+        "published": parts[2] if len(parts) > 2 else "",
+        "content": parts[3] if len(parts) > 3 else "",
         "annotated": (parts[4] == "tag") if len(parts) > 4 else False,
     }
 

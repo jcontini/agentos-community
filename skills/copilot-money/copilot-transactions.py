@@ -88,7 +88,7 @@ def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
         tags = []
         if r.get("recurring") == 1 or r.get("recurring") is True:
             tags.append({"name": "recurring"})
-        if r.get("type") == "internal_transfer":
+        if r.get("type") == "internalTransfer":
             tags.append({"name": "internal-transfer"})
         if cat:
             tags.append({

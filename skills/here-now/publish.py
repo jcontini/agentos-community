@@ -34,12 +34,12 @@ def _map_website(w: dict) -> dict:
         "name": viewer.get("title") or w.get("slug"),
         "url": w.get("siteUrl"),
         "status": "active" if w.get("status") == "active" else "pending",
-        "datePublished": w.get("updatedAt"),
-        "version_id": w.get("currentVersionId"),
-        "expires_at": w.get("expiresAt"),
+        "published": w.get("updatedAt"),
+        "versionId": w.get("currentVersionId"),
+        "expiresAt": w.get("expiresAt"),
         "anonymous": w.get("anonymous", False),
-        "claim_token": w.get("claimToken"),
-        "claim_url": w.get("claimUrl"),
+        "claimToken": w.get("claimToken"),
+        "claimUrl": w.get("claimUrl"),
     }
 
 

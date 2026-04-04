@@ -11,26 +11,27 @@
 #
 # Sources: Uber (rides), Uber Eats (delivery), SerpAPI (flights)
 trip:
+  subtitle: tripType
   fields:
-    trip_type:         string    # ride, flight, delivery, train, bus
+    tripType:         string    # ride, flight, delivery, train, bus
     status:            string    # requested, accepted, in_progress, completed, cancelled
-    departure_time:    datetime
-    arrival_time:      datetime
+    departureTime:    datetime
+    arrivalTime:      datetime
     duration:          string    # formatted ("19 minutes", "5h 23m")
-    duration_minutes:  integer
+    durationMinutes:  integer
     distance:          string    # formatted with unit ("4.04 miles", "1,420 km")
-    vehicle_type:      string    # UberX, Boeing 737, Acela, etc.
-    cabin_class:       string    # economy, business, first (flights/trains)
+    vehicleType:      string    # UberX, Boeing 737, Acela, etc.
+    cabinClass:       string    # economy, business, first (flights/trains)
     fare:              string    # formatted fare ("$24.50", "ZAR 303.00")
-    fare_amount:       number    # numeric for math
+    fareAmount:       number    # numeric for math
     currency:          string    # ISO 4217
     rating:            string    # user's rating of the trip
-    tracking_url:      url       # live tracking link
-    is_surge:          boolean   # surge/dynamic pricing (rides)
-    is_scheduled:      boolean   # pre-scheduled trip
+    trackingUrl:      url       # live tracking link
+    isSurge:          boolean   # surge/dynamic pricing (rides)
+    isScheduled:      boolean   # pre-scheduled trip
     stops:             integer   # number of intermediate stops
-    booking_token:     string    # opaque token for booking (flights)
-    carbon_emissions:  json      # CO2 estimate
+    bookingToken:     string    # opaque token for booking (flights)
+    carbonEmissions:  json      # CO2 estimate
   relations:
     origin:            place     # pickup / departure airport / departure station
     destination:       place     # dropoff / arrival airport / arrival station
@@ -38,15 +39,3 @@ trip:
     carrier:           organization  # primary airline, transit agency
     driver:            person    # driver/courier (rides/delivery)
     order:             order     # the order this trip fulfills (delivery, ride booking)
-  display:
-    title: name
-    subtitle: trip_type
-    date: departure_time
-    image: image
-    columns:
-      - name:            Trip
-      - trip_type:       Type
-      - status:          Status
-      - departure_time:  Departs
-      - arrival_time:    Arrives
-      - fare:            Fare

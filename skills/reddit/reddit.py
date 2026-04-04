@@ -25,13 +25,13 @@ def _map_post(d: dict) -> dict:
     return {
         "id": d.get("id"),
         "name": d.get("title"),
-        "text": d.get("selftext") or d.get("body"),
+        "content": d.get("selftext") or d.get("body"),
         "url": f"https://reddit.com{d['permalink']}" if d.get("permalink") else None,
         "author": author,
-        "datePublished": _ts(d.get("created_utc")),
+        "published": _ts(d.get("created_utc")),
         "score": d.get("score"),
-        "comment_count": d.get("num_comments"),
-        "posted_by": {
+        "commentCount": d.get("num_comments"),
+        "postedBy": {
             "id": author,
             "name": author,
             "url": f"https://reddit.com/u/{author}",
@@ -50,10 +50,10 @@ def _map_community(d: dict) -> dict:
     return {
         "id": d.get("name"),
         "name": display,
-        "text": d.get("public_description"),
+        "content": d.get("public_description"),
         "url": f"https://reddit.com/r/{display}" if display else None,
         "image": d.get("community_icon") or d.get("icon_img"),
-        "subscriber_count": d.get("subscribers"),
+        "subscriberCount": d.get("subscribers"),
         "privacy": "OPEN",
     }
 
@@ -104,11 +104,11 @@ def get_post(id: str = None, url: str = None, comment_limit: int = None) -> dict
             ]
         return {
             "id": d.get("id"),
-            "text": d.get("body"),
+            "content": d.get("body"),
             "author": author,
-            "datePublished": _ts(d.get("created_utc")),
+            "published": _ts(d.get("created_utc")),
             "score": d.get("ups"),
-            "posted_by": {
+            "postedBy": {
                 "id": author,
                 "name": author,
                 "url": f"https://reddit.com/u/{author}",
@@ -140,17 +140,17 @@ def comments_post(id: str, comment_limit: int = None) -> list[dict]:
         author = d.get("author", "")
         comment = {
             "id": d.get("id"),
-            "text": d.get("body"),
+            "content": d.get("body"),
             "url": f"https://reddit.com{d['permalink']}" if d.get("permalink") else None,
             "author": author,
-            "datePublished": _ts(d.get("created_utc")),
+            "published": _ts(d.get("created_utc")),
             "score": d.get("ups"),
-            "posted_by": {
+            "postedBy": {
                 "id": author,
                 "name": author,
                 "url": f"https://reddit.com/u/{author}",
             } if author else None,
-            "replies_to": {"id": parent_id},
+            "repliesTo": {"id": parent_id},
         }
         result.append(comment)
         replies_raw = d.get("replies")

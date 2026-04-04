@@ -27,8 +27,8 @@ SITE = "https://www.youtube.com"
 
 _BASE_OPTS = {
     "quiet": True,
-    "no_warnings": True,
-    "socket_timeout": 30,
+    "noWarnings": True,
+    "socketTimeout": 30,
 }
 
 
@@ -54,11 +54,11 @@ def _map_flat_entry(e: dict) -> dict:
     result = {
         "id": vid_id,
         "name": e.get("title"),
-        "text": e.get("description"),
+        "content": e.get("description"),
         "url": f"{SITE}/watch?v={vid_id}" if vid_id else e.get("webpage_url"),
         "image": thumbnail,
-        "duration_ms": int(e["duration"] * 1000) if e.get("duration") else None,
-        "view_count": e.get("view_count"),
+        "durationMs": int(e["duration"] * 1000) if e.get("duration") else None,
+        "viewCount": e.get("view_count"),
     }
     if channel_id:
         result["channel"] = {
@@ -85,16 +85,16 @@ def _map_full_info(info: dict) -> dict:
     result = {
         "id": vid_id,
         "name": info.get("title"),
-        "text": info.get("description"),
+        "content": info.get("description"),
         "url": info.get("webpage_url") or f"{SITE}/watch?v={vid_id}",
         "image": info.get("thumbnail"),
         "author": author,
-        "datePublished": _upload_date_to_iso(info.get("upload_date")),
-        "duration_ms": int(info["duration"] * 1000) if info.get("duration") else None,
+        "published": _upload_date_to_iso(info.get("upload_date")),
+        "durationMs": int(info["duration"] * 1000) if info.get("duration") else None,
         "resolution": info.get("resolution"),
-        "view_count": info.get("view_count"),
-        "like_count": info.get("like_count"),
-        "comment_count": info.get("comment_count"),
+        "viewCount": info.get("view_count"),
+        "likeCount": info.get("like_count"),
+        "commentCount": info.get("comment_count"),
     }
     if channel_id:
         result["channel"] = {
@@ -117,19 +117,19 @@ def _ydl(extra: dict | None = None) -> yt_dlp.YoutubeDL:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def search_videos(query: str, limit: int = 50) -> list[dict]:
-    with _ydl({"extract_flat": "in_playlist"}) as ydl:
+    with _ydl({"extractFlat": "in_playlist"}) as ydl:
         info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
 
 def search_recent_video(query: str, limit: int = 50) -> list[dict]:
-    with _ydl({"extract_flat": "in_playlist"}) as ydl:
+    with _ydl({"extractFlat": "in_playlist"}) as ydl:
         info = ydl.extract_info(f"ytsearchdate{limit}:{query}", download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
 
 def list_videos(url: str, limit: int = 50) -> list[dict]:
-    with _ydl({"extract_flat": "in_playlist", "playlistend": limit}) as ydl:
+    with _ydl({"extractFlat": "in_playlist", "playlistend": limit}) as ydl:
         info = ydl.extract_info(url, download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
@@ -175,19 +175,19 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
     if format == "segments":
         segments = [
             {
-                "start_ms": e.get("tStartMs", 0),
-                "end_ms": e.get("tStartMs", 0) + e.get("dDurationMs", 0),
-                "text": "".join(s.get("utf8", "") for s in e["segs"]).replace("\n", " ").strip(),
+                "startMs": e.get("tStartMs", 0),
+                "endMs": e.get("tStartMs", 0) + e.get("dDurationMs", 0),
+                "content": "".join(s.get("utf8", "") for s in e["segs"]).replace("\n", " ").strip(),
             }
             for e in events
             if "".join(s.get("utf8", "") for s in e["segs"]).strip()
         ]
-        transcript = " ".join(s["text"] for s in segments)
+        transcript = " ".join(s["content"] for s in segments)
         vid.update({
             "content": transcript,
-            "transcript_segments": segments,
-            "segment_count": len(segments),
-            "source_type": source_type,
+            "transcriptSegments": segments,
+            "segmentCount": len(segments),
+            "sourceType": source_type,
             "language": lang,
         })
     else:
@@ -197,7 +197,7 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
         ).strip()
         vid.update({
             "content": transcript,
-            "source_type": source_type,
+            "sourceType": source_type,
             "language": lang,
         })
 
@@ -205,7 +205,7 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
 
 
 def get_channel(url: str) -> dict:
-    with _ydl({"extract_flat": True, "playlistend": 0}) as ydl:
+    with _ydl({"extractFlat": True, "playlistend": 0}) as ydl:
         info = ydl.extract_info(url, download=False)
 
     thumbnails = info.get("thumbnails") or []
@@ -222,11 +222,11 @@ def get_channel(url: str) -> dict:
     return {
         "id": info.get("channel_id") or info.get("id"),
         "name": info.get("channel") or info.get("uploader") or info.get("title"),
-        "text": info.get("description"),
+        "content": info.get("description"),
         "url": info.get("channel_url") or url,
         "image": avatar,
         "banner": banner,
-        "subscriber_count": info.get("channel_follower_count"),
+        "subscriberCount": info.get("channel_follower_count"),
     }
 
 
@@ -246,7 +246,7 @@ def list_posts(url: str, limit: int = 50) -> list[dict]:
     """List comments on a video as post entities."""
     opts = {
         "getcomments": True,
-        "extractor_args": {"youtube": {"max_comments": [str(limit), "all", "all", "100"]}},
+        "extractorArgs": {"youtube": {"maxComments": [str(limit), "all", "all", "100"]}},
     }
     with _ydl(opts) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -261,19 +261,19 @@ def list_posts(url: str, limit: int = 50) -> list[dict]:
         parent = c.get("parent", "root")
         post = {
             "id": c.get("id"),
-            "text": c.get("text"),
+            "content": c.get("text"),
             "url": f"{SITE}/watch?v={vid_id}&lc={c.get('id')}",
-            "datePublished": _upload_date_to_iso(
+            "published": _upload_date_to_iso(
                 str(c.get("timestamp", ""))[:8] if c.get("timestamp") else None
             ),
             "likes": c.get("like_count"),
-            "posted_by": {
+            "postedBy": {
                 "id": author_id,
                 "name": c.get("author"),
                 "url": c.get("author_url"),
                 "image": c.get("author_thumbnail"),
             } if author_id else None,
-            "replies_to": {
+            "repliesTo": {
                 "id": video_post_id if parent == "root" else parent,
             },
         }

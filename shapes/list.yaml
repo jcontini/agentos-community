@@ -4,16 +4,10 @@
 list:
   fields:
     privacy:           string
-    list_type:         string
-    is_default:        boolean   # platform-created list (e.g. "Watch Later")
-    is_public:         boolean
+    listType:         string
+    isDefault:        boolean   # platform-created list (e.g. "Watch Later")
+    isPublic:         boolean
   relations:
     platform:          product
-    belongs_to:        account   # who owns this list
+    belongsTo:        account   # who owns this list
     contains:          product[]
-  display:
-    title: name
-    date: datePublished
-    columns:
-      - name:            Name
-      - list_type:       Type

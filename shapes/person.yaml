@@ -3,31 +3,23 @@
 #
 # Sources: Apple Contacts, WhatsApp, PostHog, iMessage (inferred from handles)
 person:
+  subtitle: about
   also: [actor]       # a person is also an actor
   fields:
-    first_name:        string
-    last_name:         string
-    middle_name:       string
+    firstName:        string
+    lastName:         string
+    middleName:       string
     nickname:          string
     birthday:          datetime
     notes:             text
     gender:            string
     about:             text
-    joined_date:       datetime  # when they joined a platform (partial OK: 2013-12)
-    last_active:       datetime  # when last seen active
+    joinedDate:       datetime  # when they joined a platform (partial OK: 2013-12)
+    lastActive:       datetime  # when last seen active
   relations:
     accounts:          account[] # platform identities this person owns
     roles:             role[]    # positions at organizations
     location:          place
     website:           website
-    favorite_books:    book[]    # books this person has marked as favorites
-    currently_reading: book[]    # books this person is currently reading
-  display:
-    title: name
-    subtitle: about
-    image: image
-    columns:
-      - name:            Name
-      - first_name:      First
-      - last_name:       Last
-      - birthday:        Birthday
+    favoriteBooks:    book[]    # books this person has marked as favorites
+    currentlyReading: book[]    # books this person is currently reading

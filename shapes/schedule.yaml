@@ -15,29 +15,20 @@
 # Sources: Claude Code (cron agents), GTFS (transit), Uber Eats (store hours),
 #          future: flight timetables, gym class schedules
 schedule:
+  subtitle: cronExpression
   fields:
-    schedule_type:     string    # cron, interval, timetable, hours, one_shot
-    cron_expression:   string    # 5-field cron (e.g. "0 9 * * *")
+    scheduleType:     string    # cron, interval, timetable, hours, one_shot
+    cronExpression:   string    # 5-field cron (e.g. "0 9 * * *")
     rrule:             string    # iCal RRULE for complex recurrence (FREQ=WEEKLY;BYDAY=MO,WE,FR)
     hours:             json      # operating hours [{day, open, close}] — for store/service availability
     timezone:          string    # IANA timezone for evaluation
     prompt:            string    # what to do when it fires (automation triggers)
     enabled:           boolean
     durability:        string    # session, desktop, cloud — how resilient is it
-    provider_job_id:   string    # the provider's native ID (e.g. Claude Code's job ID)
-    last_fired_at:     datetime
-    next_fire_at:      datetime
+    providerJobId:   string    # the provider's native ID (e.g. Claude Code's job ID)
+    lastFiredAt:     datetime
+    nextFireAt:      datetime
   relations:
     produces:          trip      # what each occurrence creates (transport schedules)
     provider:          skill     # which skill runs this (claude, launchd, etc.)
     operator:          organization  # who operates the service (airline, transit agency)
-  display:
-    title: name
-    subtitle: cron_expression
-    date: next_fire_at
-    columns:
-      - name:            Schedule
-      - schedule_type:   Type
-      - cron_expression: Cron
-      - enabled:         On
-      - next_fire_at:    Next

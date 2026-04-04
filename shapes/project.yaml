@@ -2,12 +2,7 @@
 #
 # Sources: Linear, Todoist
 project:
+  subtitle: state
   fields:
     state:             string
     color:             string
-  display:
-    title: name
-    subtitle: state
-    columns:
-      - name:            Project
-      - state:           State

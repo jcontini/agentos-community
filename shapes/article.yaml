@@ -8,22 +8,12 @@
 #
 # Sources: Exa (web articles), Firecrawl, future RSS integration
 article:
+  subtitle: author
   fields:
-    word_count:        integer
-    reading_time:      integer   # estimated minutes
+    wordCount:        integer
+    readingTime:      integer   # estimated minutes
     section:           string    # e.g. "Technology", "Opinion", "Science"
     language:          string    # ISO 639-1 (e.g. en, es, ja)
   relations:
     publisher:         organization
-    published_in:      website
-  display:
-    title: name
-    subtitle: author
-    description: text
-    date: datePublished
-    columns:
-      - name:            Title
-      - author:          Author
-      - section:         Section
-      - word_count:      Words
-      - datePublished:   Published
+    publishedIn:      website

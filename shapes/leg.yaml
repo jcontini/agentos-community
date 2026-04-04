@@ -6,19 +6,20 @@
 #
 # Sources: SerpAPI (flight segments), Uber (ride waypoints)
 leg:
+  subtitle: flightNumber
   fields:
     sequence:          integer   # 1-based order within the trip
-    departure_time:    datetime
-    arrival_time:      datetime
+    departureTime:    datetime
+    arrivalTime:      datetime
     duration:          string    # formatted ("2h 15m", "19 minutes")
-    duration_minutes:  integer
-    flight_number:     string    # e.g. "UA 1234" (flights only)
-    cabin_class:       string    # economy, business, first
-    vehicle_type:      string    # aircraft model, car type, train name
-    layover_minutes:   integer   # wait time AFTER this leg before next leg
-    carbon_emissions:  json      # CO2 estimate for this leg
+    durationMinutes:  integer
+    flightNumber:     string    # e.g. "UA 1234" (flights only)
+    cabinClass:       string    # economy, business, first
+    vehicleType:      string    # aircraft model, car type, train name
+    layoverMinutes:   integer   # wait time AFTER this leg before next leg
+    carbonEmissions:  json      # CO2 estimate for this leg
     trace:             json      # GPS breadcrumbs: [{t, lat, lng, alt?, spd?, hdg?, acc?}, ...]
-    trace_point_count: integer   # number of sample points
+    tracePointCount: integer   # number of sample points
     polyline:          string    # Google encoded polyline (compact visual path, no timestamps)
   relations:
     origin:            place     # departure airport/station/address
@@ -26,13 +27,3 @@ leg:
     carrier:           organization  # airline or operator for this leg
     aircraft:          aircraft  # aircraft type (flights)
     trip:              trip      # parent trip
-  display:
-    title: name
-    subtitle: flight_number
-    date: departure_time
-    columns:
-      - name:            Leg
-      - flight_number:   Flight
-      - departure_time:  Departs
-      - arrival_time:    Arrives
-      - duration_minutes: Duration

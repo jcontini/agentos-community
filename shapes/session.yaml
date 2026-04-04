@@ -3,22 +3,14 @@
 #
 # Sources: agentOS engine (MCP sessions), OpenCode, Claude
 session:
+  subtitle: sessionType
   fields:
-    session_type:      string    # mcp, coding, browsing, call, etc.
-    started_at:        datetime
-    ended_at:          datetime
-    message_count:     integer   # messages exchanged in this session
-    token_count:       integer   # tokens used (for AI sessions)
+    sessionType:      string    # mcp, coding, browsing, call, etc.
+    startedAt:        datetime
+    endedAt:          datetime
+    messageCount:     integer   # messages exchanged in this session
+    tokenCount:       integer   # tokens used (for AI sessions)
   relations:
     participant:       actor     # who was in this session (person, agent)
     project:           project   # what was being worked on
     folder:            folder    # working directory (for coding sessions)
-  display:
-    title: name
-    subtitle: session_type
-    date: started_at
-    columns:
-      - name:            Session
-      - session_type:    Type
-      - started_at:      Started
-      - ended_at:        Ended

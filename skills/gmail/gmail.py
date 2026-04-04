@@ -68,7 +68,7 @@ def _parse_addresses(header_val):
             {
                 "handle": email,
                 "platform": "email",
-                "display_name": display_name or None,
+                "displayName": display_name or None,
             }
         )
     return results
@@ -230,7 +230,7 @@ def _collect_attachments(payload):
                     "id": attachment_id,
                     "name": filename,
                     "filename": filename,
-                    "mime_type": mime_type,
+                    "mimeType": mime_type,
                     "format": _mime_to_format(mime_type),
                     "size": body.get("size"),
                     "encoding": "base64url",
@@ -286,7 +286,7 @@ def _map_email(msg):
 
     # Parse From for display_name and email
     from_parsed = _parse_addresses(from_raw)
-    from_obj = from_parsed[0] if from_parsed else {"handle": from_raw, "platform": "email", "display_name": None}
+    from_obj = from_parsed[0] if from_parsed else {"handle": from_raw, "platform": "email", "displayName": None}
 
     # Author: display name before '<', or None
     if "<" in from_raw:
@@ -342,36 +342,36 @@ def _map_email(msg):
     return {
         "id": msg.get("id"),
         "name": subject,
-        "text": msg.get("snippet", ""),
+        "content": msg.get("snippet", ""),
         "author": author,
-        "datePublished": _internaldate_to_iso(msg.get("internalDate")),
-        "is_starred": "STARRED" in label_ids,
-        "is_unread": "UNREAD" in label_ids,
-        "is_draft": "DRAFT" in label_ids,
-        "is_sent": "SENT" in label_ids,
-        "is_trash": "TRASH" in label_ids,
-        "is_spam": "SPAM" in label_ids,
-        "is_automated": is_automated,
-        "has_attachments": len(attachments) > 0,
-        "message_id": _get_header(headers, "Message-ID") or "",
-        "in_reply_to": _get_header(headers, "In-Reply-To"),
-        "conversation_id": msg.get("threadId", ""),
+        "published": _internaldate_to_iso(msg.get("internalDate")),
+        "isStarred": "STARRED" in label_ids,
+        "isUnread": "UNREAD" in label_ids,
+        "isDraft": "DRAFT" in label_ids,
+        "isSent": "SENT" in label_ids,
+        "isTrash": "TRASH" in label_ids,
+        "isSpam": "SPAM" in label_ids,
+        "isAutomated": is_automated,
+        "hasAttachments": len(attachments) > 0,
+        "messageId": _get_header(headers, "Message-ID") or "",
+        "inReplyTo": _get_header(headers, "In-Reply-To"),
+        "conversationId": msg.get("threadId", ""),
         "content": _decode_body_text(payload),
-        "label_ids": label_ids,
-        "size_estimate": msg.get("sizeEstimate"),
-        "history_id": msg.get("historyId"),
+        "labelIds": label_ids,
+        "sizeEstimate": msg.get("sizeEstimate"),
+        "historyId": msg.get("historyId"),
         "references": _get_header(headers, "References"),
-        "reply_to": _get_header(headers, "Reply-To"),
-        "delivered_to": _get_header(headers, "Delivered-To"),
-        "return_path": _get_header(headers, "Return-Path"),
-        "list_id": list_id,
+        "replyTo": _get_header(headers, "Reply-To"),
+        "deliveredTo": _get_header(headers, "Delivered-To"),
+        "returnPath": _get_header(headers, "Return-Path"),
+        "listId": list_id,
         "precedence": _get_header(headers, "Precedence"),
         "mailer": _get_header(headers, "X-Mailer") or _get_header(headers, "User-Agent"),
-        "auth_results": _get_header(headers, "Authentication-Results"),
-        "feedback_id": _get_header(headers, "Feedback-ID"),
+        "authResults": _get_header(headers, "Authentication-Results"),
+        "feedbackId": _get_header(headers, "Feedback-ID"),
         "unsubscribe": unsubscribe,
-        "unsubscribe_one_click": unsubscribe_one_click,
-        "manage_subscription": manage_sub,
+        "unsubscribeOneClick": unsubscribe_one_click,
+        "manageSubscription": manage_sub,
         "attachments": attachments,
         # Relations
         "from": from_obj,
@@ -379,8 +379,8 @@ def _map_email(msg):
         "cc": cc_accounts,
         "bcc": bcc_accounts,
         "domain": {"name": _extract_domain(from_obj.get("handle", ""))} if _extract_domain(from_obj.get("handle", "")) else None,
-        "to_domain": _domains_from_accounts(to_accounts),
-        "cc_domain": _domains_from_accounts(cc_accounts),
+        "toDomain": _domains_from_accounts(to_accounts),
+        "ccDomain": _domains_from_accounts(cc_accounts),
     }
 
 
@@ -399,7 +399,7 @@ def _map_conversation(thread):
     if not name:
         name = snippet[:120] + ("…" if len(snippet) > 120 else "")
 
-    # datePublished from last message
+    # published from last message
     date_published = None
     if raw_messages:
         date_published = _internaldate_to_iso(raw_messages[-1].get("internalDate"))
@@ -414,11 +414,11 @@ def _map_conversation(thread):
     return {
         "id": thread.get("id"),
         "name": name,
-        "text": snippet,
-        "datePublished": date_published,
-        "message_count": len(mapped_messages) if mapped_messages else None,
-        "unread_count": unread_count,
-        "history_id": thread.get("historyId"),
+        "content": snippet,
+        "published": date_published,
+        "messageCount": len(mapped_messages) if mapped_messages else None,
+        "unreadCount": unread_count,
+        "historyId": thread.get("historyId"),
         # Relations
         "message": mapped_messages,
         "participant": participants,
@@ -559,7 +559,7 @@ def _map_label(label):
     return {
         "id": label.get("id"),
         "name": label.get("name"),
-        "tag_type": label.get("type", "").lower() or None,  # system, user
+        "tagType": label.get("type", "").lower() or None,  # system, user
         "color": (label.get("color") or {}).get("backgroundColor"),
     }
 
@@ -686,7 +686,7 @@ def unsubscribe_email(*, id, **params):
     if not one_click:
         return {
             "status": "manual_required",
-            "unsubscribe_url": unsub_url,
+            "unsubscribeUrl": unsub_url,
             "message": "This sender doesn't support one-click unsubscribe. Open this URL in a browser to unsubscribe.",
         }
 
@@ -696,12 +696,12 @@ def unsubscribe_email(*, id, **params):
 
     return {
         "status": "unsubscribed" if 200 <= status_code < 300 else "failed",
-        "status_code": status_code,
+        "statusCode": status_code,
         "from": email.get("from", {}).get("handle"),
         "domain": (email.get("domain") or {}).get("name"),
         "subject": email.get("name"),
-        "thread_id": email.get("conversation_id"),
-        "message_id": email.get("message_id"),
+        "threadId": email.get("conversation_id"),
+        "messageId": email.get("message_id"),
     }
 
 
@@ -774,12 +774,12 @@ def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None,
 
     status_code = resp.get("status", 0)
     if status_code != 200:
-        return {"status": "failed", "status_code": status_code}
+        return {"status": "failed", "statusCode": status_code}
 
     return {
         "status": "synced",
-        "thread_id": thread_id,
-        "labels_applied": ["^punsub", "^punsub_sat"],
+        "threadId": thread_id,
+        "labelsApplied": ["^punsub", "^punsub_sat"],
     }
 
 

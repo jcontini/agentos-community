@@ -3,37 +3,30 @@
 # The universal base for anything with a when: meetings, classes, parties,
 # conferences, concerts, life events. Subtypes extend via `also: [event]`.
 #
-# Standard fields (inherited): id, name, text, url, image, author, datePublished
-# datePublished is when the event was *posted/announced* — NOT when it happens.
-# Use start_date / end_date for the actual event timing.
+# Standard fields (inherited): id, name, url, image, published, content
+# published is when the event was *posted/announced* — NOT when it happens.
+# Use startDate / endDate for the actual event timing.
 #
 # Sources: Google Calendar, Apple Calendar, Partiful, Luma, Austin Boulder Project
 event:
+  subtitle: eventType
   fields:
-    event_type:        string    # open vocabulary — subtypes define their own values
-    start_date:        datetime  # when the event starts (UTC preferred)
-    end_date:          datetime  # when the event ends
+    eventType:        string    # open vocabulary — subtypes define their own values
+    startDate:        datetime  # when the event starts (UTC preferred)
+    endDate:          datetime  # when the event ends
     timezone:          string    # IANA timezone (e.g. America/Chicago) — for display + recurrence
-    all_day:           boolean
+    allDay:           boolean
     recurrence:        string[]  # iCal RRULE/EXDATE/RDATE list (e.g. ["RRULE:FREQ=WEEKLY;BYDAY=MO"])
     status:            string    # confirmed, tentative, cancelled
     visibility:        string    # public, private, confidential
-    show_as:           string    # free, busy, tentative, out_of_office, working_elsewhere
-    date_updated:      datetime  # when entity was last modified
-    source_url:        url       # where entity came from (e.g. Partiful event page)
-    source_title:      string    # display name of source ("Partiful", "Luma", "Gmail")
-    ical_uid:          string    # RFC 5545 UID for cross-system dedup
+    showAs:           string    # free, busy, tentative, out_of_office, working_elsewhere
+    dateUpdated:      datetime  # when entity was last modified
+    sourceUrl:        url       # where entity came from (e.g. Partiful event page)
+    sourceTitle:      string    # display name of source ("Partiful", "Luma", "Gmail")
+    icalUid:          string    # RFC 5545 UID for cross-system dedup
   relations:
     involves:          person[]  # people this event involves (many-to-many)
     location:          place     # where it happens
     organizer:         person    # who organized/hosts it
     creator:           person    # who created it (may differ from organizer)
     attachments:       file[]    # documents attached to the event
-  display:
-    title: name
-    subtitle: event_type
-    date: start_date
-    columns:
-      - name:            Event
-      - event_type:      Type
-      - start_date:      Start

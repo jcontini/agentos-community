@@ -3,22 +3,13 @@
 #
 # Sources: iMessage, WhatsApp; extended by email (Gmail, Mimestream)
 message:
+  subtitle: author
   fields:
-    conversation_id:   string
-    is_outgoing:       boolean   # true if sent by the user
-    is_starred:        boolean   # user-flagged as important
+    conversationId:   string
+    isOutgoing:       boolean   # true if sent by the user
+    isStarred:        boolean   # user-flagged as important
   relations:
     platform:          product
     from:              account   # sender
-    in_conversation:   conversation
-    replies_to:        message
-  display:
-    title: name
-    subtitle: author
-    description: content
-    date: datePublished
-    columns:
-      - name:            Name
-      - author:          From
-      - datePublished:   Date
-      - is_outgoing:     Sent
+    inConversation:   conversation
+    repliesTo:        message

@@ -4,15 +4,9 @@
 #
 # Sources: Goodreads (quotes)
 quote:
+  subtitle: author
   fields:
     context:           string    # when/where it was said
   relations:
-    spoken_by:         person    # who said it (the speaker)
-    appears_in:        book      # where you found it (the source)
-  display:
-    title: name
-    subtitle: author
-    description: context
-    columns:
-      - name:            Quote
-      - author:          Speaker
+    spokenBy:         person    # who said it (the speaker)
+    appearsIn:        book      # where you found it (the source)

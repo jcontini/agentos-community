@@ -1,12 +1,6 @@
 # Base type for anything that can be attributed as "who did this" in the graph.
 # Not used directly — person, organization, and agent extend it via `also`.
 actor:
+  subtitle: actorType
   fields:
-    actor_type:        string    # person, organization, or agent
-  display:
-    title: name
-    subtitle: actor_type
-    image: image
-    columns:
-      - name:            Actor
-      - actor_type:      Type
+    actorType:        string    # person, organization, or agent

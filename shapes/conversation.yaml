@@ -3,23 +3,15 @@
 #
 # Sources: iMessage, WhatsApp, Gmail
 conversation:
+  subtitle: text
   fields:
-    is_group:          boolean
-    is_archived:       boolean
-    unread_count:      integer
-    message_count:     integer   # number of messages in the thread
-    account_email:     string    # which account this conversation belongs to
-    history_id:        string    # Gmail history ID for incremental sync
+    isGroup:          boolean
+    isArchived:       boolean
+    unreadCount:      integer
+    messageCount:     integer   # number of messages in the thread
+    accountEmail:     string    # which account this conversation belongs to
+    historyId:        string    # Gmail history ID for incremental sync
   relations:
     platform:          product
     participant:       account[]
     message:           message[]
-  display:
-    title: name
-    subtitle: text
-    date: datePublished
-    columns:
-      - name:            Name
-      - participant_count: Participants
-      - datePublished:   Last Activity
-      - unread_count:    Unread

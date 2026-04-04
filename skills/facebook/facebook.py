@@ -69,10 +69,10 @@ def get_community(
     return {
         "id": group_id,
         "name": title,
-        "text": description,
+        "content": description,
         "url": group_url,
         "image": og_image,
-        "member_count": member_count_numeric,
+        "memberCount": member_count_numeric,
         "privacy": "OPEN",
     }
 

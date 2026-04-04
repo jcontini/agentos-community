@@ -2,27 +2,19 @@
 #
 # Sources: GitHub
 repository:
+  identity_any: [path, url]
+  subtitle: language
   fields:
     stars:             integer
     forks:             integer
     language:          string    # primary language
     topics:            string[]
-    open_issues:       integer
-    is_archived:       boolean
-    is_private:        boolean
-    default_branch:    string
+    openIssues:       integer
+    isArchived:       boolean
+    isPrivate:        boolean
+    defaultBranch:    string
     license:           string    # SPDX identifier (e.g. MIT, Apache-2.0)
     size:              integer   # repo size in KB
   relations:
-    forked_from:       repository  # source repo this was forked from
+    forkedFrom:       repository  # source repo this was forked from
     owner:             account
-  display:
-    title: name
-    subtitle: language
-    description: text
-    date: datePublished
-    columns:
-      - name:            Name
-      - language:        Language
-      - stars:           Stars
-      - forks:           Forks

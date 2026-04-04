@@ -23,6 +23,6 @@ def read_webpage(*, url: str, **params) -> dict:
         "id": url,
         "name": title or url,
         "url": url,
-        "text": content,
+        "content": content,
         "content_type": content_type,
     }

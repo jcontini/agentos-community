@@ -21,14 +21,14 @@ def _map_hit(hit: dict) -> dict:
     return {
         "id": oid,
         "name": hit.get("title"),
-        "text": hit.get("text"),
+        "content": hit.get("text"),
         "url": _post_url(oid),
-        "external_url": hit.get("url"),
+        "externalUrl": hit.get("url"),
         "author": author,
-        "datePublished": hit.get("created_at"),
+        "published": hit.get("created_at"),
         "score": hit.get("points"),
-        "comment_count": hit.get("num_comments"),
-        "posted_by": {
+        "commentCount": hit.get("num_comments"),
+        "postedBy": {
             "id": author,
             "name": author,
             "url": _user_url(author),
@@ -47,11 +47,11 @@ def _map_item(item: dict) -> dict:
         cauthor = c.get("author", "")
         return {
             "id": cid,
-            "text": c.get("text"),
+            "content": c.get("text"),
             "url": _post_url(cid),
             "author": cauthor,
-            "datePublished": c.get("created_at"),
-            "posted_by": {
+            "published": c.get("created_at"),
+            "postedBy": {
                 "id": cauthor,
                 "name": cauthor,
                 "url": _user_url(cauthor),
@@ -62,14 +62,14 @@ def _map_item(item: dict) -> dict:
     return {
         "id": item_id,
         "name": item.get("title"),
-        "text": item.get("text"),
+        "content": item.get("text"),
         "url": _post_url(item_id),
-        "external_url": item.get("url"),
+        "externalUrl": item.get("url"),
         "author": author,
-        "datePublished": item.get("created_at"),
+        "published": item.get("created_at"),
         "score": item.get("points"),
-        "comment_count": len(children),
-        "posted_by": {
+        "commentCount": len(children),
+        "postedBy": {
             "id": author,
             "name": author,
             "url": _user_url(author),
@@ -129,14 +129,14 @@ def comments_post(id: str) -> list[dict]:
         post = {
             "id": nid,
             "name": node.get("title"),
-            "text": node.get("text"),
+            "content": node.get("text"),
             "url": _post_url(nid),
-            "external_url": node.get("url"),
+            "externalUrl": node.get("url"),
             "author": author,
-            "datePublished": node.get("created_at"),
+            "published": node.get("created_at"),
             "score": node.get("points"),
-            "comment_count": len(node.get("children", [])),
-            "posted_by": {
+            "commentCount": len(node.get("children", [])),
+            "postedBy": {
                 "id": author,
                 "name": author,
                 "url": _user_url(author),

@@ -3,6 +3,7 @@
 #
 # Sources: Goodreads
 book:
+  subtitle: author
   also: [product]     # a book is also a product
   fields:
     isbn:              string    # 10-digit ISBN
@@ -12,33 +13,22 @@ book:
     series:            string
     format:            string    # hardcover, paperback, ebook, audiobook
     language:          string
-    original_title:    string    # title in original language if translated
-    average_rating:    number
-    ratings_count:     integer
-    review_count:      integer
-    currently_reading_count: integer
-    to_read_count:     integer
+    originalTitle:    string    # title in original language if translated
+    averageRating:    number
+    ratingsCount:     integer
+    reviewCount:      integer
+    currentlyReadingCount: integer
+    toReadCount:     integer
     places:            string[]  # settings/locations in the book
     characters:        string[]  # named characters
-    awards_won:        string[]
-    work_url:          url       # Goodreads canonical work URL
-    user_rating:       number    # authenticated user's rating
-    date_read:         datetime  # when the user finished it
-    date_started:      datetime  # when the user started it
-    date_added:        datetime  # when the user added it to a shelf
+    awardsWon:        string[]
+    workUrl:          url       # Goodreads canonical work URL
+    userRating:       number    # authenticated user's rating
+    dateRead:         datetime  # when the user finished it
+    dateStarted:      datetime  # when the user started it
+    dateAdded:        datetime  # when the user added it to a shelf
     shelf:             string    # user's shelf (read, to-read, currently-reading)
   relations:
-    written_by:        author
+    writtenBy:        author
     contributors:      author[]  # editors, translators, illustrators
     publisher:         organization
-  display:
-    title: name
-    subtitle: author
-    image: image
-    date: datePublished
-    columns:
-      - name:            Title
-      - author:          Author
-      - average_rating:  Rating
-      - pages:           Pages
-      - datePublished:   Published

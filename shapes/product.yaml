@@ -3,15 +3,16 @@
 #
 # Sources: Amazon, Uber Eats (grocery), Open Food Facts (enrichment)
 product:
+  subtitle: brand
   fields:
     price:             string    # formatted price (e.g. "$29.99") — current/discounted price
-    price_amount:      number    # numeric price for math
-    original_price:    string    # pre-discount price (e.g. "$10.99" before Uber One / Prime / sale)
-    original_price_amount: number
+    priceAmount:      number    # numeric price for math
+    originalPrice:    string    # pre-discount price (e.g. "$10.99" before Uber One / Prime / sale)
+    originalPriceAmount: number
     currency:          string
     rating:            number
-    ratings_count:     integer
-    review_count:      integer
+    ratingsCount:     integer
+    reviewCount:      integer
     categories:        string[]
     availability:      string
     prime:             boolean   # Amazon Prime eligible
@@ -20,32 +21,19 @@ product:
     quantity:          integer
     # Physical / grocery
     weight:            string    # formatted weight/size ("12 oz", "3 lbs", "500ml")
-    weight_value:      number    # numeric weight for math
-    weight_unit:       string    # oz, lb, kg, g, ml, L, ct, etc.
-    sold_by_weight:    boolean   # true if priced per-lb/kg (vs per-unit)
+    weightValue:      number    # numeric weight for math
+    weightUnit:       string    # oz, lb, kg, g, ml, L, ct, etc.
+    soldByWeight:    boolean   # true if priced per-lb/kg (vs per-unit)
     department:        string    # top-level grocery department ("Produce", "Dairy", "Bakery")
     aisle:             string    # store aisle/section ("Fresh Fruits", "Organic Dairy")
     sku:               string    # retailer SKU / catalog UUID
     barcode:           string    # UPC/EAN barcode (from Open Food Facts)
     # Nutrition (populated via Open Food Facts enrichment)
-    nutrition_score:   string    # Nutri-Score A-E
-    nova_group:        integer   # NOVA 1-4 ultra-processing level
+    nutritionScore:   string    # Nutri-Score A-E
+    novaGroup:        integer   # NOVA 1-4 ultra-processing level
     calories:          number    # per serving
-    serving_size:      string    # "1 cup (240ml)"
+    servingSize:      string    # "1 cup (240ml)"
   relations:
     brand:             brand
     manufacturer:      organization
     tagged:            tag[]     # dietary (VEGAN), allergens, certifications (Organic), departments
-  display:
-    title: name
-    subtitle: brand
-    description: text
-    image: image
-    date: datePublished
-    columns:
-      - name:            Name
-      - brand:           Brand
-      - price:           Price
-      - weight:          Size
-      - department:      Dept
-      - availability:    Available

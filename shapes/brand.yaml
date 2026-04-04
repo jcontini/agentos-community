@@ -2,18 +2,11 @@
 #
 # Sources: Amazon
 brand:
+  subtitle: tagline
   fields:
     tagline:           string
     founded:           datetime
     country:           string
   relations:
-    owned_by:          organization
+    ownedBy:          organization
     website:           website
-  display:
-    title: name
-    subtitle: tagline
-    image: image
-    columns:
-      - name:            Brand
-      - country:         Country
-      - founded:         Founded

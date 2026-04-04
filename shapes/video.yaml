@@ -5,23 +5,14 @@
 #
 # Sources: YouTube (via post), local files
 video:
+  subtitle: author
   also: [file]        # a video is also a file
   fields:
-    duration_ms:       integer
+    durationMs:       integer
     resolution:        string    # e.g. "1080p", "4K"
-    frame_rate:        number    # fps
+    frameRate:        number    # fps
     codec:             string    # e.g. "h264", "vp9"
   relations:
     channel:           channel   # channel this was uploaded to
     transcribe:        transcript
-    add_to:            playlist
-  display:
-    title: name
-    subtitle: author
-    image: image
-    date: datePublished
-    columns:
-      - name:            Title
-      - author:          Channel
-      - duration_ms:     Duration
-      - datePublished:   Published
+    addTo:            playlist

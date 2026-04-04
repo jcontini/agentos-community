@@ -3,27 +3,18 @@
 #
 # Sources: SerpAPI (Google Flights)
 flight:
+  subtitle: airline
   also: [leg]           # a flight is also a leg
   fields:
-    flight_number:     string    # e.g. UA 1234
-    departure_time:    datetime
-    arrival_time:      datetime
-    duration_minutes:  integer
-    cabin_class:       string    # economy, premium_economy, business, first
+    flightNumber:     string    # e.g. UA 1234
+    departureTime:    datetime
+    arrivalTime:      datetime
+    durationMinutes:  integer
+    cabinClass:       string    # economy, premium_economy, business, first
     stops:             integer   # intermediate stops without transfer (rare, multi-stop flights)
-    carbon_emissions:  json      # CO2 estimate from Google Flights
+    carbonEmissions:  json      # CO2 estimate from Google Flights
   relations:
     airline:           airline
-    departs_from:      airport
-    arrives_at:        airport
+    departsFrom:      airport
+    arrivesAt:        airport
     aircraft:          aircraft
-  display:
-    title: name
-    subtitle: airline
-    date: departure_time
-    columns:
-      - name:            Flight
-      - airline:         Airline
-      - departure_time:  Departs
-      - arrival_time:    Arrives
-      - duration_minutes: Duration

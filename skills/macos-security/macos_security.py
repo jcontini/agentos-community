@@ -152,7 +152,7 @@ def cmd_audit(**kwargs) -> list[dict]:
 
         item: dict = {"category": category}
 
-        if category == "electron_safe_storage":
+        if category == "electronSafeStorage":
             m = _SAFE_STORAGE.match(svce)
             item["app"] = m.group(1) if m else svce
             item["note"] = "Master encryption key for all locally stored credentials"
@@ -160,7 +160,7 @@ def cmd_audit(**kwargs) -> list[dict]:
             if app_support.exists():
                 item["data_path"] = str(app_support)
 
-        elif category == "google_oauth_native":
+        elif category == "googleOauthNative":
             m = _NATIVE_OAUTH.match(svce)
             item["app"] = m.group(1) if m else svce
             item["account"] = m.group(2) if m else acct
@@ -168,19 +168,19 @@ def cmd_audit(**kwargs) -> list[dict]:
             item["account_name"] = acct
             item["note"] = "Native Google OAuth tokens stored by app in Keychain"
 
-        elif category == "spark_auth":
+        elif category == "sparkAuth":
             item["app"] = "Spark"
             item["service"] = svce
             item["account"] = acct
             item["note"] = "Spark account auth key (Secure Enclave or RSA)"
 
-        elif category == "github_cli":
+        elif category == "githubCli":
             m = _GH_CLI.match(svce)
             item["app"] = "GitHub CLI (gh)"
             item["host"] = m.group(1) if m else svce
             item["account"] = acct
 
-        elif category == "cursor_token":
+        elif category == "cursorToken":
             item["app"] = "Cursor"
             item["token_type"] = svce
             item["account"] = acct
@@ -257,11 +257,11 @@ def cmd_scan_google_oauth(**kwargs) -> list[dict]:
 
                     results.append({
                         "app": app_path.stem,
-                        "install_path": str(app_path),
-                        "bundle_id": plist.get("CFBundleIdentifier"),
+                        "installPath": str(app_path),
+                        "bundleId": plist.get("CFBundleIdentifier"),
                         "version": plist.get("CFBundleShortVersionString"),
-                        "client_id": client_id,
-                        "url_scheme": scheme,
+                        "clientId": client_id,
+                        "urlScheme": scheme,
                         "note": (
                             "Public client ID embedded in app bundle. "
                             "Use with PKCE for token exchange. No secret needed for desktop apps."
@@ -339,7 +339,7 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
                 continue
             results.append({
                 "username": username,
-                "account_type": account_type or "unknown",
+                "accountType": account_type or "unknown",
                 "identifier": row.get("identifier"),
                 "note": _account_type_note(account_type),
             })

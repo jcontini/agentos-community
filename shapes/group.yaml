@@ -2,14 +2,7 @@
 #
 # Sources: Goodreads
 group:
+  subtitle: category
   fields:
-    member_count:      integer
+    memberCount:      integer
     category:          string
-  display:
-    title: name
-    subtitle: category
-    description: text
-    columns:
-      - name:            Group
-      - member_count:    Members
-      - category:        Category

@@ -25,10 +25,10 @@ def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> l
         {
             "id": r.get("url"),
             "name": r.get("title"),
-            "text": r.get("description"),
+            "content": r.get("description"),
             "url": r.get("url"),
             "image": (r.get("meta_url") or {}).get("favicon"),
-            "indexed_at": r.get("page_age"),
+            "indexedAt": r.get("page_age"),
         }
         for r in results
     ]

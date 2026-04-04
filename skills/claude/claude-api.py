@@ -44,7 +44,18 @@ def _client(cookie_header: str):
 
 def _get_organizations(client):
     resp = client.get(f"{BASE_URL}/api/organizations")
-    return resp["json"]
+    data = resp["json"]
+    # API returns a list of org dicts on success, or an error dict on failure
+    if isinstance(data, dict) and "error" in data:
+        err = data["error"]
+        code = err.get("details", {}).get("error_code", "") if isinstance(err, dict) else ""
+        msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+        if "session_invalid" in code or "authorization" in msg.lower():
+            raise RuntimeError(f"SESSION_EXPIRED: Claude session is invalid — re-login at claude.ai")
+        raise RuntimeError(f"Claude API error: {msg}")
+    if not isinstance(data, list):
+        raise RuntimeError(f"Unexpected orgs response type: {type(data).__name__}")
+    return data
 
 
 def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
@@ -59,12 +70,15 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
     if cookie_header:
         last_active = parse_cookie(cookie_header, "lastActiveOrg")
         if last_active:
-            probe = client.get(
-                f"{BASE_URL}/api/organizations/{last_active}"
-                f"/chat_conversations?limit=1"
-            )
-            if probe["status"] == 200:
-                return last_active
+            # Validate it looks like a UUID before probing
+            import re as _re
+            if _re.match(r'^[0-9a-fA-F-]{36}$', last_active):
+                probe = client.get(
+                    f"{BASE_URL}/api/organizations/{last_active}"
+                    f"/chat_conversations?limit=1"
+                )
+                if probe["status"] == 200:
+                    return last_active
     # Slow path: fetch all orgs, find chat-capable one.
     orgs = _get_organizations(client)
     for org in orgs:
@@ -78,6 +92,8 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
 def _get_conversations(client, org_uuid, limit=50, offset=0):
     path = f"/api/organizations/{org_uuid}/chat_conversations?limit={limit}&offset={offset}"
     resp = client.get(f"{BASE_URL}{path}")
+    if resp.get("status", 0) >= 400:
+        raise RuntimeError(f"Conversations API returned {resp.get('status')}: {resp.get('body', resp.get('json', ''))}")
     return resp["json"]
 
 
@@ -97,9 +113,9 @@ def _format_conversation_list(convs, org_uuid):
         {
             "uuid": c.get("uuid"),
             "name": c.get("name") or "(untitled)",
-            "updated_at": c.get("updated_at"),
-            "created_at": c.get("created_at"),
-            "org_uuid": org_uuid,
+            "updatedAt": c.get("updated_at"),
+            "createdAt": c.get("created_at"),
+            "orgUuid": org_uuid,
         }
         for c in convs
     ]
@@ -119,8 +135,8 @@ def _format_conversation(conv, org_uuid):
         role = msg.get("sender", "human")
         formatted_messages.append({
             "role": role,
-            "text": text,
-            "created_at": msg.get("created_at"),
+            "content": text,
+            "createdAt": msg.get("created_at"),
             "uuid": msg.get("uuid"),
         })
         if text.strip():
@@ -130,12 +146,12 @@ def _format_conversation(conv, org_uuid):
     return {
         "uuid": conv.get("uuid"),
         "name": conv.get("name") or "(untitled)",
-        "org_uuid": org_uuid,
-        "created_at": conv.get("created_at"),
-        "updated_at": conv.get("updated_at"),
+        "orgUuid": org_uuid,
+        "createdAt": conv.get("created_at"),
+        "updatedAt": conv.get("updated_at"),
         "content": "\n\n---\n\n".join(content_lines),
         "messages": formatted_messages,
-        "message_count": len(formatted_messages),
+        "messageCount": len(formatted_messages),
     }
 
 
@@ -220,11 +236,11 @@ def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
                 msg_uuid = msg.get("uuid", "")
                 rows.append({
                     "id": f"{conv_uuid}_{msg_uuid}",
-                    "conversation_id": conv_uuid,
-                    "conversation_name": conv_name,
+                    "conversationId": conv_uuid,
+                    "conversationName": conv_name,
                     "role": msg.get("sender", "human"),
-                    "text": text,
-                    "created_at": msg.get("created_at", conv_stub.get("created_at")),
+                    "content": text,
+                    "createdAt": msg.get("created_at", conv_stub.get("created_at")),
                 })
 
     return rows
@@ -352,7 +368,7 @@ def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
 def op_extract_magic_link(raw_email: str) -> dict:
     link = _extract_magic_link_from_raw_email(raw_email)
     if link:
-        return {"magic_link": link}
+        return {"magicLink": link}
     return {"error": "No magic link found in raw email content"}
 
 

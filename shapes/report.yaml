@@ -12,26 +12,16 @@
 #
 # Sources: agent output (claude-code, cursor), skill runs, manual creation
 report:
+  subtitle: reportType
   also: [document]
   fields:
-    report_type:       string    # research, analysis, comparison, audit, review
+    reportType:       string    # research, analysis, comparison, audit, review
     methodology:       text      # how the research/analysis was conducted
     findings:          text      # what was discovered (primary output)
     recommendations:   text      # what to do next, if applicable
     confidence:        number    # 0.0–1.0 — agent's self-assessed reliability
-    data_sources:      string[]  # URLs, file paths, tool names used as inputs
-    subject_id:        string    # node ID of the entity this report is about
+    dataSources:      string[]  # URLs, file paths, tool names used as inputs
+    subjectId:        string    # node ID of the entity this report is about
   relations:
-    commissioned_by:   actor     # person or agent that requested this report
-    related_specs:     spec[]    # specs this report informs or was written for
-  display:
-    title: name
-    subtitle: report_type
-    description: findings
-    date: datePublished
-    columns:
-      - name:            Title
-      - report_type:     Type
-      - commissioned_by: By
-      - confidence:      Confidence
-      - datePublished:   Date
+    commissionedBy:   actor     # person or agent that requested this report
+    relatedSpecs:     spec[]    # specs this report informs or was written for

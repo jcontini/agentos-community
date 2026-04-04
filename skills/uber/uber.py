@@ -304,15 +304,15 @@ def whoami(**params) -> dict:
 
     return {
         "uuid": user.get("uuid"),
-        "first_name": user.get("firstName"),
-        "last_name": user.get("lastName"),
+        "firstName": user.get("firstName"),
+        "lastName": user.get("lastName"),
         "email": user.get("email"),
         "phone": user.get("formattedNumber"),
         "rating": user.get("rating"),
-        "picture_url": user.get("pictureUrl"),
-        "has_uber_one": benefits.get("hasUberOne", False),
-        "signup_country": user.get("signupCountry"),
-        "payment_methods": [
+        "pictureUrl": user.get("pictureUrl"),
+        "hasUberOne": benefits.get("hasUberOne", False),
+        "signupCountry": user.get("signupCountry"),
+        "paymentMethods": [
             {
                 "name": (p.get("displayable") or {}).get("displayName"),
                 "type": p.get("tokenType"),
@@ -367,12 +367,12 @@ def list_trips(
             "name": t.get("title"),  # destination name
             "image": (t.get("imageURL") or {}).get("light"),
             "url": t.get("cardURL"),
-            "datePublished": t.get("subtitle"),
+            "published": t.get("subtitle"),
             # Trip shape fields
-            "trip_type": "ride",
+            "tripType": "ride",
             "status": "completed",
             "fare": fare_str or None,
-            "fare_amount": total_amount,
+            "fareAmount": total_amount,
             "currency": currency,
         })
 
@@ -413,21 +413,21 @@ def get_trip(trip_id: str, **params) -> dict:
         "id": trip.get("uuid") or trip.get("jobUUID"),
         "name": waypoints[-1] if waypoints else trip_id,
         "image": result.get("mapURL"),
-        "datePublished": trip.get("beginTripTime"),
+        "published": trip.get("beginTripTime"),
         # Trip shape fields
-        "trip_type": "ride",
+        "tripType": "ride",
         "status": status_raw,
-        "departure_time": trip.get("beginTripTime"),
-        "arrival_time": trip.get("dropoffTime"),
+        "departureTime": trip.get("beginTripTime"),
+        "arrivalTime": trip.get("dropoffTime"),
         "duration": receipt.get("duration"),
         "distance": distance,
-        "vehicle_type": receipt.get("vehicleType"),
+        "vehicleType": receipt.get("vehicleType"),
         "fare": fare_str or None,
-        "fare_amount": fare_amount,
+        "fareAmount": fare_amount,
         "currency": currency,
         "rating": result.get("rating") or None,
-        "is_surge": trip.get("isSurgeTrip", False),
-        "is_scheduled": trip.get("isScheduledRide", False),
+        "isSurge": trip.get("isSurgeTrip", False),
+        "isScheduled": trip.get("isScheduledRide", False),
         "stops": max(0, len(waypoints) - 2) if waypoints else 0,
     }
 
@@ -435,13 +435,13 @@ def get_trip(trip_id: str, **params) -> dict:
     if driver_name:
         out["driver"] = {
             "name": driver_name,
-            "first_name": driver_parts[0] if driver_parts else None,
-            "last_name": driver_parts[1] if len(driver_parts) > 1 else None,
+            "firstName": driver_parts[0] if driver_parts else None,
+            "lastName": driver_parts[1] if len(driver_parts) > 1 else None,
         }
 
     if waypoints:
-        out["origin"] = {"id": waypoints[0], "name": waypoints[0], "full_address": waypoints[0], "feature_type": "address"}
-        out["destination"] = {"id": waypoints[-1], "name": waypoints[-1], "full_address": waypoints[-1], "feature_type": "address"}
+        out["origin"] = {"id": waypoints[0], "name": waypoints[0], "fullAddress": waypoints[0], "featureType": "address"}
+        out["destination"] = {"id": waypoints[-1], "name": waypoints[-1], "fullAddress": waypoints[-1], "featureType": "address"}
 
     # Build legs from waypoint pairs (multi-stop support)
     if len(waypoints) >= 2:
@@ -451,8 +451,8 @@ def get_trip(trip_id: str, **params) -> dict:
                 "id": f"{trip_id}_leg_{i + 1}",
                 "name": f"Leg {i + 1}: {waypoints[i + 1]}",
                 "sequence": i + 1,
-                "origin": {"id": waypoints[i], "name": waypoints[i], "full_address": waypoints[i], "feature_type": "address"},
-                "destination": {"id": waypoints[i + 1], "name": waypoints[i + 1], "full_address": waypoints[i + 1], "feature_type": "address"},
+                "origin": {"id": waypoints[i], "name": waypoints[i], "fullAddress": waypoints[i], "featureType": "address"},
+                "destination": {"id": waypoints[i + 1], "name": waypoints[i + 1], "fullAddress": waypoints[i + 1], "featureType": "address"},
             }
             for i in range(len(waypoints) - 1)
         ]
@@ -585,13 +585,13 @@ def list_deliveries(cursor: str = "", **params) -> list:
             "id": uuid,
             "name": store_info.get("title", "Unknown store"),
             "image": store_info.get("heroImageUrl"),
-            "datePublished": base.get("completedAt") or base.get("lastStateChangeAt"),
+            "published": base.get("completedAt") or base.get("lastStateChangeAt"),
             # Order shape fields
             "total": f"{total_cents / 100:.2f}" if total_cents else None,
-            "total_amount": total_cents / 100 if total_cents else None,
+            "totalAmount": total_cents / 100 if total_cents else None,
             "currency": currency,
             "status": status,
-            "fare_breakdown": [
+            "fareBreakdown": [
                 {"label": item.get("label"), "amount": item.get("rawValue"), "key": item.get("key")}
                 for item in (fare.get("checkoutInfo") or [])
             ],
@@ -601,13 +601,13 @@ def list_deliveries(cursor: str = "", **params) -> list:
                 "id": store_info.get("uuid"),
                 "name": store_info.get("title"),
                 "image": store_info.get("heroImageUrl"),
-                "feature_type": "poi",
-                "full_address": raw_addr.get("eaterFormattedAddress"),
+                "featureType": "poi",
+                "fullAddress": raw_addr.get("eaterFormattedAddress"),
                 "latitude": location.get("latitude"),
                 "longitude": location.get("longitude"),
             },
-            "shipping_address": {
-                "full_address": raw_addr.get("eaterFormattedAddress"),
+            "shippingAddress": {
+                "fullAddress": raw_addr.get("eaterFormattedAddress"),
                 "latitude": location.get("latitude"),
                 "longitude": location.get("longitude"),
             } if raw_addr.get("eaterFormattedAddress") else None,
@@ -654,7 +654,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
             items.append({
                 "name": el.text_content().strip(),
                 "quantity": qty,
-                "item_uuid": uid,
+                "itemUuid": uid,
             })
 
         # Fare breakdown
@@ -674,13 +674,13 @@ def get_delivery(order_uuid: str, **params) -> dict:
         # Standard fields
         "id": order_uuid,
         "name": f"Delivery ({len(items)} items)",
-        "datePublished": timestamp,
+        "published": timestamp,
         # Order shape fields
         "total": fare.get("total"),
-        "total_amount": total_amount,
+        "totalAmount": total_amount,
         "currency": currency,
         "status": "completed",
-        "fare_breakdown": fare,
+        "fareBreakdown": fare,
         # Typed reference: contains → product[] (engine infers type from shape)
         "contains": [
             {
@@ -758,9 +758,9 @@ def get_store(store_uuid: str, **params) -> dict:
                     "id": uid,
                     "name": ci.get("title", ""),
                     "image": ci.get("imageUrl"),
-                    "text": ci.get("itemDescription"),
+                    "content": ci.get("itemDescription"),
                     # Product shape fields
-                    "price_amount": price_cents / 100 if price_cents else None,
+                    "priceAmount": price_cents / 100 if price_cents else None,
                     "currency": store_currency,
                     "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
                     "categories": [section_title] if section_title else [],
@@ -801,28 +801,28 @@ def get_store(store_uuid: str, **params) -> dict:
         "image": (data.get("heroImageUrls") or [None])[0],
         "url": f"https://www.ubereats.com/store/{data.get('slug', '')}",
         # Place shape fields
-        "full_address": address.get("eaterFormattedAddress"),
+        "fullAddress": address.get("eaterFormattedAddress"),
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
-        "feature_type": "poi",
+        "featureType": "poi",
         "categories": [c if isinstance(c, str) else c.get("name", "") for c in (data.get("categories") or []) if c],
         "phone": data.get("phoneNumber"),
         "hours": data.get("hours"),
-        "business_status": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
+        "businessStatus": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
         "rating": rating_data.get("ratingValue"),
-        "review_count": rating_data.get("reviewCount"),
+        "reviewCount": rating_data.get("reviewCount"),
         # delivery/eta/is_orderable are CONTEXTUAL — they depend on the user's
         # delivery address, not intrinsic to the place. Returned here for UX
         # but not part of the place shape.
-        "is_orderable": data.get("isOrderable", False),
-        "closed_message": data.get("closedMessage"),
+        "isOrderable": data.get("isOrderable", False),
+        "closedMessage": data.get("closedMessage"),
         "eta": (data.get("etaRange") or {}).get("text"),
         "brand": {
             "name": data.get("title", ""),
         },
         # Products — place.offers→product[] relation creates linked product nodes
         "offers": products,
-        "product_count": len(products),
+        "productCount": len(products),
     }
 
 
@@ -907,15 +907,15 @@ def search_products(store_uuid: str, query: str, **params) -> list:
                     "id": uid,
                     "name": ci.get("title", ""),
                     "image": ci.get("imageUrl"),
-                    "price_amount": price_cents / 100 if price_cents else None,
-                    "original_price": original_price,
+                    "priceAmount": price_cents / 100 if price_cents else None,
+                    "originalPrice": original_price,
                     "currency": "USD",  # TODO: from store data
                     "availability": "in_stock" if ci.get("isAvailable", True) else "out_of_stock",
                     "categories": [section_title] if section_title else [],
                 }
                 if tags:
                     product["tagged"] = [
-                        {"name": t, "tag_type": "dietary"}
+                        {"name": t, "tagType": "dietary"}
                         for t in tags
                     ]
                 if weight:
@@ -1017,14 +1017,14 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
         "image": images[0]["url"] if images else None,
         "url": f"https://www.ubereats.com{action}" if action else None,
         # Place shape fields
-        "feature_type": "poi",
+        "featureType": "poi",
         "latitude": marker.get("latitude"),
         "longitude": marker.get("longitude"),
         "rating": rating_val,
-        "review_count": rating_obj.get("accessibilityText"),
+        "reviewCount": rating_obj.get("accessibilityText"),
         # Contextual delivery info (depends on user's address, not intrinsic to place)
         "eta": eta,
-        "delivery_fee": delivery_fee,
+        "deliveryFee": delivery_fee,
         "currency": currency,
     })
 
@@ -1179,14 +1179,14 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
         "name": f"Cart ({len(final_items)} items)",
         # Order shape fields
         "status": "draft",
-        "total_amount": total_cents / 100 if total_cents else None,
+        "totalAmount": total_cents / 100 if total_cents else None,
         "currency": draft_currency,
         "contains": [
             {
                 "id": i.get("uuid"),
                 "name": i.get("title"),
                 "image": i.get("imageURL"),
-                "price_amount": i.get("price", 0) / 100 if i.get("price") else None,
+                "priceAmount": i.get("price", 0) / 100 if i.get("price") else None,
                 "currency": draft_currency,
                 "quantity": i.get("quantity", 1),
             }
@@ -1218,16 +1218,16 @@ def get_cart(**params) -> list:
             # Standard fields
             "id": draft.get("uuid"),
             "name": store.get("title") or draft.get("storeUuid", "Unknown store"),
-            "datePublished": draft.get("createdAt"),
+            "published": draft.get("createdAt"),
             # Order shape fields
             "status": "draft",
-            "total_amount": total_cents / 100 if total_cents else None,
+            "totalAmount": total_cents / 100 if total_cents else None,
             "currency": cart_currency,
             "store": {
                 "id": draft.get("storeUuid"),
                 "name": store.get("title"),
                 "image": store.get("heroImageUrl"),
-                "feature_type": "poi",
+                "featureType": "poi",
             } if store.get("title") or draft.get("storeUuid") else None,
             "contains": [
                 {
@@ -1248,7 +1248,7 @@ def clear_cart(draft_order_uuid: str, **params) -> dict:
     """Discard a draft order (clear the cart for a store)."""
     cookie_header = require_cookies(params, "clear_cart")
     _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft_order_uuid})
-    return {"status": "cleared", "draft_order_uuid": draft_order_uuid}
+    return {"status": "cleared", "draftOrderUuid": draft_order_uuid}
 
 
 def checkout(draft_order_uuid: str, **params) -> dict:
@@ -1343,7 +1343,7 @@ def checkout(draft_order_uuid: str, **params) -> dict:
         "name": f"Order placed (${total_amount:.2f})" if total_amount else "Order placed",
         "status": "placed",
         "total": total_obj.get("formattedValue"),
-        "total_amount": total_amount,
+        "totalAmount": total_amount,
         "currency": currency,
     }
 
@@ -1443,7 +1443,7 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
             "name": item.get("title"),
             "image": item.get("imageURL"),
             "quantity": item.get("quantity", 1),
-            "fulfillment_state": fs.get("type", "UNKNOWN"),
+            "fulfillmentState": fs.get("type", "UNKNOWN"),
         })
 
     # Count fulfillment states
@@ -1468,17 +1468,17 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
         "name": overview.get("title") or info.get("storeInfo", {}).get("name"),
         "status": phase.lower().replace("...", "").replace("…", "").strip() or "active",
         "eta": eta,
-        "latest_arrival": latest_arrival or None,
+        "latestArrival": latest_arrival or None,
         "progress": status_obj.get("currentProgress"),
-        "progress_total": status_obj.get("totalProgressSegments"),
+        "progressTotal": status_obj.get("totalProgressSegments"),
         "total": overview.get("subtitle"),
-        "item_states": state_counts,
+        "itemStates": state_counts,
         "contains": items,
     }
 
     # Delivery trip with courier
     trip_data = {
-        "trip_type": "delivery",
+        "tripType": "delivery",
         "status": "in_progress",
         "eta": eta,
     }
@@ -1527,10 +1527,10 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
         trip_data["origin"] = {
             "id": store_info.get("uuid") or store_addr or store_info["name"],
             "name": store_info["name"],
-            "full_address": store_addr,
+            "fullAddress": store_addr,
             "latitude": store_loc.get("latitude"),
             "longitude": store_loc.get("longitude"),
-            "feature_type": "poi",
+            "featureType": "poi",
         }
 
     # Delivery address as destination
@@ -1547,8 +1547,8 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
         dest_place = {
             "id": dest_address,
             "name": dest_address,
-            "full_address": dest_address,
-            "feature_type": "address",
+            "fullAddress": dest_address,
+            "featureType": "address",
         }
         if eater_entity:
             dest_place["latitude"] = eater_entity.get("latitude")

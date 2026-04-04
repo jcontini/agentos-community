@@ -2,22 +2,17 @@
 #
 # Sources: Google Calendar, Apple Calendar
 calendar:
+  subtitle: source
   fields:
-    calendar_id:       string    # provider's calendar ID (Google: email-like string)
+    calendarId:       string    # provider's calendar ID (Google: email-like string)
     color:             string    # display color (hex)
-    background_color:  string    # hex color for background
-    foreground_color:  string    # hex color for text
-    is_primary:        boolean
-    is_readonly:       boolean
-    access_role:       string    # owner, writer, reader, freeBusyReader
+    backgroundColor:  string    # hex color for background
+    foregroundColor:  string    # hex color for text
+    isPrimary:        boolean
+    isReadonly:       boolean
+    accessRole:       string    # owner, writer, reader, freeBusyReader
     source:            string    # e.g., "iCloud", "Google"
     timezone:          string
   relations:
     owner:             person    # who owns this calendar
     events:            event[]   # events in this calendar
-  display:
-    title: name
-    subtitle: source
-    columns:
-      - name:            Calendar
-      - source:          Source

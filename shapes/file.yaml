@@ -4,24 +4,17 @@
 #
 # Sources: GitHub, Cursor, Mimestream, filesystem
 file:
+  subtitle: path
   fields:
     filename:          string    # original filename with extension
-    mime_type:         string    # IANA MIME type (e.g. application/pdf, text/plain)
+    mimeType:         string    # IANA MIME type (e.g. application/pdf, text/plain)
     size:              integer   # file size in bytes
     path:              string    # file path within repository, workspace, or filesystem
     format:            string    # human-readable format (e.g. "PDF", "DOCX")
     encoding:          string    # content encoding (e.g. base64, utf-8)
-    line_count:        integer   # line count (text files)
+    lineCount:        integer   # line count (text files)
     kind:              string    # file, dir, symlink, submodule
     sha:               string    # git blob SHA (repo files)
   relations:
-    attached_to:       message   # email/message this file was attached to
+    attachedTo:       message   # email/message this file was attached to
     repository:        repository
-  display:
-    title: name
-    subtitle: path
-    columns:
-      - name:            File
-      - path:            Path
-      - language:        Language
-      - size:            Size

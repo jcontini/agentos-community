@@ -2,16 +2,10 @@
 #
 # Sources: YouTube (some channels are podcasts), future podcast skill
 podcast:
+  subtitle: author
   fields:
-    feed_url:          url       # RSS feed URL
+    feedUrl:          url       # RSS feed URL
   relations:
     host:              person[]
     platform:          product   # Spotify, Apple Podcasts, etc.
     episode:           episode[]
-  display:
-    title: name
-    subtitle: author
-    image: image
-    columns:
-      - name:            Podcast
-      - author:          Host

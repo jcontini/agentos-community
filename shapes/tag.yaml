@@ -4,18 +4,11 @@
 #
 # Sources: Gmail, Todoist, GitHub, git
 tag:
+  subtitle: tagType
   fields:
     color:             string    # hex color (#EA4335) or named color
-    tag_type:          string    # system, user — distinguishes built-in vs custom
+    tagType:          string    # system, user — distinguishes built-in vs custom
     hash:              string    # commit hash the tag points to (git)
     annotated:         boolean   # true if annotated vs lightweight (git)
   relations:
     repository:        repository
-  display:
-    title: name
-    subtitle: tag_type
-    date: datePublished
-    columns:
-      - name:            Tag
-      - tag_type:        Type
-      - color:           Color

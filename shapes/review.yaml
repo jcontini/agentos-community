@@ -2,22 +2,13 @@
 #
 # Sources: Goodreads, Amazon
 review:
+  subtitle: author
   also: [post]        # a review is also a post
   fields:
     rating:            number
-    rating_max:        number    # scale upper bound (e.g. 5, 10, 100)
+    ratingMax:        number    # scale upper bound (e.g. 5, 10, 100)
     tags:              string[]
-    is_verified:       boolean   # verified purchase
+    isVerified:       boolean   # verified purchase
   relations:
     reviews:           product   # what this review is about
-    posted_by:         account
-  display:
-    title: name
-    subtitle: author
-    description: text
-    date: datePublished
-    columns:
-      - name:            Review
-      - rating:          Rating
-      - author:          By
-      - datePublished:   Date
+    postedBy:         account

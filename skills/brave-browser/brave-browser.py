@@ -27,14 +27,14 @@ def _map_webpage(row):
         "id": row["url"],
         "name": row.get("title") or row["url"],
         "url": row["url"],
-        "visit_count": row.get("visit_count"),
-        "last_visit_unix": row.get("last_visit_unix"),
+        "visitCount": row.get("visit_count"),
+        "lastVisitUnix": row.get("last_visit_unix"),
     }
 
 
-def op_list_webpages(*, limit=200, connection=None, **kw):
+def op_list_webpages(*, limit=200, **kw):
     """List recently visited pages from Brave browsing history."""
-    db = connection or HISTORY_DB
+    db = HISTORY_DB
     rows = sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
@@ -46,9 +46,9 @@ def op_list_webpages(*, limit=200, connection=None, **kw):
     return [_map_webpage(r) for r in rows]
 
 
-def op_search_webpages(*, query, limit=200, connection=None, **kw):
+def op_search_webpages(*, query, limit=200, **kw):
     """Search Brave browsing history by URL or title."""
-    db = connection or HISTORY_DB
+    db = HISTORY_DB
     rows = sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
@@ -104,9 +104,9 @@ def op_get_cookie_key(**kw):
 # ==============================================================================
 
 
-def op_list_cookies(*, domain, limit=1000, connection=None, **kw):
+def op_list_cookies(*, domain, limit=1000, **kw):
     """List cookies for a domain with hex-encoded encrypted values."""
-    db = connection or COOKIES_DB
+    db = COOKIES_DB
     return sql.query("""
         SELECT name, host_key, path, hex(encrypted_value) as encrypted_value,
                is_secure, is_httponly, expires_utc, creation_utc

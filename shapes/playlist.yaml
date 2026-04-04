@@ -2,12 +2,7 @@
 #
 # Sources: YouTube
 playlist:
+  subtitle: text
   also: [list]        # a playlist is also a list
   relations:
     contains:          video[]
-  display:
-    title: name
-    subtitle: text
-    image: image
-    columns:
-      - name:            Playlist

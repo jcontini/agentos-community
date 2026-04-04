@@ -2,12 +2,13 @@
 #
 # Sources: Chase, Copilot Money
 transaction:
+  subtitle: category
   fields:
     amount:            number    # positive = credit, negative = debit
     currency:          string
     balance:           number    # account balance after this transaction
     category:          string    # spending category (e.g. "food", "travel")
-    posting_date:      datetime  # when the bank posted it (vs. datePublished = transaction date)
+    postingDate:      datetime  # when the bank posted it (vs. datePublished = transaction date)
     pending:           boolean
     recurring:         boolean
     notes:             string
@@ -15,13 +16,3 @@ transaction:
     details:           json
   relations:
     account:           account   # the financial account this posted to
-  display:
-    title: name
-    subtitle: category
-    date: posting_date
-    columns:
-      - name:            Description
-      - amount:          Amount
-      - category:        Category
-      - posting_date:    Date
-      - pending:         Pending

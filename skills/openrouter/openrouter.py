@@ -29,11 +29,11 @@ def list_models(**params) -> list[dict]:
         {
             "id": m.get("id"),
             "name": m.get("name"),
-            "text": m.get("description"),
-            "datePublished": _ts_to_iso(m.get("created")),
+            "content": m.get("description"),
+            "published": _ts_to_iso(m.get("created")),
             "provider": m.get("id", "").split("/")[0] if m.get("id") else None,
-            "model_type": "llm",
-            "context_window": int(m["context_length"]) if m.get("context_length") else None,
+            "modelType": "llm",
+            "contextWindow": int(m["context_length"]) if m.get("context_length") else None,
         }
         for m in (resp["json"] or {}).get("data", [])
     ]
@@ -122,10 +122,10 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
     usage = data.get("usage") or {}
     return {
         "content": message.get("content"),
-        "tool_calls": tool_calls,
-        "stop_reason": stop_reason,
+        "toolCalls": tool_calls,
+        "stopReason": stop_reason,
         "usage": {
-            "input_tokens": usage.get("prompt_tokens", 0),
-            "output_tokens": usage.get("completion_tokens", 0),
+            "inputTokens": usage.get("prompt_tokens", 0),
+            "outputTokens": usage.get("completion_tokens", 0),
         },
     }

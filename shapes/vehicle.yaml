@@ -9,26 +9,18 @@
 #
 # Sources: manual entry, document extraction
 vehicle:
+  subtitle: vin
   also: [product]     # a vehicle is also a product
   fields:
     vin:               string    # Vehicle Identification Number (17 chars)
     year:              integer   # model year
     model:             string    # model name (e.g. Accord, A4)
     trim:              string    # trim level (e.g. EX-L, Premium)
-    body_type:         string    # sedan, SUV, truck, etc.
-    fuel_type:         string    # gas, diesel, hybrid, electric
+    bodyType:         string    # sedan, SUV, truck, etc.
+    fuelType:         string    # gas, diesel, hybrid, electric
     transmission:      string    # automatic, manual, CVT, e-CVT
     drivetrain:        string    # FWD, RWD, AWD, 4WD
     color:             string
     odometer:          integer   # miles or km (last known)
   relations:
     manufacturer:      organization
-  display:
-    title: name
-    subtitle: vin
-    image: image
-    date: datePublished
-    columns:
-      - name:            Vehicle
-      - year:            Year
-      - vin:             VIN
