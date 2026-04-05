@@ -14,11 +14,11 @@ post:
     commentCount: integer
     likes:         integer
     viewCount:    integer
-    replies:       post[]     # nested comment tree (comments are posts)
   relations:
     postedBy:         account   # who posted it
     publish:           community # subreddit, group, or channel it was posted to
     repliesTo:        post      # parent post (makes this a "comment")
+    replies:          post[]    # nested comment tree (inverse of repliesTo)
     contains:          video[]   # embedded videos
     media:             image[]   # embedded images
     attachment:        file[]    # attached files
