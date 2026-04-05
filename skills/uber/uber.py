@@ -1275,6 +1275,67 @@ def search_products(store_uuid: str, query: str, **params) -> list:
     return products
 
 
+def search_address(query: str, resolve: bool = True, **params) -> list:
+    """Search for addresses worldwide — autocomplete + geocoding.
+
+    Backed by mapsSearchV1 (typeahead) + getDeliveryLocationV2 (coordinate resolution).
+    Returns place-shaped entities with structured address components and lat/lng.
+    Uses HERE Maps and Uber Places as providers.
+
+    Set resolve=False to skip coordinate lookup (faster, but no lat/lng).
+    """
+    cookie_header = require_cookies(params, "search_address")
+
+    results = _eats_post(cookie_header, "mapsSearchV1", {"query": query})
+    if not isinstance(results, list):
+        results = []
+
+    places = []
+    for r in results:
+        place_id = r.get("id", "")
+        provider = r.get("provider", "")
+
+        place = {
+            "id": place_id,
+            "name": r.get("addressLine1", ""),
+            "fullAddress": f"{r.get('addressLine1', '')}, {r.get('addressLine2', '')}".strip(", "),
+            "featureType": "address",
+            "categories": r.get("categories") or [],
+        }
+
+        # Resolve coordinates + structured address if requested
+        if resolve and place_id and provider:
+            try:
+                detail = _eats_post(cookie_header, "getDeliveryLocationV2", {
+                    "placeId": place_id,
+                    "provider": provider,
+                    "source": "manual_auto_complete",
+                })
+                loc = (detail.get("deliveryLocation") or {}).get("location") or {}
+                coord = loc.get("coordinate") or {}
+                comps = loc.get("addressComponents") or {}
+
+                if coord.get("latitude"):
+                    place["latitude"] = coord["latitude"]
+                    place["longitude"] = coord.get("longitude")
+                if loc.get("fullAddress"):
+                    place["fullAddress"] = loc["fullAddress"]
+                if comps:
+                    place["city"] = comps.get("CITY")
+                    place["state"] = comps.get("FIRST_LEVEL_SUBDIVISION_CODE")
+                    place["country"] = comps.get("COUNTRY_CODE")
+                    place["postalCode"] = comps.get("POSTAL_CODE")
+                    place["neighborhood"] = comps.get("NEIGHBORHOOD")
+                    place["streetName"] = comps.get("STREET_NAME")
+                    place["houseNumber"] = comps.get("HOUSE_NUMBER")
+            except Exception:
+                pass  # resolve failed — return without coordinates
+
+        places.append(place)
+
+    return places
+
+
 def search_stores(query: str = "", **params) -> list:
     """Search for stores/restaurants on Uber Eats by name or cuisine.
 

@@ -163,6 +163,23 @@ operations:
       function: get_delivery
       timeout: 30
 
+  search_address:
+    description: "Geocoding — search for addresses worldwide with autocomplete. Returns structured addresses with lat/lng, city, state, zip, neighborhood."
+    returns: place[]
+    params:
+      query:
+        type: string
+        required: true
+        description: "Address query (e.g. '350 5th Ave New York', 'Rome Italy', '1600 Pennsylvania Ave')"
+      resolve:
+        type: boolean
+        description: "Resolve coordinates + structured address (default: true). Set false for faster typeahead-only results."
+    connection: eats
+    python:
+      module: ./uber.py
+      function: search_address
+      timeout: 30
+
   search_stores:
     description: "Search for stores/restaurants by name or cuisine. Returns suggestions if no query."
     returns: place[]

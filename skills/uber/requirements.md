@@ -607,6 +607,97 @@ Rich address data including `addressComponents` with city/state/zip. `instructio
 
 This is a bot detection signal. The page sends `isBot: false` — we should do the same if we call this endpoint.
 
+#### `mapsSearchV1` — address autocomplete/geocoding (captured via CDP 2026-04-05)
+```json
+// Request — just a query string
+{ "query": "350 5th Ave New York" }
+
+// Response — array of place suggestions
+[
+  {
+    "id": "here:af:streetsection:aAvx.MO88yq8-n01foRJhA:...",
+    "provider": "here_places",           // or "uber_places" for POIs
+    "addressLine1": "350 5th Ave",
+    "addressLine2": "New York, NY 10118-0001, US",
+    "categories": ["address_point"]       // or ["RESTAURANT", "FOOD_AND_BEVERAGE", "place"]
+  }
+]
+```
+Works worldwide — returns addresses across US, Canada, Europe. Provider is HERE Maps for addresses, `uber_places` for POIs (restaurants, businesses). No lat/lng in search results — use `getDeliveryLocationV2` to resolve coordinates.
+
+#### `getDeliveryLocationV2` — resolve place to full address + coordinates (captured via CDP 2026-04-05)
+```json
+// Request — placeId from mapsSearchV1
+{
+  "placeId": "a7aad99a-4445-f929-e9b7-a4bd80e9346f",
+  "provider": "uber_places",
+  "source": "manual_auto_complete"
+}
+
+// Response — full structured address with lat/lng
+{
+  "deliveryLocation": {
+    "location": {
+      "name": "Rome Italy",
+      "addressLine1": "Rome Italy",
+      "addressLine2": "224 E 9th St, Los Angeles, CA",
+      "fullAddress": "224 E 9th St, Los Angeles, CA 90015, US",
+      "coordinate": { "latitude": 34.0400986, "longitude": -118.2537973 },
+      "id": "a7aad99a-...",
+      "provider": "uber_places",
+      "categories": ["MENS_APPAREL_STORE", "COMMERCIAL_SERVICES", "place"],
+      "title": "Rome Italy",
+      "subtitle": "224 E 9th St, Los Angeles, CA",
+      "addressComponents": {
+        "CITY": "Los Angeles",
+        "COUNTRY_CODE": "US",
+        "FIRST_LEVEL_SUBDIVISION_CODE": "CA",
+        "HOUSE_NUMBER": "224",
+        "NEIGHBORHOOD": "Downtown Los Angeles",
+        "POSTAL_CODE": "90015",
+        "STREET_NAME": "E 9th St"
+      }
+    },
+    "deliveryConfig": {
+      "availableInteractionTypes": ["door_to_door", "curbside", "leave_at_door", ...],
+      "constraint": { "maxRadiusMeters": 300 }
+    }
+  }
+}
+```
+This is a full geocoding service. Two-step: `mapsSearchV1` for typeahead → `getDeliveryLocationV2` to resolve coordinates + structured address. Useful as an address provider for the graph.
+
+#### `getDeliveryLocationsV2` — saved delivery addresses (captured via CDP 2026-04-05)
+```json
+// Request
+{ "locationTypes": ["SUGGESTED"] }
+
+// Response — user's saved addresses with full structured data
+{
+  "deliveryLocations": {
+    "SAVED": [],
+    "SUGGESTED": [{
+      "location": {
+        "name": "1141 1/4 Gunter St",
+        "fullAddress": "1141 1/4 Gunter St, Austin, TX 78721-1852, US",
+        "coordinate": { "latitude": 30.271044, "longitude": -97.695755 },
+        "provider": "uber_places",
+        "categories": ["HOME_PRIVATE", "RESIDENCE"],
+        "addressComponents": {
+          "CITY": "Austin", "COUNTRY_CODE": "US",
+          "FIRST_LEVEL_SUBDIVISION_CODE": "TX",
+          "HOUSE_NUMBER": "1141 1/4",
+          "NEIGHBORHOOD": "MLK",
+          "POSTAL_CODE": "78721-1852",
+          "STREET_NAME": "Gunter St",
+          "UNKNOWN": "Travis"
+        }
+      }
+    }]
+  }
+}
+```
+
 ### Real-time events
 
 Two event stream endpoints observed:
@@ -665,6 +756,10 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getCartsViewForEaterUuidV1` | Current cart state | **Captured** |
 | `getMenuItemV1` | Item customization options (toppings, sizes, sides) | **Captured** — full customization group/option shape documented |
 | `getInStoreSearchV1` | In-store product search | **Captured** — same item shape as getStoreV1 |
+| `mapsSearchV1` | Address autocomplete/geocoding — typeahead search worldwide | **Captured** — `{query}` → array of `{id, provider, addressLine1, addressLine2}` |
+| `getDeliveryLocationV2` | Resolve place to coordinates + structured address | **Captured** — `{placeId, provider}` → lat/lng, addressComponents |
+| `getDeliveryLocationsV2` | Saved delivery addresses | **Captured** — SAVED + SUGGESTED with full addressComponents |
+| `getAddressEntryFormV2` | Address form fields (apt/suite, residence type) | **Captured** — UI form config, not useful for data |
 | `getLocationV1` | Location details | Not yet captured |
 | `getNavigationLinksV1` | Nav structure | Not yet captured |
 | `getEatsPassV1` | Uber One / Eats Pass | Not yet captured — `getMembershipHubV1` is the actual endpoint but returns UI components |
