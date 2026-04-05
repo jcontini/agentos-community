@@ -185,6 +185,29 @@ operations:
       function: search_address
       timeout: 30
 
+  list_addresses:
+    description: "Saved and suggested delivery addresses — full structured addresses with lat/lng, delivery notes, and categories"
+    returns: place[]
+    connection: eats
+    python:
+      module: ./uber.py
+      function: list_addresses
+      timeout: 15
+
+  get_messages:
+    description: "Delivery chat messages — courier/store communication during active delivery. Chat is ephemeral (only available during/shortly after delivery)."
+    returns: order
+    params:
+      order_uuid:
+        type: string
+        required: true
+        description: "Order UUID (from list_deliveries or track_delivery)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_messages
+      timeout: 15
+
   search_stores:
     description: "Search for stores/restaurants by name or cuisine. Returns suggestions if no query."
     returns: place[]

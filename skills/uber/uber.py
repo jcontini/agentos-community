@@ -1336,6 +1336,93 @@ def search_address(query: str, resolve: bool = True, **params) -> list:
     return places
 
 
+def list_addresses(**params) -> list:
+    """List saved and suggested delivery addresses.
+
+    Backed by getDeliveryLocationsV2. Returns place-shaped entities with
+    full structured addresses, coordinates, delivery notes, and categories.
+    """
+    cookie_header = require_cookies(params, "list_addresses")
+
+    data = _eats_post(cookie_header, "getDeliveryLocationsV2", {})
+    locs = data.get("deliveryLocations") or {}
+
+    places = []
+    seen = set()
+    for loc_type, items in locs.items():
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            loc = item.get("location") or {}
+            loc_id = loc.get("id", "")
+            if not loc_id or loc_id in seen:
+                continue
+            seen.add(loc_id)
+
+            coord = loc.get("coordinate") or {}
+            comps = loc.get("addressComponents") or {}
+            dp = item.get("deliveryPayload") or {}
+            instructions = dp.get("deliveryInstructions") or {}
+
+            # Extract delivery notes from all interaction types
+            notes = None
+            for instr in instructions.values():
+                n = instr.get("deliveryNotes", "")
+                if n:
+                    notes = n
+                    break
+
+            place = {
+                "id": loc_id,
+                "name": loc.get("name") or loc.get("title", ""),
+                "fullAddress": loc.get("fullAddress"),
+                "featureType": "address",
+                "latitude": coord.get("latitude"),
+                "longitude": coord.get("longitude"),
+                "city": comps.get("CITY"),
+                "state": comps.get("FIRST_LEVEL_SUBDIVISION_CODE"),
+                "country": comps.get("COUNTRY_CODE"),
+                "postalCode": comps.get("POSTAL_CODE"),
+                "neighborhood": comps.get("NEIGHBORHOOD"),
+                "streetName": comps.get("STREET_NAME"),
+                "houseNumber": comps.get("HOUSE_NUMBER"),
+                "categories": loc.get("categories") or [],
+                "locationType": loc_type,  # SAVED, SUGGESTED, or TARGET
+            }
+            if notes:
+                place["deliveryNotes"] = notes
+
+            places.append(place)
+
+    return places
+
+
+def get_messages(order_uuid: str, **params) -> dict:
+    """Get delivery chat messages for an order.
+
+    Backed by getEaterMessagingContentV1. Returns chat content between
+    the eater and courier/store during delivery. Chat is ephemeral —
+    only available during or shortly after active delivery.
+    """
+    cookie_header = require_cookies(params, "get_messages")
+
+    data = _eats_post(cookie_header, "getEaterMessagingContentV1", {
+        "orderUuid": order_uuid,
+    })
+
+    body = data.get("body", "")
+    head = data.get("head", "")
+
+    if not body and not head:
+        return {"orderUuid": order_uuid, "messages": [], "status": "empty"}
+
+    return {
+        "orderUuid": order_uuid,
+        "body": body,
+        "head": head,
+    }
+
+
 def search_stores(query: str = "", **params) -> list:
     """Search for stores/restaurants on Uber Eats by name or cuisine.
 
