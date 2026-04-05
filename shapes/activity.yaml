@@ -1,0 +1,18 @@
+# An immutable change event — a graph mutation, skill run, search, or load.
+# Fields for what happened, relations for who/what/where.
+#
+# Sources: agentOS engine (all tool calls)
+activity:
+  subtitle: action
+  icon: activity
+  fields:
+    action:           string      # create, update, delete, run, read, search, load
+    published:        datetime    # when this happened (immutable)
+    changedKeys:      string[]    # which fields changed (for updates)
+    toolName:         string      # for skill runs: which operation
+    duration:         number      # for skill runs: execution time in ms
+    success:          boolean     # for skill runs: did it succeed
+  relations:
+    target:           entity      # what was affected (any graph node)
+    session:          session     # during which session
+    folder:           folder      # working directory
