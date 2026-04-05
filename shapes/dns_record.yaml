@@ -2,6 +2,7 @@
 #
 # Sources: Gandi, Porkbun
 dns_record:
+  identity: [domain, recordType, recordName]
   subtitle: recordType
   fields:
     domain:            string

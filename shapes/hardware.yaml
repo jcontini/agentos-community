@@ -2,6 +2,7 @@
 #
 # Examples: MacBook Pro, iPhone, Arduino, server rack
 hardware:
+  identity: serialNumber
   subtitle: author
   also: [product]     # hardware is also a product
   fields:

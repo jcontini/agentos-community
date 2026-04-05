@@ -4,6 +4,7 @@
 #
 # Sources: Reddit, Hacker News, YouTube, Moltbook
 post:
+  identity: [platform, id]
   subtitle: author
   fields:
     externalUrl:      url       # linked URL (for link posts)

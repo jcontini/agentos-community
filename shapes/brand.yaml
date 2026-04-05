@@ -2,6 +2,7 @@
 #
 # Sources: Amazon
 brand:
+  identity: url
   subtitle: tagline
   fields:
     tagline:           string

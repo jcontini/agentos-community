@@ -2,6 +2,7 @@
 #
 # Sources: Chase, Copilot Money
 transaction:
+  identity: [platform, id]
   subtitle: category
   fields:
     amount:            number    # positive = credit, negative = debit

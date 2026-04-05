@@ -3,6 +3,7 @@
 #
 # Sources: Linear, Todoist, GitHub
 task:
+  identity: [platform, id]
   subtitle: state
   fields:
     remoteId:         string    # source-specific ID (e.g. PROJ-123, #456)

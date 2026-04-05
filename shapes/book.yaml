@@ -3,6 +3,7 @@
 #
 # Sources: Goodreads
 book:
+  identity_any: [isbn13, isbn]
   subtitle: author
   also: [product]     # a book is also a product
   fields:

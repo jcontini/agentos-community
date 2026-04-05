@@ -2,6 +2,7 @@
 #
 # Sources: SerpAPI (flight search)
 airport:
+  identity: iataCode
   subtitle: iataCode
   fields:
     iataCode:         string    # 3-letter code (e.g. LAX, JFK, SFO)

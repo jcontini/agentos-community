@@ -3,6 +3,7 @@
 #
 # Sources: Goodreads
 author:
+  identity: url
   subtitle: location
   fields:
     location:          string

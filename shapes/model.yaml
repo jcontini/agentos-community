@@ -2,6 +2,7 @@
 #
 # Sources: Ollama, OpenRouter, Anthropic API
 model:
+  identity: [provider, name]
   subtitle: provider
   fields:
     provider:          string    # e.g., "anthropic", "openai", "meta"

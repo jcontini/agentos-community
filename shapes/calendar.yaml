@@ -2,6 +2,7 @@
 #
 # Sources: Google Calendar, Apple Calendar
 calendar:
+  identity: [platform, calendarId]
   subtitle: source
   fields:
     calendarId:       string    # provider's calendar ID (Google: email-like string)

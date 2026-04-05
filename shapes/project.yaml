@@ -2,6 +2,7 @@
 #
 # Sources: Linear, Todoist
 project:
+  identity: [platform, id]
   subtitle: state
   fields:
     state:             string
