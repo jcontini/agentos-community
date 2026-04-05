@@ -397,15 +397,46 @@ Returns all stores available for delivery near the user's saved address. 126 fee
 // Request
 { "shouldGetSubsMetadata": true }
 
-// Response: TODO
+// Response (captured 2026-04-05)
+{
+  "firstName": "Joe",
+  "lastName": "Contini",
+  "pictureUrl": "https://d1w2poirtb3as9.cloudfront.net/...",
+  "hashedEmail": "abc123...",           // NOT plain email — hashed
+  "creationTime": "2012-05-17T01:46:40.000+00:00",
+  "geoIpCountryCode": "US",
+  "hasConfirmedMobile": true,
+  "isAdmin": false,
+  "isLoggedIn": true,
+  "paymentProfiles": ["lastSelectedProfile", "paymentProfiles"],  // NOT UUIDs — key names
+  "subscriptionMeta": {
+    "eatsSubscriptionStatus": "ACTIVE",
+    "isEligible": true,
+    "passType": "UBER_ONE",
+    "title": "Uber One",
+    "showAccountMenu": true,
+    "showBottomTab": false,
+    "offerSavingInfo": []
+  }
+}
+// Note: no plain email, no phone, no uuid, no saved addresses.
+// Use Rides GraphQL CurrentUserRidersWeb for email/phone/uuid/payment details.
 ```
 
-#### `getProfilesForUserV1` — profiles
+#### `getProfilesForUserV1` — business/personal profiles
 ```json
 // Request
 {}
 
-// Response: TODO
+// Response (captured 2026-04-05)
+{
+  "profiles": [
+    { "uuid": "3bb0a14b-...", "name": "Personal", "type": "Personal" },
+    { "uuid": "b2a4efed-...", "name": "Adavia", "type": "Business" }
+  ],
+  "selectedProfile": { "uuid": "3bb0a14b-..." },
+  "defaultBusinessProfileUUID": "b2a4efed-..."
+}
 ```
 
 #### `getInstructionForLocationV1` — delivery instructions

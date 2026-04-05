@@ -306,26 +306,31 @@ def whoami(**params) -> dict:
     benefits = user.get("membershipBenefits") or {}
     payment_profiles = user.get("paymentProfiles") or []
 
+    first = user.get("firstName", "")
+    last = user.get("lastName", "")
+
     return {
-        "uuid": user.get("uuid"),
-        "firstName": user.get("firstName"),
-        "lastName": user.get("lastName"),
+        # Account-shaped entity — stable ID for graph upsert
+        "id": user.get("uuid"),
+        "name": f"{first} {last}".strip() or None,
+        "firstName": first or None,
+        "lastName": last or None,
         "email": user.get("email"),
         "phone": user.get("formattedNumber"),
         "rating": user.get("rating"),
-        "pictureUrl": user.get("pictureUrl"),
+        "image": user.get("pictureUrl"),
         "hasUberOne": benefits.get("hasUberOne", False),
-        "signupCountry": user.get("signupCountry"),
+        "country": user.get("signupCountry"),
         "paymentMethods": [
             {
+                "id": p.get("uuid"),
                 "name": (p.get("displayable") or {}).get("displayName"),
                 "type": p.get("tokenType"),
-                "uuid": p.get("uuid"),
             }
             for p in payment_profiles
         ],
         "profiles": [
-            {"name": p.get("name"), "type": p.get("type"), "uuid": p.get("uuid")}
+            {"id": p.get("uuid"), "name": p.get("name"), "type": p.get("type")}
             for p in (user.get("profiles") or [])
         ],
     }
@@ -560,6 +565,65 @@ def check_eats_session(**params) -> dict:
         "identifier": email or name or "unknown",
         "display": name or email,
     }
+
+
+def get_eats_profile(**params) -> dict:
+    """Get Uber Eats user profile — name, photo, subscription, business profiles.
+
+    Backed by getUserV1 + getProfilesForUserV1. Returns account-shaped entity.
+    Note: getUserV1 returns hashedEmail (not plain email) and no phone.
+    Use whoami (Rides API) for email, phone, rating, and payment method details.
+    """
+    cookie_header = require_cookies(params, "get_eats_profile")
+
+    data = _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
+
+    # getUserV1 shape: {firstName, lastName, pictureUrl, hashedEmail,
+    #   subscriptionMeta, creationTime, geoIpCountryCode, hasConfirmedMobile}
+    first = data.get("firstName", "")
+    last = data.get("lastName", "")
+    name = f"{first} {last}".strip()
+
+    # Subscription metadata
+    subs = data.get("subscriptionMeta") or {}
+
+    result = {
+        "name": name or None,
+        "firstName": first or None,
+        "lastName": last or None,
+        "image": data.get("pictureUrl"),
+        "country": data.get("geoIpCountryCode"),
+        "createdAt": data.get("creationTime"),
+        "hasConfirmedMobile": data.get("hasConfirmedMobile", False),
+    }
+
+    if subs and isinstance(subs, dict):
+        result["subscription"] = {
+            "name": subs.get("title") or subs.get("passType"),
+            "status": subs.get("eatsSubscriptionStatus"),
+            "type": subs.get("passType"),
+        }
+
+    # getProfilesForUserV1 — business vs personal profiles
+    try:
+        profiles_data = _eats_post(cookie_header, "getProfilesForUserV1", {})
+        profiles_list = profiles_data.get("profiles") or []
+        selected = profiles_data.get("selectedProfile") or {}
+        if profiles_list:
+            result["profiles"] = [
+                {
+                    "id": p.get("uuid"),
+                    "name": p.get("name") or p.get("displayName"),
+                    "type": p.get("type"),  # Personal, Business
+                    "isSelected": p.get("uuid") == selected.get("uuid") if selected else False,
+                }
+                for p in profiles_list
+                if isinstance(p, dict)
+            ]
+    except Exception:
+        pass  # best-effort
+
+    return result
 
 
 def list_deliveries(cursor: str = "", **params) -> list:

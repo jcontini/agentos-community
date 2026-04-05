@@ -85,16 +85,17 @@ operations:
       timeout: 30
 
   whoami:
-    description: "Get current user profile — name, email, phone, rating, payment methods, Uber One status"
+    description: "Get Uber account — name, email, phone, rating, payment methods, Uber One, business profiles"
     returns:
-      uuid: string
-      first_name: string
-      last_name: string
+      id: string
+      name: string
       email: string
       phone: string
       rating: string
-      has_uber_one: boolean
-      payment_methods: array
+      hasUberOne: boolean
+      paymentMethods: array
+      profiles: array
+      country: string
     connection: web
     python:
       module: ./uber.py
@@ -117,6 +118,22 @@ operations:
     python:
       module: ./uber.py
       function: check_eats_session
+      timeout: 30
+
+  get_eats_profile:
+    description: "Get Uber Eats user profile — name, email, phone, saved addresses, payment methods, Uber One status"
+    returns:
+      id: string
+      name: string
+      email: string
+      phone: string
+      subscription: object
+      savedAddresses: array
+      paymentMethods: array
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_eats_profile
       timeout: 30
 
   list_deliveries:
