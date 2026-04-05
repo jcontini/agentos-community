@@ -498,6 +498,8 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getUserV1` | User profile | **Captured** |
 | `getProfilesForUserV1` | User profiles list | **Captured** |
 | `getCartsViewForEaterUuidV1` | Current cart state | **Captured** |
+| `getMenuItemV1` | Item customization options (toppings, sizes, sides) | **Captured** — full customization group/option shape documented |
+| `getInStoreSearchV1` | In-store product search | **Captured** — same item shape as getStoreV1 |
 | `getLocationV1` | Location details | Not yet captured |
 | `getNavigationLinksV1` | Nav structure | Not yet captured |
 | `getEatsPassV1` | Uber One / Eats Pass | Not yet captured |
@@ -761,6 +763,142 @@ The key endpoint for browsing store products. Returns store metadata AND the ent
 - Fresh Chicken Breast $23.22
 - Wild Sockeye Salmon Fillet $18.12
 - Fairlife Protein Shake 18-pack $43.19
+
+#### `getMenuItemV1` — item customization options (captured 2026-04-05)
+
+Returns all customization groups and options for a menu item. This is the key endpoint for adding toppings, sizes, sides, etc.
+
+```json
+// Request
+{
+  "itemRequestType": "ITEM",
+  "storeUuid": "92faf8b2-ad6f-5126-b45c-f5a3f89deb86",
+  "sectionUuid": "c6164ff2-ca35-5432-9113-bc3aee79604a",
+  "subsectionUuid": "0379a62a-1156-4ddb-a09a-7e1dc45d5dfb",
+  "menuItemUuid": "b003f5fe-8a16-563b-98d9-a43ea5d6817d",
+  "cbType": "EATER_ENDORSED",
+  "includeCheaperAlternatives": false,
+  "contextReferences": [
+    {"type": "GROUP_ITEMS", "payload": {"type": "groupItemsContextReferencePayload", "groupItemsContextReferencePayload": {}}, "pageContext": "UNKNOWN"}
+  ]
+}
+
+// Response (key fields)
+{
+  "status": "success",
+  "data": {
+    "customizationsList": [
+      {
+        "uuid": "016cb9f9-...",      // customization group UUID
+        "title": "Whole",             // group name
+        "groupId": 0,                 // integer group index
+        "minPermitted": 0,            // 0 = optional
+        "maxPermitted": 15,           // max selections in this group
+        "options": [
+          {
+            "uuid": "95bbd11d-...",   // option UUID
+            "title": "Pepperoni",
+            "price": 400,             // cents — $4.00
+            "minPermitted": 0,
+            "maxPermitted": 15,       // max quantity of this option
+            "defaultQuantity": 0,
+            "isSoldOut": false,
+            "childCustomizationList": []  // nested customizations (e.g. half toppings)
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Sammataro Classic Pie customization groups (2026-04-05):**
+
+| Group | Title | Options | Price range |
+|-------|-------|---------|-------------|
+| 0 | Whole | 15 toppings: Pepperoni $4, Sausage $4, Mushroom $3, Ricotta $3, ... | $3–$4 |
+| 1 | Half Toppings | 1ST HALF / 2ND HALF, each with 7 child toppings | $2.25–$2.50 |
+
+**Customization format in cart requests:**
+
+The `customizations` field in `createDraftOrderV2` / `addItemsToDraftOrderV2` uses this key format:
+```
+Key: "{customizationGroupUuid}+{groupId}"
+Value: array of selected option objects
+```
+
+Example — adding Pepperoni as a whole topping:
+```json
+"customizations": {
+  "016cb9f9-9ead-5880-a57c-431350775a71+0": [
+    {
+      "uuid": "95bbd11d-82ee-51df-a50f-f40d08500bbc",
+      "price": 400,
+      "quantity": 1,
+      "title": "Pepperoni",
+      "defaultQuantity": 0,
+      "customizationMeta": {
+        "title": "Whole",
+        "isPickOne": false
+      }
+    }
+  ]
+}
+```
+
+**Nested customizations (half toppings):**
+```json
+"6a37054e-c34b-562a-986a-7f7caabbe815+1": [
+  {
+    "uuid": "8755bdb8-...",
+    "price": 0,
+    "quantity": 1,
+    "title": "1ST HALF",
+    "customizationMeta": {"title": "Half Toppings", "isPickOne": false},
+    "childCustomizations": {
+      "5005c439-90d3-54e5-af16-cf2b1f4f7b29+0": [
+        {"uuid": "5ac3cad4-...", "price": 225, "quantity": 1, "title": "Sausage", ...}
+      ]
+    }
+  }
+]
+```
+
+**Quantity:** The `quantity` field on cart items already supports values > 1 — tested with `quantity: 2` successfully. The API returns `itemQuantity.inSellableUnit.value.coefficient: 2`.
+
+**Required fields from `getStoreV1` for `getMenuItemV1`:**
+- `storeUuid` — store UUID
+- `sectionUuid` — from the item's `_raw.sectionUuid`
+- `subsectionUuid` — from the item's `_raw.subsectionUuid`
+- `menuItemUuid` — from the item's `uuid`
+
+All four UUIDs are already preserved in the `_raw` field that `get_store` attaches to each product.
+
+#### `getInStoreSearchV1` — in-store product search (captured 2026-04-05)
+
+Used by `search_products` operation. Returns items matching a search query within a specific store.
+
+```json
+// Request
+{
+  "storeUuid": "92faf8b2-...",
+  "query": "pepperoni"
+}
+
+// Response
+{
+  "status": "success",
+  "data": {
+    "sections": [
+      {
+        "catalogSectionUUID": "c6164ff2-...",
+        "title": { "title": "Results" },
+        "catalogItems": [...]          // same shape as getStoreV1 catalogItems
+      }
+    ]
+  }
+}
+```
 
 ### Next steps
 

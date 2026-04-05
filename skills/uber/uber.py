@@ -619,19 +619,42 @@ def list_deliveries(cursor: str = "", **params) -> list:
 def get_delivery(order_uuid: str, **params) -> dict:
     """Get full delivery details including items, quantities, and fare breakdown.
 
-    Uses getReceiptByWorkflowUuidV1 for item data (HTML parsing with lxml).
+    Uses getReceiptByWorkflowUuidV1 for item data (HTML parsing with lxml)
+    and getPastOrdersV1 for store metadata.
     Note: getOrderEntityByUuidV1 only works for ACTIVE orders — returns 404 for
     completed ones. See requirements.md for selector documentation.
     """
     cookie_header = require_cookies(params, "get_delivery")
 
-    # timestamp: null is how the browser sends it, but the SDK may serialize differently.
-    # If this endpoint returns 500, check that the JSON body matches what the browser sends.
-    # See requirements.md for the captured request shape.
+    # Fetch receipt (items, fare) and order metadata (store) in sequence
     data = _eats_post(cookie_header, "getReceiptByWorkflowUuidV1", {
         "contentType": "WEB_HTML",
         "workflowUuid": order_uuid,
     })
+
+    # Get store metadata from getPastOrdersV1 — the receipt doesn't include it
+    store_ref = None
+    order_meta = {}
+    try:
+        past_data = _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": ""})
+        orders_map = past_data.get("ordersMap") or {}
+        if order_uuid in orders_map:
+            order_meta = orders_map[order_uuid]
+            si = order_meta.get("storeInfo") or {}
+            loc = si.get("location") or {}
+            addr = (loc.get("address") or {})
+            if si.get("title"):
+                store_ref = {
+                    "id": si.get("uuid"),
+                    "name": si["title"],
+                    "image": si.get("heroImageUrl"),
+                    "fullAddress": addr.get("eaterFormattedAddress"),
+                    "latitude": loc.get("latitude"),
+                    "longitude": loc.get("longitude"),
+                    "featureType": "poi",
+                }
+    except Exception:
+        pass  # store metadata is best-effort
 
     receipt_html = data.get("receiptData", "")
     receipts = data.get("receiptsForJob") or []
@@ -670,10 +693,13 @@ def get_delivery(order_uuid: str, **params) -> dict:
     total_str = fare.get("total", "")
     total_amount, currency = _parse_fare(total_str)
 
-    return {
+    store_name = (store_ref or {}).get("name", "")
+    order_name = f"{store_name} ({len(items)} items)" if store_name else f"Delivery ({len(items)} items)"
+
+    result = {
         # Standard fields
         "id": order_uuid,
-        "name": f"Delivery ({len(items)} items)",
+        "name": order_name,
         "published": timestamp,
         # Order shape fields
         "orderId": order_uuid,
@@ -685,13 +711,19 @@ def get_delivery(order_uuid: str, **params) -> dict:
         # Typed reference: contains → product[] (engine infers type from shape)
         "contains": [
             {
-                "id": item["item_uuid"],
+                "id": item["itemUuid"],
                 "name": item["name"],
                 "quantity": item["quantity"],
             }
             for item in items
         ],
     }
+
+    # Store as a place reference — creates an edge in the graph
+    if store_ref:
+        result["store"] = store_ref
+
+    return result
 
 
 def get_store(store_uuid: str, **params) -> dict:
@@ -824,6 +856,94 @@ def get_store(store_uuid: str, **params) -> dict:
         # Products — place.offers→product[] relation creates linked product nodes
         "offers": products,
         "productCount": len(products),
+    }
+
+
+def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str = "", subsection_uuid: str = "", **params) -> dict:
+    """Get customization options for a menu item (toppings, sizes, sides, etc.).
+
+    Uses getMenuItemV1. The section/subsection UUIDs come from the item's _raw
+    field in get_store output. If omitted, attempts to look them up via get_store.
+
+    Returns a dict with the item name and customization groups, each containing
+    options with UUID, title, price, and nested child customizations.
+    """
+    cookie_header = require_cookies(params, "get_item_customizations")
+
+    # Build the request — sectionUuid and subsectionUuid are required
+    body = {
+        "itemRequestType": "ITEM",
+        "storeUuid": store_uuid,
+        "sectionUuid": section_uuid,
+        "subsectionUuid": subsection_uuid,
+        "menuItemUuid": item_uuid,
+        "cbType": "EATER_ENDORSED",
+        "includeCheaperAlternatives": False,
+        "contextReferences": [
+            {"type": "GROUP_ITEMS", "payload": {"type": "groupItemsContextReferencePayload",
+             "groupItemsContextReferencePayload": {}}, "pageContext": "UNKNOWN"}
+        ],
+    }
+
+    data = _eats_post(cookie_header, "getMenuItemV1", body)
+
+    # Parse customization groups
+    groups = []
+    for group in (data.get("customizationsList") or []):
+        options = []
+        for opt in (group.get("options") or []):
+            option_data = {
+                "uuid": opt.get("uuid"),
+                "title": opt.get("title"),
+                "price": opt.get("price", 0),  # cents
+                "priceAmount": (opt.get("price") or 0) / 100,
+                "maxQuantity": opt.get("maxPermitted", 1),
+                "defaultQuantity": opt.get("defaultQuantity", 0),
+                "isSoldOut": opt.get("isSoldOut", False),
+            }
+            # Nested customizations (e.g. half toppings → 1ST HALF / 2ND HALF)
+            children = opt.get("childCustomizationList") or []
+            if children:
+                option_data["childGroups"] = []
+                for child_group in children:
+                    child_options = []
+                    for child_opt in (child_group.get("options") or []):
+                        child_options.append({
+                            "uuid": child_opt.get("uuid"),
+                            "title": child_opt.get("title"),
+                            "price": child_opt.get("price", 0),
+                            "priceAmount": (child_opt.get("price") or 0) / 100,
+                            "maxQuantity": child_opt.get("maxPermitted", 1),
+                            "isSoldOut": child_opt.get("isSoldOut", False),
+                        })
+                    option_data["childGroups"].append({
+                        "uuid": child_group.get("uuid"),
+                        "title": child_group.get("title"),
+                        "groupId": child_group.get("groupId"),
+                        "options": child_options,
+                    })
+            options.append(option_data)
+
+        groups.append({
+            "uuid": group.get("uuid"),
+            "title": group.get("title"),
+            "groupId": group.get("groupId"),
+            "minRequired": group.get("minPermitted", 0),
+            "maxAllowed": group.get("maxPermitted", 1),
+            "options": options,
+        })
+
+    item_title = data.get("title") or data.get("itemTitle") or ""
+    item_desc = data.get("itemDescription") or ""
+    item_price = data.get("price") or 0
+
+    return {
+        "id": item_uuid,
+        "name": item_title,
+        "content": item_desc,
+        "priceAmount": item_price / 100 if item_price else None,
+        "currency": "USD",
+        "customizationGroups": groups,
     }
 
 
@@ -1037,6 +1157,55 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
 # "addItemsToDraftOrderV2" and "createDraftOrderV2" sections.
 # ---------------------------------------------------------------------------
 
+def _build_customizations(customizations) -> dict:
+    """Build the customizations dict for the cart API.
+
+    Accepts either:
+    - None / empty → returns {}
+    - A pre-built dict (passthrough for power users who know the API format)
+    - A list of dicts with {group_uuid, group_id, group_title, selections: [{uuid, title, price, quantity}]}
+
+    The API format is: { "{groupUuid}+{groupId}": [option objects] }
+    Each option needs: uuid, price, quantity, title, defaultQuantity, customizationMeta
+    """
+    if not customizations:
+        return {}
+
+    # Passthrough: already in API format (dict with "+" keys)
+    if isinstance(customizations, dict):
+        return customizations
+
+    # Build from structured list
+    result = {}
+    for group in customizations:
+        group_uuid = group.get("group_uuid") or group.get("uuid", "")
+        group_id = group.get("group_id") if group.get("group_id") is not None else group.get("groupId", 0)
+        group_title = group.get("group_title") or group.get("title", "")
+        key = f"{group_uuid}+{group_id}"
+
+        options = []
+        for sel in (group.get("selections") or []):
+            opt = {
+                "uuid": sel.get("uuid", ""),
+                "price": sel.get("price", 0),
+                "quantity": sel.get("quantity", 1),
+                "title": sel.get("title", ""),
+                "defaultQuantity": sel.get("defaultQuantity", 0),
+                "customizationMeta": {
+                    "title": group_title,
+                    "isPickOne": group.get("isPickOne", False),
+                },
+            }
+            # Nested child customizations (for half toppings)
+            if sel.get("childCustomizations"):
+                opt["childCustomizations"] = _build_customizations(sel["childCustomizations"])
+            options.append(opt)
+
+        result[key] = options
+
+    return result
+
+
 def _build_cart_item(product: dict, store_uuid: str) -> dict:
     """Build cart item from a product returned by get_store.
 
@@ -1078,8 +1247,8 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
         "price": raw["price"],
         "quantity": quantity,
         "imageURL": raw["imageUrl"],
-        "specialInstructions": "",
-        "customizations": {},
+        "specialInstructions": product.get("specialInstructions", ""),
+        "customizations": _build_customizations(product.get("customizations")),
         "fulfillmentIssueAction": {
             "type": "STORE_REPLACE_ITEM",
             "itemSubstitutes": None,
@@ -1452,7 +1621,7 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
     # Count fulfillment states
     state_counts = {}
     for i in items:
-        s = i["fulfillment_state"]
+        s = i["fulfillmentState"]
         state_counts[s] = state_counts.get(s, 0) + 1
 
     # Build the delivery trip
@@ -1480,8 +1649,46 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
         "contains": items,
     }
 
-    # Delivery trip with courier
+    # If no items from getOrderEntityByUuidV1, try overview.items and orderSummary feed card
+    if not items:
+        # overview.items — present on active restaurant orders
+        overview_items = overview.get("items") or []
+        for oi in overview_items:
+            item_data = {
+                "name": oi.get("title") or oi.get("text", ""),
+                "quantity": oi.get("quantity", 1),
+            }
+            # Customizations often in subtitle/description
+            customization_text = oi.get("subtitle") or oi.get("description") or ""
+            if customization_text:
+                item_data["customizations"] = customization_text
+            if oi.get("imageUrl") or oi.get("image"):
+                item_data["image"] = oi.get("imageUrl") or oi.get("image")
+            items.append(item_data)
+
+        # Fallback: orderSummary feed card
+        if not items:
+            for card in (order.get("feedCards") or []):
+                if card.get("type") == "orderSummary":
+                    summary = card.get("orderSummary") or card
+                    summary_items = summary.get("items") or summary.get("orderItems") or []
+                    for si in summary_items:
+                        item_data = {
+                            "name": si.get("title") or si.get("name", ""),
+                            "quantity": si.get("quantity", 1),
+                        }
+                        customization_text = si.get("subtitle") or si.get("description") or ""
+                        if customization_text:
+                            item_data["customizations"] = customization_text
+                        items.append(item_data)
+
+        result["contains"] = items
+
+    # Delivery trip with courier — use order UUID as stable ID for upsert
+    store_name = overview.get("title") or info.get("storeInfo", {}).get("name") or "Delivery"
     trip_data = {
+        "id": f"{order_uuid}_delivery",
+        "name": f"{store_name} delivery",
         "tripType": "delivery",
         "status": "in_progress",
         "eta": eta,
@@ -1489,9 +1696,13 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
 
     # Driver as person — engine knows trip.driver → person from shape
     if courier_contact:
+        # Use courier UUID or phone as stable ID for upsert
+        courier_id = courier_contact.get("uuid") or courier_contact.get("formattedPhoneNumber")
         person_data = {
             "name": courier_contact.get("title"),
         }
+        if courier_id:
+            person_data["id"] = courier_id
         if courier_contact.get("formattedPhoneNumber"):
             person_data["phone"] = courier_contact["formattedPhoneNumber"]
         if courier_info.get("iconUrl"):
@@ -1560,5 +1771,36 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
         trip_data["destination"] = dest_place
 
     result["delivery"] = trip_data
+
+    # Fare / payment — check all known locations in the response
+    fare_info = info.get("fareInfo") or overview.get("fareInfo") or {}
+    checkout_info = fare_info.get("checkoutInfo") or []
+    if checkout_info:
+        result["fareBreakdown"] = [
+            {"label": ci.get("label"), "amount": ci.get("rawValue"), "key": ci.get("key")}
+            for ci in checkout_info
+        ]
+    if fare_info.get("totalPrice"):
+        result["totalAmount"] = fare_info["totalPrice"] / 100  # cents to dollars
+
+    # Payment — look in feed cards too
+    for card in (order.get("feedCards") or []):
+        if card.get("type") == "receipt":
+            receipt_card = card.get("receipt") or {}
+            receipt_items = receipt_card.get("items") or []
+            if receipt_items:
+                result["fareBreakdown"] = [
+                    {"label": ri.get("label"), "amount": ri.get("value"), "key": ri.get("key", "")}
+                    for ri in receipt_items
+                ]
+
+    # Delivery instructions — from delivery feed card
+    delivery_notes = delivery_card.get("description") or delivery_card.get("instructions") or {}
+    if isinstance(delivery_notes, dict):
+        # Already structured {title, notes}
+        if delivery_notes.get("notes") or delivery_notes.get("title"):
+            result["deliveryInstructions"] = delivery_notes
+    elif delivery_notes:
+        result["deliveryInstructions"] = delivery_notes
 
     return result

@@ -169,6 +169,32 @@ operations:
       function: get_store
       timeout: 30
 
+  get_item_customizations:
+    description: "Get customization options for a menu item — toppings, sizes, sides with prices. Use with items where hasCustomizations is true."
+    returns: product
+    params:
+      store_uuid:
+        type: string
+        required: true
+        description: "Store UUID"
+      item_uuid:
+        type: string
+        required: true
+        description: "Item UUID (from get_store or search_products)"
+      section_uuid:
+        type: string
+        required: true
+        description: "Catalog section UUID (from item's _raw.sectionUuid)"
+      subsection_uuid:
+        type: string
+        required: true
+        description: "Catalog subsection UUID (from item's _raw.subsectionUuid)"
+    connection: eats
+    python:
+      module: ./uber.py
+      function: get_item_customizations
+      timeout: 15
+
   search_products:
     description: "Search products within a store — returns dietary tags (VEGAN, Non-GMO, SNAP), prices, weight, aisles"
     returns: product[]
