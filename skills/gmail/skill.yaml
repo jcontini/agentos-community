@@ -7,7 +7,6 @@ website: https://mail.google.com
 product:
   name: Gmail
   website: https://mail.google.com
-  tags: [platform]
   developer: Google LLC
 privacy_url: https://policies.google.com/privacy
 

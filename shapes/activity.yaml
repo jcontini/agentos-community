@@ -13,6 +13,7 @@ activity:
     duration:         number      # for skill runs: execution time in ms
     success:          boolean     # for skill runs: did it succeed
   relations:
-    target:           entity      # what was affected (any graph node)
+    # target is any graph node — no shape constraint. Stored as target_id field
+    # until the activity ontology spec redesigns this as a proper typed relation.
     session:          session     # during which session
     folder:           folder      # working directory

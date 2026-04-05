@@ -4,6 +4,10 @@ description: Meeting transcripts, AI summaries, and Q&A conversations from Grano
 color: "#2D6A4F"
 
 website: https://granola.ai
+product:
+  name: Granola
+  website: https://granola.ai
+  developer: Granola
 privacy_url: https://granola.ai/privacy
 
 provides:

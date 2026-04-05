@@ -4,6 +4,10 @@ description: Read and search email from Mimestream, a native macOS email client 
 color: "#3B82F6"
 
 website: https://mimestream.com
+product:
+  name: Mimestream
+  website: https://mimestream.com
+  developer: Mimestream LLC
 privacy_url: https://mimestream.com/privacy
 
 connections:

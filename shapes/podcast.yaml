@@ -2,6 +2,7 @@
 #
 # Sources: YouTube (some channels are podcasts), future podcast skill
 podcast:
+  identity: [platform, id]
   subtitle: author
   fields:
     feedUrl:          url       # RSS feed URL

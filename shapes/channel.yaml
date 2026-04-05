@@ -2,6 +2,7 @@
 #
 # Sources: YouTube
 channel:
+  identity: [platform, id]
   fields:
     subscriberCount:  integer
     banner:            url       # channel banner/header image

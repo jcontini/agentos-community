@@ -7,7 +7,6 @@ website: https://calendar.google.com
 product:
   name: Google Calendar
   website: https://calendar.google.com
-  tags: [platform]
   developer: Google LLC
 privacy_url: https://policies.google.com/privacy
 

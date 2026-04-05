@@ -137,7 +137,6 @@
       "properties": {
         "name": { "type": "string", "description": "Product display name (e.g. Gmail, Amazon)" },
         "website": { "type": "string", "format": "uri", "description": "Product website URL" },
-        "tags": { "type": "array", "items": { "type": "string" }, "description": "Shape tags (e.g. platform, software)" },
         "developer": { "type": "string", "description": "Developer/company name" }
       },
       "additionalProperties": false

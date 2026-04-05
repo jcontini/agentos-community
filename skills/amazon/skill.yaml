@@ -7,7 +7,6 @@ website: https://www.amazon.com
 product:
   name: Amazon
   website: https://amazon.com
-  tags: [platform]
   developer: Amazon.com, Inc.
 connections:
   public:

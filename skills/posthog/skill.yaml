@@ -4,6 +4,10 @@ description: Product analytics — events, persons, and session recordings
 color: "#1D4AFF"
 
 website: https://posthog.com
+product:
+  name: PostHog
+  website: https://posthog.com
+  developer: PostHog Inc
 privacy_url: https://posthog.com/privacy
 terms_url: https://posthog.com/terms
 

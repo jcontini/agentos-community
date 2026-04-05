@@ -4,6 +4,10 @@ description: Ride history, trip details, Eats order history, and account info fr
 color: "#000000"
 
 website: https://uber.com
+product:
+  name: Uber
+  website: https://uber.com
+  developer: Uber Technologies
 
 connections:
   web:

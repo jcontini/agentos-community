@@ -2,6 +2,7 @@
 #
 # Sources: Goodreads (via shelf), YouTube (via playlist)
 list:
+  identity: [platform, id]
   fields:
     privacy:           string
     listType:         string

@@ -2,6 +2,7 @@
 #
 # Sources: Reddit, Facebook
 community:
+  identity: [platform, id]
   subtitle: text
   fields:
     memberCount:      integer

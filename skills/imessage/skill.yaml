@@ -7,7 +7,6 @@ website: https://support.apple.com/messages
 product:
   name: iMessage
   website: https://support.apple.com/messages
-  tags: [platform]
   developer: Apple Inc.
 connections:
   db:
