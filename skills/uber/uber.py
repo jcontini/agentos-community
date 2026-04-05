@@ -1275,6 +1275,67 @@ def search_products(store_uuid: str, query: str, **params) -> list:
     return products
 
 
+def search_stores(query: str = "", **params) -> list:
+    """Search for stores/restaurants on Uber Eats by name or cuisine.
+
+    Backed by getSearchSuggestionsV1 + getFeedV1. Returns place-shaped entities.
+    If no query, returns suggestions and recent searches.
+    """
+    cookie_header = require_cookies(params, "search_stores")
+
+    if not query:
+        # Return search suggestions and history
+        data = _eats_post(cookie_header, "getSearchHomeV2", {"dropPastOrders": True})
+        suggestions = []
+        for section in (data.get("suggestedSections") or []):
+            for item in (section.get("items") or []):
+                suggestions.append(item.get("title") or item.get("text", ""))
+        history = [h.get("text", "") for h in (data.get("searchHistory") or []) if h.get("text")]
+        return [{"suggestions": [s for s in suggestions if s], "recentSearches": history}]
+
+    # Search: use getPaginatedStoresV1 which supports keyword search
+    try:
+        data = _eats_post(cookie_header, "getPaginatedStoresV1", {
+            "query": query,
+            "vertical": "ALL",
+        })
+        stores = []
+        seen = set()
+        currency = data.get("currencyCode")
+        for store_data in (data.get("stores") or data.get("feedItems") or []):
+            if isinstance(store_data, dict):
+                sd = store_data.get("store", store_data)
+                _extract_feed_store(sd, stores, seen, currency)
+        if stores:
+            return stores
+    except Exception:
+        pass  # endpoint may not support this shape — fall through
+
+    # Fallback: use getFeedV1 and filter client-side
+    data = _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
+    currency = data.get("currencyCode")
+    items = data.get("feedItems") or []
+
+    stores = []
+    seen = set()
+    query_lower = query.lower()
+    for item in items:
+        if item.get("type") == "REGULAR_STORE":
+            store_data = item.get("store", item)
+            title = store_data.get("title") or {}
+            name = title.get("text", "") if isinstance(title, dict) else str(title)
+            if query_lower in name.lower():
+                _extract_feed_store(store_data, stores, seen, currency)
+        elif item.get("type") in ("REGULAR_CAROUSEL", "FEATURED_STORES"):
+            for store_data in (item.get("carousel", {}).get("stores") or []):
+                title = store_data.get("title") or {}
+                name = title.get("text", "") if isinstance(title, dict) else str(title)
+                if query_lower in name.lower():
+                    _extract_feed_store(store_data, stores, seen, currency)
+
+    return stores
+
+
 def list_nearby_stores(**params) -> list:
     """List nearby stores/restaurants available for delivery.
 

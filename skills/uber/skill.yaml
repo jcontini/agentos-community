@@ -163,6 +163,19 @@ operations:
       function: get_delivery
       timeout: 30
 
+  search_stores:
+    description: "Search for stores/restaurants by name or cuisine. Returns suggestions if no query."
+    returns: place[]
+    params:
+      query:
+        type: string
+        description: "Search term (e.g. 'pizza', 'Sammataro', 'thai food'). Omit for suggestions."
+    connection: eats
+    python:
+      module: ./uber.py
+      function: search_stores
+      timeout: 15
+
   list_nearby_stores:
     description: "Browse stores and restaurants available for delivery near the user's saved address"
     returns: place[]
