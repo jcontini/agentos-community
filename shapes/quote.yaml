@@ -1,12 +1,14 @@
-# A notable saying with speaker attribution. The speaker is NOT necessarily
-# the author of the source where you found it — FDR said the quote, but
-# Jean Edward Smith wrote the biography you found it in.
+# A notable quote. Attribution is a graph relationship, not a field —
+# a document --contains--> the quote, a person --authored--> the document.
+# The provenance chain IS the attribution. No spokenBy needed.
 #
-# Sources: Goodreads (quotes)
+# Freeform edges handle everything:
+#   document/book/article --contains--> quote
+#   person --attributed--> quote (when we know who said it)
+#   quote --inspired--> anything
+#
+# Sources: Goodreads, RFCs, papers, talks, podcasts, interviews
 quote:
-  subtitle: author
   fields:
-    context:           string    # when/where it was said
-  relations:
-    spokenBy:         person    # who said it (the speaker)
-    appearsIn:        book      # where you found it (the source)
+    context:           string    # when/where it was said, any extra notes
+    year:              integer   # year of first known appearance

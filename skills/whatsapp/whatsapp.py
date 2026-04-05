@@ -187,7 +187,7 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
         ORDER BY real_name, contact_name, display_name
         LIMIT :limit
     """, db=DB_PATH, params={
-        "conversationId": conversation_id or "",
+        "conversation_id": conversation_id or "",
         "limit": limit,
     }, attach={
         "contacts": CONTACTS_DB,
@@ -291,7 +291,7 @@ def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **param
         ORDER BY m.ZMESSAGEDATE DESC
         LIMIT :limit
     """, db=DB_PATH, params={
-        "conversationId": conversation_id or "",
+        "conversation_id": conversation_id or "",
         "unread": 1 if is_unread else 0,
         "limit": limit,
     })

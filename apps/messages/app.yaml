@@ -1,0 +1,78 @@
+# Messages App (AIM Messenger)
+# Unified messaging across WhatsApp, iMessage, and more — in classic AIM style
+
+id: messages
+name: Messages
+icon: icon.png
+description: Instant messaging with AIM-style buddy list and chat windows
+
+entities:
+  - conversation
+  - message
+
+menus:
+  - name: My AIM
+    items:
+      - label: Away Message...
+        action: open_view
+        view: away
+      - label: Preferences...
+        action: open_view
+        view: preferences
+  - name: People
+    items:
+      - label: Search for Buddy...
+        action: search
+        shortcut: "⌘F"
+  - name: Help
+    items:
+      - label: About Messages
+        action: open_view
+        view: about
+
+views:
+  main:
+    title: Buddy List
+    layout:
+      - component: buddy-list
+
+  chat:
+    title: Instant Message
+    layout:
+      - component: chat-window
+
+  about:
+    title: About Messages
+    layout:
+      - component: layout/stack
+        props:
+          gap: 16
+          align: center
+          padding: 24
+        children:
+          - component: text
+            props:
+              content: Messages
+              variant: title
+              align: center
+          - component: text
+            props:
+              content: AIM-style messaging across all your platforms
+              variant: body
+              align: center
+
+default_view: main
+
+# App-specific theme overrides
+theme:
+  highlight: "#FDFF04"
+  highlight-text: "#000"
+  highlight-border: "1px dotted #000"
+
+# Assets bundled with this app
+assets:
+  aim-top-text: assets/aim-top-text.png
+  aim-logo: assets/aim-logo-blue-rect.png
+  bottom-icons: assets/bottom-icons.png
+  sound-send: assets/aim-send.mp3
+  sound-receive: assets/aim-receive.mp3

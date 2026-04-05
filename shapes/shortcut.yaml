@@ -1,0 +1,18 @@
+# A named alias that expands to a location URI at parse time.
+# Built-in shortcuts (limbo, search, help, web, files) are seeded at boot.
+# Skills can register shortcuts (reddit, youtube, etc).
+# Users can create, modify, or delete any shortcut.
+#
+# Sources: boot seed, skill registration, user creation
+shortcut:
+  identity: [name]
+  subtitle: target
+  icon: link
+  fields:
+    name:             string    # e.g. "limbo", "reddit", "ppl"
+    target:           string    # location URI this expands to (e.g. "person/", "web/reddit.com")
+    pattern:          string    # optional — URI pattern with {placeholders}
+    filter:           string    # optional — default query filter applied after expansion
+    builtin:          boolean   # true for boot-seeded shortcuts, false for user-created
+  relations:
+    skill:            skill     # skill that registered this shortcut (if any)

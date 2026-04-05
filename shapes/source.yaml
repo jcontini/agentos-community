@@ -1,0 +1,22 @@
+# A content source — where skills, themes, shapes, and wallpapers live.
+# Sources are like Cydia repos, Homebrew taps, or APT sources.
+#
+# Identity: address — the canonical location (filesystem path, git URL, or HTTP URL).
+# Two entries pointing to the same address are the same source.
+#
+# Platform tells the engine which scanner to use:
+# - "agentos" scans for skills/, themes/, apps/, shapes/, wallpapers/ subdirs
+# - Future: homebrew, apt, synology, etc.
+source:
+  identity: address
+  subtitle: sourceId
+  icon: "\U0001F4E6"
+  fields:
+    sourceId:          string    # namespace prefix: "community", "joes", "retro-pack"
+    address:           string    # canonical location: filesystem path, git URL, or HTTP URL
+    platform:          string    # scanner type: "agentos", "homebrew", "apt", "synology"
+    enabled:           boolean
+    description:       text
+    lastSynced:       datetime  # when items were last scanned from this source
+  relations:
+    folder:            folder    # local sources → the folder entity at this path

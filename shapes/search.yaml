@@ -1,0 +1,15 @@
+# A search query and its results. Every search is a graph entity with click
+# tracking — re-searching shows previously-found results first.
+#
+# Sources: location system (cross-scheme search)
+search:
+  identity: [query]
+  subtitle: query
+  icon: magnifying-glass
+  fields:
+    query:            string    # the search text
+    searchedAt:       datetime  # last time this query was executed
+    searchCount:      integer   # how many times this query has been run
+    resultCount:      integer   # total results from last execution
+  # Results are --found--> edges to any entity (not a typed relation, since
+  # search results can be any shape). Edge carries: click_count, first_seen, rank.
