@@ -3,6 +3,7 @@
 #
 # Sources: iMessage, WhatsApp; extended by email (Gmail, Mimestream)
 message:
+  plural: messages
   identity: [platform, id]
   subtitle: author
   fields:

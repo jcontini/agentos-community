@@ -8,6 +8,7 @@
 # - "agentos" scans for skills/, themes/, apps/, shapes/, wallpapers/ subdirs
 # - Future: homebrew, apt, synology, etc.
 source:
+  plural: sources
   identity: address
   subtitle: sourceId
   icon: "\U0001F4E6"

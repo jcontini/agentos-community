@@ -3,6 +3,7 @@
 #
 # Sources: here.now
 website:
+  plural: websites
   identity: url
   subtitle: url
   fields:

@@ -3,6 +3,7 @@
 #
 # Sources: Linear, Todoist, GitHub
 task:
+  plural: tasks
   identity: [platform, id]
   subtitle: state
   fields:

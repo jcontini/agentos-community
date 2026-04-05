@@ -5,6 +5,7 @@
 # Identity: themeId — unique per source namespace (e.g., "xp", "macos9").
 # Qualified references use sourceId.themeId (e.g., "community.xp").
 theme:
+  plural: themes
   identity: themeId
   subtitle: family
   fields:

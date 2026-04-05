@@ -4,6 +4,7 @@
 #
 # Sources: GitHub, Cursor, Mimestream, filesystem
 file:
+  plural: files
   subtitle: path
   fields:
     filename:          string    # original filename with extension

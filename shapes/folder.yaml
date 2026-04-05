@@ -3,6 +3,7 @@
 #
 # Sources: agentOS engine (session working directories), filesystem
 folder:
+  plural: folders
   identity: path
   subtitle: path
   fields:

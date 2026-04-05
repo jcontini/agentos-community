@@ -2,6 +2,7 @@
 #
 # Sources: Goodreads, Amazon
 review:
+  plural: reviews
   subtitle: author
   also: [post]        # a review is also a post
   fields:

@@ -2,6 +2,7 @@
 #
 # Sources: macOS screenshots, email attachments, web scraping
 image:
+  plural: images
   also: [file]        # an image is also a file
   fields:
     width:             integer   # pixels

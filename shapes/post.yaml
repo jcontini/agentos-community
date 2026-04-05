@@ -4,6 +4,7 @@
 #
 # Sources: Reddit, Hacker News, YouTube, Moltbook
 post:
+  plural: posts
   identity: [platform, id]
   subtitle: author
   fields:

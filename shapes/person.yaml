@@ -3,6 +3,7 @@
 #
 # Sources: Apple Contacts, WhatsApp, PostHog, iMessage (inferred from handles)
 person:
+  plural: people
   subtitle: about
   also: [actor]       # a person is also an actor
   fields:

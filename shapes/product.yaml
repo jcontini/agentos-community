@@ -3,6 +3,7 @@
 #
 # Sources: Amazon, Uber Eats (grocery), Open Food Facts (enrichment)
 product:
+  plural: products
   subtitle: brand
   fields:
     price:             string    # formatted price (e.g. "$29.99") — current/discounted price

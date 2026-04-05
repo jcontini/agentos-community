@@ -3,6 +3,7 @@
 #
 # Sources: agentOS engine (MCP session registration)
 session:
+  plural: sessions
   identity: [client, projectId, gitBranch]
   subtitle: client
   icon: terminal

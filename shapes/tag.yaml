@@ -4,6 +4,7 @@
 #
 # Sources: Gmail, Todoist, GitHub, git
 tag:
+  plural: tags
   subtitle: tagType
   fields:
     color:             string    # hex color (#EA4335) or named color

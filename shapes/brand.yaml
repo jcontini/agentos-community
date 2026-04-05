@@ -2,6 +2,7 @@
 #
 # Sources: Amazon
 brand:
+  plural: brands
   identity: url
   subtitle: tagline
   fields:

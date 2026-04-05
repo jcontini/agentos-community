@@ -8,6 +8,7 @@
 #
 # Sources: Exa (web articles), Firecrawl, future RSS integration
 article:
+  plural: articles
   subtitle: author
   fields:
     wordCount:        integer

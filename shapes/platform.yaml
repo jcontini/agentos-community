@@ -7,6 +7,7 @@
 #
 # Sources: seeded by skills at load time
 platform:
+  plural: platforms
   also: [software]
   identity: website
   subtitle: website

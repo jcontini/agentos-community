@@ -2,6 +2,7 @@
 #
 # Sources: YouTube (some channels are podcasts), future podcast skill
 podcast:
+  plural: podcasts
   identity: [platform, id]
   subtitle: author
   fields:

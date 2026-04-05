@@ -4,6 +4,7 @@
 #
 # Examples: Claude in Cursor, a background job agent, a scheduled task runner.
 agent:
+  plural: agents
   subtitle: model
   also: [actor]       # an agent is also an actor (like person, organization)
   fields:

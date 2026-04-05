@@ -2,6 +2,7 @@
 #
 # Sources: git
 branch:
+  plural: branches
   subtitle: commit
   fields:
     commit:            string    # HEAD commit hash

@@ -12,6 +12,7 @@
 #
 # Sources: agent output (claude-code, cursor), skill runs, manual creation
 report:
+  plural: reports
   subtitle: reportType
   also: [document]
   fields:

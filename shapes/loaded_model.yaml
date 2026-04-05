@@ -2,6 +2,7 @@
 #
 # Sources: Ollama
 loaded_model:
+  plural: loaded_models
   subtitle: size
   fields:
     size:              string    # memory footprint

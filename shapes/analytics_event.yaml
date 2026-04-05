@@ -3,6 +3,7 @@
 #
 # Sources: PostHog
 analytics_event:
+  plural: analytics_events
   fields:
     distinctId:       string    # PostHog user identifier
     properties:        json      # arbitrary event properties

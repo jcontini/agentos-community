@@ -5,6 +5,7 @@
 #
 # Sources: YouTube (via post), local files
 video:
+  plural: videos
   subtitle: author
   also: [file]        # a video is also a file
   fields:

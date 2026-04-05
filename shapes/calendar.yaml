@@ -2,6 +2,7 @@
 #
 # Sources: Google Calendar, Apple Calendar
 calendar:
+  plural: calendars
   identity: [platform, calendarId]
   subtitle: source
   fields:

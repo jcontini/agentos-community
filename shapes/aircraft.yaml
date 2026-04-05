@@ -2,6 +2,7 @@
 #
 # Sources: SerpAPI (flight search)
 aircraft:
+  plural: aircraft
   identity: icaoCode
   subtitle: model
   also: [product]     # an aircraft is also a product

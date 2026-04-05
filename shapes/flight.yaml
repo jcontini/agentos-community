@@ -3,6 +3,7 @@
 #
 # Sources: SerpAPI (Google Flights)
 flight:
+  plural: flights
   subtitle: airline
   also: [leg]           # a flight is also a leg
   fields:

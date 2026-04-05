@@ -5,6 +5,7 @@
 #
 # Sources: filesystem, agent output, skill results
 document:
+  plural: documents
   subtitle: author
   also: [file]
   fields:

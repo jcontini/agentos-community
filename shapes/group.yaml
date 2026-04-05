@@ -2,6 +2,7 @@
 #
 # Sources: Goodreads
 group:
+  plural: groups
   identity: [platform, id]
   subtitle: category
   fields:

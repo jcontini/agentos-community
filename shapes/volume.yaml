@@ -3,6 +3,7 @@
 #
 # Sources: macos-control (local volumes), future: Google Drive, Dropbox, iCloud
 volume:
+  plural: volumes
   subtitle: path
   fields:
     path:              string    # mount point (e.g. /, /Volumes/Backup)

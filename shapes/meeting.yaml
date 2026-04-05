@@ -3,6 +3,7 @@
 #
 # Sources: Google Calendar, Apple Calendar, Granola
 meeting:
+  plural: meetings
   subtitle: location
   also: [event]
   fields:

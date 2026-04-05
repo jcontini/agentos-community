@@ -2,6 +2,7 @@
 #
 # Sources: YouTube, future podcast skill
 episode:
+  plural: episodes
   subtitle: author
   fields:
     durationMs:       integer

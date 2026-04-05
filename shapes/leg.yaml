@@ -6,6 +6,7 @@
 #
 # Sources: SerpAPI (flight segments), Uber (ride waypoints)
 leg:
+  plural: legs
   subtitle: flightNumber
   fields:
     sequence:          integer   # 1-based order within the trip

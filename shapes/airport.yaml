@@ -2,6 +2,7 @@
 #
 # Sources: SerpAPI (flight search)
 airport:
+  plural: airports
   identity: iataCode
   subtitle: iataCode
   fields:

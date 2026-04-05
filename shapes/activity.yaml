@@ -3,6 +3,7 @@
 #
 # Sources: agentOS engine (all tool calls)
 activity:
+  plural: activities
   subtitle: action
   icon: activity
   fields:

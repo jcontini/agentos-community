@@ -15,6 +15,7 @@
 #
 # Sources: future (GTFS, flight timetables, Uber Eats store hours)
 route:
+  plural: routes
   subtitle: routeNumber
   also: [schedule]      # a route is also a schedule
   fields:

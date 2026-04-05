@@ -3,6 +3,7 @@
 #
 # Sources: extracted from various skills (email domains, product manufacturers, etc.)
 organization:
+  plural: organizations
   identity: url
   subtitle: industry
   also: [actor]       # an organization is also an actor

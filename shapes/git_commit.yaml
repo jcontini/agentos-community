@@ -2,6 +2,7 @@
 #
 # Sources: git skill
 git_commit:
+  plural: git_commits
   subtitle: author
   fields:
     sha:               string    # full 40-char SHA hash

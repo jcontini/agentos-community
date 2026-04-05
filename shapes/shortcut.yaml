@@ -5,6 +5,7 @@
 #
 # Sources: boot seed, skill registration, user creation
 shortcut:
+  plural: shortcuts
   identity: [name]
   subtitle: target
   icon: link

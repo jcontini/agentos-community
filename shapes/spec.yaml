@@ -4,6 +4,7 @@
 #
 # Sources: filesystem (docs/specs/)
 spec:
+  plural: specs
   subtitle: state
   also: [task, file]
   fields:

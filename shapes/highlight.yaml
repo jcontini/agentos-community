@@ -4,6 +4,7 @@
 #
 # Sources: Goodreads (highlights), future Kindle/Readwise/Hypothesis integration
 highlight:
+  plural: highlights
   fields:
     position:          string    # location in source (page number, timestamp, percentage)
     color:             string    # highlight color (yellow, green, blue, etc.)

@@ -4,6 +4,7 @@
 #
 # Examples: Gmail, Cursor, Slack, yt-dlp, agentOS itself
 software:
+  plural: software
   identity: url
   subtitle: text
   also: [product]     # software is also a product

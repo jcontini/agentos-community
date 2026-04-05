@@ -3,6 +3,7 @@
 #
 # Sources: location system (cross-scheme search)
 search:
+  plural: searches
   identity: [query]
   subtitle: query
   icon: magnifying-glass

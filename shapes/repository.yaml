@@ -2,6 +2,7 @@
 #
 # Sources: GitHub
 repository:
+  plural: repositories
   identity_any: [path, url]
   subtitle: language
   fields:

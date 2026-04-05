@@ -2,6 +2,7 @@
 #
 # Sources: Chase, Copilot Money
 transaction:
+  plural: transactions
   identity: [platform, id]
   subtitle: category
   fields:

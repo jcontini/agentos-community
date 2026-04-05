@@ -2,6 +2,7 @@
 #
 # Sources: SerpAPI (flight search)
 airline:
+  plural: airlines
   identity: iataCode
   subtitle: iataCode
   also: [organization]  # an airline is also an organization

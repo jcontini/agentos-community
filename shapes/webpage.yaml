@@ -3,6 +3,7 @@
 #
 # Sources: Brave Browser, Firefox (history); Exa, Firecrawl, Curl (web reading)
 webpage:
+  plural: webpages
   identity: url
   subtitle: url
   fields:

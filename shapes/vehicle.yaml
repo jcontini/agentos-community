@@ -9,6 +9,7 @@
 #
 # Sources: manual entry, document extraction
 vehicle:
+  plural: vehicles
   identity: vin
   subtitle: vin
   also: [product]     # a vehicle is also a product

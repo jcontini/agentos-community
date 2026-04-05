@@ -3,6 +3,7 @@
 #
 # Sources: SerpAPI (Google Flights)
 offer:
+  plural: offers
   fields:
     price:             number
     currency:          string    # ISO 4217 (e.g. USD, EUR)

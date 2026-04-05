@@ -9,6 +9,7 @@
 #
 # Sources: Goodreads, RFCs, papers, talks, podcasts, interviews
 quote:
+  plural: quotes
   fields:
     context:           string    # when/where it was said, any extra notes
     year:              integer   # year of first known appearance

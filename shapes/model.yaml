@@ -2,6 +2,7 @@
 #
 # Sources: Ollama, OpenRouter, Anthropic API
 model:
+  plural: models
   identity: [provider, name]
   subtitle: provider
   fields:

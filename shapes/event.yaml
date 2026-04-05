@@ -9,6 +9,7 @@
 #
 # Sources: Google Calendar, Apple Calendar, Partiful, Luma, Austin Boulder Project
 event:
+  plural: events
   identity: [platform, id]
   subtitle: eventType
   fields:

@@ -2,6 +2,7 @@
 #
 # Sources: Gandi, Porkbun (registered domains); Gmail (extracted from addresses)
 domain:
+  plural: domains
   identity: name
   fields:
     status:            string

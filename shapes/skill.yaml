@@ -3,6 +3,7 @@
 #
 # Sources: agentOS engine (auto-registered from skill YAML files)
 skill:
+  plural: skills
   subtitle: description
   fields:
     skillId:          string    # unique identifier (e.g. "gmail", "github")

@@ -11,6 +11,7 @@
 #
 # Sources: Uber (rides), Uber Eats (delivery), SerpAPI (flights)
 trip:
+  plural: trips
   identity: [platform, id]
   subtitle: tripType
   fields:

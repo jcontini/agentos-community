@@ -2,6 +2,7 @@
 #
 # Sources: YouTube
 channel:
+  plural: channels
   identity: [platform, id]
   fields:
     subscriberCount:  integer

@@ -3,6 +3,7 @@
 #
 # Sources: Amazon, Uber Eats
 order:
+  plural: orders
   identity: [platform, orderId]
   subtitle: total
   fields:

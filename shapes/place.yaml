@@ -8,6 +8,7 @@
 #
 # Sources: Apple Calendar, Amazon (shipping), Mapbox (geocoding), Uber Eats (stores)
 place:
+  plural: places
   identity_any: [googlePlaceId, mapboxId]
   subtitle: fullAddress
   fields:

@@ -3,6 +3,7 @@
 #
 # Sources: iMessage, WhatsApp, Gmail
 conversation:
+  plural: conversations
   identity: [platform, id]
   subtitle: text
   fields:

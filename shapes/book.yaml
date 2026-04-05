@@ -3,6 +3,7 @@
 #
 # Sources: Goodreads
 book:
+  plural: books
   identity_any: [isbn13, isbn]
   subtitle: author
   also: [product]     # a book is also a product

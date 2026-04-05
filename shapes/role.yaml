@@ -3,6 +3,7 @@
 #
 # Sources: Apple Contacts, LinkedIn (via enrichment)
 role:
+  plural: roles
   subtitle: name
   fields:
     title:             string

@@ -2,6 +2,7 @@
 #
 # Sources: YouTube
 playlist:
+  plural: playlists
   subtitle: text
   also: [list]        # a playlist is also a list
   relations:
