@@ -10,7 +10,7 @@ product:
   developer: Uber Technologies
 
 provides:
-  - tool: geocode
+  - tool: geocoding
     via: search_address
     description: "Worldwide address geocoding — autocomplete + lat/lng resolution via HERE Maps"
 
