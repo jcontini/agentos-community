@@ -1,6 +1,6 @@
 """Auto-generated TypedDict classes from shape YAML — do not edit.
 
-Generated from 57 shapes.
+Generated from 78 shapes.
 Regenerate with: python generate.py --lang python
 """
 
@@ -17,21 +17,50 @@ class Account(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    account_type: str
+    accountId: str
+    accountType: str
+    available: float
+    balance: float
     bio: str
+    cardType: str
     color: str
-    display_name: str
+    creditLimit: float
+    displayName: str
     email: str
     handle: str
-    is_active: bool
-    joined_date: str
+    identifier: str
+    isActive: bool
+    issuer: str
+    joinedDate: str
     karma: int
-    last_active: str
+    last4: str
+    lastActive: str
+    minimumPayment: float
+    paymentDueDate: str
     phone: str
     followers: list[Account]
     follows: list[Account]
     owner: Person
     platform: Product
+
+
+class Activity(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    action: str
+    changedKeys: list[str]
+    duration: float
+    published: str
+    success: bool
+    toolName: str
+    folder: Folder
+    session: Session
 
 
 class Actor(TypedDict, total=False):
@@ -43,7 +72,7 @@ class Actor(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    actor_type: str
+    actorType: str
 
 
 class Agent(TypedDict, total=False):
@@ -55,10 +84,10 @@ class Agent(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    actor_type: str
+    actorType: str
     model: str
     provider: str
-    session_id: str
+    sessionId: str
 
 
 class Aircraft(TypedDict, total=False):
@@ -70,26 +99,41 @@ class Aircraft(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
+    barcode: str
+    calories: float
     categories: list[str]
     currency: str
-    iata_code: str
-    icao_code: str
+    department: str
+    iataCode: str
+    icaoCode: str
     images: Any
     model: str
+    novaGroup: int
+    nutritionScore: str
+    originalPrice: str
+    originalPriceAmount: float
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
-    range_km: int
+    rangeKm: int
     rating: float
-    ratings_count: int
-    review_count: int
-    seat_capacity: int
+    ratingsCount: int
+    reviewCount: int
+    seatCapacity: int
+    servingSize: str
+    sku: str
+    soldByWeight: bool
     sponsored: bool
     variant: str
+    weight: str
+    weightUnit: str
+    weightValue: float
     brand: Brand
     manufacturer: Organization
+    tagged: list[Tag]
 
 
 class Airline(TypedDict, total=False):
@@ -101,14 +145,14 @@ class Airline(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    actor_type: str
+    actorType: str
     alliance: str
     callsign: str
     country: str
-    employee_count: int
+    employeeCount: int
     founded: str
-    iata_code: str
-    icao_code: str
+    iataCode: str
+    icaoCode: str
     industry: str
     domain: Domain
     headquarters: Place
@@ -127,11 +171,11 @@ class Airport(TypedDict, total=False):
     content: str
     city: str
     country: str
-    country_code: str
-    elevation_ft: int
-    iata_code: str
-    icao_code: str
-    terminal_count: int
+    countryCode: str
+    elevationFt: int
+    iataCode: str
+    icaoCode: str
+    terminalCount: int
     timezone: str
     location: Place
     operator: Organization
@@ -146,8 +190,8 @@ class AnalyticsEvent(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    current_url: str
-    distinct_id: str
+    currentUrl: str
+    distinctId: str
     properties: Any
     person: Person
 
@@ -162,10 +206,10 @@ class Article(TypedDict, total=False):
     datePublished: str
     content: str
     language: str
-    reading_time: int
+    readingTime: int
     section: str
-    word_count: int
-    published_in: Website
+    wordCount: int
+    publishedIn: Website
     publisher: Organization
 
 
@@ -178,14 +222,14 @@ class Author(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    average_rating: float
-    birth_date: str
-    followers_count: int
+    averageRating: float
+    birthDate: str
+    followersCount: int
     location: str
-    member_since: str
+    memberSince: str
     twitter: str
     website: str
-    works_count: int
+    worksCount: int
     books: list[Book]
 
 
@@ -198,43 +242,76 @@ class Book(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
-    average_rating: float
-    awards_won: list[str]
+    averageRating: float
+    awardsWon: list[str]
+    barcode: str
+    calories: float
     categories: list[str]
     characters: list[str]
     currency: str
-    currently_reading_count: int
-    date_added: str
-    date_read: str
-    date_started: str
+    currentlyReadingCount: int
+    dateAdded: str
+    dateRead: str
+    dateStarted: str
+    department: str
     format: str
     genres: list[str]
     images: Any
     isbn: str
     isbn13: str
     language: str
-    original_title: str
+    novaGroup: int
+    nutritionScore: str
+    originalPrice: str
+    originalPriceAmount: float
+    originalTitle: str
     pages: int
     places: list[str]
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
     rating: float
-    ratings_count: int
-    review_count: int
+    ratingsCount: int
+    reviewCount: int
     series: str
+    servingSize: str
     shelf: str
+    sku: str
+    soldByWeight: bool
     sponsored: bool
-    to_read_count: int
-    user_rating: float
-    work_url: str
+    toReadCount: int
+    userRating: float
+    weight: str
+    weightUnit: str
+    weightValue: float
+    workUrl: str
     brand: Brand
     contributors: list[Author]
     manufacturer: Organization
     publisher: Organization
-    written_by: Author
+    tagged: list[Tag]
+    writtenBy: Author
+
+
+class Branch(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    ahead: int
+    behind: int
+    commit: str
+    isCurrent: bool
+    isRemote: bool
+    upstream: str
+    repository: Repository
 
 
 class Brand(TypedDict, total=False):
@@ -249,8 +326,30 @@ class Brand(TypedDict, total=False):
     country: str
     founded: str
     tagline: str
-    owned_by: Organization
+    ownedBy: Organization
     website: Website
+
+
+class Calendar(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    accessRole: str
+    backgroundColor: str
+    calendarId: str
+    color: str
+    foregroundColor: str
+    isPrimary: bool
+    isReadonly: bool
+    source: str
+    timezone: str
+    events: list[Event]
+    owner: Person
 
 
 class Channel(TypedDict, total=False):
@@ -263,7 +362,7 @@ class Channel(TypedDict, total=False):
     datePublished: str
     content: str
     banner: str
-    subscriber_count: int
+    subscriberCount: int
     platform: Product
 
 
@@ -276,20 +375,30 @@ class Class(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    activity_type: str
-    all_day: bool
+    activityType: str
+    allDay: bool
     capacity: int
-    end_date: str
-    event_type: str
-    is_full: bool
-    recurrence: str
-    spots_remaining: int
-    start_date: str
+    dateUpdated: str
+    endDate: str
+    eventType: str
+    icalUid: str
+    isFull: bool
+    recurrence: list[str]
+    showAs: str
+    sourceTitle: str
+    sourceUrl: str
+    spotsRemaining: int
+    startDate: str
+    status: str
     timezone: str
+    visibility: str
+    attachments: list[File]
+    creator: Person
     instructor: Person
     involves: list[Person]
     location: Place
     organizer: Person
+    platform: Product
     venue: Place
 
 
@@ -302,10 +411,10 @@ class Community(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    allow_crypto: bool
-    member_count: int
+    allowCrypto: bool
+    memberCount: int
     privacy: str
-    subscriber_count: int
+    subscriberCount: int
     platform: Product
 
 
@@ -318,10 +427,12 @@ class Conversation(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    account_email: str
-    is_archived: bool
-    is_group: bool
-    unread_count: int
+    accountEmail: str
+    historyId: str
+    isArchived: bool
+    isGroup: bool
+    messageCount: int
+    unreadCount: int
     message: list[Message]
     participant: list[Account]
     platform: Product
@@ -337,10 +448,40 @@ class DnsRecord(TypedDict, total=False):
     datePublished: str
     content: str
     domain: str
-    record_name: str
-    record_type: str
+    recordName: str
+    recordType: str
     ttl: int
     values: list[str]
+
+
+class Document(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    abstract: str
+    contentType: str
+    encoding: str
+    filename: str
+    format: str
+    kind: str
+    language: str
+    lineCount: int
+    mimeType: str
+    path: str
+    sha: str
+    size: int
+    tableOfContents: str
+    wordCount: int
+    attachedTo: Message
+    author: Actor
+    citedBy: list[Document]
+    references: list[Document]
+    repository: Repository
 
 
 class Domain(TypedDict, total=False):
@@ -352,8 +493,8 @@ class Domain(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    auto_renew: bool
-    expires_at: str
+    autoRenew: bool
+    expiresAt: str
     nameservers: list[str]
     registrar: str
     status: str
@@ -368,39 +509,51 @@ class Email(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    account_email: str
+    accountEmail: str
     attachments: Any
-    bcc_raw: str
-    body_html: str
-    cc_raw: str
-    conversation_id: str
-    delivered_to: str
-    has_attachments: bool
-    in_reply_to: str
-    is_draft: bool
-    is_outgoing: bool
-    is_sent: bool
-    is_spam: bool
-    is_starred: bool
-    is_trash: bool
-    is_unread: bool
-    label_ids: list[str]
-    message_id: str
+    authResults: str
+    bccRaw: str
+    bodyHtml: str
+    ccRaw: str
+    conversationId: str
+    deliveredTo: str
+    draftId: str
+    feedbackId: str
+    hasAttachments: bool
+    inReplyTo: str
+    isAutomated: bool
+    isDraft: bool
+    isOutgoing: bool
+    isSent: bool
+    isSpam: bool
+    isStarred: bool
+    isTrash: bool
+    isUnread: bool
+    labelIds: list[str]
+    listId: str
+    mailer: str
+    manageSubscription: str
+    messageId: str
+    precedence: str
     references: str
-    reply_to: str
-    size_estimate: int
+    replyTo: str
+    returnPath: str
+    sizeEstimate: int
     subject: str
-    to_raw: str
+    toRaw: str
+    unsubscribe: str
+    unsubscribeOneClick: bool
     bcc: list[Account]
     cc: list[Account]
-    cc_domain: list[Domain]
+    ccDomain: list[Domain]
     domain: Domain
     from_: Account  # from
-    in_conversation: Conversation
+    inConversation: Conversation
     platform: Product
-    replies_to: Message
+    repliesTo: Message
+    tag: list[Tag]
     to: list[Account]
-    to_domain: list[Domain]
+    toDomain: list[Domain]
 
 
 class Episode(TypedDict, total=False):
@@ -412,9 +565,9 @@ class Episode(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    duration_ms: int
-    episode_number: int
-    season_number: int
+    durationMs: int
+    episodeNumber: int
+    seasonNumber: int
     guest: list[Person]
     series: Podcast
     transcribe: Transcript
@@ -429,15 +582,25 @@ class Event(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    all_day: bool
-    end_date: str
-    event_type: str
-    recurrence: str
-    start_date: str
+    allDay: bool
+    dateUpdated: str
+    endDate: str
+    eventType: str
+    icalUid: str
+    recurrence: list[str]
+    showAs: str
+    sourceTitle: str
+    sourceUrl: str
+    startDate: str
+    status: str
     timezone: str
+    visibility: str
+    attachments: list[File]
+    creator: Person
     involves: list[Person]
     location: Place
     organizer: Person
+    platform: Product
 
 
 class File(TypedDict, total=False):
@@ -449,12 +612,17 @@ class File(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    encoding: str
     filename: str
     format: str
-    mime_type: str
+    kind: str
+    lineCount: int
+    mimeType: str
     path: str
+    sha: str
     size: int
-    attached_to: Message
+    attachedTo: Message
+    repository: Repository
 
 
 class Flight(TypedDict, total=False):
@@ -466,18 +634,28 @@ class Flight(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    arrival_time: str
-    cabin_class: str
-    carbon_emissions: Any
-    departure_time: str
-    duration_minutes: int
-    flight_number: str
+    arrivalTime: str
+    cabinClass: str
+    carbonEmissions: Any
+    departureTime: str
+    duration: str
+    durationMinutes: int
+    flightNumber: str
+    layoverMinutes: int
+    polyline: str
+    sequence: int
     stops: int
+    trace: Any
+    tracePointCount: int
+    vehicleType: str
     aircraft: Aircraft
     airline: Airline
-    arrives_at: Airport
-    departs_from: Airport
-    layovers: list[Airport]
+    arrivesAt: Airport
+    carrier: Organization
+    departsFrom: Airport
+    destination: Place
+    origin: Place
+    trip: Trip
 
 
 class Folder(TypedDict, total=False):
@@ -489,9 +667,9 @@ class Folder(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    has_readme: bool
+    hasReadme: bool
     path: str
-    workspace_type: str
+    workspaceType: str
     contains: list[File]
     repository: Repository
 
@@ -506,15 +684,29 @@ class GitCommit(TypedDict, total=False):
     datePublished: str
     content: str
     additions: int
-    committed_at: str
+    committedAt: str
     deletions: int
-    files_changed: int
+    filesChanged: int
     message: str
     sha: str
+    shortHash: str
     author: Account
     committer: Account
     parent: GitCommit
     repository: Repository
+
+
+class Group(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    category: str
+    memberCount: int
 
 
 class Hardware(TypedDict, total=False):
@@ -526,23 +718,38 @@ class Hardware(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
+    barcode: str
+    calories: float
     categories: list[str]
     currency: str
+    department: str
     images: Any
-    model_number: str
+    modelNumber: str
+    novaGroup: int
+    nutritionScore: str
+    originalPrice: str
+    originalPriceAmount: float
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
     rating: float
-    ratings_count: int
-    review_count: int
-    serial_number: str
+    ratingsCount: int
+    reviewCount: int
+    serialNumber: str
+    servingSize: str
+    sku: str
+    soldByWeight: bool
     specs: Any
     sponsored: bool
+    weight: str
+    weightUnit: str
+    weightValue: float
     brand: Brand
     manufacturer: Organization
+    tagged: list[Tag]
 
 
 class Highlight(TypedDict, total=False):
@@ -556,8 +763,8 @@ class Highlight(TypedDict, total=False):
     content: str
     color: str
     position: str
-    created_by: Person
-    extracted_from: Book
+    createdBy: Person
+    extractedFrom: Book
 
 
 class Image(TypedDict, total=False):
@@ -569,15 +776,53 @@ class Image(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    alt_text: str
+    altText: str
+    appName: str
+    displayId: int
+    displayIndex: int
+    encoding: str
     filename: str
     format: str
     height: int
-    mime_type: str
+    kind: str
+    lineCount: int
+    mimeType: str
     path: str
+    sha: str
     size: int
     width: int
-    attached_to: Message
+    windowId: int
+    attachedTo: Message
+    repository: Repository
+
+
+class Leg(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    arrivalTime: str
+    cabinClass: str
+    carbonEmissions: Any
+    departureTime: str
+    duration: str
+    durationMinutes: int
+    flightNumber: str
+    layoverMinutes: int
+    polyline: str
+    sequence: int
+    trace: Any
+    tracePointCount: int
+    vehicleType: str
+    aircraft: Aircraft
+    carrier: Organization
+    destination: Place
+    origin: Place
+    trip: Trip
 
 
 class List(TypedDict, total=False):
@@ -589,13 +834,33 @@ class List(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    is_default: bool
-    is_public: bool
-    list_type: str
+    isDefault: bool
+    isPublic: bool
+    itemCount: int
+    items: Any
+    listId: str
+    listType: str
     privacy: str
-    belongs_to: Account
+    belongsTo: Account
     contains: list[Product]
     platform: Product
+
+
+class LoadedModel(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    digest: str
+    expiresAt: str
+    quantization: str
+    size: str
+    sizeVram: int
+    vramUsage: str
 
 
 class Meeting(TypedDict, total=False):
@@ -607,18 +872,30 @@ class Meeting(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    all_day: bool
-    calendar_link: str
-    end_date: str
-    event_type: str
-    is_virtual: bool
-    meeting_url: str
-    recurrence: str
-    start_date: str
+    allDay: bool
+    calendarLink: str
+    conferenceProvider: str
+    dateUpdated: str
+    endDate: str
+    eventType: str
+    icalUid: str
+    isVirtual: bool
+    meetingUrl: str
+    phoneDialIn: str
+    recurrence: list[str]
+    showAs: str
+    sourceTitle: str
+    sourceUrl: str
+    startDate: str
+    status: str
     timezone: str
+    visibility: str
+    attachments: list[File]
+    creator: Person
     involves: list[Person]
     location: Place
     organizer: Person
+    platform: Product
     transcribe: Transcript
 
 
@@ -631,12 +908,39 @@ class Message(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    conversation_id: str
-    is_outgoing: bool
+    conversationId: str
+    isOutgoing: bool
+    isStarred: bool
     from_: Account  # from
-    in_conversation: Conversation
+    inConversation: Conversation
     platform: Product
-    replies_to: Message
+    repliesTo: Message
+
+
+class Model(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    contextLength: int
+    contextWindow: int
+    digest: str
+    family: str
+    format: str
+    maxOutput: int
+    modality: list[str]
+    modelType: str
+    parameterSize: str
+    pricingInput: str
+    pricingOutput: str
+    provider: str
+    quantization: str
+    quantizationLevel: str
+    size: str
 
 
 class Note(TypedDict, total=False):
@@ -648,10 +952,10 @@ class Note(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    is_pinned: bool
-    note_type: str
-    created_by: Person
-    extracted_from: Webpage
+    isPinned: bool
+    noteType: str
+    createdBy: Person
+    extractedFrom: Webpage
     references: list[Note]
 
 
@@ -665,14 +969,15 @@ class Offer(TypedDict, total=False):
     datePublished: str
     content: str
     availability: str
-    booking_token: str
+    bookingToken: str
     currency: str
-    offer_type: str
+    offerType: str
     price: float
-    valid_from: str
-    valid_until: str
+    validFrom: str
+    validUntil: str
     for_: Product  # for
-    offered_by: Organization
+    offeredBy: Organization
+    trips: list[Trip]
 
 
 class Order(TypedDict, total=False):
@@ -685,13 +990,27 @@ class Order(TypedDict, total=False):
     datePublished: str
     content: str
     currency: str
-    delivery_date: str
+    deliveryDate: str
+    deliveryFee: float
+    eta: str
+    fareBreakdown: Any
+    orderDate: str
+    orderId: str
+    originalTotal: str
+    originalTotalAmount: float
+    savings: float
     status: str
+    subtotal: float
     summary: str
+    taxes: float
+    tipAmount: float
     total: str
-    total_amount: float
+    totalAmount: float
     contains: list[Product]
-    shipping_address: Place
+    delivery: Trip
+    platform: Platform
+    shippingAddress: Place
+    store: Place
     tracking: Webpage
 
 
@@ -704,8 +1023,8 @@ class Organization(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    actor_type: str
-    employee_count: int
+    actorType: str
+    employeeCount: int
     founded: str
     industry: str
     domain: Domain
@@ -724,19 +1043,19 @@ class Person(TypedDict, total=False):
     datePublished: str
     content: str
     about: str
-    actor_type: str
+    actorType: str
     birthday: str
-    first_name: str
+    firstName: str
     gender: str
-    joined_date: str
-    last_active: str
-    last_name: str
-    middle_name: str
+    joinedDate: str
+    lastActive: str
+    lastName: str
+    middleName: str
     nickname: str
     notes: str
     accounts: list[Account]
-    currently_reading: list[Book]
-    favorite_books: list[Book]
+    currentlyReading: list[Book]
+    favoriteBooks: list[Book]
     location: Place
     roles: list[Role]
     website: Website
@@ -752,23 +1071,88 @@ class Place(TypedDict, total=False):
     datePublished: str
     content: str
     accuracy: str
+    businessStatus: str
+    categories: list[str]
     city: str
+    closedMessage: str
     country: str
-    country_code: str
+    countryCode: str
     district: str
-    feature_type: str
-    full_address: str
+    eta: str
+    featureType: str
+    fullAddress: str
+    googlePlaceId: str
+    hours: Any
+    isOrderable: bool
     latitude: float
     locality: str
     longitude: float
-    mapbox_id: str
+    mapboxId: str
     neighborhood: str
-    place_formatted: str
-    postal_code: str
+    phone: str
+    placeFormatted: str
+    postalCode: str
+    priceLevel: str
+    productCount: int
+    rating: float
     region: str
+    reviewCount: int
     street: str
-    street_number: str
-    wikidata_id: str
+    streetNumber: str
+    timezone: str
+    website: str
+    wikidataId: str
+    brand: Organization
+    offers: list[Product]
+
+
+class Platform(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    aisle: str
+    availability: str
+    barcode: str
+    calories: float
+    categories: list[str]
+    currency: str
+    department: str
+    images: Any
+    license: str
+    novaGroup: int
+    nutritionScore: str
+    openSource: bool
+    originalPrice: str
+    originalPriceAmount: float
+    platform: list[str]
+    platformType: str
+    price: str
+    priceAmount: float
+    prime: bool
+    quantity: int
+    rating: float
+    ratingsCount: int
+    repositoryUrl: str
+    reviewCount: int
+    servingSize: str
+    sku: str
+    soldByWeight: bool
+    sponsored: bool
+    version: str
+    website: str
+    weight: str
+    weightUnit: str
+    weightValue: float
+    brand: Brand
+    developer: Organization
+    manufacturer: Organization
+    repository: Repository
+    tagged: list[Tag]
 
 
 class Playlist(TypedDict, total=False):
@@ -780,11 +1164,14 @@ class Playlist(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    is_default: bool
-    is_public: bool
-    list_type: str
+    isDefault: bool
+    isPublic: bool
+    itemCount: int
+    items: Any
+    listId: str
+    listType: str
     privacy: str
-    belongs_to: Account
+    belongsTo: Account
     contains: list[Video]
     platform: Product
 
@@ -798,7 +1185,7 @@ class Podcast(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    feed_url: str
+    feedUrl: str
     episode: list[Episode]
     host: list[Person]
     platform: Product
@@ -813,18 +1200,19 @@ class Post(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    comment_count: int
-    external_url: str
+    commentCount: int
+    externalUrl: str
     likes: int
-    post_type: str
+    postType: str
     score: int
-    view_count: int
+    viewCount: int
     attachment: list[File]
     contains: list[Video]
     media: list[Image]
-    posted_by: Account
+    postedBy: Account
     publish: Community
-    replies_to: Post
+    replies: list[Post]
+    repliesTo: Post
 
 
 class Product(TypedDict, total=False):
@@ -836,20 +1224,35 @@ class Product(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
+    barcode: str
+    calories: float
     categories: list[str]
     currency: str
+    department: str
     images: Any
+    novaGroup: int
+    nutritionScore: str
+    originalPrice: str
+    originalPriceAmount: float
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
     rating: float
-    ratings_count: int
-    review_count: int
+    ratingsCount: int
+    reviewCount: int
+    servingSize: str
+    sku: str
+    soldByWeight: bool
     sponsored: bool
+    weight: str
+    weightUnit: str
+    weightValue: float
     brand: Brand
     manufacturer: Organization
+    tagged: list[Tag]
 
 
 class Project(TypedDict, total=False):
@@ -875,8 +1278,46 @@ class Quote(TypedDict, total=False):
     datePublished: str
     content: str
     context: str
-    appears_in: Book
-    spoken_by: Person
+    year: int
+
+
+class Report(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    abstract: str
+    confidence: float
+    contentType: str
+    dataSources: list[str]
+    encoding: str
+    filename: str
+    findings: str
+    format: str
+    kind: str
+    language: str
+    lineCount: int
+    methodology: str
+    mimeType: str
+    path: str
+    recommendations: str
+    reportType: str
+    sha: str
+    size: int
+    subjectId: str
+    tableOfContents: str
+    wordCount: int
+    attachedTo: Message
+    author: Actor
+    citedBy: list[Document]
+    commissionedBy: Actor
+    references: list[Document]
+    relatedSpecs: list[Spec]
+    repository: Repository
 
 
 class Repository(TypedDict, total=False):
@@ -888,17 +1329,17 @@ class Repository(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    default_branch: str
+    defaultBranch: str
     forks: int
-    is_archived: bool
-    is_private: bool
+    isArchived: bool
+    isPrivate: bool
     language: str
     license: str
-    open_issues: int
+    openIssues: int
     size: int
     stars: int
     topics: list[str]
-    forked_from: Repository
+    forkedFrom: Repository
     owner: Account
 
 
@@ -911,8 +1352,8 @@ class Result(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    indexed_at: str
-    result_type: str
+    indexedAt: str
+    resultType: str
 
 
 class Review(TypedDict, total=False):
@@ -924,22 +1365,23 @@ class Review(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    comment_count: int
-    external_url: str
-    is_verified: bool
+    commentCount: int
+    externalUrl: str
+    isVerified: bool
     likes: int
-    post_type: str
+    postType: str
     rating: float
-    rating_max: float
+    ratingMax: float
     score: int
     tags: list[str]
-    view_count: int
+    viewCount: int
     attachment: list[File]
     contains: list[Video]
     media: list[Image]
-    posted_by: Account
+    postedBy: Account
     publish: Community
-    replies_to: Post
+    replies: list[Post]
+    repliesTo: Post
     reviews: Product
 
 
@@ -952,12 +1394,85 @@ class Role(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    end_date: str
-    role_type: str
-    start_date: str
+    department: str
+    endDate: str
+    roleType: str
+    startDate: str
     title: str
     organization: Organization
     person: Person
+
+
+class Route(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    color: str
+    cronExpression: str
+    direction: str
+    durability: str
+    enabled: bool
+    hours: Any
+    lastFiredAt: str
+    nextFireAt: str
+    prompt: str
+    providerJobId: str
+    routeNumber: str
+    routeType: str
+    rrule: str
+    scheduleType: str
+    timezone: str
+    destination: Place
+    operator: Organization
+    origin: Place
+    produces: Trip
+    provider: Skill
+    stops: list[Place]
+
+
+class Schedule(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    cronExpression: str
+    durability: str
+    enabled: bool
+    hours: Any
+    lastFiredAt: str
+    nextFireAt: str
+    prompt: str
+    providerJobId: str
+    rrule: str
+    scheduleType: str
+    timezone: str
+    operator: Organization
+    produces: Trip
+    provider: Skill
+
+
+class Search(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    query: str
+    resultCount: int
+    searchCount: int
+    searchedAt: str
 
 
 class Session(TypedDict, total=False):
@@ -969,14 +1484,33 @@ class Session(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    ended_at: str
-    message_count: int
-    session_type: str
-    started_at: str
-    token_count: int
+    client: str
+    endedAt: str
+    gitBranch: str
+    messageCount: int
+    projectId: str
+    sessionType: str
+    startedAt: str
+    tokenCount: int
     folder: Folder
     participant: Actor
-    project: Project
+
+
+class Shape(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    also: list[str]
+    icon: str
+    identity: list[str]
+    identity_any: list[str]
+    plural: str
+    subtitle: str
 
 
 class Shelf(TypedDict, total=False):
@@ -988,14 +1522,32 @@ class Shelf(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    is_default: bool
-    is_exclusive: bool
-    is_public: bool
-    list_type: str
+    isDefault: bool
+    isExclusive: bool
+    isPublic: bool
+    itemCount: int
+    items: Any
+    listId: str
+    listType: str
     privacy: str
-    belongs_to: Account
+    belongsTo: Account
     contains: list[Book]
     platform: Product
+
+
+class Shortcut(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    builtin: bool
+    filter: str
+    target: str
+    skill: Skill
 
 
 class Skill(TypedDict, total=False):
@@ -1010,10 +1562,10 @@ class Skill(TypedDict, total=False):
     color: str
     description: str
     error: str
-    skill_id: str
+    skillId: str
     status: str
-    privacy_policy: Webpage
-    terms_of_service: Webpage
+    privacyPolicy: Webpage
+    termsOfService: Webpage
     website: Website
 
 
@@ -1026,26 +1578,113 @@ class Software(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
+    barcode: str
+    calories: float
     categories: list[str]
     currency: str
+    department: str
     images: Any
     license: str
-    open_source: bool
+    novaGroup: int
+    nutritionScore: str
+    openSource: bool
+    originalPrice: str
+    originalPriceAmount: float
     platform: list[str]
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
     rating: float
-    ratings_count: int
-    repository_url: str
-    review_count: int
+    ratingsCount: int
+    repositoryUrl: str
+    reviewCount: int
+    servingSize: str
+    sku: str
+    soldByWeight: bool
     sponsored: bool
     version: str
+    weight: str
+    weightUnit: str
+    weightValue: float
     brand: Brand
     developer: Organization
     manufacturer: Organization
+    repository: Repository
+    tagged: list[Tag]
+
+
+class Source(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    address: str
+    description: str
+    enabled: bool
+    lastSynced: str
+    platform: str
+    sourceId: str
+    folder: Folder
+
+
+class Spec(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    encoding: str
+    filename: str
+    format: str
+    kind: str
+    labels: list[str]
+    lineCount: int
+    mimeType: str
+    path: str
+    priority: int
+    problem: str
+    remoteId: str
+    sha: str
+    size: int
+    startedAt: str
+    state: str
+    successCriteria: str
+    targetDate: str
+    assignedTo: Person
+    attachedTo: Message
+    blockedBy: list[Task]
+    blocks: list[Task]
+    children: list[Task]
+    dependsOn: list[Spec]
+    parent: Task
+    project: Project
+    repository: Repository
+    supersedes: list[Spec]
+
+
+class Tag(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    annotated: bool
+    color: str
+    hash: str
+    tagType: str
     repository: Repository
 
 
@@ -1060,16 +1699,33 @@ class Task(TypedDict, total=False):
     content: str
     labels: list[str]
     priority: int
-    started_at: str
+    remoteId: str
+    startedAt: str
     state: str
-    target_date: str
-    assigned_to: Person
-    blocked_by: list[Task]
+    targetDate: str
+    assignedTo: Person
+    blockedBy: list[Task]
     blocks: list[Task]
     children: list[Task]
     parent: Task
     project: Project
     repository: Repository
+
+
+class Theme(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    colorScheme: str
+    description: str
+    family: str
+    themeId: str
+    wallpaper: Image
 
 
 class Transaction(TypedDict, total=False):
@@ -1088,7 +1744,7 @@ class Transaction(TypedDict, total=False):
     details: Any
     notes: str
     pending: bool
-    posting_date: str
+    postingDate: str
     recurring: bool
     type: str
     account: Account
@@ -1103,12 +1759,48 @@ class Transcript(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    content_role: str
-    duration_ms: int
+    contentRole: str
+    durationMs: int
     language: str
-    segment_count: int
+    segmentCount: int
     segments: Any
-    source_type: str
+    sourceType: str
+
+
+class Trip(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    arrivalTime: str
+    bookingToken: str
+    cabinClass: str
+    carbonEmissions: Any
+    currency: str
+    departureTime: str
+    distance: str
+    duration: str
+    durationMinutes: int
+    fare: str
+    fareAmount: float
+    isScheduled: bool
+    isSurge: bool
+    rating: str
+    status: str
+    stops: int
+    trackingUrl: str
+    tripType: str
+    vehicleType: str
+    carrier: Organization
+    destination: Place
+    driver: Person
+    legs: list[Leg]
+    order: Order
+    origin: Place
 
 
 class Vehicle(TypedDict, total=False):
@@ -1120,30 +1812,45 @@ class Vehicle(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
+    aisle: str
     availability: str
-    body_type: str
+    barcode: str
+    bodyType: str
+    calories: float
     categories: list[str]
     color: str
     currency: str
+    department: str
     drivetrain: str
-    fuel_type: str
+    fuelType: str
     images: Any
     model: str
+    novaGroup: int
+    nutritionScore: str
     odometer: int
+    originalPrice: str
+    originalPriceAmount: float
     price: str
-    price_amount: float
+    priceAmount: float
     prime: bool
     quantity: int
     rating: float
-    ratings_count: int
-    review_count: int
+    ratingsCount: int
+    reviewCount: int
+    servingSize: str
+    sku: str
+    soldByWeight: bool
     sponsored: bool
     transmission: str
     trim: str
     vin: str
+    weight: str
+    weightUnit: str
+    weightValue: float
     year: int
     brand: Brand
     manufacturer: Organization
+    tagged: list[Tag]
 
 
 class Video(TypedDict, total=False):
@@ -1156,18 +1863,43 @@ class Video(TypedDict, total=False):
     datePublished: str
     content: str
     codec: str
-    duration_ms: int
+    durationMs: int
+    encoding: str
     filename: str
     format: str
-    frame_rate: float
-    mime_type: str
+    frameRate: float
+    kind: str
+    lineCount: int
+    mimeType: str
     path: str
     resolution: str
+    sha: str
     size: int
-    add_to: Playlist
-    attached_to: Message
+    addTo: Playlist
+    attachedTo: Message
     channel: Channel
+    repository: Repository
     transcribe: Transcript
+
+
+class Volume(TypedDict, total=False):
+    id: str
+    name: str
+    text: str
+    url: str
+    image: str
+    author: str
+    datePublished: str
+    content: str
+    filesystem: str
+    freeBytes: int
+    path: str
+    readOnly: bool
+    removable: bool
+    totalBytes: int
+    usedBytes: int
+    volumeType: str
+    contains: list[Folder]
 
 
 class Webpage(TypedDict, total=False):
@@ -1179,9 +1911,10 @@ class Webpage(TypedDict, total=False):
     author: str
     datePublished: str
     content: str
-    content_type: str
-    last_visit_unix: int
-    visit_count: int
+    contentType: str
+    error: str
+    lastVisitUnix: int
+    visitCount: int
 
 
 class Website(TypedDict, total=False):
@@ -1194,11 +1927,11 @@ class Website(TypedDict, total=False):
     datePublished: str
     content: str
     anonymous: bool
-    claim_token: str
-    claim_url: str
-    expires_at: str
+    claimToken: str
+    claimUrl: str
+    expiresAt: str
     status: str
-    version_id: str
+    versionId: str
     domain: Domain
-    owned_by: Organization
+    ownedBy: Organization
 

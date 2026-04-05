@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Multi-language shape codegen from shapes/*.yaml.
+"""Multi-language shape codegen.
 
-Reads shape YAML definitions, resolves inheritance (`also` chains) and
-relations, then emits typed classes for each target language.
+Reads shape definitions (from YAML files or the graph API), resolves
+inheritance (`also` chains) and relations, then emits typed classes
+for each target language.
 
 Usage:
-    python generate.py                        # all languages
+    python generate.py                        # all languages, from YAML files
     python generate.py --lang python          # Python TypedDicts only
-    python generate.py --lang typescript      # TypeScript interfaces only
-    python generate.py --lang swift           # Swift Codable structs only
-    python generate.py --lang go              # Go structs only
-    python generate.py --lang rust            # Rust serde structs only
+    python generate.py --from-api             # load shapes from graph instead of YAML
+    python generate.py --from-api --dump-yaml ./backup  # also export YAML files from graph
     python generate.py --shapes-dir ../shapes # custom shapes location
 """
 
@@ -69,7 +68,119 @@ def to_class_name(name: str) -> str:
     return "".join(w.capitalize() for w in snake.split("_"))
 
 
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown code fences from CLI JSON output."""
+    if text.startswith("```"):
+        text = "\n".join(text.split("\n")[1:])
+    if text.endswith("```"):
+        text = "\n".join(text.split("\n")[:-1])
+    return text
+
+
+def _dump_yaml_from_api(agentos_bin: str, out_dir: Path) -> None:
+    """Export each shape from the graph as a standalone YAML file (backup/restore)."""
+    import json
+    import subprocess
+    try:
+        import yaml
+    except ImportError:
+        print("pyyaml required: pip install pyyaml", file=sys.stderr)
+        sys.exit(1)
+
+    result = subprocess.run(
+        [agentos_bin, "call", "read", json.dumps({"tags": "shape", "view": {"format": "json"}, "limit": 200})],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        print(f"Failed to list shapes: {result.stderr}", file=sys.stderr)
+        return
+
+    listing = json.loads(_strip_code_fences(result.stdout.strip()))
+    nodes = listing.get("data", [])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dumped = 0
+
+    for node in nodes:
+        name = node.get("name", "")
+        node_id = node.get("id", "")
+        if not name or not node_id:
+            continue
+
+        r = subprocess.run(
+            [agentos_bin, "call", "read", json.dumps({"id": node_id, "view": {"format": "json"}})],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            continue
+
+        node_data = json.loads(_strip_code_fences(r.stdout.strip()))
+        content = node_data.get("content", "")
+        if not content:
+            continue
+
+        # Wrap in top-level name key to match original YAML format
+        defn = yaml.safe_load(content)
+        yaml_out = yaml.dump({name: defn}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        (out_dir / f"{name}.yaml").write_text(yaml_out)
+        dumped += 1
+
+    print(f"  Dumped {dumped} shape YAML files to {out_dir}")
+
+
+def load_shapes_from_api(agentos_bin: str) -> list[Shape]:
+    """Load shapes from the graph via `agentos call` CLI."""
+    import json
+    import subprocess
+    try:
+        import yaml
+    except ImportError:
+        print("pyyaml required: pip install pyyaml", file=sys.stderr)
+        sys.exit(1)
+
+    # List all shape-tagged nodes
+    result = subprocess.run(
+        [agentos_bin, "call", "read", json.dumps({"tags": "shape", "view": {"format": "json"}, "limit": 200})],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        print(f"Failed to list shapes: {result.stderr}", file=sys.stderr)
+        sys.exit(1)
+
+    listing = json.loads(_strip_code_fences(result.stdout.strip()))
+    nodes = listing.get("data", [])
+    print(f"Found {len(nodes)} shapes on graph")
+
+    # Read each shape's content body
+    raw: dict[str, dict] = {}
+    for node in nodes:
+        shape_name = node.get("name", "")
+        node_id = node.get("id", "")
+        if not shape_name or not node_id:
+            continue
+
+        r = subprocess.run(
+            [agentos_bin, "call", "read", json.dumps({"id": node_id, "view": {"format": "json"}})],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            print(f"  Warning: failed to read {shape_name}: {r.stderr}", file=sys.stderr)
+            continue
+
+        node_data = json.loads(_strip_code_fences(r.stdout.strip()))
+        content = node_data.get("content", "")
+        if not content:
+            print(f"  Warning: {shape_name} has no content body, skipping", file=sys.stderr)
+            continue
+
+        defn = yaml.safe_load(content)
+        if isinstance(defn, dict):
+            raw[shape_name] = defn
+
+    return _build_shapes(raw)
+
+
 def load_shapes(shapes_dir: Path) -> list[Shape]:
+    """Load shapes from YAML files on disk."""
     try:
         import yaml
     except ImportError:
@@ -83,6 +194,12 @@ def load_shapes(shapes_dir: Path) -> list[Shape]:
             for name, defn in data.items():
                 if isinstance(defn, dict):
                     raw[name] = defn
+
+    return _build_shapes(raw)
+
+
+def _build_shapes(raw: dict[str, dict]) -> list[Shape]:
+    """Convert raw shape dicts into Shape objects with resolved inheritance."""
 
     def resolve_fields(name: str, seen: set | None = None) -> dict[str, str]:
         if seen is None:
@@ -481,18 +598,29 @@ def main():
     parser.add_argument("--lang", choices=list(EMITTERS.keys()), help="Language to generate (default: all)")
     parser.add_argument("--shapes-dir", type=Path, help="Path to shapes/ directory")
     parser.add_argument("--out-dir", type=Path, help="Output directory (default: sdk/generated/)")
+    parser.add_argument("--from-api", action="store_true", help="Load shapes from graph via agentos CLI instead of YAML files")
+    parser.add_argument("--agentos-bin", type=str, help="Path to agentos binary (default: agentos)")
+    parser.add_argument("--dump-yaml", type=Path, help="With --from-api: also dump each shape as YAML to this directory (backup/export)")
     args = parser.parse_args()
 
     sdk_dir = Path(__file__).parent
-    shapes_dir = args.shapes_dir or sdk_dir.parent / "shapes"
     out_dir = args.out_dir or sdk_dir / "generated"
 
-    if not shapes_dir.is_dir():
-        print(f"Shapes directory not found: {shapes_dir}", file=sys.stderr)
-        sys.exit(1)
+    if args.from_api:
+        agentos_bin = args.agentos_bin or "agentos"
+        shapes = load_shapes_from_api(agentos_bin)
+        print(f"Loaded {len(shapes)} shapes from graph API")
 
-    shapes = load_shapes(shapes_dir)
-    print(f"Loaded {len(shapes)} shapes from {shapes_dir}")
+        # Optional: dump raw YAML files (for backup/export)
+        if args.dump_yaml:
+            _dump_yaml_from_api(agentos_bin, args.dump_yaml)
+    else:
+        shapes_dir = args.shapes_dir or sdk_dir.parent / "shapes"
+        if not shapes_dir.is_dir():
+            print(f"Shapes directory not found: {shapes_dir}", file=sys.stderr)
+            sys.exit(1)
+        shapes = load_shapes(shapes_dir)
+        print(f"Loaded {len(shapes)} shapes from {shapes_dir}")
 
     out_dir.mkdir(exist_ok=True)
 
