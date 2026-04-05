@@ -9,6 +9,11 @@ product:
   website: https://uber.com
   developer: Uber Technologies
 
+provides:
+  - tool: geocode
+    via: search_address
+    description: "Worldwide address geocoding — autocomplete + lat/lng resolution via HERE Maps"
+
 connections:
   web:
     description: "Uber rider account — requires cookies from a logged-in browser session"

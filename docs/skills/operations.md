@@ -100,6 +100,7 @@ Current dynamic tools (from installed skills):
 - `web_search` — brave, exa
 - `web_read` — firecrawl, exa, curl (generic); youtube, reddit (URL-specific)
 - `flight_search` — serpapi
+- `geocode` — uber (worldwide address geocoding via HERE Maps)
 
 To verify dynamic tools appear:
 
