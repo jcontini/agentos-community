@@ -374,12 +374,93 @@ Returns all stores available for delivery near the user's saved address. 126 fee
 // Response: TODO
 ```
 
-#### `getSearchHomeV2` — store browsing
+#### `getSearchFeedV1` — server-side search (captured via CDP 2026-04-05)
+```json
+// Request
+{
+  "userQuery": "sushi",         // search term
+  "date": "",
+  "startTime": 0,
+  "endTime": 0,
+  "sortAndFilters": [],         // array of filter objects (see sortAndFilters in response)
+  "vertical": "",               // empty = ALL
+  "searchSource": "",
+  "displayType": "SEARCH_RESULTS",
+  "searchType": "",
+  "keyName": "",
+  "cacheKey": "",               // pagination — use cacheKey from previous response
+  "recaptchaToken": ""
+}
+
+// Response (72 results for "sushi" in Austin)
+{
+  "favorites": { "<storeUuid>": false, ... },
+  "feedItems": [
+    {
+      "uuid": "...",
+      "type": "REGULAR_STORE",
+      "store": {
+        "storeUuid": "047d5c5d-...",
+        "title": { "text": "Asian Roll" },
+        "rating": { "text": "4.5", "accessibilityText": "Rated 4.5 out of 5 stars based on more than 140 reviews.", "badgeType": "RATINGS" },
+        "image": { "items": [{ "url": "https://tb-static.uber.com/prod/image-proc/...", "width": 2880 }] },
+        "actionUrl": "/store/asian-roll/BH1cXXBzTCWF5xcq0YY9CA",
+        "signposts": [{ "backgroundColor": { "color": "#EC0000" }, "text": "Spend $50, Save $5", "textColor": { "color": "#FFFFFF" } }],
+        "meta": [  // delivery info badges
+          { "text": "Sponsored", "badgeType": "SPONSORED" },
+          { "text": "$0 Delivery Fee", "badgeType": "DELIVERY_FEE" }
+        ]
+      }
+    }
+  ],
+  "currencyCode": "USD",
+  "cacheKey": "...",            // for pagination
+  "sortAndFilters": [           // available filters
+    { "type": "membershipFilter", "label": "From Uber Eats" },
+    { "type": "dealsFilter", "label": "Offers" },
+    { "type": "deliveryTime", "label": "Delivery time" },
+    { "type": "ratingFilter", "label": "Rating" }
+  ]
+}
+```
+Same store shape as `getFeedV1` — `_extract_feed_store` works for both.
+
+#### `getSearchSuggestionsV1` — typeahead (captured via CDP 2026-04-05)
+```json
+// Request
+{
+  "userQuery": "pizza",
+  "date": "",
+  "startTime": 0,
+  "endTime": 0,
+  "vertical": "ALL"
+}
+
+// Response — array of suggestions
+[
+  {
+    "type": "searchHistoryV2",   // or "storeSuggestion", "categorySuggestion"
+    "title": "pizza",
+    "trackingCode": "{\"uuid\":\"...\",\"codeType\":\"SEARCH\",\"searchPayload\":{\"term\":\"pizza\"}}",
+    "itemModel": { ... }         // rich text rendering info
+  }
+]
+```
+
+#### `getSearchHomeV2` — search home (captured via CDP 2026-04-05)
 ```json
 // Request
 { "dropPastOrders": true }
 
-// Response: TODO — should contain store listings near the user's location
+// Response
+{
+  "searchHistory": [
+    { "type": "searchHistory", "title": "mashed potatoes", "titleTerm": "mashed potatoes" },
+    { "type": "searchHistory", "title": "soup", "titleTerm": "soup" }
+  ],
+  "suggestedSections": [ ... ],   // suggested categories/stores
+  "verticalSearchHomeResults": [ ... ]
+}
 ```
 
 #### `getDraftOrdersByEaterUuidV1` — draft orders
@@ -464,6 +545,50 @@ Returns all stores available for delivery near the user's saved address. 126 fee
 
 This shows the location/address shape Uber uses internally. Note the `uber_places` reference type.
 
+#### `getInstructionForLocationV1` — delivery address + preferences (captured via CDP 2026-04-05)
+```json
+// Request — requires location object from session
+{
+  "location": {
+    "address": {
+      "address1": "1141 1/4 Gunter St",
+      "address2": "Austin, TX",
+      "aptOrSuite": "",
+      "eaterFormattedAddress": "1141 1/4 Gunter St, Austin, TX 78721-1852, US",
+      "subtitle": "Austin, TX",
+      "title": "1141 1/4 Gunter St"
+    },
+    "latitude": 30.271044,
+    "longitude": -97.695755,
+    "reference": "b69d9fec-...",
+    "referenceType": "uber_places",
+    "type": "uber_places",
+    "addressComponents": {
+      "city": "Austin", "countryCode": "US",
+      "firstLevelSubdivisionCode": "TX", "postalCode": "78721-1852"
+    },
+    "categories": ["HOME_PRIVATE", "RESIDENCE", "AREAS_AND_BUILDINGS", "LANDMARK", "address_point"],
+    "originType": "user_autocomplete"
+  }
+}
+
+// Response — interaction types + saved delivery notes
+{
+  "availableInteractionTypes": ["door_to_door", "curbside", "leave_at_door", "meet_in_lobby", "leave_in_lobby"],
+  "defaultInteractionType": "door_to_door",
+  "preferredInteractionType": "door_to_door",
+  "instructions": [{
+    "accountUuid": "62303c19-...",
+    "interactionType": "door_to_door",
+    "notes": "Gate code 0829...",
+    "aptOrSuite": "",
+    "waypoint": { "latitude": 30.271044, "longitude": -97.695755 },
+    "displayString": "Meet at my door, 1141 1/4 Gunter St"
+  }]
+}
+```
+Rich address data including `addressComponents` with city/state/zip. `instructions` has saved delivery notes per address.
+
 #### `setRobotEventsV1` — bot detection telemetry
 ```json
 // Request
@@ -517,10 +642,19 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getOrderEntitiesV1` | Order entities for **active orders only** | **Tested** — returns null/empty for completed orders. Only useful during live delivery (Phase 2). |
 | `getActiveOrdersV1` | Live order status/tracking | **Captured** — returns feed cards, order phase |
 | `getStoreV1` | Store details + full product catalog | **Captured** — 165 Costco items with title, uuid, price, image. See section below. |
+| `getSearchFeedV1` | **Server-side search** — query by name/cuisine, returns feedItems with full store shape | **Captured** — 72 results for "sushi". Same store shape as getFeedV1. |
+| `getSearchSuggestionsV1` | Typeahead suggestions as user types query | **Captured** — `{userQuery, date:"", startTime:0, endTime:0, vertical:"ALL"}` |
 | `getPaginatedStoresV1` | Store browsing with pagination | Not yet captured |
-| `getFeedV1` | Home feed (store listings) | Not yet captured |
+| `getFeedV1` | Home feed (store listings) | **Captured** — used by list_nearby_stores |
 | `getFeedItemsUpdateV1` | Feed updates | Not yet captured |
-| `getSearchHomeV2` | Search/browse home | **Captured** — top-level keys only |
+| `getSearchHomeV2` | Search/browse home — suggestions + search history | **Captured** — searchHistory, suggestedSections |
+| `getTerminatedOrderV1` | Completed order detail — actions (rate/help), delivery card | **Captured** — `{orderUuid}`. Returns orderActions + feed cards. |
+| `getInstructionForLocationV1` | Delivery address + saved notes + interaction types | **Captured** — needs location object from session. Rich address components. |
+| `getBusinessProfilesV1` | Business profiles (Personal/Business) | **Captured** — same shape as getProfilesForUserV1 |
+| `getMembershipHubV1` | Uber One membership hub (UI components) | **Captured** — nested UI component tree, not useful for data extraction |
+| `getLatestPendingRatingV1` | Check for orders awaiting rating | **Captured** — `{}` → returns null when no pending ratings |
+| `checkAndUpdateGratisV1` | Gratis/rewards status | **Captured** — returns string like "GRATIS_STATUS_NO_UPDATE" |
+| `getSessionElapseV1` | Session time tracking | **Captured** — returns int (milliseconds) |
 | `getCheckoutPresentationV1` | Checkout flow/presentation | Not yet captured |
 | `getEaterMessagingContentV1` | Driver messages/chat | Not yet captured |
 | `getOriginalCartV1` | Cart before substitutions | Not yet captured |
@@ -533,9 +667,9 @@ Extracted by grepping `client-main-*.js` for endpoint name patterns.
 | `getInStoreSearchV1` | In-store product search | **Captured** — same item shape as getStoreV1 |
 | `getLocationV1` | Location details | Not yet captured |
 | `getNavigationLinksV1` | Nav structure | Not yet captured |
-| `getEatsPassV1` | Uber One / Eats Pass | Not yet captured |
+| `getEatsPassV1` | Uber One / Eats Pass | Not yet captured — `getMembershipHubV1` is the actual endpoint but returns UI components |
 | `getUberBalancesV1` | Uber credits/balances | Not yet captured |
-| `getInvoiceStatusV1` | Invoice/receipt status | **Captured** |
+| `getInvoiceStatusV1` | Invoice/receipt status | **Captured** — `{orderUUID}` → `{invoiceStatus: "EMPTY"}` |
 
 **Write operations (require [firewall](../../../docs/specs/firewall.md)):**
 

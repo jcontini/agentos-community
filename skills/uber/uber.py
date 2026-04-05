@@ -1278,8 +1278,8 @@ def search_products(store_uuid: str, query: str, **params) -> list:
 def search_stores(query: str = "", **params) -> list:
     """Search for stores/restaurants on Uber Eats by name or cuisine.
 
-    Backed by getSearchSuggestionsV1 + getFeedV1. Returns place-shaped entities.
-    If no query, returns suggestions and recent searches.
+    Backed by getSearchFeedV1 (server-side search). Returns place-shaped entities.
+    If no query, returns suggestions and recent searches from getSearchHomeV2.
     """
     cookie_header = require_cookies(params, "search_stores")
 
@@ -1290,48 +1290,35 @@ def search_stores(query: str = "", **params) -> list:
         for section in (data.get("suggestedSections") or []):
             for item in (section.get("items") or []):
                 suggestions.append(item.get("title") or item.get("text", ""))
-        history = [h.get("text", "") for h in (data.get("searchHistory") or []) if h.get("text")]
-        return [{"suggestions": [s for s in suggestions if s], "recentSearches": history}]
+        history = [h.get("title") or h.get("text", "") for h in (data.get("searchHistory") or [])]
+        return [{"suggestions": [s for s in suggestions if s], "recentSearches": [h for h in history if h]}]
 
-    # Search: use getPaginatedStoresV1 which supports keyword search
-    try:
-        data = _eats_post(cookie_header, "getPaginatedStoresV1", {
-            "query": query,
-            "vertical": "ALL",
-        })
-        stores = []
-        seen = set()
-        currency = data.get("currencyCode")
-        for store_data in (data.get("stores") or data.get("feedItems") or []):
-            if isinstance(store_data, dict):
-                sd = store_data.get("store", store_data)
-                _extract_feed_store(sd, stores, seen, currency)
-        if stores:
-            return stores
-    except Exception:
-        pass  # endpoint may not support this shape — fall through
+    # Server-side search via getSearchFeedV1 (discovered via CDP RE 2026-04-05)
+    data = _eats_post(cookie_header, "getSearchFeedV1", {
+        "userQuery": query,
+        "date": "",
+        "startTime": 0,
+        "endTime": 0,
+        "sortAndFilters": [],
+        "vertical": "",
+        "searchSource": "",
+        "displayType": "SEARCH_RESULTS",
+        "searchType": "",
+        "keyName": "",
+        "cacheKey": "",
+        "recaptchaToken": "",
+    })
 
-    # Fallback: use getFeedV1 and filter client-side
-    data = _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
     currency = data.get("currencyCode")
+    favorites = data.get("favorites") or {}
     items = data.get("feedItems") or []
 
     stores = []
     seen = set()
-    query_lower = query.lower()
     for item in items:
         if item.get("type") == "REGULAR_STORE":
             store_data = item.get("store", item)
-            title = store_data.get("title") or {}
-            name = title.get("text", "") if isinstance(title, dict) else str(title)
-            if query_lower in name.lower():
-                _extract_feed_store(store_data, stores, seen, currency)
-        elif item.get("type") in ("REGULAR_CAROUSEL", "FEATURED_STORES"):
-            for store_data in (item.get("carousel", {}).get("stores") or []):
-                title = store_data.get("title") or {}
-                name = title.get("text", "") if isinstance(title, dict) else str(title)
-                if query_lower in name.lower():
-                    _extract_feed_store(store_data, stores, seen, currency)
+            _extract_feed_store(store_data, stores, seen, currency, favorites)
 
     return stores
 
@@ -1348,6 +1335,7 @@ def list_nearby_stores(**params) -> list:
     data = _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
 
     currency = data.get("currencyCode")
+    favorites = data.get("favorites") or {}
     items = data.get("feedItems") or []
 
     stores = []
@@ -1356,15 +1344,15 @@ def list_nearby_stores(**params) -> list:
         # Extract stores from both REGULAR_STORE and carousel types
         if item.get("type") == "REGULAR_STORE":
             store_data = item.get("store", item)
-            _extract_feed_store(store_data, stores, seen, currency)
+            _extract_feed_store(store_data, stores, seen, currency, favorites)
         elif item.get("type") in ("REGULAR_CAROUSEL", "FEATURED_STORES"):
             for store_data in (item.get("carousel", {}).get("stores") or []):
-                _extract_feed_store(store_data, stores, seen, currency)
+                _extract_feed_store(store_data, stores, seen, currency, favorites)
 
     return stores
 
 
-def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | None):
+def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | None, favorites: dict | None = None):
     """Extract a place-shaped entity from a getFeedV1 store item."""
     uuid = store_data.get("storeUuid", "")
     if not uuid or uuid in seen:
@@ -1414,6 +1402,11 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
         if badge_type == "CUISINE" or (badge_type == "" and text and text not in ("Delivers", "")):
             categories.append(text)
 
+    # Favorite status — check top-level favorites map and per-store field
+    is_fav = store_data.get("favorite", False)
+    if not is_fav and favorites:
+        is_fav = favorites.get(uuid, False)
+
     store = {
         # Standard fields
         "id": uuid,
@@ -1431,6 +1424,8 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
         "deliveryFee": delivery_fee,
         "currency": currency,
     }
+    if is_fav:
+        store["isFavorite"] = True
     if categories:
         store["categories"] = categories
     if promos:
