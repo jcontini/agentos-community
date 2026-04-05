@@ -1,6 +1,7 @@
 """Uber skill — rides (GraphQL) and Eats (RPC) via browser session cookies."""
 
 import json as _json
+import re as _re
 import uuid as uuid_mod
 from agentos import http, get_cookies, require_cookies
 
@@ -257,8 +258,11 @@ def _parse_fare(fare_str: str) -> tuple[float | None, str | None]:
     """
     if not fare_str:
         return None, None
+    is_negative = fare_str.strip().startswith("-")
     p = Price.fromstring(fare_str)
     amount = float(p.amount) if p.amount is not None else None
+    if amount is not None and is_negative and amount > 0:
+        amount = -amount
     currency = p.currency
     if currency and len(currency) == 3 and currency.isupper():
         return amount, currency  # already ISO code (ZAR, TRY, etc.)
@@ -408,6 +412,15 @@ def get_trip(trip_id: str, **params) -> dict:
 
     distance = f"{receipt.get('distance', '')} {receipt.get('distanceLabel', '')}".strip() or None
 
+    # Vehicle info from trip and receipt
+    vehicle = {}
+    if trip.get("vehicleDisplayName"):
+        vehicle["name"] = trip["vehicleDisplayName"]
+    if receipt.get("vehicleType"):
+        vehicle["type"] = receipt["vehicleType"]
+    if receipt.get("carYear"):
+        vehicle["year"] = receipt["carYear"]
+
     out = {
         # Standard fields
         "id": trip.get("uuid") or trip.get("jobUUID"),
@@ -428,8 +441,16 @@ def get_trip(trip_id: str, **params) -> dict:
         "rating": result.get("rating") or None,
         "isSurge": trip.get("isSurgeTrip", False),
         "isScheduled": trip.get("isScheduledRide", False),
+        "isPool": trip.get("isRidepoolTrip", False),
+        "isReserve": trip.get("isUberReserve", False),
         "stops": max(0, len(waypoints) - 2) if waypoints else 0,
     }
+    if vehicle:
+        out["vehicle"] = vehicle
+    if trip.get("marketplace"):
+        out["marketplace"] = trip["marketplace"]
+    if trip.get("guest"):
+        out["guest"] = trip["guest"]
 
     # Typed references — return data directly, engine infers type from shape relations
     if driver_name:
@@ -580,7 +601,28 @@ def list_deliveries(cursor: str = "", **params) -> list:
         else:
             status = "in_progress"
 
-        orders.append({
+        # Order + delivery state timeline
+        order_states = base.get("orderStateChanges") or []
+        delivery_states = base.get("deliveryStateChanges") or []
+        timeline = []
+        for sc in order_states:
+            timeline.append({"type": sc.get("type"), "at": sc.get("stateChangeTime"), "category": "order"})
+        for sc in delivery_states:
+            timeline.append({"type": sc.get("type"), "at": sc.get("stateChangeTime"), "category": "delivery"})
+        timeline.sort(key=lambda x: x.get("at") or "")
+
+        # Courier info (name often empty on completed orders but worth capturing)
+        courier = order.get("courierInfo") or {}
+        courier_name = courier.get("name") or None
+
+        # Delivery address — from base order, not store location
+        delivery_addr = base.get("deliveryAddress") or {}
+        delivery_loc = delivery_addr.get("location") or {}
+        delivery_address_obj = delivery_addr.get("address") or {}
+        if isinstance(delivery_address_obj, str):
+            delivery_address_obj = {"eaterFormattedAddress": delivery_address_obj}
+
+        order_data = {
             # Standard fields
             "id": uuid,
             "name": store_info.get("title", "Unknown store"),
@@ -591,12 +633,12 @@ def list_deliveries(cursor: str = "", **params) -> list:
             "totalAmount": total_cents / 100 if total_cents else None,
             "currency": currency,
             "status": status,
+            "interactionType": order.get("interactionType"),  # door_to_door, etc.
             "fareBreakdown": [
                 {"label": item.get("label"), "amount": item.get("rawValue"), "key": item.get("key")}
                 for item in (fare.get("checkoutInfo") or [])
             ],
             # Typed references — create linked entities in the graph
-            # Store is a place (POI), not an organization. See place.yaml.
             "store": {
                 "id": store_info.get("uuid"),
                 "name": store_info.get("title"),
@@ -607,11 +649,18 @@ def list_deliveries(cursor: str = "", **params) -> list:
                 "longitude": location.get("longitude"),
             },
             "shippingAddress": {
-                "fullAddress": raw_addr.get("eaterFormattedAddress"),
-                "latitude": location.get("latitude"),
-                "longitude": location.get("longitude"),
-            } if raw_addr.get("eaterFormattedAddress") else None,
-        })
+                "fullAddress": delivery_address_obj.get("eaterFormattedAddress") or raw_addr.get("eaterFormattedAddress"),
+                "latitude": delivery_loc.get("latitude") or location.get("latitude"),
+                "longitude": delivery_loc.get("longitude") or location.get("longitude"),
+            } if (delivery_address_obj.get("eaterFormattedAddress") or raw_addr.get("eaterFormattedAddress")) else None,
+        }
+
+        if timeline:
+            order_data["timeline"] = timeline
+        if courier_name:
+            order_data["courier"] = {"name": courier_name}
+
+        orders.append(order_data)
 
     return orders
 
@@ -674,20 +723,34 @@ def get_delivery(order_uuid: str, **params) -> dict:
             uid = el.get("data-testid").replace("shoppingCart_item_title_", "")
             qty_els = doc.cssselect(f'[data-testid="shoppingCart_item_quantity_{uid}"]')
             qty = int(qty_els[0].text_content().strip()) if qty_els else 1
-            items.append({
+            # Item customizations (e.g. "Whole: Pepperoni") — sibling elements after title
+            customization_els = doc.cssselect(f'[data-testid="shoppingCart_item_customization_{uid}"]')
+            customization_text = ", ".join(e.text_content().strip() for e in customization_els if e.text_content().strip())
+            item_data = {
                 "name": el.text_content().strip(),
                 "quantity": qty,
                 "itemUuid": uid,
-            })
+            }
+            if customization_text:
+                item_data["customizations"] = customization_text
+            items.append(item_data)
 
-        # Fare breakdown
+        # Fare breakdown — structured array for consistency with list_deliveries
         total_el = doc.cssselect('[data-testid="total_fare_amount"]')
         fare["total"] = total_el[0].text_content().strip() if total_el else None
 
+        fare_lines = []
         for key in ("item_subtotal", "delivery_fee", "service_fee", "tip", "delivery_discount", "tax"):
             el = doc.cssselect(f'[data-testid="fare_line_item_amount_{key}"]')
+            label_el = doc.cssselect(f'[data-testid="fare_line_item_label_{key}"]')
             if el:
-                fare[key] = el[0].text_content().strip()
+                val_text = el[0].text_content().strip()
+                label_text = label_el[0].text_content().strip() if label_el else key.replace("_", " ").title()
+                amount, _ = _parse_fare(val_text)
+                fare_lines.append({"key": key, "label": label_text, "amount": amount, "display": val_text})
+                fare[key] = val_text
+        if fare_lines:
+            fare["lines"] = fare_lines
 
     # Parse total — the receipt HTML total has the currency symbol (e.g. "$214.50")
     total_str = fare.get("total", "")
@@ -714,6 +777,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
                 "id": item["itemUuid"],
                 "name": item["name"],
                 "quantity": item["quantity"],
+                **({"customizations": item["customizations"]} if item.get("customizations") else {}),
             }
             for item in items
         ],
@@ -722,6 +786,31 @@ def get_delivery(order_uuid: str, **params) -> dict:
     # Store as a place reference — creates an edge in the graph
     if store_ref:
         result["store"] = store_ref
+
+    # Enrich from order metadata (getPastOrdersV1)
+    if order_meta:
+        base = order_meta.get("baseEaterOrder") or {}
+        # Delivery address
+        delivery_addr = base.get("deliveryAddress") or {}
+        if delivery_addr:
+            result["shippingAddress"] = {
+                "fullAddress": delivery_addr.get("address"),
+                "latitude": delivery_addr.get("latitude"),
+                "longitude": delivery_addr.get("longitude"),
+            }
+        # Interaction type (door_to_door, leave_at_door, etc.)
+        interaction = base.get("interactionType")
+        if interaction:
+            result["interactionType"] = interaction.lower()
+        # Timeline from state changes — same keys as list_deliveries
+        timeline = []
+        for sc in (base.get("orderStateChanges") or []):
+            timeline.append({"at": sc.get("stateChangeTime"), "category": "order", "type": sc.get("type")})
+        for dc in (base.get("deliveryStateChanges") or []):
+            timeline.append({"at": dc.get("stateChangeTime"), "category": "delivery", "type": dc.get("type")})
+        timeline.sort(key=lambda e: e.get("at") or "")
+        if timeline:
+            result["timeline"] = timeline
 
     return result
 
@@ -770,7 +859,6 @@ def get_store(store_uuid: str, **params) -> dict:
                 # See docs/reverse-engineering/overview.md "Write operations"
                 # Product shape: standard fields + product-specific fields
                 # Extract weight/size from thumbnail labels (e.g. "12 oz", "32 oz")
-                import re as _re
                 weight = None
                 for te in (ci.get("itemThumbnailElements") or []):
                     at = (te.get("payload", {}).get("labelPayload", {})
@@ -785,6 +873,36 @@ def get_store(store_uuid: str, **params) -> dict:
                 purchase = ci.get("purchaseInfo", {})
                 pricing = purchase.get("pricingInfo", {}).get("pricedByUnit", {})
                 sold_by_weight = pricing.get("measurementType", "") != "MEASUREMENT_TYPE_COUNT"
+
+                # Promo / endorsement badges from imageOverlayElements
+                badges = []
+                for overlay in (ci.get("imageOverlayElements") or []):
+                    for tag in ((overlay.get("element", {}).get("payload", {})
+                                 .get("tagsPayload", {}).get("tags")) or []):
+                        if tag.get("text"):
+                            badges.append(tag["text"])
+
+                # Original price from priceTagline (e.g. "$18.40, discounted from $23.00")
+                original_price = None
+                tagline = ci.get("priceTagline") or {}
+                a11y = tagline.get("accessibilityText", "")
+                if "discounted from" in a11y or "previous price" in a11y:
+                    m = _re.search(r'\$(\d+(?:\.\d+)?)\s*$', a11y)
+                    if m:
+                        original_price = float(m.group(1))
+
+                # Dietary tags (grocery items have these — e.g. VEGAN, SNAP, Non-GMO)
+                # Filter out promo-looking tags (% off, $ amounts, "#N most liked")
+                dietary_tags = []
+                for te in (ci.get("itemThumbnailElements") or []):
+                    for tag in ((te.get("payload", {}).get("tagsPayload", {})
+                                 .get("tags")) or []):
+                        t = tag.get("text", "")
+                        if t and t not in badges:
+                            if _re.search(r'%\s*off|^\$|\bmost\s+liked\b|^\d+\s*for\s*\$', t, _re.I):
+                                badges.append(t)  # promo, not dietary
+                            else:
+                                dietary_tags.append(t)
 
                 product = {
                     # Standard fields
@@ -804,6 +922,16 @@ def get_store(store_uuid: str, **params) -> dict:
                     "_raw": ci,
                     "_parent_section_uuid": item.get("catalogSectionUUID", ""),
                 }
+                if ci.get("hasCustomizations"):
+                    product["hasCustomizations"] = True
+                if badges:
+                    product["badges"] = badges
+                if original_price:
+                    product["originalPrice"] = original_price
+                if dietary_tags:
+                    product["dietaryTags"] = dietary_tags
+                if ci.get("numAlcoholicItems", 0) > 0:
+                    product["isAlcoholic"] = True
                 if sold_by_weight:
                     product["sold_by_weight"] = True
                 if weight:
@@ -817,6 +945,22 @@ def get_store(store_uuid: str, **params) -> dict:
     location = data.get("location") or {}
     raw_addr = location.get("address") or {}
     address = raw_addr if isinstance(raw_addr, dict) else {"eaterFormattedAddress": str(raw_addr)}
+
+    # Convert hours from minutes-since-midnight to readable format
+    def _fmt_minutes(m):
+        h, mn = divmod(int(m), 60)
+        suffix = "AM" if h < 12 else "PM"
+        h12 = h % 12 or 12
+        return f"{h12}:{mn:02d} {suffix}"
+
+    formatted_hours = []
+    for h in (data.get("hours") or []):
+        day = h.get("dayRange", "")
+        for sh in (h.get("sectionHours") or []):
+            start = sh.get("startTime")
+            end = sh.get("endTime")
+            if start is not None and end is not None:
+                formatted_hours.append(f"{day}: {_fmt_minutes(start)}–{_fmt_minutes(end)}")
 
     # isOpen can be True even when the store isn't accepting orders right now.
     # closedMessage tells you when it actually opens (e.g. "Opens Saturday 9:30 AM").
@@ -840,7 +984,7 @@ def get_store(store_uuid: str, **params) -> dict:
         "featureType": "poi",
         "categories": [c if isinstance(c, str) else c.get("name", "") for c in (data.get("categories") or []) if c],
         "phone": data.get("phoneNumber"),
-        "hours": data.get("hours"),
+        "hours": formatted_hours or None,
         "businessStatus": "open" if data.get("isOpen") and not data.get("closedMessage") else "closed",
         "rating": rating_data.get("ratingValue"),
         "reviewCount": rating_data.get("reviewCount"),
@@ -1012,7 +1156,6 @@ def search_products(store_uuid: str, query: str, **params) -> list:
                     original_price = tagline_text.split("discounted from ")[-1].strip()
 
                 # Extract weight/size from thumbnail labels (e.g. "12 oz", "3 lbs")
-                import re as _re
                 weight = None
                 for te in (ci.get("itemThumbnailElements") or []):
                     at = (te.get("payload", {}).get("labelPayload", {})
@@ -1131,7 +1274,22 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
     except (ValueError, TypeError):
         pass
 
-    out.append({
+    # Signpost promos (e.g. "20% off", "Buy 1 get 1", "Spend $20, save $5")
+    promos = []
+    for sp in (store_data.get("signposts") or []):
+        text = sp.get("text") or (sp.get("title") or {}).get("text", "")
+        if text:
+            promos.append(text)
+
+    # Categories from meta badges (cuisine type like "Pizza", "Italian")
+    categories = []
+    for badge in (store_data.get("meta") or []):
+        badge_type = badge.get("badgeType", "")
+        text = badge.get("text", "")
+        if badge_type == "CUISINE" or (badge_type == "" and text and text not in ("Delivers", "")):
+            categories.append(text)
+
+    store = {
         # Standard fields
         "id": uuid,
         "name": name,
@@ -1147,7 +1305,13 @@ def _extract_feed_store(store_data: dict, out: list, seen: set, currency: str | 
         "eta": eta,
         "deliveryFee": delivery_fee,
         "currency": currency,
-    })
+    }
+    if categories:
+        store["categories"] = categories
+    if promos:
+        store["promos"] = promos
+
+    out.append(store)
 
 
 # ---------------------------------------------------------------------------
@@ -1406,7 +1570,9 @@ def get_cart(**params) -> list:
                     "name": i.get("title"),
                     "image": i.get("imageURL"),
                     "quantity": i.get("quantity", 1),
+                    "priceAmount": i.get("price", 0) / 100 if i.get("price") else None,
                     "currency": cart_currency,
+                    **({"specialInstructions": i["specialInstructions"]} if i.get("specialInstructions") else {}),
                 }
                 for i in items
             ],
@@ -1717,7 +1883,13 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
     vehicle_parts = vehicle_name.split(None, 1) if vehicle_name else []
 
     if vehicle_name:
-        trip_data["vehicle_type"] = vehicle_name
+        vehicle = {"name": vehicle_name}
+        if len(vehicle_parts) >= 2:
+            vehicle["make"] = vehicle_parts[0]
+            vehicle["model"] = vehicle_parts[1]
+        if plate:
+            vehicle["licensePlate"] = plate
+        trip_data["vehicle"] = vehicle
 
     # Courier GPS location as a leg with trace
     if courier_loc:
