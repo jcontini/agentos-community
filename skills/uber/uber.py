@@ -676,6 +676,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
         "name": f"Delivery ({len(items)} items)",
         "published": timestamp,
         # Order shape fields
+        "orderId": order_uuid,
         "total": fare.get("total"),
         "totalAmount": total_amount,
         "currency": currency,
@@ -1178,6 +1179,7 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
         "id": draft_uuid,
         "name": f"Cart ({len(final_items)} items)",
         # Order shape fields
+        "orderId": draft_uuid,
         "status": "draft",
         "totalAmount": total_cents / 100 if total_cents else None,
         "currency": draft_currency,
@@ -1340,6 +1342,7 @@ def checkout(draft_order_uuid: str, **params) -> dict:
 
     return {
         "id": draft_order_uuid,
+        "orderId": draft_order_uuid,
         "name": f"Order placed (${total_amount:.2f})" if total_amount else "Order placed",
         "status": "placed",
         "total": total_obj.get("formattedValue"),
@@ -1465,6 +1468,7 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
 
     result = {
         "id": order_uuid,
+        "orderId": order_uuid,
         "name": overview.get("title") or info.get("storeInfo", {}).get("name"),
         "status": phase.lower().replace("...", "").replace("…", "").strip() or "active",
         "eta": eta,

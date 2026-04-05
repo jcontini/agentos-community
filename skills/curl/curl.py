@@ -24,5 +24,5 @@ def read_webpage(*, url: str, **params) -> dict:
         "name": title or url,
         "url": url,
         "content": content,
-        "content_type": content_type,
+        "contentType": content_type,
     }

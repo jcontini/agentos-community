@@ -23,6 +23,15 @@ account:
     isActive:         boolean
     joinedDate:       datetime
     lastActive:       datetime
+    # Financial account fields (Chase, Copilot Money)
+    accountId:        string    # platform account ID
+    last4:            string    # last 4 digits
+    balance:           number    # current balance
+    available:         number    # available balance / credit
+    creditLimit:      number
+    minimumPayment:   number
+    paymentDueDate:  datetime
+    cardType:         string    # visa, mastercard, etc.
   relations:
     platform:          product   # the service this account lives on
     owner:             person    # the real person behind this account

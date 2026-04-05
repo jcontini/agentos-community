@@ -111,7 +111,7 @@ def get_accounts(**params) -> list | dict:
 
     if not tiles:
         cache_urls = [e.get("url", "") for e in data.get("cache", []) if isinstance(e, dict)]
-        return {"error": "No accountTiles in response", "cacheUrls": cache_urls}
+        return {"error": "No accountTiles in response", "_cacheUrls": cache_urls}
 
     return [_normalize_account(t) for t in tiles]
 
@@ -127,10 +127,14 @@ def _normalize_account(t: dict) -> dict:
     else:
         acct_type = tile_type.lower() or "unknown"
 
+    acct_id = t.get("accountId", "")
     result: dict = {
-        "accountId": t.get("accountId"),
-        "name": t.get("nickname"),
-        "type": acct_type,
+        "id": acct_id,
+        "issuer": "chase.com",
+        "identifier": acct_id,
+        "accountId": acct_id,
+        "name": t.get("nickname") or f"Chase {acct_type}",
+        "accountType": acct_type,
         "last4": t.get("mask"),
         "balance": detail.get("currentBalance"),
         "available": detail.get("availableBalance"),

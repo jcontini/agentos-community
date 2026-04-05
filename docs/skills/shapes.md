@@ -59,7 +59,7 @@ These are available on every record without declaring them in a shape:
 | `url` | url | Canonical link |
 | `image` | url | Thumbnail |
 | `author` | string | Creator |
-| `datePublished` | datetime | Temporal anchor |
+| `published` | datetime | Temporal anchor |
 | `content` | text | Long body text (FTS, stored separately) |
 
 ### Relations
@@ -307,7 +307,7 @@ def get_email(id: str, _call=None) -> dict:
         "name": subject,              # standard field
         "text": snippet,              # standard field
         "url": web_url,               # standard field
-        "datePublished": date,         # standard field
+        "published": date,             # standard field
         "content": body_text,          # standard field (FTS)
         "from_email": sender,          # shape-specific field
         "to": recipients,             # shape-specific field
@@ -315,7 +315,7 @@ def get_email(id: str, _call=None) -> dict:
     }
 ```
 
-The Python code does the field mapping — it transforms raw API responses into shape-native dicts. Standard fields (`id`, `name`, `text`, `url`, `image`, `author`, `datePublished`, `content`) are available on every shape without declaring them.
+The Python code does the field mapping — it transforms raw API responses into shape-native dicts. Standard fields (`id`, `name`, `text`, `url`, `image`, `author`, `published`, `content`) are available on every shape without declaring them.
 
 ### Canonical fields
 
@@ -328,10 +328,10 @@ The renderer resolves entity display from standard fields. Every Python return s
 | `url`           | Clickable link                                   |
 | `image`         | Thumbnail / hero image                           |
 | `author`        | Creator / brand / owner                          |
-| `datePublished` | Temporal anchor                                  |
+| `published` | Temporal anchor                                  |
 | `content`       | Long body text (stored separately, FTS-indexed)  |
 
-Not every entity has all of these — a product may have no `datePublished`, an order may have no `image`. Map what the source provides; skip what doesn't apply.
+Not every entity has all of these — a product may have no `published`, an order may have no `image`. Map what the source provides; skip what doesn't apply.
 
 ### Typed references (entity relationships)
 

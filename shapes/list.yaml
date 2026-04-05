@@ -4,10 +4,13 @@
 list:
   identity: [platform, id]
   fields:
+    listId:           string    # platform list ID (may differ from graph id)
     privacy:           string
     listType:         string
     isDefault:        boolean   # platform-created list (e.g. "Watch Later")
     isPublic:         boolean
+    itemCount:        integer
+    items:             json      # nested item data (TODO: extract as contains relation)
   relations:
     platform:          product
     belongsTo:        account   # who owns this list

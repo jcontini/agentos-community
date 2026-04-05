@@ -33,5 +33,5 @@ def read_webpage(*, url: str, wait_for_js: int = 0, timeout: int = 30000, **para
             or meta.get("publishedDate")
             or meta.get("article:published_time")
         ),
-        "content_type": "text/markdown",
+        "contentType": "text/markdown",
     }

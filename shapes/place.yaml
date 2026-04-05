@@ -49,6 +49,12 @@ place:
     priceLevel:       string    # free, inexpensive, moderate, expensive, very_expensive
     timezone:          string    # IANA timezone (e.g. "America/Chicago")
 
+    # Store / ordering context (Uber Eats, DoorDash, etc.)
+    isOrderable:      boolean   # can you order from here right now
+    closedMessage:    string    # when reopening (e.g. "Opens Saturday 9:30 AM")
+    productCount:     integer   # number of menu items / products available
+    eta:               string    # delivery ETA from this store
+
     # External identifiers
     mapboxId:         string
     wikidataId:       string

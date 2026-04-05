@@ -8,3 +8,7 @@ image:
     height:            integer   # pixels
     format:            string    # PNG, JPEG, WebP, SVG, etc.
     altText:          string    # accessibility description
+    appName:          string    # source app (for screenshots)
+    windowId:         integer   # macOS window ID (for screenshots)
+    displayId:        integer   # macOS display ID (for screenshots)
+    displayIndex:     integer   # display index (for screenshots)

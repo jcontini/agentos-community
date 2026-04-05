@@ -13,6 +13,7 @@ connections:
   web:
     description: "Uber rider account — requires cookies from a logged-in browser session"
     base_url: "https://riders.uber.com"
+    domain: uber.com
     auth:
       type: cookies
       domain: ".uber.com"
@@ -24,6 +25,7 @@ connections:
   eats:
     description: "Uber Eats — requires cookies from a logged-in ubereats.com browser session"
     base_url: "https://www.ubereats.com"
+    domain: ubereats.com
     auth:
       type: cookies
       domain: ".ubereats.com"
