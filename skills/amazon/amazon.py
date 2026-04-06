@@ -148,6 +148,7 @@ def search_suggestions(
     department: str | None = None,
     personalized: bool = False,
     marketplace: str | None = None,
+    **params,
 ) -> list[dict[str, Any]]:
     """Fetch autocomplete keyword suggestions from Amazon's public completion API.
 
@@ -204,6 +205,7 @@ def search_products(
     department: str | None = None,
     page: int = 1,
     marketplace: str | None = None,
+    **params,
 ) -> list[dict[str, Any]]:
     """Search Amazon products by parsing search result HTML.
 
@@ -303,6 +305,7 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
 def get_product(
     asin: str,
     marketplace: str | None = None,
+    **params,
 ) -> dict[str, Any]:
     """Fetch detailed product info from an Amazon product detail page."""
     mp = _marketplace(marketplace)
@@ -1471,7 +1474,7 @@ def whoami(**params) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def main() -> None:
+def _main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(
             "Usage: amazon.py <command> [args...]\n"
@@ -1508,4 +1511,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    _main()

@@ -29,7 +29,7 @@ from agentos import crypto, sql, returns, provides, timeout, cookie_auth
 from agentos.macos import keychain
 
 
-def get_master_key() -> str:
+def _get_master_key() -> str:
     """Read the Brave Safe Storage password from macOS Keychain.
 
     Returns the raw password string (not yet derived into an AES key).
@@ -37,7 +37,7 @@ def get_master_key() -> str:
     return keychain.read(service="Brave Safe Storage", account="Brave")
 
 
-def derive_key(password: str) -> str:
+def _derive_key(password: str) -> str:
     """Derive AES-128 key using PBKDF2-HMAC-SHA1 (Chromium cookie encryption).
 
     Returns hex-encoded 16-byte key.
@@ -45,11 +45,11 @@ def derive_key(password: str) -> str:
     return crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
 
 
-def decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
+def _decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
     """Decrypt a Chromium v10 cookie value.
 
     encrypted_hex: hex-encoded bytes from the database (encrypted_value blob).
-    key_hex: hex-encoded 16-byte AES key from derive_key().
+    key_hex: hex-encoded 16-byte AES key from _derive_key().
 
     Chromium v10 encryption: AES-128-CBC with IV = 16 space bytes (0x20).
     The first 32 bytes of decrypted output are garbled (CBC IV mismatch artifact).
@@ -83,7 +83,7 @@ def decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
         return None
 
 
-def get_cookies(domain: str, names: list[str] | None = None,
+def _get_cookies(domain: str, names: list[str] | None = None,
                 host: str | None = None, profile: str = "Default") -> list[dict]:
     """Extract and decrypt cookies for a domain from Brave's cookie DB."""
     cookies_db = os.path.expanduser(
@@ -92,8 +92,8 @@ def get_cookies(domain: str, names: list[str] | None = None,
     if not os.path.exists(cookies_db):
         raise FileNotFoundError(f"Brave Cookies database not found: {cookies_db}")
 
-    password = get_master_key()
-    key_hex = derive_key(password)
+    password = _get_master_key()
+    key_hex = _derive_key(password)
 
     # Copy to temp to avoid lock conflicts with running Brave.
     # Also copy journal/WAL files so SQLite can replay uncommitted writes.
@@ -139,7 +139,7 @@ def get_cookies(domain: str, names: list[str] | None = None,
             if not encrypted_hex:
                 continue
 
-            value = decrypt_cookie_value(encrypted_hex, key_hex)
+            value = _decrypt_cookie_value(encrypted_hex, key_hex)
             if value is None:
                 continue
 
@@ -199,6 +199,7 @@ def op_cookie_get(
     names: str = None,
     host: str = None,
     profile: str = "Default",
+    **params,
 ) -> dict:
     """Extract and decrypt cookies — called by the python: executor with kwargs.
 
@@ -206,7 +207,7 @@ def op_cookie_get(
     """
     names_list = [n.strip() for n in names.split(",") if n.strip()] if names else None
     profile = profile or "Default"
-    cookies = get_cookies(domain, names_list, host=host or None, profile=profile)
+    cookies = _get_cookies(domain, names_list, host=host or None, profile=profile)
     return {
         "domain": domain,
         "cookies": cookies,

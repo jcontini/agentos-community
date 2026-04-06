@@ -515,7 +515,7 @@ def search_events(*, calendar_id="primary", days=30, past=False,
     )
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 @timeout(15)
 def delete_event(*, id, calendar_id="primary", **params):

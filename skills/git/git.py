@@ -95,7 +95,7 @@ def _commits_with_stats(raw):
 
 
 @returns("git_commit[]")
-def list_git_commits(path, limit=100, branch=None, author=None):
+def list_git_commits(path, limit=100, branch=None, author=None, **params):
     """List recent commits in a git repository. Returns commits newest first with diff stats."""
     args = ["log"]
     if branch:
@@ -112,7 +112,7 @@ def list_git_commits(path, limit=100, branch=None, author=None):
 
 
 @returns("git_commit")
-def get_git_commit(path, id):
+def get_git_commit(path, id, **params):
     """Get a single commit with full details and diff stats."""
     raw = _git(
         "show", id,
@@ -136,7 +136,7 @@ def get_git_commit(path, id):
 
 
 @returns("git_commit[]")
-def search_git_commits(path, query, limit=100):
+def search_git_commits(path, query, limit=100, **params):
     """Search commit messages by keyword."""
     args = [
         "log",
@@ -151,7 +151,7 @@ def search_git_commits(path, query, limit=100):
 
 
 @returns("branch[]")
-def list_branches(path):
+def list_branches(path, **params):
     """List all branches (local and remote) in a repository."""
     raw = _git(
         "branch", "-a",
@@ -177,7 +177,7 @@ def list_branches(path):
 
 
 @returns("branch")
-def get_branch(path, name):
+def get_branch(path, name, **params):
     """Get info about a specific branch."""
     raw = _git(
         "branch", "-a",
@@ -204,7 +204,7 @@ def get_branch(path, name):
 
 
 @returns("repository")
-def get_repository(path):
+def get_repository(path, **params):
     """Get repository info from the local git repo -- remote URL, platform, branch."""
     try:
         remote = _git("remote", "get-url", "origin", cwd=path).strip()
@@ -234,7 +234,7 @@ def get_repository(path):
 
 
 @returns("tag[]")
-def list_tags(path):
+def list_tags(path, **params):
     """List all tags in the repository."""
     raw = _git(
         "tag", "-l",
@@ -259,7 +259,7 @@ def list_tags(path):
 
 
 @returns("tag")
-def get_tag(path, name):
+def get_tag(path, name, **params):
     """Get info about a specific tag."""
     raw = _git(
         "tag", "-l", name,
@@ -281,8 +281,8 @@ def get_tag(path, name):
     }
 
 
-@returns("string")
-def status(path):
+@returns({"value": "string"})
+def status(path, **params):
     """Show working tree status -- modified, staged, and untracked files."""
     branch = _git("branch", "--show-current", cwd=path).strip()
 
@@ -322,8 +322,8 @@ def status(path):
     }
 
 
-@returns("string")
-def diff(path, staged=False, ref1=None, ref2=None):
+@returns({"value": "string"})
+def diff(path, staged=False, ref1=None, ref2=None, **params):
     """Show the diff of working tree changes, staged changes, or between two refs."""
     args = ["diff"]
     if ref1:
@@ -335,8 +335,8 @@ def diff(path, staged=False, ref1=None, ref2=None):
     return _git(*args, cwd=path)
 
 
-@returns("string")
-def log(path, format=None, limit=100, branch=None):
+@returns({"value": "string"})
+def log(path, format=None, limit=100, branch=None, **params):
     """Raw git log output with flexible formatting."""
     args = ["log"]
     if branch:

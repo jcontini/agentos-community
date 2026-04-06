@@ -21,7 +21,7 @@ DB_PATH = os.path.expanduser(
 )
 
 
-def load_categories():
+def _load_categories():
     """Load categories from widget JSON, return dict keyed by category id."""
     path = os.path.join(WIDGET_DIR, "widgets-category-default_categories.json")
     try:
@@ -40,7 +40,7 @@ def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
             query:
             limit:
         """
-    categories = load_categories()
+    categories = _load_categories()
 
     base_sql = """
         SELECT
@@ -110,7 +110,7 @@ def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     return results
 
 
-def main():
+def _main():
     # Accept either a single JSON argument or named flags
     if len(sys.argv) == 2 and sys.argv[1].startswith("{"):
         params = json.loads(sys.argv[1])
@@ -136,4 +136,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _main()

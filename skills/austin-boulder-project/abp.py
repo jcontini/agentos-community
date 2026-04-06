@@ -25,8 +25,8 @@ WIDGETS_API = "https://widgets.api.prod.tilefive.com"
 COGNITO_REGION = "us-east-1"
 COGNITO_ENDPOINT = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/"
 
-# Fallback config — extracted from the app bundle (see discover_config()).
-# These rotate when Tilefive redeploys; discover_config() fetches fresh values.
+# Fallback config — extracted from the app bundle (see _discover_config()).
+# These rotate when Tilefive redeploys; _discover_config() fetches fresh values.
 # Format reference: widgetsApiKey ~40 chars, userPoolId "us-east-1_XXXXXXXX"
 FALLBACK_WIDGETS_API_KEY    = "OQ2z4Q3jSU1BW3y9dyfEW5FlEFu1ozIj7jE27qjy"
 FALLBACK_COGNITO_POOL_ID    = "us-east-1_x871NwuXM"
@@ -61,7 +61,7 @@ AUSTIN_WESTGATE = {
 # Step 1: Discover the Cognito config from the portal
 # ---------------------------------------------------------------------------
 
-def get_region() -> str:
+def _get_region() -> str:
     """
     GET /region?namespace=boulderingproject
     Returns the AWS region for Cognito auth.
@@ -119,7 +119,7 @@ def _fetch(
 # Config discovery
 # ---------------------------------------------------------------------------
 
-def discover_config(force: bool = False) -> dict:
+def _discover_config(force: bool = False) -> dict:
     """
     Extract live config from the Tilefive app bundle.
 
@@ -192,7 +192,7 @@ def _widgets_headers(access_token: str | None = None) -> dict:
     The API Gateway uses this for tenant routing. When a user IS logged in,
     the authenticated portal API (Ie()) uses a real Cognito IdToken instead.
     """
-    cfg = discover_config()
+    cfg = _discover_config()
     headers = {
         "X-Api-Key": cfg["widgetsApiKey"],   # casing from bundle: "X-Api-Key"
         "Authorization": access_token or NAMESPACE,  # namespace when unauthenticated
@@ -202,7 +202,7 @@ def _widgets_headers(access_token: str | None = None) -> dict:
     return headers
 
 
-def get_locations() -> list[dict]:
+def _get_locations() -> list[dict]:
     """
     GET https://widgets.api.prod.tilefive.com/locations
     Returns all Bouldering Project locations.
@@ -211,7 +211,7 @@ def get_locations() -> list[dict]:
     return json.loads(_fetch(f"{WIDGETS_API}/locations", headers=_widgets_headers()))
 
 
-def get_location_settings(location_id: int) -> dict:
+def _get_location_settings(location_id: int) -> dict:
     """
     GET https://widgets.api.prod.tilefive.com/locationsettings/{locationId}/portal
     Returns portal config for a location.
@@ -222,7 +222,7 @@ def get_location_settings(location_id: int) -> dict:
     return json.loads(_fetch(url, headers=_widgets_headers()))
 
 
-def get_activities() -> list[dict]:
+def _get_activities() -> list[dict]:
     """
     GET https://widgets.api.prod.tilefive.com/activities
     Returns all activity categories.
@@ -232,7 +232,7 @@ def get_activities() -> list[dict]:
     return data.get("data", [])
 
 
-def get_schedule(
+def _get_schedule(
     location_id: int = AUSTIN_SPRINGDALE["id"],
     activity_ids: list[int] = None,
     date: str = None,
@@ -303,21 +303,21 @@ def get_schedule(
 # Step 2: Authenticate via AWS Cognito
 # ---------------------------------------------------------------------------
 
-def login(email: str, password: str) -> dict:
+def _login(email: str, password: str) -> dict:
     """
     Authenticate against AWS Cognito using USER_PASSWORD_AUTH flow.
-    ClientId is auto-discovered from the app bundle via discover_config().
+    ClientId is auto-discovered from the app bundle via _discover_config().
 
     Returns the AuthenticationResult dict with:
       - AccessToken  (use for API calls, expires in 1hr)
       - IdToken      (JWT with user claims)
-      - RefreshToken (long-lived; use with refresh_tokens() to avoid re-login)
+      - RefreshToken (long-lived; use with _refresh_tokens() to avoid re-login)
 
     Cognito endpoint:
       POST https://cognito-idp.us-east-1.amazonaws.com/
       X-Amz-Target: AWSCognitoIdentityProviderService.InitiateAuth
     """
-    cfg = discover_config()
+    cfg = _discover_config()
     headers = {
         "Content-Type": "application/x-amz-json-1.1",
         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
@@ -331,12 +331,12 @@ def login(email: str, password: str) -> dict:
     return result["AuthenticationResult"]
 
 
-def refresh_tokens(refresh_token: str) -> dict:
+def _refresh_tokens(refresh_token: str) -> dict:
     """
     Get a fresh AccessToken using a stored RefreshToken (no re-login needed).
     AccessToken TTL is 1hr; RefreshToken is long-lived.
     """
-    cfg = discover_config()
+    cfg = _discover_config()
     headers = {
         "Content-Type": "application/x-amz-json-1.1",
         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
@@ -370,18 +370,18 @@ def _portal_headers(id_token: str) -> dict:
     }
 
 
-def get_my_bookings(id_token: str) -> list[dict]:
+def _get_my_bookings(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/bookings (inferred)
     Returns the authenticated user's upcoming bookings.
-    Requires Cognito IdToken from login().
+    Requires Cognito IdToken from _login().
     TODO: confirm exact path via network capture after login.
     """
     url = f"{PORTAL_API}/customers/bookings"
     return json.loads(_fetch(url, headers=_portal_headers(id_token)))
 
 
-def book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> dict:
+def _book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> dict:
     """
     Book a class (add the authenticated user to a booking instance).
 
@@ -390,8 +390,8 @@ def book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> 
       Ie() uses Authorization: idToken (Cognito IdToken, NOT AccessToken)
 
     Args:
-      id_token:            Cognito IdToken from login() → auth["IdToken"]
-      booking_instance_id: The `id` field from get_schedule() bookings
+      id_token:            Cognito IdToken from _login() → auth["IdToken"]
+      booking_instance_id: The `id` field from _get_schedule() bookings
       num_guests:          Number of additional guests (0 = just yourself)
 
     Returns the API response (created reservation object).
@@ -404,7 +404,7 @@ def book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> 
     return json.loads(_fetch(url, headers=_portal_headers(id_token), data=payload))
 
 
-def cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int) -> dict:
+def _cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int) -> dict:
     """
     Cancel a booking reservation.
 
@@ -414,13 +414,13 @@ def cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int)
     Args:
       id_token:            Cognito IdToken
       booking_instance_id: The booking instance id
-      reservation_id:      The reservation id returned by book_class()
+      reservation_id:      The reservation id returned by _book_class()
     """
     url = f"{PORTAL_API}/bookings/{booking_instance_id}/reservations/{reservation_id}"
     return json.loads(_fetch(url, headers=_portal_headers(id_token), method="DELETE"))
 
 
-def get_my_memberships(id_token: str) -> list[dict]:
+def _get_my_memberships(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/memberships
     Returns the user's active memberships.
@@ -430,7 +430,7 @@ def get_my_memberships(id_token: str) -> list[dict]:
     return json.loads(_fetch(url, headers=_portal_headers(id_token)))
 
 
-def get_my_passes(id_token: str) -> list[dict]:
+def _get_my_passes(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/passes
     Returns the user's active class passes.
@@ -480,7 +480,7 @@ def _get_id_token(credentials: str) -> str:
             "Add them in agentOS skill settings for austin-boulder-project."
         )
     email, password = credentials.split(":", 1)
-    auth = login(email.strip(), password.strip())
+    auth = _login(email.strip(), password.strip())
     return auth["IdToken"]
 
 
@@ -502,7 +502,7 @@ def op_get_schedule(
         parsed_ids = [int(x) for x in activity_ids]
     else:
         parsed_ids = [4, 5, 6]
-    result = get_schedule(
+    result = _get_schedule(
         location_id=int(location_id),
         activity_ids=parsed_ids,
         date=date or None,
@@ -519,7 +519,7 @@ def op_book_class(
     """Book a class using stored credentials."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
-    result = book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
+    result = _book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
     return {"ok": True, "message": "Booked successfully", "result": result}
 
 
@@ -532,21 +532,21 @@ def op_cancel_booking(
     """Cancel a class reservation."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
-    result = cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
+    result = _cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
     return {"ok": True, "message": "Cancelled successfully", "result": result}
 
 
-@returns("array")
+@returns({"items": "array"})
 def op_get_my_memberships(**params) -> list[dict]:
     """List active memberships for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
-    return get_my_memberships(id_token)
+    return _get_my_memberships(id_token)
 
 
-@returns("array")
+@returns({"items": "array"})
 def op_get_my_passes(**params) -> list[dict]:
     """List active class passes for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
-    return get_my_passes(id_token)
+    return _get_my_passes(id_token)

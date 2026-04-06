@@ -69,7 +69,7 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
     return [_map_dns_record(r, domain) for r in (resp["json"] or {}).get("records", [])]
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def create_dns_record(*, domain: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
     """Create a new DNS record for a domain
@@ -94,7 +94,7 @@ def create_dns_record(*, domain: str, type: str, content: str, name: str = "", t
     return resp["json"]
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def update_dns_record(*, domain: str, id: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
     """Update an existing DNS record
@@ -120,7 +120,7 @@ def update_dns_record(*, domain: str, id: str, type: str, content: str, name: st
     return resp["json"]
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def delete_dns_record(*, domain: str, id: str, **params) -> dict:
     """Delete a DNS record from a domain

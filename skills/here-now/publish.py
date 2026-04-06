@@ -53,7 +53,7 @@ def list_websites(**params) -> list[dict]:
     return [_map_website(w) for w in (resp["json"] or {}).get("publishes", [])]
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def delete_website(*, slug: str, **params) -> dict:
     """Delete a published site (requires authentication)
@@ -133,7 +133,7 @@ def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl
     return {"success": True}
 
 
-def make_request(url, method="GET", body=None, headers=None, content_type="application/json"):
+def _make_request(url, method="GET", body=None, headers=None, content_type="application/json"):
     headers = dict(headers or {})
 
     if body is not None and isinstance(body, (dict, list)):
@@ -165,7 +165,7 @@ def make_request(url, method="GET", body=None, headers=None, content_type="appli
     return resp.get("json") if resp.get("json") is not None else resp.get("body", "")
 
 
-def do_publish(
+def _do_publish(
     content,
     filename="index.html",
     content_type="text/html; charset=utf-8",
@@ -212,10 +212,10 @@ def do_publish(
 
     if slug:
         url = f"{BASE_URL}/publish/{slug}"
-        response = make_request(url, method="PUT", body=create_body, headers=dict(headers))
+        response = _make_request(url, method="PUT", body=create_body, headers=dict(headers))
     else:
         url = f"{BASE_URL}/publish"
-        response = make_request(url, method="POST", body=create_body, headers=dict(headers))
+        response = _make_request(url, method="POST", body=create_body, headers=dict(headers))
 
     slug_val = response.get("slug")
     site_url = response.get("siteUrl")
@@ -227,12 +227,12 @@ def do_publish(
     for upload in uploads:
         put_url = upload["url"]
         put_headers = dict(upload.get("headers", {}))
-        make_request(put_url, method="PUT", body=content_bytes, headers=put_headers, content_type=content_type)
+        _make_request(put_url, method="PUT", body=content_bytes, headers=put_headers, content_type=content_type)
 
     finalize_headers = {}
     if token:
         finalize_headers["Authorization"] = f"Bearer {token}"
-    make_request(finalize_url, method="POST", body={"versionId": version_id}, headers=finalize_headers)
+    _make_request(finalize_url, method="POST", body={"versionId": version_id}, headers=finalize_headers)
 
     output = {
         "slug": slug_val,
@@ -265,7 +265,7 @@ def op_create_website(
 ):
     """Entry point for python: executor. Create a new publish."""
     token = params.get("auth", {}).get("key", "")
-    return do_publish(
+    return _do_publish(
         content=content,
         filename=filename,
         content_type=content_type,
@@ -288,7 +288,7 @@ def op_update_website(
 ):
     """Entry point for python: executor. Update an existing publish."""
     token = params.get("auth", {}).get("key", "")
-    return do_publish(
+    return _do_publish(
         content=content,
         filename=filename,
         content_type=content_type,
@@ -298,7 +298,7 @@ def op_update_website(
     )
 
 
-def main():
+def _main():
     parser = argparse.ArgumentParser(description="Publish files to here.now")
     parser.add_argument("--filename", default="index.html", help="File path within the publish")
     parser.add_argument("--content-type", default="text/html; charset=utf-8", dest="content_type")
@@ -311,7 +311,7 @@ def main():
     args = parser.parse_args()
 
     content = args.content if args.content else sys.stdin.read()
-    output = do_publish(
+    output = _do_publish(
         content=content,
         filename=args.filename,
         content_type=args.content_type,
@@ -325,4 +325,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _main()

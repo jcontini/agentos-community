@@ -518,7 +518,7 @@ def _write_json_atomic(path, data):
 
 @returns({"status": "string", "path": "string", "config": "string", "message": "string"})
 @timeout(15)
-def install_mcp(binary_path=None, client="cursor"):
+def install_mcp(binary_path=None, client="cursor", **params):
     """Install agentOS MCP server into a client's config file."""
     config_path = MCP_CONFIG_PATHS.get(client)
     if not config_path:
@@ -566,7 +566,7 @@ def install_mcp(binary_path=None, client="cursor"):
 
 @returns({"status": "string", "config": "string", "message": "string"})
 @timeout(15)
-def uninstall_mcp(client="cursor"):
+def uninstall_mcp(client="cursor", **params):
     """Remove agentOS MCP server from a client's config file."""
     config_path = MCP_CONFIG_PATHS.get(client)
     if not config_path:
@@ -607,7 +607,7 @@ def uninstall_mcp(client="cursor"):
 
 @returns("session[]")
 @timeout(60)
-def op_list_sessions():
+def op_list_sessions(**params):
     """List sessions from JSONL transcripts (fast, sub-second)."""
     conversations = _get_jsonl_conversations()
     return sorted(
@@ -619,7 +619,7 @@ def op_list_sessions():
 
 @returns("session[]")
 @timeout(300)
-def op_backfill_session(workspace=None):
+def op_backfill_session(workspace=None, **params):
     """List sessions including full SQLite history."""
     conversations = _get_jsonl_conversations()
     backfill = _get_backfill_conversations(
@@ -635,7 +635,7 @@ def op_backfill_session(workspace=None):
 
 
 @returns("session")
-def op_get_session(id):
+def op_get_session(id, **params):
     """Get a session by UUID (checks JSONL then SQLite)."""
     conv = _get_session_by_id(id)
     if not conv:
@@ -645,7 +645,7 @@ def op_get_session(id):
 
 @returns("file[]")
 @timeout(120)
-def op_pull_document():
+def op_pull_document(**params):
     """Pull sub-agent research blobs from Cursor's global SQLite store."""
     if not os.path.isfile(GLOBAL_STATE_DB):
         return []

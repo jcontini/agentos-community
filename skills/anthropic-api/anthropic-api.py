@@ -1,4 +1,5 @@
-from agentos import http, connection, provides, returns, timeout, llm
+from agentos import http, connection, provides, returns, timeout
+from agentos.tools import llm
 
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -57,6 +58,8 @@ def list_models(**params) -> list:
 @connection("api")
 @timeout(120)
 def chat(*, model: str, messages: list, tools: list = None,
+         max_tokens: int = 4096, temperature: float = 0,
+         system: str = None, **params) -> dict:
     """Send a chat completion request to Claude (Anthropic Messages API)
 
         Args:
@@ -67,8 +70,6 @@ def chat(*, model: str, messages: list, tools: list = None,
             temperature: Sampling temperature (0 = deterministic for agents)
             system: Optional system prompt
         """
-         max_tokens: int = 4096, temperature: float = 0,
-         system: str = None, **params) -> dict:
     model = MODEL_ALIASES.get(model, model)
     body = {
         "model": model,
@@ -86,8 +87,8 @@ def chat(*, model: str, messages: list, tools: list = None,
     blocks = data.get("content", [])
     return {
         "content": next((b["text"] for b in blocks if b.get("type") == "text"), None),
-        "tool_calls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
-                       for b in blocks if b.get("type") == "tool_use"],
-        "stop_reason": data.get("stop_reason"),
+        "toolCalls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
+                      for b in blocks if b.get("type") == "tool_use"],
+        "stopReason": data.get("stop_reason"),
         "usage": data.get("usage"),
     }

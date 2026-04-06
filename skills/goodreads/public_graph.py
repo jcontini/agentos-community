@@ -22,11 +22,11 @@ APPSYNC_ENDPOINT_RE = re.compile(
 APP_BUNDLE_RE = re.compile(r'/_next/static/chunks/pages/_app-[a-f0-9]+\.js')
 
 
-def fetch_html(url: str) -> str:
-    return fetch_url(url, extra_headers={"Cache-Control": "no-cache", "Pragma": "no-cache"}, accept="html")
+def _fetch_html(url: str) -> str:
+    return _fetch_url(url, extra_headers={"Cache-Control": "no-cache", "Pragma": "no-cache"}, accept="html")
 
 
-def fetch_url(
+def _fetch_url(
     url: str,
     *,
     extra_headers: dict[str, str] | None = None,
@@ -60,7 +60,7 @@ def fetch_url(
 
 
 
-def absolute_url(url: str | None) -> str | None:
+def _absolute_url(url: str | None) -> str | None:
     if not url:
         return None
     if url.startswith("http://") or url.startswith("https://"):
@@ -70,12 +70,12 @@ def absolute_url(url: str | None) -> str | None:
 
 
 
-def first_match(pattern: str, text: str, flags: int = re.S) -> str | None:
+def _first_match(pattern: str, text: str, flags: int = re.S) -> str | None:
     match = re.search(pattern, text, flags)
     return match.group(1) if match else None
 
 
-def unique_by(items: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+def _unique_by(items: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
     seen = set()
     deduped = []
     for item in items:
@@ -87,7 +87,7 @@ def unique_by(items: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
     return deduped
 
 
-def extract_next_data(html_text: str) -> dict[str, Any]:
+def _extract_next_data(html_text: str) -> dict[str, Any]:
     match = re.search(
         r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
         html_text,
@@ -98,13 +98,13 @@ def extract_next_data(html_text: str) -> dict[str, Any]:
     return json.loads(match.group(1))
 
 
-def deref(apollo: dict[str, Any], value: Any) -> Any:
+def _deref(apollo: dict[str, Any], value: Any) -> Any:
     if isinstance(value, dict) and "__ref" in value:
         return apollo.get(value["__ref"])
     return value
 
 
-def parse_review_id(review: dict[str, Any]) -> str | None:
+def _parse_review_id(review: dict[str, Any]) -> str | None:
     review_url = (((review.get("shelving") or {}).get("webUrl")) or "")
     match = re.search(r"/review/show/([0-9]+)", review_url)
     if match:
@@ -126,7 +126,7 @@ def _make_runtime(endpoint: str, api_key: str, source: str) -> dict[str, Any]:
     }
 
 
-def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
+def _discover_from_bundle(html_text: str) -> dict[str, Any] | None:
     """Extract AppSync config from the Next.js _app JS bundle.
 
     Goodreads ships environment configs (Dev, Beta, Preprod, Prod) as inline
@@ -139,7 +139,7 @@ def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
         return None
 
     try:
-        bundle_js = fetch_url(
+        bundle_js = _fetch_url(
             f"{BASE_URL}{bundle_match.group()}",
         )
     except Exception:
@@ -166,7 +166,7 @@ def discover_from_bundle(html_text: str) -> dict[str, Any] | None:
     return None
 
 
-def discover_runtime(
+def _discover_runtime(
     *,
     html_text: str | None = None,
     page_url: str | None = None,
@@ -186,14 +186,14 @@ def discover_runtime(
         ), True
 
     if html_text:
-        runtime = discover_from_bundle(html_text)
+        runtime = _discover_from_bundle(html_text)
         if runtime:
             return runtime, False
 
     if page_url:
         try:
-            html_text = fetch_html(page_url)
-            runtime = discover_from_bundle(html_text)
+            html_text = _fetch_html(page_url)
+            runtime = _discover_from_bundle(html_text)
             if runtime:
                 return runtime, False
         except Exception:
@@ -221,7 +221,7 @@ def _wrap_result(result: Any, runtime: dict[str, Any], was_cached: bool) -> Any:
     }
 
 
-def graphql_request(
+def _graphql_request(
     query: str,
     variables: dict[str, Any],
     runtime: dict[str, Any],
@@ -233,7 +233,7 @@ def graphql_request(
     if extra_headers:
         headers.update(extra_headers)
     payload = json.dumps({"query": query, "variables": variables})
-    body = fetch_url(
+    body = _fetch_url(
         runtime["graphql_endpoint"],
         extra_headers=headers,
         data=payload,
@@ -260,9 +260,9 @@ query getViewer {
 """.strip()
 
 
-def get_viewer(runtime: dict[str, Any], cookie_header: str) -> dict[str, Any]:
+def _get_viewer(runtime: dict[str, Any], cookie_header: str) -> dict[str, Any]:
     """Fetch the current viewer (logged-in user) via GraphQL with session cookies."""
-    data = graphql_request(
+    data = _graphql_request(
         GET_VIEWER_QUERY,
         {},
         runtime,
@@ -271,10 +271,10 @@ def get_viewer(runtime: dict[str, Any], cookie_header: str) -> dict[str, Any]:
     return (data.get("getViewer") or {}) if isinstance(data, dict) else {}
 
 
-def load_book_page(book_id: str) -> dict[str, Any]:
+def _load_book_page(book_id: str) -> dict[str, Any]:
     url = f"{BASE_URL}/book/show/{book_id}"
-    html_text = fetch_html(url)
-    next_data = extract_next_data(html_text)
+    html_text = _fetch_html(url)
+    next_data = _extract_next_data(html_text)
     page_props = next_data.get("props", {}).get("pageProps", {}) or {}
     apollo = page_props.get("apolloState", {}) or {}
     root_query = apollo.get("ROOT_QUERY", {}) or {}
@@ -284,9 +284,9 @@ def load_book_page(book_id: str) -> dict[str, Any]:
         raise RuntimeError(f"Could not resolve public Goodreads book {book_id}")
 
     book = apollo[book_ref]
-    work = deref(apollo, book.get("work"))
-    work_details = deref(work, work.get("details") if work else None)
-    work_stats = deref(work, work.get("stats") if work else None)
+    work = _deref(apollo, book.get("work"))
+    work_details = _deref(work, work.get("details") if work else None)
+    work_stats = _deref(work, work.get("stats") if work else None)
     return {
         "url": url,
         "html": html_text,
@@ -301,7 +301,7 @@ def load_book_page(book_id: str) -> dict[str, Any]:
     }
 
 
-def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
+def _map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
     apollo = page["apollo"]
     root_query = page["root_query"]
     book = page["book"]
@@ -310,11 +310,11 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
     details = book.get("details") or {}
 
     primary_edge = book.get("primaryContributorEdge") or {}
-    primary_contributor = deref(apollo, primary_edge.get("node") or {}) or {}
+    primary_contributor = _deref(apollo, primary_edge.get("node") or {}) or {}
 
     contributors = []
     for edge in [primary_edge, *(book.get("secondaryContributorEdges") or [])]:
-        contributor = deref(apollo, edge.get("node") or {}) or {}
+        contributor = _deref(apollo, edge.get("node") or {}) or {}
         if not contributor:
             continue
         contributors.append(
@@ -364,7 +364,7 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
 
     # Shape-native contributor dicts (author shape)
     shaped_contributors = []
-    for c in unique_by(contributors, "name"):
+    for c in _unique_by(contributors, "name"):
         shaped_contributors.append({
             "id": c.get("author_id") or c.get("name"),
             "name": c.get("name"),
@@ -408,13 +408,13 @@ def map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: dict[str, Any]) -> list[dict[str, Any]]:
+def _map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: dict[str, Any]) -> list[dict[str, Any]]:
     reviews = []
     for edge in edges:
-        review = deref(apollo, (edge.get("node") or {}))
+        review = _deref(apollo, (edge.get("node") or {}))
         if not review:
             continue
-        creator = deref(apollo, review.get("creator")) or {}
+        creator = _deref(apollo, review.get("creator")) or {}
         shelving = review.get("shelving") or {}
         shelf = shelving.get("shelf") or {}
         taggings = shelving.get("taggings") or []
@@ -423,7 +423,7 @@ def map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: d
             for tagging in taggings
             if (tagging.get("tag") or {}).get("name")
         ]
-        review_id = parse_review_id(review)
+        review_id = _parse_review_id(review)
         book_id = book.get("legacyId")
         book_title = book.get("title")
         reviewer_id = creator.get("legacyId") or creator.get("id")
@@ -490,19 +490,19 @@ def _simple_book(book_id: Any, title: str | None, cover_url: str | None,
     return result
 
 
-def get_public_book(book_id: str) -> dict[str, Any]:
-    return map_book_payload(load_book_page(book_id))
+def _get_public_book(book_id: str) -> dict[str, Any]:
+    return _map_book_payload(_load_book_page(book_id))
 
 
-def list_book_reviews(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
-    page = load_book_page(book_id)
+def _list_book_reviews(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
+    page = _load_book_page(book_id)
     work = page["work"] or {}
     work_id = work.get("id")
     apollo = page["apollo"]
     book = page["book"]
     if not work_id:
         edges = (((page["root_query"].get("getReviews") or {}).get("edges")) or [])
-        return map_review_list(apollo, edges, book)
+        return _map_review_list(apollo, edges, book)
 
     query = """
 fragment SocialUserFragment on User {
@@ -553,8 +553,8 @@ query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput
   }
 }
 """.strip()
-    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
-    data = graphql_request(
+    runtime, was_cached = _discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
+    data = _graphql_request(
         query,
         {
             "filters": {"resourceType": "WORK", "resourceId": work_id},
@@ -563,12 +563,12 @@ query getReviews($filters: BookReviewsFilterInput!, $pagination: PaginationInput
         runtime,
     )
     edges = (((data.get("getReviews") or {}).get("edges")) or [])
-    reviews = map_review_list(apollo, edges, book)
+    reviews = _map_review_list(apollo, edges, book)
     return _wrap_result(reviews, runtime, was_cached)
 
 
-def list_similar_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
-    page = load_book_page(book_id)
+def _list_similar_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
+    page = _load_book_page(book_id)
     book = page["book"]
     query = """
 query getSimilarBooks($id: ID!, $limit: Int!) {
@@ -594,8 +594,8 @@ query getSimilarBooks($id: ID!, $limit: Int!) {
   }
 }
 """.strip()
-    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
-    data = graphql_request(query, {"id": book.get("id"), "limit": limit}, runtime)
+    runtime, was_cached = _discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
+    data = _graphql_request(query, {"id": book.get("id"), "limit": limit}, runtime)
     edges = (((data.get("getSimilarBooks") or {}).get("edges")) or [])
     books = []
     for edge in edges:
@@ -615,7 +615,7 @@ query getSimilarBooks($id: ID!, $limit: Int!) {
     return _wrap_result(books, runtime, was_cached)
 
 
-def search_books(query: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
+def _search_books(query: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     """Search books via the public AppSync getSearchSuggestions endpoint."""
     gql = """
 query getSearchSuggestions($searchQuery: String!) {
@@ -636,8 +636,8 @@ query getSearchSuggestions($searchQuery: String!) {
   }
 }
 """.strip()
-    runtime, was_cached = discover_runtime(page_url=f"{BASE_URL}/book/show/1", cache=cache)
-    data = graphql_request(gql, {"searchQuery": query}, runtime)
+    runtime, was_cached = _discover_runtime(page_url=f"{BASE_URL}/book/show/1", cache=cache)
+    data = _graphql_request(gql, {"searchQuery": query}, runtime)
     edges = (((data.get("getSearchSuggestions") or {}).get("edges")) or [])
     books = []
     for edge in edges[:limit]:
@@ -658,16 +658,16 @@ query getSearchSuggestions($searchQuery: String!) {
     return _wrap_result(books, runtime, was_cached)
 
 
-def list_series_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
+def _list_series_books(book_id: str, limit: int, cache: dict[str, Any] | None = None) -> Any:
     """List all books in a series, given any book_id that belongs to a series."""
-    page = load_book_page(book_id)
+    page = _load_book_page(book_id)
     apollo = page["apollo"]
     book = page["book"]
 
     series_id = None
     for item in book.get("bookSeries") or []:
         series_ref = item.get("series")
-        series_obj = deref(apollo, series_ref) if series_ref else None
+        series_obj = _deref(apollo, series_ref) if series_ref else None
         if series_obj and series_obj.get("id"):
             series_id = series_obj["id"]
             break
@@ -693,8 +693,8 @@ query getWorksForSeries($input: GetWorksForSeriesInput!, $pagination: Pagination
   }
 }
 """.strip()
-    runtime, was_cached = discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
-    data = graphql_request(gql, {"input": {"id": series_id}, "pagination": {"limit": limit}}, runtime)
+    runtime, was_cached = _discover_runtime(html_text=page["html"], page_url=page["url"], cache=cache)
+    data = _graphql_request(gql, {"input": {"id": series_id}, "pagination": {"limit": limit}}, runtime)
     edges = (((data.get("getWorksForSeries") or {}).get("edges")) or [])
     books = []
     for edge in edges:
@@ -717,7 +717,7 @@ query getWorksForSeries($input: GetWorksForSeriesInput!, $pagination: Pagination
     return _wrap_result(books, runtime, was_cached)
 
 
-def section_between(html_text: str, start_marker: str, end_marker: str) -> str:
+def _section_between(html_text: str, start_marker: str, end_marker: str) -> str:
     start = html_text.find(start_marker)
     if start == -1:
         return ""
@@ -727,8 +727,8 @@ def section_between(html_text: str, start_marker: str, end_marker: str) -> str:
     return html_text[start:end]
 
 
-def parse_profile_favorite_books(html_text: str, limit: int) -> list[dict[str, Any]]:
-    section = section_between(html_text, '<div id="featured_shelf"', '<div class="bigBoxBottom"></div></div>')
+def _parse_profile_favorite_books(html_text: str, limit: int) -> list[dict[str, Any]]:
+    section = _section_between(html_text, '<div id="featured_shelf"', '<div class="bigBoxBottom"></div></div>')
     books = []
     for href, alt, image in re.findall(
         r'<a href="(/book/show/[^"]+)"><img alt="([^"]+)"[^>]*src="([^"]+)"',
@@ -740,19 +740,19 @@ def parse_profile_favorite_books(html_text: str, limit: int) -> list[dict[str, A
         if " by " in title:
             title, author = title.rsplit(" by ", 1)
         books.append(_simple_book(
-            book_id=parse_int(first_match(r"/book/show/([0-9]+)", href)),
+            book_id=parse_int(_first_match(r"/book/show/([0-9]+)", href)),
             title=title,
             cover_url=image,
-            web_url=absolute_url(href),
+            web_url=_absolute_url(href),
             author=author,
         ))
         if len(books) >= limit:
             break
-    return unique_by(books, "book_id")
+    return _unique_by(books, "book_id")
 
 
-def parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict[str, Any]]:
-    section = first_match(r'<div id="shelves">(.*?)</div>\s*<br class="clear"/>', html_text)
+def _parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict[str, Any]]:
+    section = _first_match(r'<div id="shelves">(.*?)</div>\s*<br class="clear"/>', html_text)
     if not section:
         return []
     shelves = []
@@ -765,14 +765,14 @@ def parse_profile_shelves(html_text: str, user_id: int, limit: int) -> list[dict
             "id": f"{user_id}:{html.unescape(shelf_name)}",
             "name": molt(label),
             "bookCount": parse_int(count),
-            "url": absolute_url(href),
+            "url": _absolute_url(href),
         })
         if len(shelves) >= limit:
             break
-    return unique_by(shelves, "shelf_id")
+    return _unique_by(shelves, "shelf_id")
 
 
-def parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str, Any]]:
+def _parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str, Any]]:
     marker = 'id="currentlyReadingReviews"'
     start = html_text.find(marker)
     if start == -1:
@@ -788,32 +788,32 @@ def parse_profile_currently_reading(html_text: str, limit: int) -> list[dict[str
     )
     for match in pattern.finditer(section):
         books.append(_simple_book(
-            book_id=parse_int(first_match(r"/book/show/([0-9]+)", match.group("book_href"))),
+            book_id=parse_int(_first_match(r"/book/show/([0-9]+)", match.group("book_href"))),
             title=clean_html(match.group("title")),
             cover_url=match.group("cover"),
-            web_url=absolute_url(match.group("book_href")),
+            web_url=_absolute_url(match.group("book_href")),
             author=clean_html(match.group("author_name")),
-            author_id=parse_int(first_match(r"/author/show/([0-9]+)", match.group("author_href"))),
+            author_id=parse_int(_first_match(r"/author/show/([0-9]+)", match.group("author_href"))),
         ))
         if len(books) >= limit:
             break
-    return unique_by(books, "book_id")
+    return _unique_by(books, "book_id")
 
 
-def get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
-    html_text = fetch_html(f"{BASE_URL}/user/show/{user_id}")
-    title = molt(first_match(r"<title>(.*?)</title>", html_text)) or ""
+def _get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
+    html_text = _fetch_html(f"{BASE_URL}/user/show/{user_id}")
+    title = molt(_first_match(r"<title>(.*?)</title>", html_text)) or ""
     title_match = re.match(r"^(.*?) \((.*?)\) - (.*?) \(([\d,]+) books\)$", title)
-    name = clean_html(first_match(r'<h1 id="profileNameTopHeading"[^>]*>(.*?)</h1>', html_text))
-    username = first_match(r'<meta property="profile:username" content="([^"]+)"', html_text)
-    ratings_count = parse_int(first_match(r'>([\d,]+) ratings</a>', html_text))
-    avg_rating = first_match(r"\(([\d.]+) avg\)", html_text)
+    name = clean_html(_first_match(r'<h1 id="profileNameTopHeading"[^>]*>(.*?)</h1>', html_text))
+    username = _first_match(r'<meta property="profile:username" content="([^"]+)"', html_text)
+    ratings_count = parse_int(_first_match(r'>([\d,]+) ratings</a>', html_text))
+    avg_rating = _first_match(r"\(([\d.]+) avg\)", html_text)
     reviews_count = parse_int(
-        first_match(r'view=reviews">\s*([\d,]+) reviews', html_text)
-        or first_match(r"([\d,]+) reviews", html_text)
+        _first_match(r'view=reviews">\s*([\d,]+) reviews', html_text)
+        or _first_match(r"([\d,]+) reviews", html_text)
     )
-    photo_url = first_match(r'<meta property="og:image" content="([^"]+)"', html_text)
-    website = first_match(r'<a rel="me noopener noreferrer"[^>]*href="([^"]+)"', html_text)
+    photo_url = _first_match(r'<meta property="og:image" content="([^"]+)"', html_text)
+    website = _first_match(r'<a rel="me noopener noreferrer"[^>]*href="([^"]+)"', html_text)
 
     uid = parse_int(user_id)
     result: dict[str, Any] = {
@@ -829,20 +829,20 @@ def get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
         "reviewsCount": reviews_count,
         "website": website,
     }
-    favorite_books = parse_profile_favorite_books(html_text, limit)
+    favorite_books = _parse_profile_favorite_books(html_text, limit)
     if favorite_books:
         result["favorite_books"] = favorite_books
-    currently_reading = parse_profile_currently_reading(html_text, limit)
+    currently_reading = _parse_profile_currently_reading(html_text, limit)
     if currently_reading:
         result["currently_reading"] = currently_reading
-    shelves = parse_profile_shelves(html_text, uid or 0, limit)
+    shelves = _parse_profile_shelves(html_text, uid or 0, limit)
     if shelves:
         result["shelves"] = shelves
     return result
 
 
-def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
-    html_text = fetch_html(f"{BASE_URL}/author/list/{author_id}")
+def _parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
+    html_text = _fetch_html(f"{BASE_URL}/author/list/{author_id}")
     books = []
     pattern = re.compile(
         r'<tr itemscope itemtype="http://schema.org/Book">.*?'
@@ -854,12 +854,12 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
     for match in pattern.finditer(html_text):
         title = clean_html(match.group("title_attr"))
         href = match.group("book_href")
-        image = first_match(rf'{re.escape(href)}">\s*<img[^>]+src="([^"]+)"', html_text)
+        image = _first_match(rf'{re.escape(href)}">\s*<img[^>]+src="([^"]+)"', html_text)
         books.append(_simple_book(
-            book_id=parse_int(first_match(r"/book/show/([0-9]+)", href)),
+            book_id=parse_int(_first_match(r"/book/show/([0-9]+)", href)),
             title=title,
             cover_url=image,
-            web_url=absolute_url(href),
+            web_url=_absolute_url(href),
             author=clean_html(match.group("author_name")),
             author_id=parse_int(match.group("author_id")),
             avg_rating=float(match.group("average")),
@@ -867,25 +867,25 @@ def parse_author_books(author_id: str, limit: int) -> list[dict[str, Any]]:
         ))
         if len(books) >= limit:
             break
-    return unique_by(books, "book_id")
+    return _unique_by(books, "book_id")
 
 
-def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
-    html_text = fetch_html(f"{BASE_URL}/author/show/{author_id}")
-    author_list_html = fetch_html(f"{BASE_URL}/author/list/{author_id}")
-    name = clean_html(first_match(r'<h1[^>]*>\s*(?:<span itemprop="name">)?(.*?)(?:</span>)?\s*</h1>', html_text))
-    bio = clean_html(first_match(rf'<span id="freeTextContainerauthor{author_id}">(.*?)</span>', html_text))
-    location = clean_html(first_match(r'<div class="dataTitle">Born</div>\s*(.*?)\s*<br class="clear"/>', html_text))
-    website = first_match(r'<div class="dataTitle">Website</div>\s*<div class="dataItem">\s*<a[^>]+href="([^"]+)"', html_text)
-    twitter = clean_html(first_match(r'<div class="dataTitle">Twitter</div>\s*<div class="dataItem">\s*<a[^>]*>(.*?)</a>', html_text))
-    member_since = clean_html(first_match(r'<div class="dataTitle">Member Since</div>\s*<div class="dataItem">(.*?)</div>', html_text))
-    followers_count = parse_int(first_match(r"Followers \(([\d,]+)\)", html_text))
-    average_rating = first_match(r"Average rating ([0-9.]+)", author_list_html) or first_match(
+def _get_public_author(author_id: str, limit: int) -> dict[str, Any]:
+    html_text = _fetch_html(f"{BASE_URL}/author/show/{author_id}")
+    author_list_html = _fetch_html(f"{BASE_URL}/author/list/{author_id}")
+    name = clean_html(_first_match(r'<h1[^>]*>\s*(?:<span itemprop="name">)?(.*?)(?:</span>)?\s*</h1>', html_text))
+    bio = clean_html(_first_match(rf'<span id="freeTextContainerauthor{author_id}">(.*?)</span>', html_text))
+    location = clean_html(_first_match(r'<div class="dataTitle">Born</div>\s*(.*?)\s*<br class="clear"/>', html_text))
+    website = _first_match(r'<div class="dataTitle">Website</div>\s*<div class="dataItem">\s*<a[^>]+href="([^"]+)"', html_text)
+    twitter = clean_html(_first_match(r'<div class="dataTitle">Twitter</div>\s*<div class="dataItem">\s*<a[^>]*>(.*?)</a>', html_text))
+    member_since = clean_html(_first_match(r'<div class="dataTitle">Member Since</div>\s*<div class="dataItem">(.*?)</div>', html_text))
+    followers_count = parse_int(_first_match(r"Followers \(([\d,]+)\)", html_text))
+    average_rating = _first_match(r"Average rating ([0-9.]+)", author_list_html) or _first_match(
         r"Average rating:\s*([0-9.]+)",
         html_text,
     )
-    works_count = parse_int(first_match(r"([\d,]+)\s+distinct works", html_text))
-    photo_url = first_match(rf'<img[^>]+alt="{re.escape(name or "")}"[^>]+src="([^"]+)"', html_text) if name else None
+    works_count = parse_int(_first_match(r"([\d,]+)\s+distinct works", html_text))
+    photo_url = _first_match(rf'<img[^>]+alt="{re.escape(name or "")}"[^>]+src="([^"]+)"', html_text) if name else None
 
     aid = parse_int(author_id)
     result: dict[str, Any] = {
@@ -902,7 +902,7 @@ def get_public_author(author_id: str, limit: int) -> dict[str, Any]:
         "memberSince": member_since,
         "followersCount": followers_count,
     }
-    books = parse_author_books(author_id, limit)
+    books = _parse_author_books(author_id, limit)
     if books:
         result["books"] = books
     return result
@@ -941,7 +941,7 @@ def run_get_profile(*, user_id: str = "", limit: int = 10, **params) -> dict[str
             user_id: User ID (e.g., '26631647')
             limit: Max related books or shelves to import per profile section
         """
-    return get_public_profile(user_id=str(user_id), limit=int(limit))
+    return _get_public_profile(user_id=str(user_id), limit=int(limit))
 
 
 @returns("book")
@@ -958,7 +958,7 @@ def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any
         m = re.search(r"/book/show/(\d+)", url)
         if m:
             book_id = m.group(1)
-    return get_public_book(str(book_id))
+    return _get_public_book(str(book_id))
 
 
 @returns("review[]")
@@ -970,7 +970,7 @@ def run_list_book_reviews(*, book_id: str = "", limit: int = 30, **params) -> An
             book_id: Book ID
             limit: Max reviews to return
         """
-    return list_book_reviews(book_id=str(book_id), limit=int(limit))
+    return _list_book_reviews(book_id=str(book_id), limit=int(limit))
 
 
 @returns("book[]")
@@ -982,7 +982,7 @@ def run_list_similar_books(*, book_id: str = "", limit: int = 20, **params) -> A
             book_id: Book ID
             limit: Max similar books to return
         """
-    return list_similar_books(book_id=str(book_id), limit=int(limit))
+    return _list_similar_books(book_id=str(book_id), limit=int(limit))
 
 
 @returns("book[]")
@@ -994,7 +994,7 @@ def run_list_series_books(*, book_id: str = "", limit: int = 20, **params) -> An
             book_id: Book ID of any book in the series
             limit: Max books to return
         """
-    return list_series_books(book_id=str(book_id), limit=int(limit))
+    return _list_series_books(book_id=str(book_id), limit=int(limit))
 
 
 @returns("book[]")
@@ -1007,7 +1007,7 @@ def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any:
             query: Search query (title, author, or ISBN)
             limit: Max results
         """
-    return search_books(query=str(query), limit=int(limit))
+    return _search_books(query=str(query), limit=int(limit))
 
 
 @returns("author")
@@ -1025,7 +1025,7 @@ def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **par
         m = re.search(r"/author/show/(\d+)", url)
         if m:
             author_id = m.group(1)
-    return get_public_author(author_id=str(author_id), limit=int(limit))
+    return _get_public_author(author_id=str(author_id), limit=int(limit))
 
 
 @returns("book[]")
@@ -1037,16 +1037,16 @@ def run_list_author_books(*, author_id: str = "", limit: int = 10, **params) -> 
             author_id: Author ID
             limit: Max books to return
         """
-    return parse_author_books(author_id=str(author_id), limit=int(limit))
+    return _parse_author_books(author_id=str(author_id), limit=int(limit))
 
 
-def emit_json(value: Any) -> None:
+def _emit_json(value: Any) -> None:
     if isinstance(value, dict) and "__result__" in value:
         value = value["__result__"]
     print(json.dumps(value, ensure_ascii=False))
 
 
-def main() -> None:
+def _main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(
             "Usage: public_graph.py <command> [args...]\n"
@@ -1058,8 +1058,8 @@ def main() -> None:
     mode = sys.argv[1]
     if mode == "discoverRuntime":
         page_url = sys.argv[2] if len(sys.argv) > 2 else None
-        runtime, _was_cached = discover_runtime(page_url=page_url)
-        emit_json(runtime)
+        runtime, _was_cached = _discover_runtime(page_url=page_url)
+        _emit_json(runtime)
         return
 
     if mode == "searchBooks":
@@ -1067,7 +1067,7 @@ def main() -> None:
             raise SystemExit("Usage: public_graph.py search_books <query> [limit]")
         query = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) == 4 else 10
-        emit_json(search_books(query, limit))
+        _emit_json(_search_books(query, limit))
         return
 
     if mode in {"get_public_book", "list_book_reviews", "list_similar_books", "list_series_books"}:
@@ -1076,15 +1076,15 @@ def main() -> None:
         book_id = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) == 4 else 10
         if mode == "getPublicBook":
-            emit_json(get_public_book(book_id))
+            _emit_json(_get_public_book(book_id))
             return
         if mode == "listBookReviews":
-            emit_json(list_book_reviews(book_id, limit))
+            _emit_json(_list_book_reviews(book_id, limit))
             return
         if mode == "listSeriesBooks":
-            emit_json(list_series_books(book_id, limit))
+            _emit_json(_list_series_books(book_id, limit))
             return
-        emit_json(list_similar_books(book_id, limit))
+        _emit_json(_list_similar_books(book_id, limit))
         return
 
     if mode in {"get_public_profile", "get_public_author", "list_author_books"}:
@@ -1093,16 +1093,16 @@ def main() -> None:
         entity_id = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) == 4 else 10
         if mode == "getPublicProfile":
-            emit_json(get_public_profile(entity_id, limit))
+            _emit_json(_get_public_profile(entity_id, limit))
             return
         if mode == "getPublicAuthor":
-            emit_json(get_public_author(entity_id, limit))
+            _emit_json(_get_public_author(entity_id, limit))
             return
-        emit_json(parse_author_books(entity_id, limit))
+        _emit_json(_parse_author_books(entity_id, limit))
         return
 
     raise SystemExit(f"Unknown mode: {mode}")
 
 
 if __name__ == "__main__":
-    main()
+    _main()

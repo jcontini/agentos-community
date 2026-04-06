@@ -232,7 +232,7 @@ def update_task(*, id: str, name: str = None, description: str = None,
     return _map_task(data["issueUpdate"]["issue"])
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 def delete_task(*, id: str, **params) -> dict:
     """Delete an issue."""
     query = """
@@ -354,7 +354,7 @@ def get_relations(*, id: str, **params) -> dict:
     }
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
     """Add a blocking relationship (blocker_id blocks id)."""
     query = """
@@ -376,7 +376,7 @@ def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
     return {"success": result["success"], "id": result["issueRelation"]["id"]}
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 def remove_relation(*, relation_id: str, **params) -> dict:
     """Remove a relationship by its ID."""
     query = """
@@ -388,7 +388,7 @@ def remove_relation(*, relation_id: str, **params) -> dict:
     return data["issueRelationDelete"]
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 def add_related(*, id: str, related_id: str, **params) -> dict:
     """Link two issues as related."""
     query = """

@@ -342,7 +342,7 @@ def _identify_from_orgs(orgs: list) -> dict:
 
 # -- CLI entry point -----------------------------------------------------------
 
-def main():
+def _main():
     import argparse
     parser = argparse.ArgumentParser(description="claude.ai API client")
     parser.add_argument("--op", required=True,
@@ -406,7 +406,7 @@ def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
 
 @returns({"magicLink": "string"})
 @timeout(10)
-def op_extract_magic_link(raw_email: str) -> dict:
+def op_extract_magic_link(raw_email: str, **params) -> dict:
     """Extract the magic link URL from a raw base64url-encoded email body. Pass the raw RFC 2822 email body (e.g. from whichever integration exposes raw message bytes) and this will decode it and find the claude.ai magic link.
 
         Args:
@@ -419,4 +419,4 @@ def op_extract_magic_link(raw_email: str) -> dict:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_main())

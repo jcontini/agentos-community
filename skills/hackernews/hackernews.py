@@ -79,7 +79,7 @@ def _map_item(item: dict) -> dict:
 
 
 @returns("post[]")
-def list_posts(feed: str = "front", limit: int = 30) -> list[dict]:
+def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
     """List Hacker News stories by feed type
 
         Args:
@@ -100,7 +100,7 @@ def list_posts(feed: str = "front", limit: int = 30) -> list[dict]:
 
 @returns("post[]")
 @provides(web_search)
-def search_posts(query: str, limit: int = 30) -> list[dict]:
+def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
     """Search Hacker News stories
 
         Args:
@@ -118,7 +118,7 @@ def search_posts(query: str, limit: int = 30) -> list[dict]:
 
 @returns("post")
 @provides(web_read, urls=["news.ycombinator.com/item*"])
-def get_post(id: str = None, url: str = None) -> dict:
+def get_post(id: str = None, url: str = None, **params) -> dict:
     """Get a Hacker News story with comments
 
         Args:
@@ -140,7 +140,7 @@ def get_post(id: str = None, url: str = None) -> dict:
 
 
 @returns("post[]")
-def comments_post(id: str) -> list[dict]:
+def comments_post(id: str, **params) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
     resp = http.get(f"{BASE}/items/{id}")
 

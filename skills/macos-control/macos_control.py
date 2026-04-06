@@ -118,7 +118,7 @@ JSON.stringify(result);
 """
 
 
-def read_params() -> dict:
+def _read_params() -> dict:
     raw = sys.stdin.read().strip()
     if not raw:
         return {}
@@ -126,7 +126,7 @@ def read_params() -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def run_json_command(args, input_text=None):
+def _run_json_command(args, input_text=None):
     result = shell.run(args[0], args[1:], input=input_text)
     if result["exit_code"] != 0:
         raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
@@ -134,23 +134,23 @@ def run_json_command(args, input_text=None):
     return json.loads(stdout) if stdout else None
 
 
-def run_text_command(args):
+def _run_text_command(args):
     result = shell.run(args[0], args[1:])
     if result["exit_code"] != 0:
         raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
     return result["stdout"]
 
 
-def run_swift_json(script: str):
-    return run_json_command(["swift", "-e", script])
+def _run_swift_json(script: str):
+    return _run_json_command(["swift", "-e", script])
 
 
-def run_jxa_json(script: str):
-    return run_json_command(["osascript", "-l", "JavaScript", "-e", script])
+def _run_jxa_json(script: str):
+    return _run_json_command(["osascript", "-l", "JavaScript", "-e", script])
 
 
-def load_display_names():
-    data = run_json_command(["system_profiler", "SPDisplaysDataType", "-json"])
+def _load_display_names():
+    data = _run_json_command(["system_profiler", "SPDisplaysDataType", "-json"])
     names = {}
     for gpu in data.get("SPDisplaysDataType", []):
         for display in gpu.get("spdisplays_ndrvs", []):
@@ -167,19 +167,19 @@ def load_display_names():
     return names
 
 
-def load_displays():
-    displays = run_swift_json(APP_SYSTEM_PROFILER_SWIFT)
-    metadata = load_display_names()
+def _load_displays():
+    displays = _run_swift_json(APP_SYSTEM_PROFILER_SWIFT)
+    metadata = _load_display_names()
     primary = next((display for display in displays if display.get("is_primary")), None)
-    primary_center_x = frame_center_x(primary["frame"]) if primary else None
-    primary_center_y = frame_center_y(primary["frame"]) if primary else None
+    primary_center_x = _frame_center_x(primary["frame"]) if primary else None
+    primary_center_y = _frame_center_y(primary["frame"]) if primary else None
 
     normalized = []
     for display in displays:
         display_id = str(display["display_id"])
         extra = metadata.get(display_id, {})
-        frame = normalize_frame(display["frame"])
-        visible_frame = normalize_frame(display["visible_frame"])
+        frame = _normalize_frame(display["frame"])
+        visible_frame = _normalize_frame(display["visible_frame"])
         is_primary = bool(display.get("is_primary") or extra.get("is_primary"))
         result = {
             "displayId": display_id,
@@ -196,7 +196,7 @@ def load_displays():
             "resolution": extra.get("resolution"),
             "pixels": extra.get("pixels"),
         }
-        result["position_relative_to_primary"] = relative_position(
+        result["position_relative_to_primary"] = _relative_position(
             result,
             primary_center_x,
             primary_center_y,
@@ -212,7 +212,7 @@ def load_displays():
 @timeout(15)
 def list_displays(**params):
     """List connected displays with geometry for left/right monitor reasoning"""
-    displays = load_displays()
+    displays = _load_displays()
     return {
         "displays": displays,
         "count": len(displays),
@@ -227,7 +227,7 @@ def list_apps(*, limit=None, **params):
         Args:
             limit: Optional maximum number of apps to return
         """
-    data = run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
+    data = _run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
     apps = []
     for item in data.get("SPApplicationsDataType", []):
         path = item.get("path")
@@ -245,7 +245,7 @@ def list_apps(*, limit=None, **params):
         )
 
     apps.sort(key=lambda app: ((app.get("name") or "").lower(), app.get("path") or ""))
-    normalized_limit = normalize_limit(limit)
+    normalized_limit = _normalize_limit(limit)
     if normalized_limit is not None:
         apps = apps[:normalized_limit]
     return {
@@ -262,7 +262,7 @@ def list_processes(*, limit=None, **params):
         Args:
             limit: Optional maximum number of processes to return
         """
-    output = run_text_command(
+    output = _run_text_command(
         [
             "ps",
             "-axo",
@@ -297,7 +297,7 @@ def list_processes(*, limit=None, **params):
         )
 
     processes.sort(key=lambda process: process["pid"])
-    normalized_limit = normalize_limit(limit)
+    normalized_limit = _normalize_limit(limit)
     if normalized_limit is not None:
         processes = processes[:normalized_limit]
     return {
@@ -313,9 +313,9 @@ def list_windows(*, limit=None, **params):
         Args:
             limit: Optional maximum number of windows to return
         """
-    displays = load_displays()
-    cg_windows = run_swift_json(CG_WINDOWS_SWIFT)
-    jxa_apps = run_jxa_json(JXA_WINDOWS_SCRIPT)
+    displays = _load_displays()
+    cg_windows = _run_swift_json(CG_WINDOWS_SWIFT)
+    jxa_apps = _run_jxa_json(JXA_WINDOWS_SCRIPT)
 
     normalized = []
     for app in jxa_apps:
@@ -326,7 +326,7 @@ def list_windows(*, limit=None, **params):
         for window in app.get("windows", []):
             position = window.get("position")
             size = window.get("size")
-            if not is_useful_window(app_name, position, size):
+            if not _is_useful_window(app_name, position, size):
                 continue
 
             frame = {
@@ -335,14 +335,14 @@ def list_windows(*, limit=None, **params):
                 "width": int(size[0]),
                 "height": int(size[1]),
             }
-            matched = match_cg_window(
+            matched = _match_cg_window(
                 app_name=app_name,
                 pid=pid,
                 title=window.get("title") or "",
                 frame=frame,
                 cg_windows=cg_windows,
             )
-            display_id = display_for_frame(frame, displays)
+            display_id = _display_for_frame(frame, displays)
             normalized.append(
                 {
                     "windowId": matched.get("window_id") if matched else None,
@@ -380,7 +380,7 @@ def list_windows(*, limit=None, **params):
             window["pid"] or 0,
         )
     )
-    normalized_limit = normalize_limit(limit)
+    normalized_limit = _normalize_limit(limit)
     if normalized_limit is not None:
         normalized = normalized[:normalized_limit]
     return {
@@ -399,7 +399,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
             display_index: 1-based display index from list_displays
             path: Optional output path for the PNG file
         """
-    displays = load_displays()
+    displays = _load_displays()
     target = None
 
     if display_index is not None:
@@ -418,7 +418,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
     if not target:
         raise ValueError("Display not found")
 
-    resolved_path = resolve_output_path(path, f"display-{target['display_id']}")
+    resolved_path = _resolve_output_path(path, f"display-{target['display_id']}")
     result = shell.run("screencapture", ["-x", "-D", str(target["display_index"]), resolved_path])
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
@@ -432,7 +432,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
         "height": target.get("height"),
         "displayId": target["display_id"],
         "displayIndex": target["display_index"],
-        "published": iso_now(),
+        "published": _iso_now(),
     }
 
 
@@ -453,7 +453,7 @@ def screenshot_window(*, window_id, path=None, **params):
     if not target.get("capture_eligible"):
         raise ValueError("Window is not capture_eligible")
 
-    resolved_path = resolve_output_path(path, f"window-{target_window_id}")
+    resolved_path = _resolve_output_path(path, f"window-{target_window_id}")
     result = shell.run("screencapture", ["-x", "-l", str(target_window_id), resolved_path])
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
@@ -468,18 +468,18 @@ def screenshot_window(*, window_id, path=None, **params):
         "height": frame.get("height"),
         "windowId": target_window_id,
         "appName": target.get("app_name"),
-        "published": iso_now(),
+        "published": _iso_now(),
     }
 
 
-def normalize_limit(value):
+def _normalize_limit(value):
     if value is None:
         return None
     limit = int(value)
     return max(limit, 0)
 
 
-def normalize_frame(frame):
+def _normalize_frame(frame):
     return {
         "x": int(round(float(frame["x"]))),
         "y": int(round(float(frame["y"]))),
@@ -488,26 +488,26 @@ def normalize_frame(frame):
     }
 
 
-def frame_center_x(frame):
+def _frame_center_x(frame):
     return frame["x"] + (frame["width"] / 2.0)
 
 
-def frame_center_y(frame):
+def _frame_center_y(frame):
     return frame["y"] + (frame["height"] / 2.0)
 
 
-def relative_position(display, primary_center_x, primary_center_y, is_primary):
+def _relative_position(display, primary_center_x, primary_center_y, is_primary):
     if is_primary or primary_center_x is None or primary_center_y is None:
         return "primary" if is_primary else None
 
-    dx = frame_center_x(display["frame"]) - primary_center_x
-    dy = frame_center_y(display["frame"]) - primary_center_y
+    dx = _frame_center_x(display["frame"]) - primary_center_x
+    dy = _frame_center_y(display["frame"]) - primary_center_y
     if abs(dx) >= abs(dy):
         return "right" if dx > 0 else "left"
     return "above" if dy > 0 else "below"
 
 
-def is_useful_window(app_name, position, size):
+def _is_useful_window(app_name, position, size):
     if not isinstance(position, list) or not isinstance(size, list):
         return False
     if len(position) != 2 or len(size) != 2:
@@ -521,8 +521,8 @@ def is_useful_window(app_name, position, size):
     return True
 
 
-def match_cg_window(app_name, pid, title, frame, cg_windows):
-    title_normalized = normalize_title(title)
+def _match_cg_window(app_name, pid, title, frame, cg_windows):
+    title_normalized = _normalize_title(title)
     candidates = [
         window
         for window in cg_windows
@@ -533,17 +533,17 @@ def match_cg_window(app_name, pid, title, frame, cg_windows):
     best_score = -math.inf
     for candidate in candidates:
         score = 0.0
-        candidate_title = normalize_title(candidate.get("title") or "")
-        bounds = normalize_cg_bounds(candidate.get("bounds") or {})
+        candidate_title = _normalize_title(candidate.get("title") or "")
+        bounds = _normalize_cg_bounds(candidate.get("bounds") or {})
         if candidate.get("owner_name") == app_name:
             score += 20
         if title_normalized and candidate_title == title_normalized:
             score += 50
-        elif title_normalized and candidate_title and titles_related(title_normalized, candidate_title):
+        elif title_normalized and candidate_title and _titles_related(title_normalized, candidate_title):
             score += 35
         elif title_normalized and candidate_title:
             score -= 20
-        score -= bounds_distance(frame, bounds) / 10.0
+        score -= _bounds_distance(frame, bounds) / 10.0
         if candidate.get("is_onscreen"):
             score += 5
         if score > best_score:
@@ -560,7 +560,7 @@ def match_cg_window(app_name, pid, title, frame, cg_windows):
     return best
 
 
-def normalize_cg_bounds(bounds):
+def _normalize_cg_bounds(bounds):
     return {
         "x": int(round(float(bounds.get("X", 0)))),
         "y": int(round(float(bounds.get("Y", 0)))),
@@ -569,7 +569,7 @@ def normalize_cg_bounds(bounds):
     }
 
 
-def bounds_distance(left, right):
+def _bounds_distance(left, right):
     return (
         abs(left["x"] - right["x"])
         + abs(left["y"] - right["y"])
@@ -578,26 +578,26 @@ def bounds_distance(left, right):
     )
 
 
-def normalize_title(value):
+def _normalize_title(value):
     return " ".join((value or "").split())
 
 
-def titles_related(left, right):
+def _titles_related(left, right):
     return left in right or right in left
 
 
-def display_for_frame(frame, displays):
+def _display_for_frame(frame, displays):
     best_display_id = None
     best_overlap = -1
     for display in displays:
-        overlap = intersection_area(frame, display["frame"])
+        overlap = _intersection_area(frame, display["frame"])
         if overlap > best_overlap:
             best_overlap = overlap
             best_display_id = display["display_id"]
     return best_display_id
 
 
-def intersection_area(a, b):
+def _intersection_area(a, b):
     x1 = max(a["x"], b["x"])
     y1 = max(a["y"], b["y"])
     x2 = min(a["x"] + a["width"], b["x"] + b["width"])
@@ -607,7 +607,7 @@ def intersection_area(a, b):
     return (x2 - x1) * (y2 - y1)
 
 
-def resolve_output_path(value, label):
+def _resolve_output_path(value, label):
     if value:
         return os.path.abspath(os.path.expanduser(str(value)))
     timestamp = int(time.time())
@@ -632,7 +632,7 @@ def clipboard_write(*, text, **_kwargs):
     return {"status": "ok", "length": len(text)}
 
 
-def iso_now():
+def _iso_now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
@@ -1074,11 +1074,11 @@ def get_file_info(*, path, **_kwargs):
     return result
 
 
-def main():
+def _main():
     if len(sys.argv) < 2:
         raise ValueError("operation is required")
 
-    params = read_params()
+    params = _read_params()
     operation = sys.argv[1]
     handlers = {
         "listApps": list_apps,
@@ -1103,7 +1103,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        _main()
     except subprocess.CalledProcessError as error:
         message = error.stderr.strip() if error.stderr else str(error)
         sys.stderr.write(message + "\n")

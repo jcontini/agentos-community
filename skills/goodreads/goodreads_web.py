@@ -174,7 +174,7 @@ def run_get_person(*, user_id: str = "", **params) -> dict[str, Any]:
         Args:
             user_id: User ID (e.g., '27117656')
         """
-    return get_person(user_id=str(user_id), params=params)
+    return _get_person(user_id=str(user_id), params=params)
 
 
 @returns("person[]")
@@ -187,7 +187,7 @@ def run_search_people(*, query: str = "", limit: int = 10, **params) -> list[dic
             query: Name to search
             limit: Max results (default 10)
         """
-    return search_people(query=query, limit=int(limit), params=params)
+    return _search_people(query=query, limit=int(limit), params=params)
 
 
 def _resolve_user_id(user_id: str, params: dict) -> str:
@@ -210,7 +210,7 @@ def run_list_friends(*, user_id: str = "", page: int = 0, **params) -> list[dict
             user_id: User ID
             page: Page number (0 = all pages, 30 per page)
         """
-    return list_friends(user_id=_resolve_user_id(user_id, params), page=int(page), params=params)
+    return _list_friends(user_id=_resolve_user_id(user_id, params), page=int(page), params=params)
 
 
 @returns("book[]")
@@ -225,7 +225,7 @@ def run_list_books(*, user_id: str = "", shelf: str = "all", sort: str = "date_a
             sort: Sort by: date_added, rating, title, author
             page: Page number (0 = all pages, 25 per page)
         """
-    return list_books(user_id=_resolve_user_id(user_id, params), shelf=str(shelf), sort=str(sort), page=int(page), params=params)
+    return _list_books(user_id=_resolve_user_id(user_id, params), shelf=str(shelf), sort=str(sort), page=int(page), params=params)
 
 
 @returns("review[]")
@@ -239,7 +239,7 @@ def run_list_reviews(*, user_id: str = "", sort: str = "date", page: int = 0, **
             sort: Sort by: date, rating, title
             page: Page number (0 = all pages, 25 per page)
         """
-    return list_reviews(user_id=_resolve_user_id(user_id, params), sort=str(sort), page=int(page), params=params)
+    return _list_reviews(user_id=_resolve_user_id(user_id, params), sort=str(sort), page=int(page), params=params)
 
 
 @returns("shelf[]")
@@ -251,7 +251,7 @@ def run_list_shelves(*, user_id: str = "", **params) -> list[dict[str, Any]]:
         Args:
             user_id: User ID
         """
-    return list_shelves(user_id=_resolve_user_id(user_id, params), params=params)
+    return _list_shelves(user_id=_resolve_user_id(user_id, params), params=params)
 
 
 @returns("book[]")
@@ -265,7 +265,7 @@ def run_list_shelf_books(*, user_id: str = "", shelf_name: str = "", page: int =
             shelf_name: Shelf name (e.g., 'read', 'currently-reading', 'to-read')
             page: Page number (0 = all pages, 25 per page)
         """
-    return list_shelf_books(user_id=_resolve_user_id(user_id, params), shelf_name=str(shelf_name), page=int(page), params=params)
+    return _list_shelf_books(user_id=_resolve_user_id(user_id, params), shelf_name=str(shelf_name), page=int(page), params=params)
 
 
 @returns("person[]")
@@ -278,14 +278,14 @@ def run_resolve_email(*, email: str = "", **params) -> list[dict[str, Any]]:
         Args:
             email: Email address to search for
         """
-    return resolve_email(email=str(email), params=params)
+    return _resolve_email(email=str(email), params=params)
 
 
 @returns("group[]")
 @connection("web")
 def run_list_groups(**params) -> list[dict[str, Any]]:
     """List the authenticated user's Goodreads groups"""
-    return list_groups(params=params)
+    return _list_groups(params=params)
 
 
 @returns("person[]")
@@ -297,7 +297,7 @@ def run_list_following(*, user_id: str = "", **params) -> list[dict[str, Any]]:
         Args:
             user_id: User ID
         """
-    return list_following(user_id=_resolve_user_id(user_id, params), params=params)
+    return _list_following(user_id=_resolve_user_id(user_id, params), params=params)
 
 
 @returns("person[]")
@@ -309,7 +309,7 @@ def run_list_followers(*, user_id: str = "", **params) -> list[dict[str, Any]]:
         Args:
             user_id: User ID
         """
-    return list_followers(user_id=_resolve_user_id(user_id, params), params=params)
+    return _list_followers(user_id=_resolve_user_id(user_id, params), params=params)
 
 
 @returns("quote[]")
@@ -321,7 +321,7 @@ def run_list_quotes(*, user_id: str = "", **params) -> list[dict[str, Any]]:
         Args:
             user_id: User ID
         """
-    return list_quotes(user_id=_resolve_user_id(user_id, params), params=params)
+    return _list_quotes(user_id=_resolve_user_id(user_id, params), params=params)
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +329,7 @@ def run_list_quotes(*, user_id: str = "", **params) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def get_person(
+def _get_person(
     user_id: str,
     cookie_header: str | None = None,
     *,
@@ -670,7 +670,7 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
     return friends
 
 
-def list_friends(
+def _list_friends(
     user_id: str,
     page: int = 0,
     cookie_header: str | None = None,
@@ -717,7 +717,7 @@ def list_friends(
 # ---------------------------------------------------------------------------
 
 
-def search_people(
+def _search_people(
     query: str,
     limit: int = 10,
     cookie_header: str | None = None,
@@ -759,7 +759,7 @@ def search_people(
 # ---------------------------------------------------------------------------
 
 
-def resolve_email(
+def _resolve_email(
     email: str,
     cookie_header: str | None = None,
     *,
@@ -853,7 +853,7 @@ def resolve_email(
 # ---------------------------------------------------------------------------
 
 
-def list_shelves(
+def _list_shelves(
     user_id: str,
     cookie_header: str | None = None,
     *,
@@ -1103,7 +1103,7 @@ def _fetch_book_pages(
     return all_items
 
 
-def list_books(
+def _list_books(
     user_id: str,
     shelf: str = "all",
     sort: str = "date_added",
@@ -1119,7 +1119,7 @@ def list_books(
         return _fetch_book_pages(client, url_tpl, page, as_reviews=False)
 
 
-def list_reviews(
+def _list_reviews(
     user_id: str,
     sort: str = "date",
     page: int = 0,
@@ -1134,7 +1134,7 @@ def list_reviews(
         return _fetch_book_pages(client, url_tpl, page, as_reviews=True)
 
 
-def list_shelf_books(
+def _list_shelf_books(
     user_id: str,
     shelf_name: str,
     page: int = 0,
@@ -1154,7 +1154,7 @@ def list_shelf_books(
 # ---------------------------------------------------------------------------
 
 
-def list_groups(
+def _list_groups(
     cookie_header: str | None = None,
     *,
     params: dict | None = None,
@@ -1259,7 +1259,7 @@ def _parse_follow_page(
     return users, authors
 
 
-def list_following(
+def _list_following(
     user_id: str,
     cookie_header: str | None = None,
     *,
@@ -1285,7 +1285,7 @@ def list_following(
     return results
 
 
-def list_followers(
+def _list_followers(
     user_id: str,
     cookie_header: str | None = None,
     *,
@@ -1316,7 +1316,7 @@ def list_followers(
 # ---------------------------------------------------------------------------
 
 
-def list_quotes(
+def _list_quotes(
     user_id: str,
     cookie_header: str | None = None,
     *,

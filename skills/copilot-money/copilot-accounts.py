@@ -16,7 +16,7 @@ WIDGET_DIR = os.path.expanduser(
 )
 
 
-def load_credit_ids():
+def _load_credit_ids():
     """Load the set of account IDs that Copilot classifies as credit accounts."""
     path = os.path.join(WIDGET_DIR, "widgets-account-credit_accounts.json")
     try:
@@ -26,7 +26,7 @@ def load_credit_ids():
         return set()
 
 
-def classify_account(data, credit_ids):
+def _classify_account(data, credit_ids):
     """
     Classify an account into tags based on Copilot's own groupings
     and lightweight heuristics. Returns a list of tag names.
@@ -66,9 +66,9 @@ def classify_account(data, credit_ids):
 
 
 @returns("account[]")
-def load_accounts():
+def load_accounts(**params):
     """List all financial accounts with balances and institution info"""
-    credit_ids = load_credit_ids()
+    credit_ids = _load_credit_ids()
     pattern = os.path.join(WIDGET_DIR, "widgets-account-account_*.json")
     accounts = []
     for path in sorted(glob.glob(pattern)):
@@ -79,7 +79,7 @@ def load_accounts():
             if not data.get("name") or data.get("name") == "Account name":
                 continue
 
-            tags = classify_account(data, credit_ids)
+            tags = _classify_account(data, credit_ids)
 
             accounts.append({
                 "id": data.get("id"),

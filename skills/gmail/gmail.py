@@ -913,7 +913,7 @@ def untrash_email(*, id, **params):
     return _map_email(resp["json"])
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("gmail")
 def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
     """Modify labels on multiple emails at once (max 1000 IDs)."""
@@ -928,7 +928,7 @@ def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
     return {}
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("gmail")
 def batch_delete_email(*, ids, **params):
     """Permanently delete multiple emails (max 1000 IDs). CANNOT BE UNDONE."""

@@ -9,6 +9,7 @@ def _base_url(path: str, token: str, size: int, format: str) -> str:
 @connection("api")
 @timeout(5)
 def logo_url(*, domain: str, size: int = 128, format: str = "png",
+             theme: str = "auto", **params) -> dict:
     """Return CDN URL for a company logo by domain
 
         Args:
@@ -17,7 +18,6 @@ def logo_url(*, domain: str, size: int = 128, format: str = "png",
             format: Image format (jpg, png, webp)
             theme: Theme (auto, light, dark)
         """
-             theme: str = "auto", **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     url = _base_url(domain, token, size, format) + f"&theme={theme}"
     return {"url": url}
@@ -27,6 +27,7 @@ def logo_url(*, domain: str, size: int = 128, format: str = "png",
 @connection("api")
 @timeout(5)
 def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
+               **params) -> dict:
     """Return CDN URL for a company logo by stock ticker
 
         Args:
@@ -34,7 +35,6 @@ def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
             size: Size in pixels
             format: Image format
         """
-               **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     return {"url": _base_url(f"ticker:{ticker}", token, size, format)}
 
@@ -43,6 +43,7 @@ def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
 @connection("api")
 @timeout(5)
 def name_url(*, name: str, size: int = 128, format: str = "png",
+             **params) -> dict:
     """Return CDN URL for a company logo by name
 
         Args:
@@ -50,9 +51,7 @@ def name_url(*, name: str, size: int = 128, format: str = "png",
             size: Size in pixels
             format: Image format
         """
-             **params) -> dict:
     from urllib.parse import quote
-from agentos import connection, returns, timeout
     token = params.get("auth", {}).get("key", "")
     return {"url": _base_url(f"name:{quote(name)}", token, size, format)}
 
@@ -61,6 +60,7 @@ from agentos import connection, returns, timeout
 @connection("api")
 @timeout(5)
 def crypto_url(*, symbol: str, size: int = 128, format: str = "png",
+               **params) -> dict:
     """Return CDN URL for a cryptocurrency logo
 
         Args:
@@ -68,6 +68,5 @@ def crypto_url(*, symbol: str, size: int = 128, format: str = "png",
             size: Size in pixels
             format: Image format
         """
-               **params) -> dict:
     token = params.get("auth", {}).get("key", "")
     return {"url": _base_url(f"crypto:{symbol}", token, size, format)}

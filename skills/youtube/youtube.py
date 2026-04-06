@@ -7,9 +7,8 @@ directly (no subprocess, no temp files, no jq).
 
 import glob
 import sys
-import urllib.request
 import json
-from agentos import provides, returns, web_read
+from agentos import http, provides, returns, web_read
 
 # Add yt-dlp's own site-packages to path (stable symlink, version-agnostic)
 _ytdlp_paths = glob.glob("/opt/homebrew/opt/yt-dlp/libexec/lib/python*/site-packages")
@@ -118,7 +117,7 @@ def _ydl(extra: dict | None = None) -> yt_dlp.YoutubeDL:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @returns("video[]")
-def search_videos(query: str, limit: int = 50) -> list[dict]:
+def search_videos(query: str, limit: int = 50, **params) -> list[dict]:
     """Search YouTube videos by query (returns results sorted by relevance)
 
         Args:
@@ -131,7 +130,7 @@ def search_videos(query: str, limit: int = 50) -> list[dict]:
 
 
 @returns("video[]")
-def search_recent_video(query: str, limit: int = 50) -> list[dict]:
+def search_recent_video(query: str, limit: int = 50, **params) -> list[dict]:
     """Search YouTube videos by query sorted by upload date (newest first)
 
         Args:
@@ -144,7 +143,7 @@ def search_recent_video(query: str, limit: int = 50) -> list[dict]:
 
 
 @returns("video[]")
-def list_videos(url: str, limit: int = 50) -> list[dict]:
+def list_videos(url: str, limit: int = 50, **params) -> list[dict]:
     """List videos from a YouTube channel or playlist
 
         Args:
@@ -157,7 +156,7 @@ def list_videos(url: str, limit: int = 50) -> list[dict]:
 
 
 @returns("video")
-def get_video(url: str) -> dict:
+def get_video(url: str, **params) -> dict:
     """Get video metadata (title, creator, thumbnail, duration)
 
         Args:
@@ -170,7 +169,7 @@ def get_video(url: str) -> dict:
 
 @returns("video")
 @provides(web_read, urls=["youtube.com/*", "youtu.be/*", "music.youtube.com/*"])
-def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
+def transcript_video(url: str, lang: str = "en", format: str = "text", **params) -> dict:
     """Fetch video metadata + transcript. No temp files — captions fetched in memory."""
     with _ydl() as ydl:
         info = ydl.extract_info(url, download=False)
@@ -194,8 +193,8 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
     cap_entry = next((c for c in captions if c.get("ext") == "json3"), captions[0])
     source_type = "auto_caption" if cap_entry in captions else "manual"
 
-    with urllib.request.urlopen(cap_entry["url"], timeout=30) as r:
-        cap_data = json.loads(r.read())
+    cap_resp = http.get(cap_entry["url"], timeout=30.0)
+    cap_data = cap_resp["json"] if cap_resp.get("json") else json.loads(cap_resp["body"])
 
     events = [
         e for e in cap_data.get("events", [])
@@ -235,7 +234,7 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
 
 
 @returns("channel")
-def get_channel(url: str) -> dict:
+def get_channel(url: str, **params) -> dict:
     """Get YouTube channel metadata (avatar, description, subscriber count)
 
         Args:
@@ -267,7 +266,7 @@ def get_channel(url: str) -> dict:
 
 
 @returns("channel")
-def get_avatar_channel(url: str) -> dict:
+def get_avatar_channel(url: str, **params) -> dict:
     """Quick fetch of channel avatar via og:image — ~1s."""
     from agentos import http
     resp = http.get(url, timeout=10)
@@ -280,7 +279,7 @@ def get_avatar_channel(url: str) -> dict:
 
 
 @returns("post[]")
-def list_posts(url: str, limit: int = 50) -> list[dict]:
+def list_posts(url: str, limit: int = 50, **params) -> list[dict]:
     """List comments on a video as post entities."""
     opts = {
         "getcomments": True,

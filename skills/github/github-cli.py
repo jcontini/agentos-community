@@ -6,22 +6,22 @@ import sys
 from agentos import shell, provides, returns, web_read
 
 
-def fail(message, code=1):
+def _fail(message, code=1):
     print(json.dumps({"error": message}))
     sys.exit(code)
 
 
-def read_payload():
+def _read_payload():
     raw = sys.stdin.read().strip()
     if not raw:
         return {}
     return json.loads(raw)
 
 
-def run_gh(args):
+def _run_gh(args):
     result = shell.run("gh", list(args))
     if result["exit_code"] != 0:
-        fail(result["stderr"].strip() or result["stdout"].strip() or "gh command failed", result["exit_code"])
+        _fail(result["stderr"].strip() or result["stdout"].strip() or "gh command failed", result["exit_code"])
     return result["stdout"]
 
 
@@ -35,7 +35,7 @@ def list_tasks(*, repo, state="open", limit=30, **params):
             limit: Maximum number of issues to return
         """
     limit = str(limit)
-    output = run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
+    output = _run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
     data = json.loads(output)
     result = []
     for item in data:
@@ -104,15 +104,15 @@ def get_task(*, repo=None, number=None, url=None, **params):
     if url:
         parsed = _parse_issue_or_pr_url(url)
         if not parsed:
-            fail("Could not parse owner/repo and number from GitHub issue or PR URL")
+            _fail("Could not parse owner/repo and number from GitHub issue or PR URL")
         repo, number = parsed
     if not repo or number is None:
-        fail("repo and number are required (or pass url)")
+        _fail("repo and number are required (or pass url)")
     number = str(number)
-    output = run_gh(["api", f"repos/{repo}/issues/{number}"])
+    output = _run_gh(["api", f"repos/{repo}/issues/{number}"])
     item = json.loads(output)
     if item.get("pull_request"):
-        pr_out = run_gh(["api", f"repos/{repo}/pulls/{number}"])
+        pr_out = _run_gh(["api", f"repos/{repo}/pulls/{number}"])
         pr = json.loads(pr_out)
         return _task_shape(
             {
@@ -141,7 +141,7 @@ def create_task(*, repo, title, body="", **params):
             title: Issue title
             body: Issue body
         """
-    url = run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
+    url = _run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
     return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
@@ -153,7 +153,7 @@ def close_task(*, repo, number, **params):
             number: Issue number
         """
     number = str(number)
-    run_gh(["issue", "close", number, "--repo", repo])
+    _run_gh(["issue", "close", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
@@ -165,11 +165,11 @@ def reopen_task(*, repo, number, **params):
             number: Issue number
         """
     number = str(number)
-    run_gh(["issue", "reopen", number, "--repo", repo])
+    _run_gh(["issue", "reopen", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
-@returns("array")
+@returns({"items": "array"})
 def list_pull_requests(*, repo, state="open", limit=30, **params):
     """List pull requests for a repository
 
@@ -179,7 +179,7 @@ def list_pull_requests(*, repo, state="open", limit=30, **params):
             limit: Maximum number of pull requests to return
         """
     limit = str(limit)
-    output = run_gh(
+    output = _run_gh(
         [
             "pr",
             "list",
@@ -221,11 +221,11 @@ def create_pull_request(*, repo, title, head, body="", base=None, **params):
     ]
     if base:
         args.extend(["--base", base])
-    url = run_gh(args).strip()
+    url = _run_gh(args).strip()
     return {"url": url}
 
 
-def contents_endpoint(repo, path=None, ref=None):
+def _contents_endpoint(repo, path=None, ref=None):
     endpoint = f"repos/{repo}/contents"
     path_part = (path or "").strip("/")
     if path_part:
@@ -244,8 +244,8 @@ def list_documents(*, repo, path=None, ref=None, **params):
             path: Path within the repository
             ref: Branch, tag, or commit
         """
-    endpoint = contents_endpoint(repo, path, ref)
-    output = run_gh(["api", endpoint])
+    endpoint = _contents_endpoint(repo, path, ref)
+    output = _run_gh(["api", endpoint])
     data = json.loads(output)
     items = data if isinstance(data, list) else [data]
     result = []
@@ -299,12 +299,12 @@ def read_document(*, repo=None, path=None, ref=None, url=None, **params):
     if url:
         parsed = _parse_blob_or_raw_url(url)
         if not parsed:
-            fail("Could not parse GitHub blob or raw.githubusercontent.com URL")
+            _fail("Could not parse GitHub blob or raw.githubusercontent.com URL")
         repo, path, ref = parsed
     if not repo or not path:
-        fail("repo and path are required (or pass url)")
-    endpoint = contents_endpoint(repo, path, ref)
-    output = run_gh(["api", endpoint])
+        _fail("repo and path are required (or pass url)")
+    endpoint = _contents_endpoint(repo, path, ref)
+    output = _run_gh(["api", endpoint])
     data = json.loads(output)
     content = data.get("content")
     if content is not None:
@@ -324,15 +324,15 @@ def read_document(*, repo=None, path=None, ref=None, url=None, **params):
 @returns({"output": "string"})
 def status(**params):
     """Show GitHub CLI status for the current machine"""
-    output = run_gh(["status"])
+    output = _run_gh(["status"])
     return {"output": output}
 
 
-def main():
+def _main():
     if len(sys.argv) < 2:
-        fail("Missing operation")
+        _fail("Missing operation")
     operation = sys.argv[1]
-    payload = read_payload()
+    payload = _read_payload()
     params = (payload.get("params") or {})
     operations = {
         "listTasks": list_tasks,
@@ -348,9 +348,9 @@ def main():
     }
     handler = operations.get(operation)
     if not handler:
-        fail(f"Unknown operation: {operation}")
+        _fail(f"Unknown operation: {operation}")
     print(json.dumps(handler(**params)))
 
 
 if __name__ == "__main__":
-    main()
+    _main()

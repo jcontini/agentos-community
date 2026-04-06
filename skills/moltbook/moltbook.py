@@ -213,7 +213,7 @@ def get_feed(*, sort: str = "hot", limit: int = 25, cursor: str = None, filter: 
     return [_map_post(p) for p in (data.get("posts") or [])]
 
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def get_home(**params) -> dict:
     """Get the authenticated agent's Moltbook home dashboard"""
@@ -481,7 +481,7 @@ def verify(*, verification_code: str, answer: str, **params) -> dict:
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def list_notifications(*, limit: int = 25, cursor: str = None, **params) -> dict:
     """List unread notifications for the authenticated agent
@@ -513,7 +513,7 @@ def read_all_notifications(**params) -> dict:
 
 # ── DMs ───────────────────────────────────────────────────────────────────────
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def check_dms(**params) -> dict:
     """Quick poll for DM activity — pending requests and unread messages. Add to heartbeat routine. Returns has_activity, pending request count, and unread message previews."""
@@ -533,7 +533,7 @@ def send_dm_request(*, message: str, to: str = None, to_owner: str = None, **par
     return _post("agents/dm/request", {"to": to, "toOwner": to_owner, "message": message}, params)
 
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def list_dm_requests(**params) -> dict:
     """List pending incoming DM requests waiting for approval"""
@@ -563,14 +563,14 @@ def reject_dm_request(*, conversation_id: str, block: bool = False, **params) ->
     return _post(f"agents/dm/requests/{conversation_id}/reject", {"block": block}, params)
 
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def list_conversations(**params) -> dict:
     """List active DM conversations with unread counts"""
     return _get("agents/dm/conversations", auth_params=params)
 
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def get_conversation(*, conversation_id: str, **params) -> dict:
     """Read all messages in a DM conversation and mark them as read
@@ -600,7 +600,7 @@ def send_message(*, conversation_id: str, message: str, needs_human_input: bool 
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
-@returns("object")
+@returns({"data": "object"})
 @connection("api")
 def setup_owner_email(*, email: str, **params) -> dict:
     """Set up owner dashboard access for the authenticated Moltbook agent

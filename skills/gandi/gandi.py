@@ -95,7 +95,7 @@ def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
     return _map_dns_record(resp["json"], domain)
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: int = 3600, **params) -> dict:
     """Create or replace a DNS record
@@ -115,7 +115,7 @@ def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: i
     return resp["json"] or {"success": True}
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
     """Delete a DNS record

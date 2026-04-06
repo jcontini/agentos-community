@@ -235,7 +235,7 @@ def op_search_messages(*, query, limit=200, **params):
 # ==============================================================================
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 def op_send_message(*, to, text, service="iMessage", **params):
     """Send an iMessage or SMS to a phone number or email."""
     result = shell.run("imsg", ["send", "--to", to, "--text", text, "--service", service, "--json"], timeout=15)

@@ -16,7 +16,8 @@ import sys
 import time
 from pathlib import Path
 
-from agentos import http, shell, connection, provides, returns, timeout, llm
+from agentos import http, shell, connection, provides, returns, timeout
+from agentos.tools import llm
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_BINARY = "/opt/homebrew/bin/ollama"
@@ -171,6 +172,16 @@ def _normalize_tool_calls(raw: list) -> list:
 @connection(["api", "cli"])
 @timeout(300)
 def op_chat(
+    model: str,
+    messages: list,
+    tools: list = None,
+    system: str = None,
+    max_tokens: int = 4096,
+    temperature: float = 0,
+    thinking: bool = False,
+    connection: dict | None = None,
+    **kwargs,
+) -> dict:
     """Send a chat message to a local Ollama model. Supports tool calling, system prompts, and extended thinking mode. Uses the REST API by default; falls back to the CLI for single-turn prompts if the API connection is chosen as cli. Auto-starts the Ollama server if it is not running.
 
         Args:
@@ -182,16 +193,6 @@ def op_chat(
             temperature: Sampling temperature (0 = deterministic, good for agents)
             thinking: Enable extended thinking / reasoning mode (qwen3, glm-4.7, etc.)
         """
-    model: str,
-    messages: list,
-    tools: list = None,
-    system: str = None,
-    max_tokens: int = 4096,
-    temperature: float = 0,
-    thinking: bool = False,
-    connection: dict | None = None,
-    **kwargs,
-) -> dict:
     conn_name = _connection_name(connection)
 
     if conn_name == "cli":
@@ -240,15 +241,15 @@ def op_chat(
     return {
         "content": msg.get("content") or None,
         "thinking": msg.get("thinking") or None,
-        "tool_calls": _normalize_tool_calls(raw_tools),
-        "stop_reason": (
+        "toolCalls": _normalize_tool_calls(raw_tools),
+        "stopReason": (
             "tool_use" if done_reason == "tool_calls"
             else "max_tokens" if done_reason == "length"
             else "end_turn"
         ),
         "usage": {
-            "input_tokens": resp.get("prompt_eval_count", 0),
-            "output_tokens": resp.get("eval_count", 0),
+            "inputTokens": resp.get("prompt_eval_count", 0),
+            "outputTokens": resp.get("eval_count", 0),
         },
     }
 
@@ -289,6 +290,14 @@ def _chat_via_cli(
 @connection("api")
 @timeout(300)
 def op_generate(
+    model: str,
+    prompt: str,
+    system: str = None,
+    max_tokens: int = 4096,
+    temperature: float = 0,
+    connection: dict | None = None,
+    **kwargs,
+) -> dict:
     """One-shot text generation — no chat history, faster for simple single-turn prompts. Returns the raw response text and token counts.
 
         Args:
@@ -298,14 +307,6 @@ def op_generate(
             max_tokens:
             temperature:
         """
-    model: str,
-    prompt: str,
-    system: str = None,
-    max_tokens: int = 4096,
-    temperature: float = 0,
-    connection: dict | None = None,
-    **kwargs,
-) -> dict:
     _ensure_api_running(connection)
     base = _base_url(connection)
 
@@ -325,15 +326,15 @@ def op_generate(
     return {
         "response": resp.get("response", ""),
         "usage": {
-            "input_tokens": resp.get("prompt_eval_count", 0),
-            "output_tokens": resp.get("eval_count", 0),
+            "inputTokens": resp.get("prompt_eval_count", 0),
+            "outputTokens": resp.get("eval_count", 0),
         },
     }
 
 
 # ── List models ───────────────────────────────────────────────────────────────
 
-def op_list_models(connection: dict | None = None) -> list:
+def _op_list_models(connection: dict | None = None, **params) -> list:
     conn_name = _connection_name(connection)
     if conn_name == "cli":
         return _list_models_via_cli(connection)
@@ -493,7 +494,7 @@ def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
 @timeout(15)
 def list_models(connection: dict | None = None, **params) -> list[dict]:
     """List downloaded models, shape-native (id=name, published, size, details)."""
-    raw = op_list_models(connection)
+    raw = _op_list_models(connection)
     return [
         {
             "id": m.get("name"),
@@ -562,7 +563,7 @@ if __name__ == "__main__":
         if cmd == "status":
             result = op_status()
         elif cmd == "list":
-            result = op_list_models()
+            result = _op_list_models()
         elif cmd == "pull":
             if len(sys.argv) < 3:
                 raise ValueError("Usage: ollama.py pull <model>")

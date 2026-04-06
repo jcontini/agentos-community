@@ -417,7 +417,7 @@ def update_contact(*, id, first_name=None, last_name=None, organization=None,
     return _map_person(resp["json"])
 
 
-@returns("void")
+@returns({"ok": "boolean"})
 @connection("api")
 @timeout(15)
 def delete_contact(*, id, **params):

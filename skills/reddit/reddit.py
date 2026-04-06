@@ -74,7 +74,7 @@ def _get_json(path: str, params: dict | None = None) -> dict:
 
 @returns("post[]")
 @provides(web_search)
-def search_posts(query: str, limit: int = 25, sort: str = "relevance") -> list[dict]:
+def search_posts(query: str, limit: int = 25, sort: str = "relevance", **params) -> list[dict]:
     """Search posts across Reddit
 
         Args:
@@ -87,7 +87,7 @@ def search_posts(query: str, limit: int = 25, sort: str = "relevance") -> list[d
 
 
 @returns("post[]")
-def list_posts(subreddit: str, sort: str = "hot", limit: int = 25) -> list[dict]:
+def list_posts(subreddit: str, sort: str = "hot", limit: int = 25, **params) -> list[dict]:
     """List posts from a subreddit
 
         Args:
@@ -101,7 +101,7 @@ def list_posts(subreddit: str, sort: str = "hot", limit: int = 25) -> list[dict]
 
 @returns("post")
 @provides(web_read, urls=["reddit.com/*/comments/*", "reddit.com/r/*/comments/*"])
-def get_post(id: str = None, url: str = None, comment_limit: int = None) -> dict:
+def get_post(id: str = None, url: str = None, comment_limit: int = None, **params) -> dict:
     """Get a Reddit post with comments. Pass either an id or a full Reddit URL.
 
         Args:
@@ -161,7 +161,7 @@ def get_post(id: str = None, url: str = None, comment_limit: int = None) -> dict
 
 
 @returns("post[]")
-def comments_post(id: str, comment_limit: int = None) -> list[dict]:
+def comments_post(id: str, comment_limit: int = None, **params) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
     params = {}
     if comment_limit:
@@ -203,7 +203,7 @@ def comments_post(id: str, comment_limit: int = None) -> list[dict]:
 
 
 @returns("community")
-def get_community(subreddit: str) -> dict:
+def get_community(subreddit: str, **params) -> dict:
     """Get subreddit metadata
 
         Args:
@@ -214,7 +214,7 @@ def get_community(subreddit: str) -> dict:
 
 
 @returns("community[]")
-def search_communities(query: str, limit: int = 25) -> list[dict]:
+def search_communities(query: str, limit: int = 25, **params) -> list[dict]:
     """Search for subreddits
 
         Args:
