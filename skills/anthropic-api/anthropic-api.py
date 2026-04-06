@@ -3,6 +3,12 @@ from agentos import http, connection, provides, returns, timeout, llm
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
 
+MODEL_ALIASES = {
+    "opus": "claude-opus-4-6",
+    "sonnet": "claude-sonnet-4-5",
+    "haiku": "claude-haiku-4-5-20251001",
+}
+
 
 def _headers(params):
     key = params.get("auth", {}).get("key", "")
@@ -63,6 +69,7 @@ def chat(*, model: str, messages: list, tools: list = None,
         """
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
+    model = MODEL_ALIASES.get(model, model)
     body = {
         "model": model,
         "messages": [_to_anthropic_msg(m) for m in messages],

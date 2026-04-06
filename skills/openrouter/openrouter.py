@@ -7,6 +7,15 @@ from agentos import http, connection, provides, returns, llm
 
 API_BASE = "https://openrouter.ai/api/v1"
 
+MODEL_ALIASES = {
+    "opus": "anthropic/claude-opus-4-6",
+    "sonnet": "anthropic/claude-sonnet-4-5",
+    "haiku": "anthropic/claude-haiku-4-5-20251001",
+    "gpt-4o": "openai/gpt-4o",
+    "gpt-4o-mini": "openai/gpt-4o-mini",
+    "llama3.3": "meta-llama/llama-3.3-70b-instruct",
+}
+
 
 def _auth_header(params: dict) -> dict:
     key = params.get("auth", {}).get("key", "")
@@ -73,6 +82,7 @@ def _to_openai_msg(msg: dict) -> dict:
 @connection("api")
 def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:
     """Send a chat completion request through OpenRouter."""
+    model = MODEL_ALIASES.get(model, model)
     openai_messages = []
     if system:
         openai_messages.append({"role": "system", "content": system})
