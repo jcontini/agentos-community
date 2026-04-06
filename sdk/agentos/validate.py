@@ -65,7 +65,7 @@ _SNAKE_RE = re.compile(r"^[a-z]+_[a-z]")
 # ---------------------------------------------------------------------------
 
 def _find_shapes_dir() -> Path | None:
-    """Find the shapes directory."""
+    """Find the shapes directory. Checks: env var, CWD ancestors, bundled package data."""
     # Check env var first
     env = os.environ.get("AGENT_SHAPES_DIR")
     if env:
@@ -79,6 +79,12 @@ def _find_shapes_dir() -> Path | None:
         candidate = parent / "shapes"
         if candidate.is_dir() and (candidate / "event.yaml").exists():
             return candidate
+
+    # Bundled shapes inside the package
+    bundled = Path(__file__).parent / "shapes"
+    if bundled.is_dir():
+        return bundled
+
     return None
 
 

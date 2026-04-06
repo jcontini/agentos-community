@@ -8,7 +8,7 @@ import yaml
 
 
 def _find_shapes_dir() -> Path | None:
-    """Find the shapes directory."""
+    """Find the shapes directory. Checks: env var, CWD ancestors, bundled package data."""
     env = os.environ.get("AGENT_SHAPES_DIR")
     if env:
         p = Path(env)
@@ -19,6 +19,10 @@ def _find_shapes_dir() -> Path | None:
         candidate = parent / "shapes"
         if candidate.is_dir() and (candidate / "event.yaml").exists():
             return candidate
+    # Bundled shapes inside the package
+    bundled = Path(__file__).parent / "shapes"
+    if bundled.is_dir():
+        return bundled
     return None
 
 
@@ -47,7 +51,7 @@ def run_shapes(name: str | None):
     shapes_dir = _find_shapes_dir()
     if not shapes_dir:
         print("  Error: shapes directory not found", file=sys.stderr)
-        print("  Set AGENT_SHAPES_DIR or run from inside the agentos-community repo", file=sys.stderr)
+        print("  Reinstall agent-sdk or set AGENT_SHAPES_DIR", file=sys.stderr)
         sys.exit(1)
 
     shapes = _load_all_shapes(shapes_dir)

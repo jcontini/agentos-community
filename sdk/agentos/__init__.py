@@ -27,15 +27,17 @@ from agentos import sql
 from agentos import crypto
 from agentos import oauth
 from agentos import shell
+from agentos import llm
 
 # --- Operation decorators (read by engine via AST, no-ops at runtime) ---
 from agentos.decorators import returns, provides, connection, timeout
 
 # --- Standard tool constants (for @provides decorator) ---
+# NOTE: `llm` tool constant is NOT imported here — `agentos.llm` is the SDK module.
+# Use `from agentos.tools import llm` in @provides decorators.
 from agentos.tools import (
     web_search, web_read, email_lookup, flight_search,
     geocoding, map_tiles, file_list, file_read, file_info,
-    llm,
     cookie_auth, oauth_auth,
 )
 
@@ -48,13 +50,12 @@ __all__ = [
     # Core modules
     "http", "molt", "shape",
     # Engine-dispatched modules
-    "sql", "crypto", "oauth", "shell",
+    "sql", "crypto", "oauth", "shell", "llm",
     # Operation decorators
     "returns", "provides", "connection", "timeout",
     # Standard tools
     "web_search", "web_read", "email_lookup", "flight_search",
     "geocoding", "map_tiles", "file_list", "file_read", "file_info",
-    "llm",
     "cookie_auth", "oauth_auth",
     # HTTP helpers
     "get_cookies", "require_cookies", "parse_cookie",
