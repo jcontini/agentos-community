@@ -15,13 +15,6 @@ accounts:
   list_via: list_accounts
   id_field: name
 
-provides:
-- auth: cookies
-  via: cookie_get
-  account_param: domain
-  creation_timestamps: true
-  description: Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption
-    pipeline.
 ---
 
 # Brave Browser

@@ -18,10 +18,6 @@ connections:
     help_url: https://www.moltbook.com/skill.md
     optional: true
 
-operations:
-  get_post:
-    web_url: .params.url
-
 test:
   list_posts:
     params:

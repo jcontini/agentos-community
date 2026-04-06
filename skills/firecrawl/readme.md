@@ -17,9 +17,6 @@ connections:
     label: API Key
     help_url: https://www.firecrawl.dev/app/api-keys
 
-operations:
-  read_webpage:
-    web_url: .params.url
 ---
 
 # Firecrawl

@@ -17,19 +17,6 @@ connections:
     label: API Token
     help_url: https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB
 
-operations:
-  list_tasks:
-    web_url: https://app.todoist.com/app/today
-  list_all_tasks:
-    web_url: https://app.todoist.com/app/upcoming
-  filter_task:
-    web_url: https://app.todoist.com/app/today
-  get_task:
-    web_url: if (.params.url // "") != "" then .params.url else "https://app.todoist.com/app/task/" + .params.id end
-  list_projects:
-    web_url: https://app.todoist.com/app/projects/active
-  list_tags:
-    web_url: https://app.todoist.com/app/labels
 ---
 
 # Todoist

@@ -13,12 +13,6 @@ connections:
     sqlite:
       macos: ~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite
 
-provides:
-- auth: cookies
-  via: cookie_get
-  account_param: domain
-  creation_timestamps: true
-  description: Extract plaintext Firefox cookies from local profiles for cookie-based connections.
 ---
 
 # Mozilla Firefox

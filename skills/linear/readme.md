@@ -17,11 +17,6 @@ connections:
     label: API Key
     help_url: https://linear.app/settings/api
 
-operations:
-  list_tasks:
-    web_url: '"https://linear.app/" + .params.workspace_slug'
-  list_projects:
-    web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
 ---
 
 # Linear

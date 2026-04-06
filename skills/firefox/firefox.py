@@ -6,7 +6,7 @@ Two databases: places.sqlite (history + bookmarks) and cookies.sqlite (cookies).
 All public functions accept **kw for forward-compatibility with engine context.
 """
 
-from agentos import sql, connection, returns
+from agentos import sql, connection, returns, provides, cookie_auth
 
 PLACES_DB = "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
 COOKIES_DB = "~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"
@@ -118,6 +118,7 @@ def op_list_cookies(*, domain, limit=200, connection=None, **kw):
 
 
 @returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
+@provides(cookie_auth, account_param="domain", creation_timestamps=True, description="Extract plaintext Firefox cookies from local profiles")
 def op_cookie_get(*, domain, names=None, limit=200, connection=None, **kw):
     """Extract cookies for a domain — provider interface for cookie matchmaking.
 

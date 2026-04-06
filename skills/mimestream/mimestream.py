@@ -7,7 +7,7 @@ All public functions use keyword-only args and accept **params for
 forward-compatibility with engine-injected context.
 """
 
-from agentos import oauth, sql, returns
+from agentos import oauth, sql, returns, provides, oauth_auth
 from agentos.macos import keychain, plist
 
 DB_PATH = "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
@@ -341,6 +341,7 @@ def list_accounts(**params):
 
 
 @returns({"accessToken": "string", "refreshToken": "string", "clientId": "string", "tokenUrl": "string"})
+@provides(oauth_auth, service="google", account_param="account")
 def credential_get(*, account, **params):
     """Get a live Google OAuth access token from Mimestream's keychain.
 

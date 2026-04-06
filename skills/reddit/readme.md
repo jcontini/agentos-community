@@ -18,20 +18,6 @@ sources:
   image_headers:
     Referer: https://www.reddit.com/
 
-operations:
-  search_posts:
-    web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
-  list_posts:
-    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
-  get_post:
-    web_url: if (.params.url // "") != "" then .params.url else "https://www.reddit.com/comments/" + .params.id end
-  comments_post:
-    web_url: '"https://www.reddit.com/comments/" + .params.id'
-  get_community:
-    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
-  search_communities:
-    web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
-
 test:
   list_posts:
     params:

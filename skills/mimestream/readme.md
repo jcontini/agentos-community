@@ -14,12 +14,6 @@ accounts:
   list_via: list_accounts
   id_field: email
 
-provides:
-- auth: oauth
-  service: google
-  via: credential_get
-  account_param: account
-
 product:
   name: Mimestream
   website: https://mimestream.com

@@ -14,33 +14,6 @@ sources:
   - https://www.youtube.com
   - https://www.youtube-nocookie.com
 
-operations:
-  search_videos:
-    web_url: https://www.youtube.com/results?search_query=${PARAM_QUERY}
-  search_recent_video:
-    web_url: https://www.youtube.com/results?search_query=${PARAM_QUERY}&sp=CAI
-  list_videos:
-    handles_urls:
-    - youtube.com/@*
-    - youtube.com/channel/*
-    - youtube.com/c/*
-    - youtube.com/playlist*
-    web_url: .params.url
-  get_video:
-    handles_urls:
-    - youtube.com/*
-    - youtu.be/*
-    - music.youtube.com/*
-    web_url: .params.url
-  transcript_video:
-    web_url: .params.url
-  get_channel:
-    handles_urls:
-    - youtube.com/@*
-    - youtube.com/channel/*
-    - youtube.com/c/*
-  list_posts:
-    web_url: .params.url
 ---
 
 # YouTube

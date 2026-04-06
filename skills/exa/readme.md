@@ -39,9 +39,6 @@ product:
 operations:
   search:
     wraps_as: search
-    web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
-  read_webpage:
-    web_url: .params.url
 
 test:
   check_session:

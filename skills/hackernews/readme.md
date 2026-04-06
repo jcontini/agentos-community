@@ -7,17 +7,6 @@ website: "https://news.ycombinator.com"
 privacy_url: "https://www.ycombinator.com/legal#privacy"
 terms_url: "https://www.ycombinator.com/legal"
 
-operations:
-  list_posts:
-    web_url: '"https://news.ycombinator.com/" + (if .params.feed == "front" then "" else .params.feed end)'
-  search_posts:
-    web_url: '"https://hn.algolia.com/?query=" + (.params.query | @uri)'
-  get_post:
-    web_url: '"https://news.ycombinator.com/item?id=" + (if (.params.url // "") != "" then (.params.url | capture("[?&]id=(?<pid>[0-9]+)")
-      | .pid) else .params.id end)'
-  comments_post:
-    web_url: '"https://news.ycombinator.com/item?id=" + .params.id'
-
 test:
   list_posts:
     params:

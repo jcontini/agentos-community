@@ -33,3 +33,4 @@ file_info = "file_info"
 
 # Auth provision (browser cookie providers, OAuth providers)
 cookie_auth = "cookie_auth"
+oauth_auth = "oauth_auth"
