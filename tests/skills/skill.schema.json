@@ -84,11 +84,11 @@
     "agent": {
       "type": "object",
       "description": "Agent configuration — makes this skill an AI agent skill that runs an LLM loop instead of a single API call.",
-      "required": ["intelligence", "system_prompt"],
+      "required": ["inference", "system_prompt"],
       "properties": {
-        "intelligence": {
+        "inference": {
           "type": "string",
-          "description": "Intelligence reference: 'skill/model' (e.g., 'anthropic/claude-3-5-haiku-20241022')"
+          "description": "Inference reference: 'skill/model' (e.g., 'anthropic/claude-3-5-haiku-20241022')"
         },
         "system_prompt": {
           "type": "string",
