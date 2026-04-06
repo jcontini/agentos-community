@@ -35,6 +35,7 @@ from agentos.decorators import returns, provides, connection, timeout
 from agentos.tools import (
     web_search, web_read, email_lookup, flight_search,
     geocoding, map_tiles, file_list, file_read, file_info,
+    llm,
     cookie_auth, oauth_auth,
 )
 
@@ -53,6 +54,7 @@ __all__ = [
     # Standard tools
     "web_search", "web_read", "email_lookup", "flight_search",
     "geocoding", "map_tiles", "file_list", "file_read", "file_info",
+    "llm",
     "cookie_auth", "oauth_auth",
     # HTTP helpers
     "get_cookies", "require_cookies", "parse_cookie",

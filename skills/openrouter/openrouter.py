@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from agentos import http, connection, returns
+from agentos import http, connection, provides, returns, llm
 
 API_BASE = "https://openrouter.ai/api/v1"
 
@@ -68,6 +68,7 @@ def _to_openai_msg(msg: dict) -> dict:
     return {"role": msg.get("role"), "content": msg.get("content")}
 
 
+@provides(llm, models=["opus", "sonnet", "haiku", "gpt-4o", "gpt-4o-mini", "llama3.3", "claude-opus-4-6", "claude-sonnet-4-5"])
 @returns({"content": "{'type': 'string', 'description': 'Text response from the model (null if tool calls only)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage (input_tokens, output_tokens)'}"})
 @connection("api")
 def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:

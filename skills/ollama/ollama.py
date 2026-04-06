@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-from agentos import http, shell, connection, returns, timeout
+from agentos import http, shell, connection, provides, returns, timeout, llm
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_BINARY = "/opt/homebrew/bin/ollama"
@@ -166,6 +166,7 @@ def _normalize_tool_calls(raw: list) -> list:
     return out
 
 
+@provides(llm)
 @returns({"content": "{'type': 'string', 'description': 'Text response (null if tool calls only)'}", "thinking": "{'type': 'string', 'description': 'Reasoning trace (only for thinking models)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token counts: input_tokens, output_tokens'}"})
 @connection(["api", "cli"])
 @timeout(300)

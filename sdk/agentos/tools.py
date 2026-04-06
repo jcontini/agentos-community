@@ -31,6 +31,9 @@ file_list = "file_list"
 file_read = "file_read"
 file_info = "file_info"
 
+# LLM inference
+llm = "llm"
+
 # Auth provision (browser cookie providers, OAuth providers)
 cookie_auth = "cookie_auth"
 oauth_auth = "oauth_auth"

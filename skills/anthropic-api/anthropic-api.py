@@ -1,4 +1,4 @@
-from agentos import http, connection, returns, timeout
+from agentos import http, connection, provides, returns, timeout, llm
 
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -46,6 +46,7 @@ def list_models(**params) -> list:
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
+@provides(llm, models=["opus", "sonnet", "haiku", "claude-opus-4-6", "claude-sonnet-4-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"])
 @returns({"content": "{'type': 'string', 'description': 'Text response from Claude (null if only tool calls)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage statistics'}"})
 @connection("api")
 @timeout(120)
