@@ -46,7 +46,7 @@ def list_models(**params) -> list:
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
-@returns({"content": "{'type': 'string', 'description': 'Text response from Claude (null if only tool calls)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage statistics'}"})
+@returns({"content": "{'type': 'string', 'description': 'Text response from Claude (null if only tool calls)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage statistics'}"})
 @connection("api")
 @timeout(120)
 def chat(*, model: str, messages: list, tools: list = None,
@@ -78,8 +78,8 @@ def chat(*, model: str, messages: list, tools: list = None,
     blocks = data.get("content", [])
     return {
         "content": next((b["text"] for b in blocks if b.get("type") == "text"), None),
-        "toolCalls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
+        "tool_calls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
                        for b in blocks if b.get("type") == "tool_use"],
-        "stopReason": data.get("stop_reason"),
+        "stop_reason": data.get("stop_reason"),
         "usage": data.get("usage"),
     }

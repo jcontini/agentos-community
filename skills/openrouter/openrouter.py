@@ -68,7 +68,7 @@ def _to_openai_msg(msg: dict) -> dict:
     return {"role": msg.get("role"), "content": msg.get("content")}
 
 
-@returns({"content": "{'type': 'string', 'description': 'Text response from the model (null if tool calls only)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage (input_tokens, output_tokens)'}"})
+@returns({"content": "{'type': 'string', 'description': 'Text response from the model (null if tool calls only)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage (input_tokens, output_tokens)'}"})
 @connection("api")
 def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:
     """Send a chat completion request through OpenRouter."""
@@ -126,10 +126,10 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
     usage = data.get("usage") or {}
     return {
         "content": message.get("content"),
-        "toolCalls": tool_calls,
-        "stopReason": stop_reason,
+        "tool_calls": tool_calls,
+        "stop_reason": stop_reason,
         "usage": {
-            "inputTokens": usage.get("prompt_tokens", 0),
-            "outputTokens": usage.get("completion_tokens", 0),
+            "input_tokens": usage.get("prompt_tokens", 0),
+            "output_tokens": usage.get("completion_tokens", 0),
         },
     }

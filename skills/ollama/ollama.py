@@ -166,7 +166,7 @@ def _normalize_tool_calls(raw: list) -> list:
     return out
 
 
-@returns({"content": "{'type': 'string', 'description': 'Text response (null if tool calls only)'}", "thinking": "{'type': 'string', 'description': 'Reasoning trace (only for thinking models)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token counts: input_tokens, output_tokens'}"})
+@returns({"content": "{'type': 'string', 'description': 'Text response (null if tool calls only)'}", "thinking": "{'type': 'string', 'description': 'Reasoning trace (only for thinking models)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token counts: input_tokens, output_tokens'}"})
 @connection(["api", "cli"])
 @timeout(300)
 def op_chat(
@@ -239,15 +239,15 @@ def op_chat(
     return {
         "content": msg.get("content") or None,
         "thinking": msg.get("thinking") or None,
-        "toolCalls": _normalize_tool_calls(raw_tools),
-        "stopReason": (
+        "tool_calls": _normalize_tool_calls(raw_tools),
+        "stop_reason": (
             "tool_use" if done_reason == "tool_calls"
             else "max_tokens" if done_reason == "length"
             else "end_turn"
         ),
         "usage": {
-            "inputTokens": resp.get("prompt_eval_count", 0),
-            "outputTokens": resp.get("eval_count", 0),
+            "input_tokens": resp.get("prompt_eval_count", 0),
+            "output_tokens": resp.get("eval_count", 0),
         },
     }
 
@@ -276,9 +276,9 @@ def _chat_via_cli(
     return {
         "content": result["stdout"].strip(),
         "thinking": None,
-        "toolCalls": [],
-        "stopReason": "end_turn",
-        "usage": {"inputTokens": 0, "outputTokens": 0},
+        "tool_calls": [],
+        "stop_reason": "end_turn",
+        "usage": {"input_tokens": 0, "output_tokens": 0},
     }
 
 
@@ -324,8 +324,8 @@ def op_generate(
     return {
         "response": resp.get("response", ""),
         "usage": {
-            "inputTokens": resp.get("prompt_eval_count", 0),
-            "outputTokens": resp.get("eval_count", 0),
+            "input_tokens": resp.get("prompt_eval_count", 0),
+            "output_tokens": resp.get("eval_count", 0),
         },
     }
 
