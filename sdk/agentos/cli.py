@@ -15,6 +15,7 @@ def main():
     p_val = sub.add_parser("validate", help="Validate a skill directory")
     p_val.add_argument("dir", nargs="?", default=".", help="Skill directory to validate (default: current dir)")
     p_val.add_argument("--all", action="store_true", help="Validate all skills in parent directory")
+    p_val.add_argument("--dry-run", action="store_true", help="Execute test operations (no engine needed)")
 
     # new-skill
     p_new = sub.add_parser("new-skill", help="Scaffold a new skill")
@@ -32,7 +33,7 @@ def main():
         print_guide()
     elif args.command == "validate":
         from agentos.validate import run_validate
-        run_validate(args.dir, validate_all=args.all)
+        run_validate(args.dir, validate_all=args.all, dry_run=args.dry_run)
     elif args.command == "new-skill":
         from agentos.scaffold import run_new_skill
         run_new_skill(args.name, args.shape)

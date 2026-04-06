@@ -383,7 +383,7 @@ def _validate_skill(skill_dir: Path, shapes: dict) -> tuple[list[str], list[str]
     return errors, warnings, info
 
 
-def run_validate(target: str, validate_all: bool = False):
+def run_validate(target: str, validate_all: bool = False, dry_run: bool = False):
     """Main entry point for validation."""
     # Load shapes
     shapes_dir = _find_shapes_dir()
@@ -405,10 +405,10 @@ def run_validate(target: str, validate_all: bool = False):
         _validate_all(skills_root, shapes)
     else:
         skill_dir = Path(target).resolve()
-        _validate_one(skill_dir, shapes)
+        _validate_one(skill_dir, shapes, dry_run=dry_run)
 
 
-def _validate_one(skill_dir: Path, shapes: dict):
+def _validate_one(skill_dir: Path, shapes: dict, dry_run: bool = False):
     """Validate and print results for one skill."""
     name = skill_dir.name
     errors, warnings, info = _validate_skill(skill_dir, shapes)
@@ -428,8 +428,101 @@ def _validate_one(skill_dir: Path, shapes: dict):
     else:
         print(f"\n  {len(errors)} error(s), {len(warnings)} warning(s)")
 
+    # Dry-run: execute test operations
+    if dry_run and not errors:
+        _dry_run_skill(skill_dir, shapes)
+
     if errors:
         sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# Dry-run execution
+# ---------------------------------------------------------------------------
+
+def _dry_run_skill(skill_dir: Path, shapes: dict):
+    """Execute skill operations with test params (no engine needed)."""
+    import importlib.util
+
+    readme = skill_dir / "readme.md"
+    fm_data, _ = _parse_frontmatter(readme)
+    test_block = fm_data.get("test", {}) if fm_data else {}
+    if not test_block:
+        print(f"  \033[90m  (no test block — skipping dry-run)\033[0m")
+        return
+
+    # Patch the agentos bridge to raise on dispatch (no engine)
+    try:
+        import agentos._bridge as bridge
+        original = bridge._dispatch
+
+        def _mock_dispatch(op, params):
+            raise RuntimeError(
+                f"Engine dispatch '{op}' called — dry-run cannot execute "
+                f"operations that need the engine (HTTP, SQL, etc.)"
+            )
+        bridge._dispatch = _mock_dispatch
+    except ImportError:
+        print(f"  \033[33m⚠ agentos package not installed — cannot dry-run\033[0m")
+        return
+
+    try:
+        # Import each Python module in the skill
+        modules = {}
+        for py_file in sorted(skill_dir.glob("*.py")):
+            spec = importlib.util.spec_from_file_location(
+                f"_dryrun_{skill_dir.name}_{py_file.stem}", py_file)
+            try:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                modules[py_file.stem] = mod
+            except Exception as e:
+                print(f"  \033[31m✗ dry-run import {py_file.name}: {e}\033[0m")
+                continue
+
+        # Find and call test operations
+        for op_name, test_config in test_block.items():
+            if isinstance(test_config, dict) and test_config.get("skip"):
+                print(f"  \033[90m  ⏭ {op_name} — skipped\033[0m")
+                continue
+
+            # Find the function
+            func = None
+            for mod in modules.values():
+                func = getattr(mod, op_name, None)
+                if func and callable(func):
+                    break
+
+            if not func:
+                print(f"  \033[33m⚠ {op_name} — function not found\033[0m")
+                continue
+
+            params = {}
+            if isinstance(test_config, dict):
+                params = test_config.get("params", {})
+
+            print(f"  \033[90m  ▶ {op_name}({params or ''})...\033[0m", end="", flush=True)
+            try:
+                result = func(**params)
+                if isinstance(result, list):
+                    print(f"\r  \033[32m  ✓ {op_name} — returned {len(result)} record(s)\033[0m")
+                elif isinstance(result, dict):
+                    print(f"\r  \033[32m  ✓ {op_name} — returned dict ({len(result)} keys)\033[0m")
+                else:
+                    print(f"\r  \033[32m  ✓ {op_name} — returned {type(result).__name__}\033[0m")
+            except RuntimeError as e:
+                if "Engine dispatch" in str(e):
+                    print(f"\r  \033[33m  ⚠ {op_name} — requires engine (cookie/API auth)\033[0m")
+                else:
+                    print(f"\r  \033[31m  ✗ {op_name} — {e}\033[0m")
+            except Exception as e:
+                print(f"\r  \033[31m  ✗ {op_name} — {type(e).__name__}: {e}\033[0m")
+    finally:
+        # Restore original dispatch
+        try:
+            bridge._dispatch = original
+        except Exception:
+            pass
 
 
 def _validate_all(skills_root: Path, shapes: dict):
