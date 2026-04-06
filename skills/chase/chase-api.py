@@ -37,7 +37,7 @@ import json
 import sys
 import urllib.parse
 
-from agentos import http, require_cookies
+from agentos import http, connection, returns, timeout, require_cookies
 
 BASE = "https://secure.chase.com"
 
@@ -59,6 +59,9 @@ def _client(cookie_header: str):
 
 
 
+@returns("account")
+@connection("web")
+@timeout(20)
 def check_session(**params) -> dict:
     """Verify Chase session and identify the account holder."""
     cookie_header = (params.get("auth") or {}).get("cookies", "")
@@ -88,7 +91,10 @@ def check_session(**params) -> dict:
     return {"authenticated": False, "error": "no account tiles"}
 
 
+@returns("account[]")
+@timeout(20)
 def get_accounts(**params) -> list | dict:
+    """List all Chase accounts with current balances. Returns checking, savings, and credit card accounts. Balance = current balance. Available = available to spend/credit available."""
     cookie_header = require_cookies(params, "list_accounts")
 
     with _client(cookie_header) as client:
@@ -149,7 +155,15 @@ def _normalize_account(t: dict) -> dict:
     return result
 
 
+@returns("transaction[]")
+@timeout(20)
 def get_transactions(*, account_id, limit=30, **params) -> list | dict:
+    """List recent transactions for a Chase checking or savings account (DDA accounts only). Returns transactions with date, description, signed amount (negative=debit), running balance, and category. Credit card transactions require a different endpoint (not yet implemented).
+
+        Args:
+            account_id: The accountId from account.list (e.g. 123456789)
+            limit: Number of transactions to return (default: 30, max: 100)
+        """
     cookie_header = require_cookies(params, "list_transactions")
     limit = int(limit)
 

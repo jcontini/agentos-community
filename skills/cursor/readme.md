@@ -1,3 +1,11 @@
+---
+id: cursor
+name: Cursor
+description: AI-first code editor with built-in MCP support
+color: "#3B82F6"
+website: "https://cursor.com"
+---
+
 # Cursor
 
 AI-first code editor with built-in MCP support.

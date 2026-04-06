@@ -22,7 +22,7 @@ import json
 import os
 import sys
 
-from agentos import http
+from agentos import http, connection, returns, timeout
 
 BASE_URL = "https://here.now/api/v1"
 
@@ -43,21 +43,39 @@ def _map_website(w: dict) -> dict:
     }
 
 
+@returns("website[]")
+@connection("api")
 def list_websites(**params) -> list[dict]:
+    """List all your published sites (requires authentication)"""
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     resp = http.get(f"{BASE_URL}/publishes", **http.headers(accept="json", extra=headers))
     return [_map_website(w) for w in (resp["json"] or {}).get("publishes", [])]
 
 
+@returns("void")
+@connection("api")
 def delete_website(*, slug: str, **params) -> dict:
+    """Delete a published site (requires authentication)
+
+        Args:
+            slug: The site slug to delete
+        """
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     http.delete(f"{BASE_URL}/publish/{slug}", **http.headers(accept="json", extra=headers))
     return {"success": True, "id": slug}
 
 
+@returns({"success": "boolean", "slug": "string"})
+@connection("api")
 def claim_website(*, slug: str, claim_token: str, **params) -> dict:
+    """Claim an anonymous publish to make it permanent. Requires authentication. The claim_token is in entity.data.claim_token — returned once at publish time, never again.
+
+        Args:
+            slug: The site slug to claim
+            claim_token: The one-time claim token from entity.data.claim_token
+        """
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     http.post(
@@ -68,7 +86,13 @@ def claim_website(*, slug: str, claim_token: str, **params) -> dict:
     return {"success": True, "slug": slug}
 
 
+@returns({"sent": "boolean", "message": "string"})
 def op_signup(*, email: str, **params) -> dict:
+    """Send a magic link to the user's email. They click it, land on the here.now dashboard, and copy their API key. Then add it to AgentOS credentials for permanent publishes (no 24h expiry, 60/hour rate limit). After getting the key: POST /sys/accounts { "skill": "here-now", "account": "default", "api_key": "..." }
+
+        Args:
+            email: User's email address
+        """
     http.post("https://here.now/api/auth/login", json={"email": email}, **http.headers(accept="json"))
     return {
         "sent": True,
@@ -80,7 +104,16 @@ def op_signup(*, email: str, **params) -> dict:
     }
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl: int = None, **params) -> dict:
+    """Update site title, description, or TTL without redeploying files
+
+        Args:
+            title: New title
+            description: New description
+            ttl: New TTL in seconds
+        """
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     body: dict = {}
@@ -219,6 +252,8 @@ def do_publish(
     return output
 
 
+@returns("website")
+@timeout(60)
 def op_create_website(
     content,
     filename="index.html",
@@ -241,6 +276,8 @@ def op_create_website(
     )
 
 
+@returns("website")
+@timeout(60)
 def op_update_website(
     slug,
     content,

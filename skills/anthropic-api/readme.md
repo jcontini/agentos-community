@@ -1,3 +1,23 @@
+---
+id: anthropic-api
+name: Anthropic API
+description: Claude AI models via Anthropic Messages API
+color: "#000000"
+website: "https://www.anthropic.com"
+privacy_url: "https://www.anthropic.com/privacy"
+terms_url: "https://www.anthropic.com/terms-of-service"
+
+connections:
+  api:
+    base_url: https://api.anthropic.com/v1
+    auth:
+      type: api_key
+      header:
+        x-api-key: .auth.key
+    label: API Key
+    help_url: https://console.anthropic.com/settings/keys
+---
+
 # Anthropic API
 
 Claude AI models via the [Anthropic Messages API](https://docs.anthropic.com/messages).

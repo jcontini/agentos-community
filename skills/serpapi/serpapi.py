@@ -1,6 +1,6 @@
 """SerpAPI — Google Flights search via the SerpAPI proxy."""
 
-from agentos import http
+from agentos import http, connection, provides, returns, flight_search
 
 SEARCH_URL = "https://serpapi.com/search"
 
@@ -119,7 +119,31 @@ def _flight_get(query: dict, **params) -> dict:
     return resp["json"]
 
 
+@returns("offer[]")
+@provides(flight_search)
+@connection("api")
 def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, adults: int = 1, children: int = None, stops: int = None, max_price: int = None, sort_by: int = None, include_airlines: str = None, exclude_airlines: str = None, currency: str = "USD", hl: str = "en", gl: str = None, deep_search: bool = None, **params) -> list[dict]:
+    """Search Google Flights for flight offers between airports
+
+        Args:
+            departure_id: Departure airport IATA code(s), comma-separated (e.g. 'AUS' or 'CDG,ORY')
+            arrival_id: Arrival airport IATA code(s), comma-separated (e.g. 'JFK' or 'LHR,LGW')
+            outbound_date: Outbound date (YYYY-MM-DD)
+            return_date: Return date (YYYY-MM-DD). Required for round trip.
+            type: Flight type: 1=Round trip (default), 2=One way, 3=Multi-city
+            travel_class: 1=Economy (default), 2=Premium economy, 3=Business, 4=First
+            adults: Number of adult passengers
+            children: Number of children
+            stops: 0=Any (default), 1=Nonstop, 2=1 stop or fewer, 3=2 stops or fewer
+            max_price: Maximum ticket price in USD
+            sort_by: 1=Top flights (default), 2=Price, 3=Departure, 4=Arrival, 5=Duration, 6=Emissions
+            include_airlines: Airline IATA codes to include, comma-separated (e.g. 'UA,AA')
+            exclude_airlines: Airline IATA codes to exclude, comma-separated
+            currency: Currency code (ISO 4217)
+            hl: Language code
+            gl: Country code for localization (e.g. 'us', 'uk')
+            deep_search: true for browser-identical results (slower)
+        """
     q: dict = {
         "engine": "google_flights",
         "departureId": departure_id,
@@ -144,7 +168,21 @@ def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, ret
     return [_map_offer(r) for r in (data.get("other_flights") or [])]
 
 
+@returns("offer[]")
+@connection("api")
 def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
+    """Get the best/recommended flight offers (may not always be available)
+
+        Args:
+            departure_id: Departure airport IATA code(s)
+            arrival_id: Arrival airport IATA code(s)
+            outbound_date: Outbound date (YYYY-MM-DD)
+            return_date: Return date (YYYY-MM-DD)
+            type: 1=Round trip, 2=One way
+            travel_class: 1=Economy, 2=Premium economy, 3=Business, 4=First
+            currency: Currency code
+            hl: Language code
+        """
     q: dict = {
         "engine": "google_flights",
         "departureId": departure_id,
@@ -160,7 +198,16 @@ def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, retur
     return [_map_offer(r) for r in (data.get("best_flights") or [])]
 
 
+@returns("offer[]")
+@connection("api")
 def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
+    """Get return flight offers using a departure token from a previous search
+
+        Args:
+            departure_token: Departure token from a flight offer search result
+            currency: Currency code
+            hl: Language code
+        """
     q = {
         "engine": "google_flights",
         "departureToken": departure_token,
@@ -171,7 +218,16 @@ def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **
     return [_map_offer(r) for r in (data.get("other_flights") or [])]
 
 
+@returns({"bookingOptions": "array", "price": "number"})
+@connection("api")
 def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = "en", **params) -> dict:
+    """Get booking options for selected flights using a booking token
+
+        Args:
+            booking_token: Booking token from a flight offer result
+            currency: Currency code
+            hl: Language code
+        """
     q = {
         "engine": "google_flights",
         "bookingToken": booking_token,
@@ -185,7 +241,19 @@ def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = 
     }
 
 
+@returns({"lowestPrice": "number", "priceLevel": "string", "typicalPriceRange": "array", "priceHistory": "array"})
+@connection("api")
 def get_price_insights(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, currency: str = "USD", **params) -> dict:
+    """Get price insights for a flight route (typical price range, price level, history)
+
+        Args:
+            departure_id: Departure airport IATA code
+            arrival_id: Arrival airport IATA code
+            outbound_date: Outbound date (YYYY-MM-DD)
+            return_date: Return date (YYYY-MM-DD)
+            type: 1=Round trip, 2=One way
+            currency: Currency code
+        """
     q: dict = {
         "engine": "google_flights",
         "departureId": departure_id,

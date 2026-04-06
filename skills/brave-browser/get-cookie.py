@@ -25,7 +25,7 @@ import os
 import shutil
 import tempfile
 
-from agentos import sql, crypto
+from agentos import crypto, sql, returns, timeout
 from agentos.macos import keychain
 
 
@@ -191,6 +191,8 @@ def _domain_matches(cookie_domain: str, request_host: str) -> bool:
     return False
 
 
+@returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
+@timeout(15)
 def op_cookie_get(
     domain: str,
     names: str = None,

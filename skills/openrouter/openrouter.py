@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from agentos import http
+from agentos import http, connection, returns
 
 API_BASE = "https://openrouter.ai/api/v1"
 
@@ -22,6 +22,8 @@ def _ts_to_iso(ts) -> str | None:
         return None
 
 
+@returns("model[]")
+@connection("api")
 def list_models(**params) -> list[dict]:
     """List available AI models from all providers via OpenRouter."""
     resp = http.get(f"{API_BASE}/models", **http.headers(accept="json", extra=_auth_header(params)))
@@ -66,6 +68,8 @@ def _to_openai_msg(msg: dict) -> dict:
     return {"role": msg.get("role"), "content": msg.get("content")}
 
 
+@returns({"content": "{'type': 'string', 'description': 'Text response from the model (null if tool calls only)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage (input_tokens, output_tokens)'}"})
+@connection("api")
 def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:
     """Send a chat completion request through OpenRouter."""
     openai_messages = []

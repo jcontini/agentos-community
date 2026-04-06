@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agentos import shell
+from agentos import shell, provides, returns, timeout, file_info, file_list, file_read
 
 
 APP_SYSTEM_PROFILER_SWIFT = r"""
@@ -208,7 +208,10 @@ def load_displays():
     return normalized
 
 
+@returns({"displays": "{'type': 'array', 'description': 'Connected displays'}", "count": "integer"})
+@timeout(15)
 def list_displays(**params):
+    """List connected displays with geometry for left/right monitor reasoning"""
     displays = load_displays()
     return {
         "displays": displays,
@@ -216,7 +219,14 @@ def list_displays(**params):
     }
 
 
+@returns({"apps": "{'type': 'array', 'description': 'Installed applications'}", "count": "integer"})
+@timeout(60)
 def list_apps(*, limit=None, **params):
+    """List installed macOS applications using system_profiler
+
+        Args:
+            limit: Optional maximum number of apps to return
+        """
     data = run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
     apps = []
     for item in data.get("SPApplicationsDataType", []):
@@ -244,7 +254,14 @@ def list_apps(*, limit=None, **params):
     }
 
 
+@returns({"processes": "{'type': 'array', 'description': 'Running processes'}", "count": "integer"})
+@timeout(15)
 def list_processes(*, limit=None, **params):
+    """List running macOS processes with stable fields from ps
+
+        Args:
+            limit: Optional maximum number of processes to return
+        """
     output = run_text_command(
         [
             "ps",
@@ -289,7 +306,13 @@ def list_processes(*, limit=None, **params):
     }
 
 
+@returns({"windows": "{'type': 'array', 'description': 'User-facing application windows'}", "count": "integer"})
 def list_windows(*, limit=None, **params):
+    """List useful user-facing application windows with capture eligibility
+
+        Args:
+            limit: Optional maximum number of windows to return
+        """
     displays = load_displays()
     cg_windows = run_swift_json(CG_WINDOWS_SWIFT)
     jxa_apps = run_jxa_json(JXA_WINDOWS_SCRIPT)
@@ -366,7 +389,16 @@ def list_windows(*, limit=None, **params):
     }
 
 
+@returns("image")
+@timeout(20)
 def screenshot_display(*, display_id=None, display_index=None, path=None, **params):
+    """Capture a screenshot of a display by display_id or display_index
+
+        Args:
+            display_id: Display ID from list_displays
+            display_index: 1-based display index from list_displays
+            path: Optional output path for the PNG file
+        """
     displays = load_displays()
     target = None
 
@@ -404,7 +436,15 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
     }
 
 
+@returns("image")
+@timeout(20)
 def screenshot_window(*, window_id, path=None, **params):
+    """Capture a screenshot of a specific application window by window_id
+
+        Args:
+            window_id: Window ID from list_windows
+            path: Optional output path for the PNG file
+        """
     target_window_id = int(window_id)
     windows = list_windows().get("windows", [])
     target = next((window for window in windows if window.get("window_id") == target_window_id), None)
@@ -574,12 +614,16 @@ def resolve_output_path(value, label):
     return f"/tmp/macos-control-{label}-{timestamp}.png"
 
 
+@returns({"text": "string"})
+@timeout(5)
 def clipboard_read(**_kwargs):
     """Read the current macOS clipboard contents."""
     result = shell.run("pbpaste", [])
     return {"content": result["stdout"]}
 
 
+@returns({"status": "string", "length": "integer"})
+@timeout(5)
 def clipboard_write(*, text, **_kwargs):
     """Write text to the macOS clipboard."""
     result = shell.run("pbcopy", [], input=text)
@@ -670,6 +714,9 @@ SORT_KEYS = {
 }
 
 
+@returns({"path": "string", "entries": "{'type': 'array', 'description': 'File and folder entries with shape-compatible fields'}", "count": "integer"})
+@provides(file_list)
+@timeout(10)
 def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
     """List contents of a directory. Returns file and folder shapes."""
     resolved = os.path.expanduser(path or "~")
@@ -697,6 +744,9 @@ def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
     }
 
 
+@returns({"name": "string", "path": "string", "content": "string", "encoding": "string", "mimeType": "string", "size": "integer"})
+@provides(file_read)
+@timeout(10)
 def read_file(*, path, **_kwargs):
     """Read file contents. Text as UTF-8 string, binary as base64."""
     resolved = os.path.expanduser(path)
@@ -918,6 +968,9 @@ def _get_finder_favorites():
     return favorites
 
 
+@returns({"provider": "string", "providerName": "string", "home": "string", "specialFolders": "{'type': 'object', 'description': 'Well-known folders: desktop, documents, downloads'}", "volumes": "{'type': 'array', 'description': 'Mounted volumes with capacity and filesystem info'}"})
+@provides(file_info)
+@timeout(15)
 def get_info(**_kwargs):
     """Get filesystem info — home dir, special folders, volumes, Finder favorites."""
     home = os.path.expanduser("~")
@@ -943,6 +996,8 @@ def get_info(**_kwargs):
     }
 
 
+@returns({"name": "string", "path": "string", "kind": "string", "size": "integer", "sizeOnDisk": "integer", "created": "string", "modified": "string", "accessed": "string", "mimeType": "string", "permissions": "string", "owner": "string", "group": "string", "hidden": "boolean", "readOnly": "boolean"})
+@timeout(10)
 def get_file_info(*, path, **_kwargs):
     """Get detailed file/folder properties — like XP Properties dialog."""
     resolved = os.path.expanduser(path)

@@ -1,3 +1,22 @@
+---
+id: gandi
+name: Gandi
+description: Domain and DNS management via the Gandi API
+color: "#E74B3C"
+website: "https://www.gandi.net"
+privacy_url: "https://www.gandi.net/en/contracts/privacy-policy"
+
+connections:
+  api:
+    base_url: https://api.gandi.net/v5
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: Personal Access Token
+    help_url: https://admin.gandi.net/organizations/account/pat
+---
+
 # Gandi
 
 Manage domains and DNS records in a Gandi account.

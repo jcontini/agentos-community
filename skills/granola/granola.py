@@ -28,7 +28,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from agentos import http
+from agentos import http, connection, provides, returns, timeout, web_read
 
 DEFAULT_API_BASE = "https://api.granola.ai"
 DEFAULT_AUTH_FILE = Path.home() / "Library" / "Application Support" / "Granola" / "supabase.json"
@@ -410,6 +410,8 @@ def _connection_mode(con: object | None) -> str:
     return "api"
 
 
+@returns("meeting[]")
+@connection(["api", "cache"])
 def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None, **_kwargs) -> list:
     """Entry point for python: executor. `connection` is injected by AgentOS (api vs cache)."""
     mode = _connection_mode(connection)
@@ -421,6 +423,10 @@ def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = N
     die(f"Unknown connection {mode!r}")
 
 
+@returns("meeting")
+@provides(web_read, urls=["app.granola.ai/docs/*"])
+@connection("api")
+@timeout(60)
 def op_get_meeting(id: str = None, url: str = None, connection: dict | None = None, **_kwargs) -> dict:
     """API only — local cache does not include full transcripts.
 
@@ -438,7 +444,14 @@ def op_get_meeting(id: str = None, url: str = None, connection: dict | None = No
     return cmd_get(token, doc_id, connection)
 
 
+@returns("conversation[]")
+@connection(["api", "cache"])
 def op_list_conversations(document_id: str, connection: dict | None = None, **_kwargs) -> list:
+    """List Q&A/AI chat threads linked to a meeting transcript
+
+        Args:
+            document_id: Meeting document ID (UUID)
+        """
     mode = _connection_mode(connection)
     if mode == "cache":
         return cmd_list_conversations_from_cache(document_id, connection)
@@ -448,7 +461,14 @@ def op_list_conversations(document_id: str, connection: dict | None = None, **_k
     die(f"Unknown connection {mode!r}")
 
 
+@returns("conversation")
+@connection(["api", "cache"])
 def op_get_conversation(thread_id: str, connection: dict | None = None, **_kwargs) -> dict:
+    """Get a Q&A conversation with full message history
+
+        Args:
+            thread_id: Chat thread ID (UUID)
+        """
     mode = _connection_mode(connection)
     if mode == "cache":
         return cmd_get_conversation_from_cache(thread_id, connection)

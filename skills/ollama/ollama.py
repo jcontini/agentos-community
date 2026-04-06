@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-from agentos import http, shell
+from agentos import http, shell, connection, returns, timeout
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_BINARY = "/opt/homebrew/bin/ollama"
@@ -110,6 +110,8 @@ def _ensure_api_running(connection: dict | None, cli_connection: dict | None = N
 
 # ── Status ────────────────────────────────────────────────────────────────────
 
+@returns({"running": "{'type': 'boolean'}", "version": "{'type': 'string'}", "started": "{'type': 'boolean'}", "message": "{'type': 'string'}"})
+@connection("cli")
 def op_status(connection: dict | None = None, **kwargs) -> dict:
     """Check if Ollama is running; start it if not. Returns running state + version."""
     binary = _binary(connection)
@@ -164,7 +166,21 @@ def _normalize_tool_calls(raw: list) -> list:
     return out
 
 
+@returns({"content": "{'type': 'string', 'description': 'Text response (null if tool calls only)'}", "thinking": "{'type': 'string', 'description': 'Reasoning trace (only for thinking models)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token counts: input_tokens, output_tokens'}"})
+@connection(["api", "cli"])
+@timeout(300)
 def op_chat(
+    """Send a chat message to a local Ollama model. Supports tool calling, system prompts, and extended thinking mode. Uses the REST API by default; falls back to the CLI for single-turn prompts if the API connection is chosen as cli. Auto-starts the Ollama server if it is not running.
+
+        Args:
+            model: Model name (e.g. qwen3.5:9b-q8_0, glm-4.7-flash)
+            messages: Array of {role, content} message objects
+            tools: Optional tool definitions ({name, description, input_schema})
+            system: Optional system prompt (prepended as first message)
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature (0 = deterministic, good for agents)
+            thinking: Enable extended thinking / reasoning mode (qwen3, glm-4.7, etc.)
+        """
     model: str,
     messages: list,
     tools: list = None,
@@ -268,7 +284,19 @@ def _chat_via_cli(
 
 # ── Generate ──────────────────────────────────────────────────────────────────
 
+@returns({"response": "{'type': 'string'}", "usage": "{'type': 'object', 'description': 'input_tokens, output_tokens'}"})
+@connection("api")
+@timeout(300)
 def op_generate(
+    """One-shot text generation — no chat history, faster for simple single-turn prompts. Returns the raw response text and token counts.
+
+        Args:
+            model:
+            prompt:
+            system: Optional system context
+            max_tokens:
+            temperature:
+        """
     model: str,
     prompt: str,
     system: str = None,
@@ -348,7 +376,15 @@ def _parse_list_text(text: str) -> list:
 
 # ── Pull model ────────────────────────────────────────────────────────────────
 
+@returns({"status": "{'type': 'string'}", "model": "{'type': 'string'}", "message": "{'type': 'string'}"})
+@connection(["cli", "api"])
+@timeout(600)
 def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+    """Download a model from the Ollama registry. Uses the CLI by default for reliable progress on large downloads; can also use the REST API. Timeout is 10 minutes — large models (e.g. 19GB GLM) take several minutes.
+
+        Args:
+            model: Model tag to pull (e.g. qwen3.5:9b-q8_0, glm-4.7-flash)
+        """
     conn_name = _connection_name(connection)
     if conn_name == "api":
         return _pull_via_api(model, connection)
@@ -382,7 +418,14 @@ def _pull_via_api(model: str, connection: dict | None) -> dict:
 
 # ── Delete model ──────────────────────────────────────────────────────────────
 
+@returns({"status": "{'type': 'string'}", "model": "{'type': 'string'}", "message": "{'type': 'string'}"})
+@connection(["api", "cli"])
 def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+    """Delete a downloaded model, freeing disk space.
+
+        Args:
+            model: Model name to delete (e.g. qwen3.5:9b)
+        """
     conn_name = _connection_name(connection)
     if conn_name == "cli":
         return _delete_via_cli(model, connection)
@@ -407,7 +450,15 @@ def _delete_via_cli(model: str, connection: dict | None) -> dict:
 
 # ── Show model ────────────────────────────────────────────────────────────────
 
+@returns({"name": "{'type': 'string'}", "format": "{'type': 'string'}", "family": "{'type': 'string'}", "parameterSize": "{'type': 'string'}", "quantizationLevel": "{'type': 'string'}", "contextLength": "{'type': 'integer'}", "template": "{'type': 'string'}", "systemPrompt": "{'type': 'string'}"})
+@connection("api")
+@timeout(15)
 def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+    """Show detailed model info: architecture, parameter count, quantization, context window length, template, and system prompt.
+
+        Args:
+            model: Model name
+        """
     _ensure_api_running(connection)
     base = _base_url(connection)
     resp = _http_post(f"{base}/api/show", {"name": model}, timeout=15)
@@ -436,6 +487,9 @@ def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
 
 # ── Shape-native list/ps ─────────────────────────────────────────────────────
 
+@returns("model[]")
+@connection("api")
+@timeout(15)
 def list_models(connection: dict | None = None, **params) -> list[dict]:
     """List downloaded models, shape-native (id=name, published, size, details)."""
     raw = op_list_models(connection)
@@ -454,6 +508,9 @@ def list_models(connection: dict | None = None, **params) -> list[dict]:
     ]
 
 
+@returns("model[]")
+@connection("cli")
+@timeout(15)
 def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
     """List models via the Ollama CLI binary (for when the REST server may not be running)."""
     raw = _list_models_via_cli(connection)
@@ -472,6 +529,9 @@ def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
     ]
 
 
+@returns("loaded_model[]")
+@connection("api")
+@timeout(15)
 def ps(connection: dict | None = None, **params) -> list[dict]:
     """List currently loaded models (in GPU/unified RAM), shape-native."""
     _ensure_api_running(connection)

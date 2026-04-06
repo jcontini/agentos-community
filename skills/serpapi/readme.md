@@ -1,3 +1,23 @@
+---
+id: serpapi
+name: SerpAPI
+description: "Google search results API — flights, hotels, web search, and more"
+color: "#0FA47F"
+website: "https://serpapi.com"
+privacy_url: "https://serpapi.com/privacy"
+terms_url: "https://serpapi.com/terms-and-conditions"
+
+connections:
+  api:
+    base_url: https://serpapi.com
+    auth:
+      type: api_key
+      query:
+        api_key: .auth.key
+    label: API Key
+    help_url: https://serpapi.com/manage-api-key
+---
+
 # SerpAPI
 
 Structured Google search results — starting with Google Flights.

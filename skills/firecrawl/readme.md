@@ -1,3 +1,27 @@
+---
+id: firecrawl
+name: Firecrawl
+description: Read webpages with browser rendering for JS-heavy sites
+color: "#FF5308"
+website: "https://firecrawl.dev"
+privacy_url: "https://www.firecrawl.dev/privacy"
+terms_url: "https://www.firecrawl.dev/terms-and-conditions"
+
+connections:
+  api:
+    base_url: https://api.firecrawl.dev/v1
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    help_url: https://www.firecrawl.dev/app/api-keys
+
+operations:
+  read_webpage:
+    web_url: .params.url
+---
+
 # Firecrawl
 
 Read webpages with full browser rendering. Handles JS-heavy sites that other tools struggle with.

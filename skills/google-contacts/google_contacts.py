@@ -6,7 +6,7 @@ from the Mimestream OAuth provider (googleapis.com / contacts scope).
 
 import re
 
-from agentos import http
+from agentos import http, connection, returns, timeout
 
 BASE_URL = "https://people.googleapis.com/v1"
 
@@ -297,6 +297,8 @@ def _update_person_fields(body):
 # ==============================================================================
 
 
+@returns("person[]")
+@connection("api")
 def list_contacts(*, limit=100, page_token=None, **params):
     """List contacts sorted by last modified."""
     headers = _auth_header(params)
@@ -318,6 +320,9 @@ def list_contacts(*, limit=100, page_token=None, **params):
     return [_map_person(p) for p in connections]
 
 
+@returns("person")
+@connection("api")
+@timeout(15)
 def get_contact(*, id, **params):
     """Get full details of a specific contact."""
     headers = _auth_header(params)
@@ -331,6 +336,9 @@ def get_contact(*, id, **params):
     return _map_person(resp["json"])
 
 
+@returns("person[]")
+@connection("api")
+@timeout(15)
 def search_contacts(*, query, limit=30, **params):
     """Search contacts by name, email, phone, or any text."""
     headers = _auth_header(params)
@@ -350,6 +358,9 @@ def search_contacts(*, query, limit=30, **params):
     return [_map_person(r.get("person", {})) for r in results]
 
 
+@returns("person")
+@connection("api")
+@timeout(15)
 def create_contact(*, first_name=None, last_name=None, organization=None,
                    job_title=None, department=None, emails=None, phones=None,
                    addresses=None, urls=None, birthday=None, notes=None, **params):
@@ -370,6 +381,9 @@ def create_contact(*, first_name=None, last_name=None, organization=None,
     return _map_person(resp["json"])
 
 
+@returns("person")
+@connection("api")
+@timeout(15)
 def update_contact(*, id, first_name=None, last_name=None, organization=None,
                    job_title=None, department=None, emails=None, phones=None,
                    addresses=None, urls=None, birthday=None, notes=None, **params):
@@ -403,6 +417,9 @@ def update_contact(*, id, first_name=None, last_name=None, organization=None,
     return _map_person(resp["json"])
 
 
+@returns("void")
+@connection("api")
+@timeout(15)
 def delete_contact(*, id, **params):
     """Delete a contact permanently."""
     headers = _auth_header(params)

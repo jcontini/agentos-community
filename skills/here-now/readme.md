@@ -1,3 +1,24 @@
+---
+id: here-now
+name: here.now
+description: "Publish static websites instantly — HTML, images, PDFs — no account needed"
+color: "#000000"
+website: "https://here.now"
+privacy_url: "https://here.now/privacy"
+terms_url: "https://here.now/terms"
+
+connections:
+  api:
+    base_url: https://here.now/api/v1
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    optional: true
+    help_url: https://here.now
+---
+
 # here.now
 
 Publish static files to the Cloudflare edge instantly — no build step, no deploy config, no account required.

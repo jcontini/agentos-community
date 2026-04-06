@@ -7,7 +7,7 @@ All public functions use keyword-only args and accept **params for
 forward-compatibility with engine-injected context.
 """
 
-from agentos import sql, oauth
+from agentos import oauth, sql, returns
 from agentos.macos import keychain, plist
 
 DB_PATH = "~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite"
@@ -84,6 +84,7 @@ def _map_conversation(row):
 # ==============================================================================
 
 
+@returns("email[]")
 def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **params):
     """List emails, optionally filtered by mailbox, account, or flags."""
     rows = sql.query("""
@@ -138,6 +139,7 @@ def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **par
     return [_map_email(r) for r in rows]
 
 
+@returns("email")
 def get_email(*, id, **params):
     """Get a specific email with full body content and headers."""
     rows = sql.query("""
@@ -183,6 +185,7 @@ def get_email(*, id, **params):
     return _map_email(rows[0]) if rows else None
 
 
+@returns("email[]")
 def search_emails(*, query, account=None, limit=1000, **params):
     """Search emails by subject, snippet, body text, or sender."""
     rows = sql.query("""
@@ -235,6 +238,7 @@ def search_emails(*, query, account=None, limit=1000, **params):
 # ==============================================================================
 
 
+@returns("conversation[]")
 def list_conversations(*, account=None, limit=1000, **params):
     """List email threads with latest message info."""
     rows = sql.query("""
@@ -259,6 +263,7 @@ def list_conversations(*, account=None, limit=1000, **params):
     return [_map_conversation(r) for r in rows]
 
 
+@returns("conversation")
 def get_conversation(*, id, **params):
     """Get all messages in an email thread."""
     rows = sql.query("""
@@ -283,6 +288,7 @@ def get_conversation(*, id, **params):
 # ==============================================================================
 
 
+@returns({"id": "integer", "name": "string", "role": "string", "unreadCount": "integer", "totalCount": "integer", "accountEmail": "string"})
 def list_mailboxes(*, account=None, **params):
     """List mailboxes/labels for an account."""
     return sql.query("""
@@ -314,6 +320,7 @@ def list_mailboxes(*, account=None, **params):
     """, db=DB_PATH, params={"account": account})
 
 
+@returns({"id": "integer", "name": "string", "email": "string", "color": "string"})
 def list_accounts(**params):
     """List configured email accounts with their primary email address."""
     return sql.query("""
@@ -333,6 +340,7 @@ def list_accounts(**params):
 # ==============================================================================
 
 
+@returns({"accessToken": "string", "refreshToken": "string", "clientId": "string", "tokenUrl": "string"})
 def credential_get(*, account, **params):
     """Get a live Google OAuth access token from Mimestream's keychain.
 

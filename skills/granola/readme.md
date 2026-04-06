@@ -1,3 +1,28 @@
+---
+id: granola
+name: Granola
+description: "Meeting transcripts, AI summaries, and Q&A conversations from Granola"
+color: "#2D6A4F"
+website: "https://granola.ai"
+privacy_url: "https://granola.ai/privacy"
+
+connections:
+  api:
+    description: Granola REST API — live data, requires network
+    base_url: https://api.granola.ai
+    vars:
+      token_file: ~/Library/Application Support/Granola/supabase.json
+  cache:
+    description: Local app cache — instant, offline, read-only
+    vars:
+      cache_file: ~/Library/Application Support/Granola/cache-v6.json
+
+product:
+  name: Granola
+  website: https://granola.ai
+  developer: Granola
+---
+
 # Granola
 
 Meeting transcripts and AI summaries from [Granola](https://granola.ai) — automatically captured as you meet.

@@ -36,7 +36,7 @@ Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
 import urllib.parse
-from agentos import http
+from agentos import http, connection, provides, returns, timeout, web_read, web_search
 
 AUTH_BASE = "https://auth.exa.ai"
 API_BASE = "https://api.exa.ai"
@@ -100,6 +100,9 @@ def _extract_set_cookies(resp: dict) -> dict:
 # Operations — called by the Python executor with kwargs
 # ---------------------------------------------------------------------------
 
+@returns({"authenticated": "boolean", "identifier": "string", "display": "string"})
+@connection("dashboard")
+@timeout(15)
 def check_session(*, auth: dict = None, **params) -> dict:
     """Verify Exa dashboard session and identify the logged-in account."""
     cookies = (auth or {}).get("cookies", "")
@@ -115,6 +118,8 @@ def check_session(*, auth: dict = None, **params) -> dict:
     }}
 
 
+@returns({"status": "string", "email": "string", "hint": "string"})
+@connection("dashboard")
 def send_login_code(*, email: str, **params) -> dict:
     """Trigger a verification code email for the given address.
 
@@ -143,6 +148,8 @@ def send_login_code(*, email: str, **params) -> dict:
     }
 
 
+@returns({"status": "string", "email": "string", "team": "string", "userId": "string"})
+@connection("dashboard")
 def verify_login_code(*, email: str, code: str, **params) -> dict:
     """Verify the 6-digit code and complete login — no browser needed.
 
@@ -232,6 +239,8 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
     }
 
 
+@returns({"status": "string", "identifier": "string", "domain": "string", "userId": "string", "team": "string"})
+@connection("dashboard")
 def store_session_cookies(*, email: str, session_token: str, cf_clearance: str = "", **params) -> dict:
     """Store browser-extracted session cookies for authenticated dashboard access.
 
@@ -292,6 +301,8 @@ def _require_session(client) -> dict:
     return session
 
 
+@returns({"apiKeys": "array", "count": "integer"})
+@connection("dashboard")
 def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     """List API keys from the Exa dashboard and optionally store the first enabled key.
 
@@ -351,6 +362,8 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     return result
 
 
+@returns({"teams": "array", "count": "integer"})
+@connection("dashboard")
 def get_teams(*, cookies: dict = None, **params) -> dict:
     """Get team info including rate limits, credits, and usage from the dashboard."""
     if not cookies:
@@ -389,6 +402,8 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
     }
 
 
+@returns({"status": "string", "keyName": "string", "domain": "string", "maskedKey": "string"})
+@connection("dashboard")
 def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> dict:
     """Create a new API key on the Exa dashboard and store it via __secrets__."""
     if not cookies:
@@ -450,6 +465,9 @@ def _map_result(r: dict) -> dict:
     }
 
 
+@returns("result[]")
+@provides(web_search)
+@connection("api")
 def search(*, query: str, limit: int = 10, category: str = None, include_text: bool = True, **params) -> list[dict]:
     """Search the web using Exa's neural/semantic search."""
     api_key = params.get("auth", {}).get("key", "")
@@ -471,6 +489,9 @@ def search(*, query: str, limit: int = 10, category: str = None, include_text: b
     return [_map_result(r) for r in (resp["json"] or {}).get("results", [])]
 
 
+@returns("webpage")
+@provides(web_read)
+@connection("api")
 def read_webpage(*, url: str, **params) -> dict:
     """Extract full content from a URL using Exa."""
     api_key = params.get("auth", {}).get("key", "")
@@ -486,6 +507,8 @@ def read_webpage(*, url: str, **params) -> dict:
     return _map_result(results[0])
 
 
+@returns({"status": "string", "hint": "string"})
+@connection("dashboard")
 def logout(*, cookies: dict = None, **params) -> dict:
     """Sign out of the Exa dashboard and invalidate the session.
 

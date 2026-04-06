@@ -2,7 +2,7 @@
 
 import json
 import re
-from agentos import shell
+from agentos import shell, returns
 
 
 def _git(*args, cwd=None):
@@ -94,6 +94,7 @@ def _commits_with_stats(raw):
 # ---------------------------------------------------------------------------
 
 
+@returns("git_commit[]")
 def list_git_commits(path, limit=100, branch=None, author=None):
     """List recent commits in a git repository. Returns commits newest first with diff stats."""
     args = ["log"]
@@ -110,6 +111,7 @@ def list_git_commits(path, limit=100, branch=None, author=None):
     return _commits_with_stats(raw)
 
 
+@returns("git_commit")
 def get_git_commit(path, id):
     """Get a single commit with full details and diff stats."""
     raw = _git(
@@ -133,6 +135,7 @@ def get_git_commit(path, id):
     return commit
 
 
+@returns("git_commit[]")
 def search_git_commits(path, query, limit=100):
     """Search commit messages by keyword."""
     args = [
@@ -147,6 +150,7 @@ def search_git_commits(path, query, limit=100):
     return _commits_with_stats(raw)
 
 
+@returns("branch[]")
 def list_branches(path):
     """List all branches (local and remote) in a repository."""
     raw = _git(
@@ -172,6 +176,7 @@ def list_branches(path):
     return branches
 
 
+@returns("branch")
 def get_branch(path, name):
     """Get info about a specific branch."""
     raw = _git(
@@ -198,6 +203,7 @@ def get_branch(path, name):
     raise RuntimeError(f"Branch not found: {name}")
 
 
+@returns("repository")
 def get_repository(path):
     """Get repository info from the local git repo -- remote URL, platform, branch."""
     try:
@@ -227,6 +233,7 @@ def get_repository(path):
     }
 
 
+@returns("tag[]")
 def list_tags(path):
     """List all tags in the repository."""
     raw = _git(
@@ -251,6 +258,7 @@ def list_tags(path):
     return tags
 
 
+@returns("tag")
 def get_tag(path, name):
     """Get info about a specific tag."""
     raw = _git(
@@ -273,6 +281,7 @@ def get_tag(path, name):
     }
 
 
+@returns("string")
 def status(path):
     """Show working tree status -- modified, staged, and untracked files."""
     branch = _git("branch", "--show-current", cwd=path).strip()
@@ -313,6 +322,7 @@ def status(path):
     }
 
 
+@returns("string")
 def diff(path, staged=False, ref1=None, ref2=None):
     """Show the diff of working tree changes, staged changes, or between two refs."""
     args = ["diff"]
@@ -325,6 +335,7 @@ def diff(path, staged=False, ref1=None, ref2=None):
     return _git(*args, cwd=path)
 
 
+@returns("string")
 def log(path, format=None, limit=100, branch=None):
     """Raw git log output with flexible formatting."""
     args = ["log"]

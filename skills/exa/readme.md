@@ -1,3 +1,60 @@
+---
+id: exa
+name: Exa
+description: Semantic web search and content extraction
+color: "#1F40ED"
+website: "https://exa.ai"
+privacy_url: "https://exa.ai/privacy"
+terms_url: "https://exa.ai/terms"
+
+connections:
+  api:
+    base_url: https://api.exa.ai
+    domain: exa.ai
+    auth:
+      type: api_key
+      header:
+        x-api-key: .auth.key
+    label: API Key
+    help_url: https://dashboard.exa.ai/api-keys
+  dashboard:
+    base_url: https://dashboard.exa.ai
+    domain: exa.ai
+    auth:
+      type: cookies
+      domain: .exa.ai
+      names:
+      - next-auth.session-token
+      account:
+        check: check_session
+      login:
+      - email_code: true
+      - sso: google
+
+product:
+  name: Exa
+  website: https://exa.ai
+  developer: Exa AI, Inc.
+
+operations:
+  search:
+    wraps_as: search
+    web_url: '"https://exa.ai/search?q=" + (.params.query | @uri)'
+  read_webpage:
+    web_url: .params.url
+
+test:
+  check_session:
+    skip: true
+  search:
+    params:
+      query: agentOS personal AI
+      limit: 3
+  read_webpage:
+    params:
+      url: https://exa.ai
+---
+
 # Exa
 
 Semantic web search and content extraction. Neural search finds content by meaning, not just keywords.

@@ -2,6 +2,8 @@
 
     from agentos import http, molt, shape       # HTTP, text, typed dicts
     from agentos import sql, crypto, oauth      # engine-dispatched modules
+    from agentos import returns, provides       # operation decorators
+    from agentos import web_search, web_read    # tool constants
     from agentos.macos import keychain, plist   # platform-specific
 
     resp = http.get("https://api.example.com/data", profile="api")
@@ -26,6 +28,16 @@ from agentos import crypto
 from agentos import oauth
 from agentos import shell
 
+# --- Operation decorators (read by engine via AST, no-ops at runtime) ---
+from agentos.decorators import returns, provides, connection, timeout
+
+# --- Standard tool constants (for @provides decorator) ---
+from agentos.tools import (
+    web_search, web_read, email_lookup, flight_search,
+    geocoding, map_tiles, file_list, file_read, file_info,
+    cookie_auth,
+)
+
 # --- Fine-grained (available when you need specific control) ---
 from agentos.text import clean_text, clean_html, clean_sentinel, strip_tags
 from agentos.text import parse_int, parse_float
@@ -36,6 +48,12 @@ __all__ = [
     "http", "molt", "shape",
     # Engine-dispatched modules
     "sql", "crypto", "oauth", "shell",
+    # Operation decorators
+    "returns", "provides", "connection", "timeout",
+    # Standard tools
+    "web_search", "web_read", "email_lookup", "flight_search",
+    "geocoding", "map_tiles", "file_list", "file_read", "file_info",
+    "cookie_auth",
     # HTTP helpers
     "get_cookies", "require_cookies", "parse_cookie",
     # Skill result helpers

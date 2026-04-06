@@ -1,3 +1,11 @@
+---
+id: kitty
+name: Kitty
+description: "Control Kitty windows, tabs, and panes through Kitty remote control"
+color: "#C34C89"
+website: "https://sw.kovidgoyal.net/kitty/"
+---
+
 # Kitty
 
 Kitty remote control for AgentOS. This skill is for terminal orchestration: inspect windows, focus tabs, send input, and launch or close tabs without relying on the old CLI glue.

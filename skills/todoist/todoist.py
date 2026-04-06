@@ -1,5 +1,5 @@
 import re
-from agentos import http
+from agentos import http, connection, provides, returns, web_read
 
 API_BASE = "https://api.todoist.com/api/v1"
 
@@ -43,14 +43,31 @@ def _map_tag(t: dict) -> dict:
     }
 
 
+@returns("task[]")
+@connection("api")
 def list_tasks(*, query: str = "today | overdue | #Inbox", **params) -> list:
+    """List actionable tasks (due today, overdue, or in inbox)
+
+        Args:
+            query: Todoist filter query
+        """
     headers = _auth_header(params)
     resp = http.get(f"{API_BASE}/tasks/filter",
                     params={"query": query}, **http.headers(accept="json", extra=headers))
     return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
+@returns("task[]")
+@connection("api")
 def list_all_tasks(*, project_id: str = None, section_id: str = None,
+    """List all tasks with optional filters (no smart defaults)
+
+        Args:
+            project_id: Filter by project ID
+            section_id: Filter by section ID
+            parent_id: Filter by parent task ID
+            label: Filter by label name
+        """
                    parent_id: str = None, label: str = None, **params) -> list:
     headers = _auth_header(params)
     q = {}
@@ -62,14 +79,30 @@ def list_all_tasks(*, project_id: str = None, section_id: str = None,
     return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
+@returns("task[]")
+@connection("api")
 def filter_task(*, filter: str, **params) -> list:
+    """Get tasks matching a Todoist filter query
+
+        Args:
+            filter: Todoist filter (e.g., 'today', 'overdue', '7 days')
+        """
     headers = _auth_header(params)
     resp = http.get(f"{API_BASE}/tasks/filter",
                     params={"query": filter}, **http.headers(accept="json", extra=headers))
     return [_map_task(t) for t in (resp["json"] or {}).get("results", [])]
 
 
+@returns("task")
+@provides(web_read, urls=["app.todoist.com/*/task/*", "todoist.com/*/task/*"])
+@connection("api")
 def get_task(*, id: str = None, url: str = None, **params) -> dict:
+    """Get a specific task by ID
+
+        Args:
+            id: Task ID — optional if url is an app.todoist.com task link
+            url: Todoist task URL from the app (web_read)
+        """
     headers = _auth_header(params)
     if url:
         m = re.search(r"/task/([^/?#]+)", url)
@@ -79,7 +112,20 @@ def get_task(*, id: str = None, url: str = None, **params) -> dict:
     return _map_task(resp["json"])
 
 
+@returns("task")
+@connection("api")
 def create_task(*, name: str, description: str = None, due: str = None,
+    """Create a new task
+
+        Args:
+            name: Task name
+            description: Task description
+            due: Due date (natural language like 'tomorrow')
+            priority: Priority 1 (highest) to 4 (lowest)
+            project_id: Project ID
+            parent_id: Parent task ID (for sub-tasks)
+            labels: Label names
+        """
                 priority: int = None, project_id: str = None,
                 parent_id: str = None, labels: list = None, **params) -> dict:
     headers = _auth_header(params)
@@ -94,7 +140,20 @@ def create_task(*, name: str, description: str = None, due: str = None,
     return _map_task(resp["json"])
 
 
+@returns("task")
+@connection("api")
 def update_task(*, id: str, name: str = None, description: str = None,
+    """Update an existing task (including moving to different project)
+
+        Args:
+            id: Task ID
+            name: New name
+            description: New description
+            due: New due date
+            priority: New priority 1 (highest) to 4 (lowest)
+            labels: New labels
+            project_id: Move to different project
+        """
                 due: str = None, priority: int = None, labels: list = None,
                 project_id: str = None, **params) -> dict:
     headers = _auth_header(params)
@@ -109,34 +168,71 @@ def update_task(*, id: str, name: str = None, description: str = None,
     return _map_task(resp["json"])
 
 
+@returns("void")
+@connection("api")
 def complete_task(*, id: str, **params) -> None:
+    """Mark a task as achieved
+
+        Args:
+            id: Task ID
+        """
     headers = _auth_header(params)
     http.post(f"{API_BASE}/tasks/{id}/close", **http.headers(accept="json", extra=headers))
 
 
+@returns("void")
+@connection("api")
 def reopen_task(*, id: str, **params) -> None:
+    """Reopen a task
+
+        Args:
+            id: Task ID
+        """
     headers = _auth_header(params)
     http.post(f"{API_BASE}/tasks/{id}/reopen", **http.headers(accept="json", extra=headers))
 
 
+@returns("void")
+@connection("api")
 def delete_task(*, id: str, **params) -> None:
+    """Delete a task
+
+        Args:
+            id: Task ID
+        """
     headers = _auth_header(params)
     http.delete(f"{API_BASE}/tasks/{id}", **http.headers(accept="json", extra=headers))
 
 
+@returns("project[]")
+@connection("api")
 def list_projects(**params) -> list:
+    """List all projects"""
     headers = _auth_header(params)
     resp = http.get(f"{API_BASE}/projects", **http.headers(accept="json", extra=headers))
     return [_map_project(p) for p in (resp["json"] or {}).get("results", [])]
 
 
+@returns("tag[]")
+@connection("api")
 def list_tags(**params) -> list:
+    """List all tags (labels)"""
     headers = _auth_header(params)
     resp = http.get(f"{API_BASE}/labels", **http.headers(accept="json", extra=headers))
     return [_map_tag(t) for t in (resp["json"] or {}).get("results", [])]
 
 
+@returns("task")
+@connection("api")
 def move_task(*, id: str, project_id: str = None, section_id: str = None,
+    """Move task to a different project, section, or parent
+
+        Args:
+            id: Task ID to move
+            project_id: Target project ID
+            section_id: Target section ID
+            parent_id: Target parent task ID
+        """
               parent_id: str = None, **params) -> dict:
     headers = _auth_header(params)
     body = {}

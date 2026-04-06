@@ -3,7 +3,7 @@
 import re
 from datetime import datetime, timezone
 
-from agentos import http
+from agentos import http, provides, returns, web_read, web_search
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -70,17 +70,43 @@ def _get_json(path: str, params: dict | None = None) -> dict:
     return data
 
 
+@returns("post[]")
+@provides(web_search)
 def search_posts(query: str, limit: int = 25, sort: str = "relevance") -> list[dict]:
+    """Search posts across Reddit
+
+        Args:
+            query: Search query
+            limit: Number of results (max 100)
+            sort: Sort by: relevance, hot, top, new, comments
+        """
     data = _get_json("/search.json", {"q": query, "limit": limit, "sort": sort})
     return [_map_post(c["data"]) for c in data.get("data", {}).get("children", [])]
 
 
+@returns("post[]")
 def list_posts(subreddit: str, sort: str = "hot", limit: int = 25) -> list[dict]:
+    """List posts from a subreddit
+
+        Args:
+            subreddit: Subreddit name (without r/)
+            sort: Sort by: hot, new, top, rising
+            limit: Number of posts (max 100)
+        """
     data = _get_json(f"/r/{subreddit}/{sort}.json", {"limit": limit})
     return [_map_post(c["data"]) for c in data.get("data", {}).get("children", [])]
 
 
+@returns("post")
+@provides(web_read, urls=["reddit.com/*/comments/*", "reddit.com/r/*/comments/*"])
 def get_post(id: str = None, url: str = None, comment_limit: int = None) -> dict:
+    """Get a Reddit post with comments. Pass either an id or a full Reddit URL.
+
+        Args:
+            id: Post ID (e.g. abc123) — optional if url is set
+            url: Full Reddit post URL (web_read) — optional if id is set
+            comment_limit: Max comments to fetch
+        """
     if url and not id:
         m = re.search(r"comments/([a-z0-9]+)", url)
         if m:
@@ -132,6 +158,7 @@ def get_post(id: str = None, url: str = None, comment_limit: int = None) -> dict
     return post
 
 
+@returns("post[]")
 def comments_post(id: str, comment_limit: int = None) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
     params = {}
@@ -173,11 +200,24 @@ def comments_post(id: str, comment_limit: int = None) -> list[dict]:
     return result
 
 
+@returns("community")
 def get_community(subreddit: str) -> dict:
+    """Get subreddit metadata
+
+        Args:
+            subreddit: Subreddit name (without r/)
+        """
     data = _get_json(f"/r/{subreddit}/about.json")
     return _map_community(data.get("data", {}))
 
 
+@returns("community[]")
 def search_communities(query: str, limit: int = 25) -> list[dict]:
+    """Search for subreddits
+
+        Args:
+            query: Search query
+            limit: Number of results (max 100)
+        """
     data = _get_json("/subreddits/search.json", {"q": query, "limit": limit})
     return [_map_community(c["data"]) for c in data.get("data", {}).get("children", [])]

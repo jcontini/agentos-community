@@ -1,6 +1,6 @@
 """Porkbun — domain and DNS management via the Porkbun API."""
 
-from agentos import http
+from agentos import http, connection, returns
 
 API_BASE = "https://api.porkbun.com/api/json/v3"
 
@@ -43,7 +43,10 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
     }
 
 
+@returns("domain[]")
+@connection("api")
 def list_domains(**params) -> list[dict]:
+    """List all domains in your Porkbun account"""
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/domain/listAll",
                      json={"apikey": api_key, "secretapikey": secret_key},
@@ -51,7 +54,14 @@ def list_domains(**params) -> list[dict]:
     return [_map_domain(d) for d in (resp["json"] or {}).get("domains", [])]
 
 
+@returns("dns_record[]")
+@connection("api")
 def list_dns_records(*, domain: str, **params) -> list[dict]:
+    """List all DNS records for a domain
+
+        Args:
+            domain: Domain name, for example example.com
+        """
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/dns/retrieve/{domain}",
                      json={"apikey": api_key, "secretapikey": secret_key},
@@ -59,7 +69,19 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
     return [_map_dns_record(r, domain) for r in (resp["json"] or {}).get("records", [])]
 
 
+@returns("void")
+@connection("api")
 def create_dns_record(*, domain: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
+    """Create a new DNS record for a domain
+
+        Args:
+            domain: Domain name
+            name: Subdomain, omit or empty string for the apex
+            type: A, AAAA, CNAME, MX, TXT, NS, or SRV
+            content: Record value
+            ttl: TTL in seconds
+            prio: Priority, used for MX records
+        """
     api_key, secret_key = _auth(params)
     body: dict = {
         "apikey": api_key, "secretapikey": secret_key,
@@ -72,7 +94,20 @@ def create_dns_record(*, domain: str, type: str, content: str, name: str = "", t
     return resp["json"]
 
 
+@returns("void")
+@connection("api")
 def update_dns_record(*, domain: str, id: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
+    """Update an existing DNS record
+
+        Args:
+            domain: Domain name
+            id: Porkbun DNS record ID
+            name: Subdomain, omit or empty string for the apex
+            type: Record type
+            content: Record value
+            ttl: TTL in seconds
+            prio: Priority, used for MX records
+        """
     api_key, secret_key = _auth(params)
     body: dict = {
         "apikey": api_key, "secretapikey": secret_key,
@@ -85,7 +120,15 @@ def update_dns_record(*, domain: str, id: str, type: str, content: str, name: st
     return resp["json"]
 
 
+@returns("void")
+@connection("api")
 def delete_dns_record(*, domain: str, id: str, **params) -> dict:
+    """Delete a DNS record from a domain
+
+        Args:
+            domain: Domain name
+            id: Porkbun DNS record ID
+        """
     api_key, secret_key = _auth(params)
     resp = http.post(f"{API_BASE}/dns/delete/{domain}/{id}",
                      json={"apikey": api_key, "secretapikey": secret_key},

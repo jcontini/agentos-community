@@ -1,3 +1,52 @@
+---
+id: reddit
+name: Reddit
+description: "Read public Reddit communities, posts, and comments"
+color: "#FF4500"
+website: "https://reddit.com"
+privacy_url: "https://www.reddit.com/policies/privacy-policy"
+terms_url: "https://www.redditinc.com/policies/user-agreement"
+
+sources:
+  images:
+  - styles.redditmedia.com
+  - preview.redd.it
+  - i.redd.it
+  - external-preview.redd.it
+  - a.thumbs.redditmedia.com
+  - b.thumbs.redditmedia.com
+  image_headers:
+    Referer: https://www.reddit.com/
+
+operations:
+  search_posts:
+    web_url: '"https://www.reddit.com/search/?q=" + (.params.query | @uri)'
+  list_posts:
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
+  get_post:
+    web_url: if (.params.url // "") != "" then .params.url else "https://www.reddit.com/comments/" + .params.id end
+  comments_post:
+    web_url: '"https://www.reddit.com/comments/" + .params.id'
+  get_community:
+    web_url: '"https://www.reddit.com/r/" + .params.subreddit'
+  search_communities:
+    web_url: '"https://www.reddit.com/subreddits/search/?q=" + (.params.query | @uri)'
+
+test:
+  list_posts:
+    params:
+      subreddit: programming
+      sort: hot
+      limit: 3
+  get_post:
+    params:
+      id: 1qoxwdt
+      url: null
+  get_community:
+    params:
+      subreddit: programming
+---
+
 # Reddit
 
 Access public Reddit data using Reddit's built-in JSON endpoints.

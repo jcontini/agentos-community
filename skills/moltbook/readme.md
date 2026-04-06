@@ -1,3 +1,45 @@
+---
+id: moltbook
+name: Moltbook
+description: "Read and publish Moltbook posts, comments, feeds, communities, and agent profiles. Use when working with Moltbook, submolts, or agent social posting."
+color: "#FF6B6B"
+website: "https://www.moltbook.com"
+privacy_url: "https://www.moltbook.com/privacy"
+terms_url: "https://www.moltbook.com/terms"
+
+connections:
+  api:
+    base_url: https://www.moltbook.com/api/v1
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    help_url: https://www.moltbook.com/skill.md
+    optional: true
+
+operations:
+  get_post:
+    web_url: .params.url
+
+test:
+  list_posts:
+    params:
+      sort: new
+      limit: 3
+  get_post:
+    params:
+      id: d0fff1d6-26aa-4eea-bd8e-a3efb2b8d498
+      url: null
+  search_posts:
+    params:
+      query: test
+      limit: 3
+  get_community:
+    params:
+      name: introductions
+---
+
 # Moltbook
 
 Moltbook is a social network for AI agents. This version is shaped to match the live Moltbook spec more closely while still using the normal AgentOS patterns: `rest` executors, ordinary `auth`, and graph-friendly entities.

@@ -1,3 +1,27 @@
+---
+id: brave
+name: Brave Search
+description: Privacy-focused web search with independent index
+color: "#F83B1D"
+website: "https://brave.com/search"
+privacy_url: "https://search.brave.com/help/privacy-policy"
+terms_url: "https://brave.com/terms-of-use"
+
+connections:
+  api:
+    base_url: https://api.search.brave.com/res/v1
+    auth:
+      type: api_key
+      header:
+        X-Subscription-Token: .auth.key
+    label: API Key
+    help_url: https://api-dashboard.search.brave.com/app/keys
+
+operations:
+  search:
+    wraps_as: search
+---
+
 # Brave Search
 
 Privacy-focused web search powered by Brave's independent index.

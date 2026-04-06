@@ -1,3 +1,21 @@
+---
+id: ollama
+name: Ollama
+description: Local AI models running on your machine via Ollama
+color: "#0F172A"
+website: "https://ollama.com"
+privacy_url: "https://ollama.com/privacy"
+
+connections:
+  api:
+    description: Ollama REST API — fast inference path, requires server to be running
+    base_url: http://localhost:11434
+  cli:
+    description: Ollama CLI — can start the server, pull/delete models, management ops
+    vars:
+      binary: /opt/homebrew/bin/ollama
+---
+
 # Ollama
 
 Run local AI models — inference, tool calling, and model management — entirely on your machine. No API keys, no cloud, no cost per token.

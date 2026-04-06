@@ -1,3 +1,23 @@
+---
+id: openrouter
+name: OpenRouter
+description: Unified AI gateway for models across providers via one API
+color: "#111827"
+website: "https://openrouter.ai"
+privacy_url: "https://openrouter.ai/privacy"
+terms_url: "https://openrouter.ai/terms"
+
+connections:
+  api:
+    base_url: https://openrouter.ai/api/v1
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: API Key
+    help_url: https://openrouter.ai/keys
+---
+
 # OpenRouter
 
 OpenRouter lets AgentOS access models from multiple providers using one API key and one `chat` interface.

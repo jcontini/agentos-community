@@ -3,7 +3,7 @@ import base64
 import json
 import re
 import sys
-from agentos import shell
+from agentos import shell, provides, returns, web_read
 
 
 def fail(message, code=1):
@@ -25,7 +25,15 @@ def run_gh(args):
     return result["stdout"]
 
 
+@returns("task[]")
 def list_tasks(*, repo, state="open", limit=30, **params):
+    """List issues for a repository
+
+        Args:
+            repo: Repository in owner/name format
+            state: open, closed, or all
+            limit: Maximum number of issues to return
+        """
     limit = str(limit)
     output = run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
     data = json.loads(output)
@@ -83,7 +91,16 @@ def _task_shape(item: dict, repo: str) -> dict:
     }
 
 
+@returns("task")
+@provides(web_read, urls=["github.com/*/issues/*", "github.com/*/pull/*"])
 def get_task(*, repo=None, number=None, url=None, **params):
+    """Get a single issue by number
+
+        Args:
+            repo: Repository in owner/name format — optional if url is a GitHub issue or PR link
+            number: Issue or PR number — optional if url is set
+            url: GitHub issue or pull request URL (web_read)
+        """
     if url:
         parsed = _parse_issue_or_pr_url(url)
         if not parsed:
@@ -115,24 +132,52 @@ def get_task(*, repo=None, number=None, url=None, **params):
     return _task_shape(item, repo)
 
 
+@returns({"url": "string", "number": "integer", "title": "string"})
 def create_task(*, repo, title, body="", **params):
+    """Create a new GitHub issue
+
+        Args:
+            repo: Repository in owner/name format
+            title: Issue title
+            body: Issue body
+        """
     url = run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
     return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
+@returns({"ok": "boolean", "url": "string"})
 def close_task(*, repo, number, **params):
+    """Close an issue
+
+        Args:
+            number: Issue number
+        """
     number = str(number)
     run_gh(["issue", "close", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
+@returns({"ok": "boolean", "url": "string"})
 def reopen_task(*, repo, number, **params):
+    """Reopen a closed issue
+
+        Args:
+            number: Issue number
+        """
     number = str(number)
     run_gh(["issue", "reopen", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
+@returns("array")
 def list_pull_requests(*, repo, state="open", limit=30, **params):
+    """List pull requests for a repository
+
+        Args:
+            repo: Repository in owner/name format
+            state: open, closed, or all
+            limit: Maximum number of pull requests to return
+        """
     limit = str(limit)
     output = run_gh(
         [
@@ -151,7 +196,17 @@ def list_pull_requests(*, repo, state="open", limit=30, **params):
     return json.loads(output)
 
 
+@returns({"url": "string"})
 def create_pull_request(*, repo, title, head, body="", base=None, **params):
+    """Create a pull request
+
+        Args:
+            repo: Repository in owner/name format
+            title: Pull request title
+            body: Pull request body
+            head: Source branch
+            base: Target branch
+        """
     args = [
         "pr",
         "create",
@@ -180,7 +235,15 @@ def contents_endpoint(repo, path=None, ref=None):
     return endpoint
 
 
+@returns("file[]")
 def list_documents(*, repo, path=None, ref=None, **params):
+    """List files and folders at a repository path
+
+        Args:
+            repo: Repository in owner/name format
+            path: Path within the repository
+            ref: Branch, tag, or commit
+        """
     endpoint = contents_endpoint(repo, path, ref)
     output = run_gh(["api", endpoint])
     data = json.loads(output)
@@ -222,7 +285,17 @@ def _parse_blob_or_raw_url(url: str) -> tuple[str, str, str] | None:
     return None
 
 
+@returns("file")
+@provides(web_read, urls=["github.com/*/blob/*", "raw.githubusercontent.com/*"])
 def read_document(*, repo=None, path=None, ref=None, url=None, **params):
+    """Read a text file from a repository
+
+        Args:
+            repo: Repository in owner/name format — optional if url is a blob or raw.githubusercontent.com link
+            path: File path within the repository — optional if url is set
+            ref: Branch, tag, or commit — optional if url is set
+            url: GitHub blob URL or raw.githubusercontent.com file URL (web_read)
+        """
     if url:
         parsed = _parse_blob_or_raw_url(url)
         if not parsed:
@@ -248,7 +321,9 @@ def read_document(*, repo=None, path=None, ref=None, url=None, **params):
     }
 
 
+@returns({"output": "string"})
 def status(**params):
+    """Show GitHub CLI status for the current machine"""
     output = run_gh(["status"])
     return {"output": output}
 

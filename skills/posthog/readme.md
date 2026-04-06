@@ -1,3 +1,27 @@
+---
+id: posthog
+name: PostHog
+description: "Product analytics — events, persons, and session recordings"
+color: "#1D4AFF"
+website: "https://posthog.com"
+privacy_url: "https://posthog.com/privacy"
+terms_url: "https://posthog.com/terms"
+
+connections:
+  api:
+    auth:
+      type: api_key
+      header:
+        Authorization: '"Bearer " + .auth.key'
+    label: Personal API Key
+    help_url: https://us.posthog.com/settings/user-api-keys
+
+product:
+  name: PostHog
+  website: https://posthog.com
+  developer: PostHog Inc
+---
+
 # PostHog
 
 Product analytics — events, persons, and session recordings.

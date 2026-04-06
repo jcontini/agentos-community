@@ -1,3 +1,11 @@
+---
+id: curl
+name: Curl
+description: Simple URL fetching using curl (no API key needed)
+color: "#333333"
+website: "https://curl.se"
+---
+
 # Curl
 
 Simple URL fetching using curl. No API key required.

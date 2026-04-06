@@ -1,3 +1,11 @@
+---
+id: macos-control
+name: macOS Control
+description: "Inspect macOS apps, processes, displays, windows, screenshots, and filesystem with built-in system tools"
+color: "#111827"
+website: "https://www.apple.com/macos/"
+---
+
 # macOS Control
 
 Read-only macOS inspection skill for local computer awareness. This first pass is intentionally limited to discovery and screenshots only.

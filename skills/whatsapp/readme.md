@@ -1,3 +1,20 @@
+---
+id: whatsapp
+name: WhatsApp
+description: Read WhatsApp messages from local macOS database
+color: "#2CD46B"
+website: "https://www.whatsapp.com/"
+
+connections:
+  db:
+    sqlite: ~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite
+
+product:
+  name: WhatsApp
+  website: https://whatsapp.com
+  developer: Meta Platforms, Inc.
+---
+
 # WhatsApp
 
 Read WhatsApp messages from the local macOS database. Read-only access to message history.

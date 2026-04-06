@@ -1,3 +1,29 @@
+---
+id: linear
+name: Linear
+description: Project management for engineering teams
+color: "#636FD3"
+website: "https://linear.app"
+privacy_url: "https://linear.app/privacy"
+terms_url: "https://linear.app/terms"
+
+connections:
+  api:
+    base_url: https://api.linear.app/graphql
+    auth:
+      type: api_key
+      header:
+        Authorization: .auth.key
+    label: API Key
+    help_url: https://linear.app/settings/api
+
+operations:
+  list_tasks:
+    web_url: '"https://linear.app/" + .params.workspace_slug'
+  list_projects:
+    web_url: '"https://linear.app/" + .params.workspace_slug + "/projects"'
+---
+
 # Linear
 
 Project management integration for engineering teams.

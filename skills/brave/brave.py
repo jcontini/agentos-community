@@ -1,10 +1,13 @@
 """Brave Search — privacy-focused web search with independent index."""
 
-from agentos import http
+from agentos import http, connection, provides, returns, web_search
 
 API_BASE = "https://api.search.brave.com/res/v1"
 
 
+@returns("result[]")
+@provides(web_search)
+@connection("api")
 def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> list[dict]:
     """Search the web using Brave's independent index."""
     api_key = params.get("auth", {}).get("key", "")

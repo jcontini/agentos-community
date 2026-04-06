@@ -3,7 +3,7 @@
 import json as _json
 import re as _re
 import uuid as uuid_mod
-from agentos import http, get_cookies, require_cookies
+from agentos import get_cookies, http, connection, provides, returns, timeout, geocoding, require_cookies
 
 # ---------------------------------------------------------------------------
 # Rides API — GraphQL at riders.uber.com
@@ -273,6 +273,8 @@ def _parse_fare(fare_str: str) -> tuple[float | None, str | None]:
 # Operations
 # ---------------------------------------------------------------------------
 
+@returns({"authenticated": "boolean", "identifier": "string", "display": "string", "domain": "string"})
+@connection("web")
 def check_session(**params) -> dict:
     """Validate session and return account identity."""
     cookie_header = get_cookies(params)
@@ -296,6 +298,8 @@ def check_session(**params) -> dict:
     }
 
 
+@returns({"id": "string", "name": "string", "email": "string", "phone": "string", "rating": "string", "hasUberOne": "boolean", "paymentMethods": "array", "profiles": "array", "country": "string"})
+@connection("web")
 def whoami(**params) -> dict:
     """Get current user profile with full details."""
     cookie_header = require_cookies(params, "whoami")
@@ -336,6 +340,8 @@ def whoami(**params) -> dict:
     }
 
 
+@returns("trip[]")
+@connection("web")
 def list_trips(
     limit: int = 10,
     next_page_token: str | None = None,
@@ -388,6 +394,8 @@ def list_trips(
     return trips
 
 
+@returns("trip")
+@connection("web")
 def get_trip(trip_id: str, **params) -> dict:
     """Get full trip details.
 
@@ -543,6 +551,8 @@ def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None) -> d
 # See requirements.md for full API shape documentation.
 # ---------------------------------------------------------------------------
 
+@returns({"authenticated": "boolean", "identifier": "string", "display": "string", "domain": "string"})
+@connection("eats")
 def check_eats_session(**params) -> dict:
     """Validate Uber Eats session cookies."""
     cookie_header = get_cookies(params)
@@ -567,6 +577,8 @@ def check_eats_session(**params) -> dict:
     }
 
 
+@returns({"id": "string", "name": "string", "email": "string", "phone": "string", "subscription": "object", "savedAddresses": "array", "paymentMethods": "array"})
+@connection("eats")
 def get_eats_profile(**params) -> dict:
     """Get Uber Eats user profile — name, photo, subscription, business profiles.
 
@@ -626,6 +638,8 @@ def get_eats_profile(**params) -> dict:
     return result
 
 
+@returns("order[]")
+@connection("eats")
 def list_deliveries(cursor: str = "", **params) -> list:
     """List Uber Eats order history as order-shaped entities.
 
@@ -729,6 +743,8 @@ def list_deliveries(cursor: str = "", **params) -> list:
     return orders
 
 
+@returns("order")
+@connection("eats")
 def get_delivery(order_uuid: str, **params) -> dict:
     """Get full delivery details including items, quantities, and fare breakdown.
 
@@ -879,6 +895,8 @@ def get_delivery(order_uuid: str, **params) -> dict:
     return result
 
 
+@returns("place")
+@connection("eats")
 def get_store(store_uuid: str, **params) -> dict:
     """Get store details and full product catalog.
 
@@ -1067,6 +1085,9 @@ def get_store(store_uuid: str, **params) -> dict:
     }
 
 
+@returns("product")
+@connection("eats")
+@timeout(15)
 def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str = "", subsection_uuid: str = "", **params) -> dict:
     """Get customization options for a menu item (toppings, sizes, sides, etc.).
 
@@ -1155,6 +1176,9 @@ def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str =
     }
 
 
+@returns("product[]")
+@connection("eats")
+@timeout(15)
 def search_products(store_uuid: str, query: str, **params) -> list:
     """Search products within a store. Server-side search via getInStoreSearchV1.
 
@@ -1275,6 +1299,9 @@ def search_products(store_uuid: str, query: str, **params) -> list:
     return products
 
 
+@returns("place[]")
+@provides(geocoding)
+@connection("eats")
 def search_address(query: str, resolve: bool = True, **params) -> list:
     """Search for addresses worldwide — autocomplete + geocoding.
 
@@ -1336,6 +1363,9 @@ def search_address(query: str, resolve: bool = True, **params) -> list:
     return places
 
 
+@returns("place[]")
+@connection("eats")
+@timeout(15)
 def list_addresses(**params) -> list:
     """List saved and suggested delivery addresses.
 
@@ -1397,6 +1427,9 @@ def list_addresses(**params) -> list:
     return places
 
 
+@returns("order")
+@connection("eats")
+@timeout(15)
 def get_messages(order_uuid: str, **params) -> dict:
     """Get delivery chat messages for an order.
 
@@ -1423,6 +1456,9 @@ def get_messages(order_uuid: str, **params) -> dict:
     }
 
 
+@returns("place[]")
+@connection("eats")
+@timeout(15)
 def search_stores(query: str = "", **params) -> list:
     """Search for stores/restaurants on Uber Eats by name or cuisine.
 
@@ -1471,6 +1507,8 @@ def search_stores(query: str = "", **params) -> list:
     return stores
 
 
+@returns("place[]")
+@connection("eats")
 def list_nearby_stores(**params) -> list:
     """List nearby stores/restaurants available for delivery.
 
@@ -1713,6 +1751,9 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
     return item
 
 
+@returns("order")
+@connection("eats")
+@timeout(60)
 def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **params) -> dict:
     """Add items to an Uber Eats cart for a store.
 
@@ -1798,6 +1839,8 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
     }
 
 
+@returns("order[]")
+@connection("eats")
 def get_cart(**params) -> list:
     """Get current Uber Eats carts as order-shaped entities (status: draft).
 
@@ -1849,6 +1892,8 @@ def get_cart(**params) -> list:
     return orders
 
 
+@returns({"status": "string", "draftOrderUuid": "string"})
+@connection("eats")
 def clear_cart(draft_order_uuid: str, **params) -> dict:
     """Discard a draft order (clear the cart for a store)."""
     cookie_header = require_cookies(params, "clear_cart")
@@ -1856,6 +1901,9 @@ def clear_cart(draft_order_uuid: str, **params) -> dict:
     return {"status": "cleared", "draftOrderUuid": draft_order_uuid}
 
 
+@returns("order")
+@connection("eats")
+@timeout(60)
 def checkout(draft_order_uuid: str, **params) -> dict:
     """Place an Uber Eats order from a draft cart.
 
@@ -1954,6 +2002,8 @@ def checkout(draft_order_uuid: str, **params) -> dict:
     }
 
 
+@returns("order")
+@connection("eats")
 def track_delivery(order_uuid: str = "", **params) -> dict:
     """Track a live Uber Eats delivery — courier location, ETA, progress, item fulfillment.
 

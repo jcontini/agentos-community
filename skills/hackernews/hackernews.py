@@ -1,6 +1,6 @@
 """Hacker News — public Algolia API, no auth required."""
 
-from agentos import http
+from agentos import http, provides, returns, web_read, web_search
 
 BASE = "https://hn.algolia.com/api/v1"
 SITE = "https://news.ycombinator.com"
@@ -78,7 +78,14 @@ def _map_item(item: dict) -> dict:
     }
 
 
+@returns("post[]")
 def list_posts(feed: str = "front", limit: int = 30) -> list[dict]:
+    """List Hacker News stories by feed type
+
+        Args:
+            feed: Feed type: front, new, ask, show
+            limit: Number of stories (max 100)
+        """
     endpoint = "search_by_date" if feed == "new" else "search"
     tag_map = {"new": "story", "ask": "ask_hn", "show": "show_hn"}
     tags = tag_map.get(feed, "front_page")
@@ -91,7 +98,15 @@ def list_posts(feed: str = "front", limit: int = 30) -> list[dict]:
     return [_map_hit(h) for h in (resp["json"] or {}).get("hits", [])]
 
 
+@returns("post[]")
+@provides(web_search)
 def search_posts(query: str, limit: int = 30) -> list[dict]:
+    """Search Hacker News stories
+
+        Args:
+            query: Search query
+            limit: Number of results (max 100)
+        """
     resp = http.get(f"{BASE}/search", params={
         "query": query,
         "tags": "story",
@@ -101,7 +116,15 @@ def search_posts(query: str, limit: int = 30) -> list[dict]:
     return [_map_hit(h) for h in (resp["json"] or {}).get("hits", [])]
 
 
+@returns("post")
+@provides(web_read, urls=["news.ycombinator.com/item*"])
 def get_post(id: str = None, url: str = None) -> dict:
+    """Get a Hacker News story with comments
+
+        Args:
+            id: Story ID (optional if url is a news.ycombinator.com item link)
+            url: HN item URL with id= in the query (web_read)
+        """
     if url and not id:
         import re
         m = re.search(r"[?&]id=(\d+)", url)
@@ -116,6 +139,7 @@ def get_post(id: str = None, url: str = None) -> dict:
     return _map_item(resp["json"])
 
 
+@returns("post[]")
 def comments_post(id: str) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
     resp = http.get(f"{BASE}/items/{id}")

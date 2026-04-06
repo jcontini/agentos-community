@@ -8,7 +8,7 @@ import json
 import os
 import glob
 
-from agentos import sql, crypto
+from agentos import crypto, sql, connection, returns
 from agentos.macos import keychain
 
 HISTORY_DB = "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"
@@ -32,6 +32,8 @@ def _map_webpage(row):
     }
 
 
+@returns("webpage[]")
+@connection("history")
 def op_list_webpages(*, limit=200, **kw):
     """List recently visited pages from Brave browsing history."""
     db = HISTORY_DB
@@ -46,6 +48,8 @@ def op_list_webpages(*, limit=200, **kw):
     return [_map_webpage(r) for r in rows]
 
 
+@returns("webpage[]")
+@connection("history")
 def op_search_webpages(*, query, limit=200, **kw):
     """Search Brave browsing history by URL or title."""
     db = HISTORY_DB
@@ -66,6 +70,7 @@ def op_search_webpages(*, query, limit=200, **kw):
 # ==============================================================================
 
 
+@returns({"name": "string", "path": "string"})
 def op_list_accounts(**kw):
     """List Brave browser profiles with their display name and email."""
     profiles = []
@@ -87,6 +92,7 @@ def op_list_accounts(**kw):
 # ==============================================================================
 
 
+@returns({"key": "string"})
 def op_get_cookie_key(**kw):
     """Derive the AES-128 decryption key for Brave cookies on macOS.
 
@@ -104,6 +110,8 @@ def op_get_cookie_key(**kw):
 # ==============================================================================
 
 
+@returns({"name": "string", "hostKey": "string", "path": "string", "encryptedValue": "string", "isSecure": "integer", "isHttponly": "integer", "expiresUtc": "integer"})
+@connection("cookies_db")
 def op_list_cookies(*, domain, limit=1000, **kw):
     """List cookies for a domain with hex-encoded encrypted values."""
     db = COOKIES_DB

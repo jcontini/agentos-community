@@ -1,3 +1,54 @@
+---
+id: chase
+name: Chase Bank
+description: "Chase Bank accounts, balances, and transactions — checking, savings, and credit cards"
+color: "#117ACA"
+website: "https://www.chase.com"
+
+connections:
+  web:
+    auth:
+      type: cookies
+      domain: .chase.com
+      names:
+      - AMSESSION
+      - sessioncacheid
+      - auth-guid
+      - dps-pod-id
+      - x-auth-activity-info
+      - akaalb_secure_chase_com
+      - auth-site-info
+      account:
+        check: check_session
+      login:
+        account_prompt: What is your Chase username?
+        phases:
+        - name: navigate_to_login
+          steps:
+          - action: goto
+            url: https://secure.chase.com/web/auth/dashboard#/dashboard/overview
+          returns_to_agent: 'The Chase login page is open in the browser.
+
+            Ask the user to log in (username, password, MFA). Tell them to let you know when they can see their accounts dashboard.
+
+            '
+        - name: complete_login
+          steps:
+          - action: wait
+            url_contains: /dashboard
+          returns_to_agent: 'Login confirmed. Cookie provider matchmaking can extract `.chase.com`
+
+            cookies on the next API call. If multiple cookie providers are
+
+            installed, ask the user which browser/provider to use.
+
+            '
+
+test:
+  check_session:
+    skip: true
+---
+
 # Chase Bank
 
 Access your Chase accounts, balances, and transaction history.

@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
-from agentos import http
+from agentos import http, connection, provides, returns, timeout, web_read
 
 BASE_URL = "https://www.googleapis.com/calendar/v3"
 
@@ -336,6 +336,9 @@ def _extract_event_id_from_url(url):
 # ==============================================================================
 
 
+@returns("calendar[]")
+@connection("api")
+@timeout(15)
 def list_calendars(*, account=None, **params):
     """List all calendars the user can see."""
     headers = _auth_header(params)
@@ -354,6 +357,8 @@ def list_calendars(*, account=None, **params):
     ]
 
 
+@returns("event[]")
+@connection("api")
 def list_events(*, calendar_id="primary", days=7, past=False,
                 query=None, limit=50, page_token=None,
                 exclude_all_day=False, **params):
@@ -393,6 +398,10 @@ def list_events(*, calendar_id="primary", days=7, past=False,
     return events
 
 
+@returns("event")
+@provides(web_read, urls=["calendar.google.com/*"])
+@connection("api")
+@timeout(15)
 def get_event(*, id=None, url=None, calendar_id="primary", **params):
     """Get full details of a specific event."""
     if url and not id:
@@ -408,6 +417,9 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
     return _map_event(resp["json"])
 
 
+@returns("event")
+@connection("api")
+@timeout(15)
 def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
                  location=None, description=None, attendees=None,
                  recurrence=None, timezone=None, meet=False, **params):
@@ -463,6 +475,9 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
     return _map_event(resp["json"])
 
 
+@returns("event")
+@connection("api")
+@timeout(15)
 def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
                  location=None, description=None, attendees=None, **params):
     """Update an existing event (PATCH — only provided fields change)."""
@@ -489,6 +504,8 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
     return _map_event(resp["json"])
 
 
+@returns("event[]")
+@connection("api")
 def search_events(*, calendar_id="primary", days=30, past=False,
                    query=None, limit=25, **params):
     """Search events — thin wrapper over list_events with search-oriented defaults."""
@@ -498,6 +515,9 @@ def search_events(*, calendar_id="primary", days=30, past=False,
     )
 
 
+@returns("void")
+@connection("api")
+@timeout(15)
 def delete_event(*, id, calendar_id="primary", **params):
     """Delete a calendar event."""
     headers = _auth_header(params)

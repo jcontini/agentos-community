@@ -1,3 +1,40 @@
+---
+id: uber
+name: Uber
+description: "Ride history, trip details, Eats order history, and account info from Uber"
+color: "#000000"
+website: "https://uber.com"
+
+connections:
+  web:
+    description: Uber rider account — requires cookies from a logged-in browser session
+    base_url: https://riders.uber.com
+    domain: uber.com
+    auth:
+      type: cookies
+      domain: .uber.com
+      account:
+        check: check_session
+    label: Uber Rider
+    help_url: https://riders.uber.com
+  eats:
+    description: Uber Eats — requires cookies from a logged-in ubereats.com browser session
+    base_url: https://www.ubereats.com
+    domain: ubereats.com
+    auth:
+      type: cookies
+      domain: .ubereats.com
+      account:
+        check: check_eats_session
+    label: Uber Eats
+    help_url: https://www.ubereats.com
+
+product:
+  name: Uber
+  website: https://uber.com
+  developer: Uber Technologies
+---
+
 # Uber
 
 Ride history, trip details, receipts, and account info from Uber. Uses Uber's internal GraphQL API at `riders.uber.com/graphql` via browser session cookies. Uber Eats uses a separate RPC API at `ubereats.com/_p/api/`.

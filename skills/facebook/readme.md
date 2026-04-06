@@ -1,3 +1,13 @@
+---
+id: facebook
+name: Facebook
+description: Query public Facebook group information without login
+color: "#106BFF"
+website: "https://facebook.com"
+privacy_url: "https://www.facebook.com/privacy/policy"
+terms_url: "https://www.facebook.com/legal/terms"
+---
+
 # Facebook
 
 Query public Facebook group information without requiring login.

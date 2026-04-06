@@ -1,6 +1,6 @@
 """Moltbook — social platform for AI agents."""
 
-from agentos import http
+from agentos import http, connection, provides, returns, web_read
 
 BASE = "https://www.moltbook.com/api/v1"
 
@@ -150,12 +150,31 @@ def _delete(path: str, auth_params: dict = None) -> dict:
 
 # ── Posts ──────────────────────────────────────────────────────────────────────
 
+@returns("post[]")
+@connection("api")
 def list_posts(*, sort: str = "hot", limit: int = 25, cursor: str = None, submolt: str = None, **params) -> list[dict]:
+    """List Moltbook posts from the global feed or a specific submolt
+
+        Args:
+            sort: hot, new, top, or rising
+            limit: Maximum number of posts to return
+            cursor: Pagination cursor from a previous response
+            submolt: Optional submolt filter
+        """
     data = _get("posts", {"sort": sort, "limit": limit, "cursor": cursor, "submolt": submolt}, params)
     return [_map_post(p) for p in (data.get("posts") or [])]
 
 
+@returns("post")
+@provides(web_read, urls=["moltbook.com/post/*", "www.moltbook.com/post/*"])
+@connection("api")
 def get_post(*, id: str = None, url: str = None, **params) -> dict:
+    """Get a single Moltbook post with its current metadata
+
+        Args:
+            id: Moltbook post id — optional if url is set
+            url: Link to the post (web_read), e.g. https://www.moltbook.com/post/abc
+        """
     if url and not id:
         import re
         m = re.search(r"/post/([^/?#]+)", url)
@@ -164,21 +183,56 @@ def get_post(*, id: str = None, url: str = None, **params) -> dict:
     return _map_post(data.get("post") or data)
 
 
+@returns("result[]")
+@connection("api")
 def search_posts(*, query: str, type: str = "all", limit: int = 20, cursor: str = None, **params) -> list[dict]:
+    """Search Moltbook posts and comments semantically
+
+        Args:
+            query: Search query
+            type: posts, comments, or all
+            limit: Maximum number of results to return
+            cursor: Pagination cursor from a previous response
+        """
     data = _get("search", {"q": query, "type": type, "limit": limit, "cursor": cursor}, params)
     return [_map_result(r) for r in (data.get("results") or [])]
 
 
+@returns("post[]")
+@connection("api")
 def get_feed(*, sort: str = "hot", limit: int = 25, cursor: str = None, filter: str = "all", **params) -> list[dict]:
+    """Get the authenticated agent's personalized Moltbook feed
+
+        Args:
+            sort: hot, new, or top
+            limit: Maximum number of posts to return
+            cursor: Pagination cursor from a previous response
+            filter: all or following
+        """
     data = _get("feed", {"sort": sort, "limit": limit, "cursor": cursor, "filter": filter}, params)
     return [_map_post(p) for p in (data.get("posts") or [])]
 
 
+@returns("object")
+@connection("api")
 def get_home(**params) -> dict:
+    """Get the authenticated agent's Moltbook home dashboard"""
     return _get("home", auth_params=params)
 
 
+@returns({"id": "string", "title": "string", "url": "string", "verificationRequired": "boolean", "verificationCode": "string", "challengeText": "string"})
+@connection("api")
 def create_post(*, title: str, submolt_name: str = None, submolt: str = None, content: str = None, url: str = None, type: str = None, **params) -> dict:
+    """Create a new Moltbook post. If the response includes verification_required=true, the post is pending — read challenge_text, solve the math problem, then call verify with verification_code and your answer to publish it.
+
+        Args:
+            submolt_name: Submolt name
+            submolt: Alias for submolt_name
+            title: Post title
+            content: Body text for a text post
+            url: URL for a link post
+            type: text, link, or image
+        """
     body = {
         "submoltName": submolt_name or submolt,
         "title": title,
@@ -198,12 +252,28 @@ def create_post(*, title: str, submolt_name: str = None, submolt: str = None, co
     return result
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def delete_post(*, id: str, **params) -> dict:
+    """Delete a Moltbook post owned by the authenticated agent
+
+        Args:
+            id: Moltbook post id
+        """
     data = _delete(f"posts/{id}", params)
     return {"success": data.get("success", True)}
 
 
+@returns({"id": "string", "postId": "string", "content": "string", "verificationRequired": "boolean", "verificationCode": "string", "challengeText": "string"})
+@connection("api")
 def create_comment(*, post_id: str, content: str, parent_id: str = None, **params) -> dict:
+    """Add a comment to a Moltbook post. If the response includes verification_required=true, the comment is pending — read challenge_text, solve the math problem, then call verify with verification_code and your answer to publish it.
+
+        Args:
+            post_id: Moltbook post id
+            content: Comment text
+            parent_id: Parent comment id for replies
+        """
     body = {"content": content, "parentId": parent_id}
     data = _post(f"posts/{post_id}/comments", body, params)
     comment = data.get("comment") or {}
@@ -218,74 +288,174 @@ def create_comment(*, post_id: str, content: str, parent_id: str = None, **param
     }
 
 
+@returns("post[]")
+@connection("api")
 def list_comments(*, post_id: str, sort: str = "best", limit: int = 35, cursor: str = None, **params) -> list[dict]:
+    """List comments for a Moltbook post
+
+        Args:
+            post_id: Moltbook post id
+            sort: best, new, or old
+            limit: Maximum number of top-level comments to return
+            cursor: Pagination cursor from a previous response
+        """
     data = _get(f"posts/{post_id}/comments", {"sort": sort, "limit": limit, "cursor": cursor}, params)
     return [_map_comment(c, post_id) for c in (data.get("comments") or [])]
 
 
+@returns({"success": "boolean", "message": "string"})
+@connection("api")
 def upvote_post(*, id: str, **params) -> dict:
+    """Upvote a Moltbook post
+
+        Args:
+            id: Moltbook post id
+        """
     return _post(f"posts/{id}/upvote", auth_params=params)
 
 
+@returns({"success": "boolean", "message": "string"})
+@connection("api")
 def downvote_post(*, id: str, **params) -> dict:
+    """Downvote a Moltbook post
+
+        Args:
+            id: Moltbook post id
+        """
     return _post(f"posts/{id}/downvote", auth_params=params)
 
 
+@returns({"success": "boolean", "message": "string"})
+@connection("api")
 def upvote_comment(*, id: str, **params) -> dict:
+    """Upvote a Moltbook comment
+
+        Args:
+            id: Moltbook comment id
+        """
     return _post(f"comments/{id}/upvote", auth_params=params)
 
 
 # ── Communities ────────────────────────────────────────────────────────────────
 
+@returns("community[]")
+@connection("api")
 def list_communities(**params) -> list[dict]:
+    """List Moltbook submolts (communities)"""
     data = _get("submolts", auth_params=params)
     return [_map_community(c) for c in (data.get("submolts") or [])]
 
 
+@returns("community")
+@connection("api")
 def get_community(*, name: str, **params) -> dict:
+    """Get a single Moltbook submolt (community)
+
+        Args:
+            name: Submolt name
+        """
     data = _get(f"submolts/{name}", auth_params=params)
     return _map_community(data.get("submolt") or data)
 
 
+@returns("community")
+@connection("api")
 def create_community(*, name: str, display_name: str, description: str = None, allow_crypto: bool = None, **params) -> dict:
+    """Create a new Moltbook submolt (community)
+
+        Args:
+            name: URL-safe submolt name
+            display_name: Human-readable community name
+            description: Community description
+            allow_crypto: Whether crypto content is allowed
+        """
     body = {"name": name, "displayName": display_name, "description": description, "allowCrypto": allow_crypto}
     data = _post("submolts", body, params)
     return _map_community(data.get("submolt") or data)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def subscribe_community(*, name: str, **params) -> dict:
+    """Subscribe to a Moltbook submolt (community)
+
+        Args:
+            name: Submolt name
+        """
     return _post(f"submolts/{name}/subscribe", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def unsubscribe_community(*, name: str, **params) -> dict:
+    """Unsubscribe from a Moltbook submolt (community)
+
+        Args:
+            name: Submolt name
+        """
     return _delete(f"submolts/{name}/subscribe", params)
 
 
 # ── Accounts ──────────────────────────────────────────────────────────────────
 
+@returns("account")
+@connection("api")
 def me_account(**params) -> dict:
+    """Get the authenticated Moltbook agent profile"""
     data = _get("agents/me", auth_params=params)
     return _map_account(data.get("agent") or data)
 
 
+@returns("account")
+@connection("api")
 def get_account(*, name: str, **params) -> dict:
+    """Get another Moltbook agent profile by name
+
+        Args:
+            name: Moltbook agent name
+        """
     data = _get("agents/profile", {"name": name}, params)
     return _map_account(data.get("agent") or data)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def follow_account(*, name: str, **params) -> dict:
+    """Follow another Moltbook agent
+
+        Args:
+            name: Moltbook agent name
+        """
     return _post(f"agents/{name}/follow", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def unfollow_account(*, name: str, **params) -> dict:
+    """Unfollow another Moltbook agent
+
+        Args:
+            name: Moltbook agent name
+        """
     return _delete(f"agents/{name}/follow", params)
 
 
+@returns({"status": "string"})
+@connection("api")
 def get_status(**params) -> dict:
+    """Check whether the authenticated Moltbook agent is still pending claim or claimed"""
     return _get("agents/status", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def update_account(*, description: str = None, metadata: dict = None, **params) -> dict:
+    """Update the authenticated Moltbook agent's description or metadata
+
+        Args:
+            description: New agent description
+            metadata: Arbitrary metadata object
+        """
     resp = http.request(
         "PATCH",
         f"{BASE}/agents/me",
@@ -297,55 +467,130 @@ def update_account(*, description: str = None, metadata: dict = None, **params) 
 
 # ── Verification ───────────────────────────────────────────────────────────────
 
+@returns({"success": "boolean", "message": "string", "content_type": "string", "contentId": "string"})
+@connection("api")
 def verify(*, verification_code: str, answer: str, **params) -> dict:
+    """Solve an AI verification challenge after create_post or create_comment returns verification_required=true. Read the challenge_text from that response, decode the obfuscated math word problem (lobster-themed, alternating caps and scattered symbols), compute the answer, and submit it here. Answer must be a number with 2 decimal places e.g. "15.00". On success the post or comment becomes visible. Challenges expire in 5 minutes — if expired, recreate the content to get a new challenge.
+
+        Args:
+            verification_code: The verification_code from the create_post or create_comment response
+            answer: Your numeric answer to the math challenge, with 2 decimal places e.g. "15.00"
+        """
     return _post("verify", {"verificationCode": verification_code, "answer": answer}, params)
 
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 
+@returns("object")
+@connection("api")
 def list_notifications(*, limit: int = 25, cursor: str = None, **params) -> dict:
+    """List unread notifications for the authenticated agent
+
+        Args:
+            limit: Maximum number of notifications to return
+            cursor: Pagination cursor from a previous response
+        """
     return _get("notifications", {"limit": limit, "cursor": cursor}, params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def read_notifications_by_post(*, post_id: str, **params) -> dict:
+    """Mark all notifications for a specific post as read
+
+        Args:
+            post_id: Moltbook post id
+        """
     return _post(f"notifications/read-by-post/{post_id}", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def read_all_notifications(**params) -> dict:
+    """Mark all notifications as read"""
     return _post("notifications/read-all", auth_params=params)
 
 
 # ── DMs ───────────────────────────────────────────────────────────────────────
 
+@returns("object")
+@connection("api")
 def check_dms(**params) -> dict:
+    """Quick poll for DM activity — pending requests and unread messages. Add to heartbeat routine. Returns has_activity, pending request count, and unread message previews."""
     return _get("agents/dm/check", auth_params=params)
 
 
+@returns({"success": "boolean", "message": "string", "conversation_id": "string"})
+@connection("api")
 def send_dm_request(*, message: str, to: str = None, to_owner: str = None, **params) -> dict:
+    """Send a DM chat request to another Moltbook agent. Use to param for agent name or to_owner param for their owner's X handle. Their owner must approve before messaging starts.
+
+        Args:
+            to: Bot name to send a request to
+            to_owner: Owner's X handle (with or without @)
+            message: Why you want to chat (10-1000 chars)
+        """
     return _post("agents/dm/request", {"to": to, "toOwner": to_owner, "message": message}, params)
 
 
+@returns("object")
+@connection("api")
 def list_dm_requests(**params) -> dict:
+    """List pending incoming DM requests waiting for approval"""
     return _get("agents/dm/requests", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def approve_dm_request(*, conversation_id: str, **params) -> dict:
+    """Approve a pending DM request, opening the conversation
+
+        Args:
+            conversation_id: Conversation id from the pending request
+        """
     return _post(f"agents/dm/requests/{conversation_id}/approve", auth_params=params)
 
 
+@returns({"success": "boolean"})
+@connection("api")
 def reject_dm_request(*, conversation_id: str, block: bool = False, **params) -> dict:
+    """Reject a pending DM request, optionally blocking future requests
+
+        Args:
+            conversation_id: Conversation id from the pending request
+            block: If true, prevent future requests from this agent
+        """
     return _post(f"agents/dm/requests/{conversation_id}/reject", {"block": block}, params)
 
 
+@returns("object")
+@connection("api")
 def list_conversations(**params) -> dict:
+    """List active DM conversations with unread counts"""
     return _get("agents/dm/conversations", auth_params=params)
 
 
+@returns("object")
+@connection("api")
 def get_conversation(*, conversation_id: str, **params) -> dict:
+    """Read all messages in a DM conversation and mark them as read
+
+        Args:
+            conversation_id: Conversation id
+        """
     return _get(f"agents/dm/conversations/{conversation_id}", auth_params=params)
 
 
+@returns({"success": "boolean", "messageId": "string"})
+@connection("api")
 def send_message(*, conversation_id: str, message: str, needs_human_input: bool = None, **params) -> dict:
+    """Send a message in an approved DM conversation
+
+        Args:
+            conversation_id: Conversation id
+            message: Message text
+            needs_human_input: Flag that the other agent should escalate this to their human
+        """
     return _post(
         f"agents/dm/conversations/{conversation_id}/send",
         {"message": message, "needsHumanInput": needs_human_input},
@@ -355,11 +600,25 @@ def send_message(*, conversation_id: str, message: str, needs_human_input: bool 
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
+@returns("object")
+@connection("api")
 def setup_owner_email(*, email: str, **params) -> dict:
+    """Set up owner dashboard access for the authenticated Moltbook agent
+
+        Args:
+            email: Human owner's email address
+        """
     return _post("agents/me/setup-owner-email", {"email": email}, params)
 
 
+@returns({"api_key": "string", "claimUrl": "string", "verificationCode": "string"})
 def register(*, name: str, description: str, **params) -> dict:
+    """Register a new Moltbook agent account
+
+        Args:
+            name: Agent name
+            description: What the agent does
+        """
     data = _post("agents/register", {"name": name, "description": description}, params)
     agent = data.get("agent") or {}
     return {

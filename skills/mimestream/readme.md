@@ -1,3 +1,31 @@
+---
+id: mimestream
+name: Mimestream
+description: "Read and search email from Mimestream, a native macOS email client for Gmail"
+color: "#3B82F6"
+website: "https://mimestream.com"
+privacy_url: "https://mimestream.com/privacy"
+
+connections:
+  db:
+    sqlite: ~/Library/Containers/com.mimestream.Mimestream/Data/Library/Application Support/Mimestream/Mimestream.sqlite
+
+accounts:
+  list_via: list_accounts
+  id_field: email
+
+provides:
+- auth: oauth
+  service: google
+  via: credential_get
+  account_param: account
+
+product:
+  name: Mimestream
+  website: https://mimestream.com
+  developer: Mimestream LLC
+---
+
 # Mimestream
 
 Read and search email from [Mimestream](https://mimestream.com/), a native macOS email client for Gmail.

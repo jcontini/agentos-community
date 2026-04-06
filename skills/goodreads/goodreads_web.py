@@ -10,7 +10,7 @@ import re
 from typing import Any
 from urllib.parse import quote_plus
 
-from agentos import molt, parse_int, parse_date, http, get_cookies
+from agentos import get_cookies, http, molt, connection, provides, returns, timeout, email_lookup, parse_date, parse_int
 from lxml import html as lhtml
 from lxml.html import HtmlElement
 
@@ -116,6 +116,9 @@ def _require_cookies(cookie_header: str | None, params: dict | None, op: str) ->
 # ---------------------------------------------------------------------------
 
 
+@returns({"authenticated": "boolean", "identifier": "string", "display": "string"})
+@connection("web")
+@timeout(15)
 def check_session(**params) -> dict[str, Any]:
     """Verify Goodreads session and identify the logged-in user.
 
@@ -162,11 +165,28 @@ def check_session(**params) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+@returns("person")
+@connection("web")
+@timeout(15)
 def run_get_person(*, user_id: str = "", **params) -> dict[str, Any]:
+    """Get a rich person profile from Goodreads — demographics, stats, favorite books, genres, currently reading
+
+        Args:
+            user_id: User ID (e.g., '27117656')
+        """
     return get_person(user_id=str(user_id), params=params)
 
 
+@returns("person[]")
+@connection("web")
+@timeout(15)
 def run_search_people(*, query: str = "", limit: int = 10, **params) -> list[dict[str, Any]]:
+    """Search for Goodreads users by name
+
+        Args:
+            query: Name to search
+            limit: Max results (default 10)
+        """
     return search_people(query=query, limit=int(limit), params=params)
 
 
@@ -180,43 +200,127 @@ def _resolve_user_id(user_id: str, params: dict) -> str:
     return uid
 
 
+@returns("person[]")
+@connection("web")
+@timeout(60)
 def run_list_friends(*, user_id: str = "", page: int = 0, **params) -> list[dict[str, Any]]:
+    """List a user's friends as people with linked Goodreads accounts
+
+        Args:
+            user_id: User ID
+            page: Page number (0 = all pages, 30 per page)
+        """
     return list_friends(user_id=_resolve_user_id(user_id, params), page=int(page), params=params)
 
 
+@returns("book[]")
+@connection("web")
+@timeout(60)
 def run_list_books(*, user_id: str = "", shelf: str = "all", sort: str = "date_added", page: int = 0, **params) -> list[dict[str, Any]]:
+    """List a user's books organized by shelf (requires Goodreads session cookies)
+
+        Args:
+            user_id: User ID
+            shelf: Shelf: all, read, currently-reading, to-read, did-not-finish (default: all)
+            sort: Sort by: date_added, rating, title, author
+            page: Page number (0 = all pages, 25 per page)
+        """
     return list_books(user_id=_resolve_user_id(user_id, params), shelf=str(shelf), sort=str(sort), page=int(page), params=params)
 
 
+@returns("review[]")
+@connection("web")
+@timeout(60)
 def run_list_reviews(*, user_id: str = "", sort: str = "date", page: int = 0, **params) -> list[dict[str, Any]]:
+    """List your book reviews with ratings and dates (requires Goodreads session cookies)
+
+        Args:
+            user_id: User ID
+            sort: Sort by: date, rating, title
+            page: Page number (0 = all pages, 25 per page)
+        """
     return list_reviews(user_id=_resolve_user_id(user_id, params), sort=str(sort), page=int(page), params=params)
 
 
+@returns("shelf[]")
+@connection("web")
+@timeout(15)
 def run_list_shelves(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    """List a user's bookshelves including default shelves (read, currently-reading, want-to-read)
+
+        Args:
+            user_id: User ID
+        """
     return list_shelves(user_id=_resolve_user_id(user_id, params), params=params)
 
 
+@returns("book[]")
+@connection("web")
+@timeout(60)
 def run_list_shelf_books(*, user_id: str = "", shelf_name: str = "", page: int = 0, **params) -> list[dict[str, Any]]:
+    """List books on a specific user shelf (requires Goodreads session cookies)
+
+        Args:
+            user_id: User ID
+            shelf_name: Shelf name (e.g., 'read', 'currently-reading', 'to-read')
+            page: Page number (0 = all pages, 25 per page)
+        """
     return list_shelf_books(user_id=_resolve_user_id(user_id, params), shelf_name=str(shelf_name), page=int(page), params=params)
 
 
+@returns("person[]")
+@provides(email_lookup)
+@connection("web")
+@timeout(15)
 def run_resolve_email(*, email: str = "", **params) -> list[dict[str, Any]]:
+    """Look up a person on Goodreads by email address
+
+        Args:
+            email: Email address to search for
+        """
     return resolve_email(email=str(email), params=params)
 
 
+@returns("group[]")
+@connection("web")
 def run_list_groups(**params) -> list[dict[str, Any]]:
+    """List the authenticated user's Goodreads groups"""
     return list_groups(params=params)
 
 
+@returns("person[]")
+@connection("web")
+@timeout(15)
 def run_list_following(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    """List people (users and authors) a user is following
+
+        Args:
+            user_id: User ID
+        """
     return list_following(user_id=_resolve_user_id(user_id, params), params=params)
 
 
+@returns("person[]")
+@connection("web")
+@timeout(15)
 def run_list_followers(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    """List people following a user
+
+        Args:
+            user_id: User ID
+        """
     return list_followers(user_id=_resolve_user_id(user_id, params), params=params)
 
 
+@returns("quote[]")
+@connection("web")
+@timeout(15)
 def run_list_quotes(*, user_id: str = "", **params) -> list[dict[str, Any]]:
+    """List a user's liked/saved quotes with author attribution
+
+        Args:
+            user_id: User ID
+        """
     return list_quotes(user_id=_resolve_user_id(user_id, params), params=params)
 
 

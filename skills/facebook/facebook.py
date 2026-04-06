@@ -4,9 +4,12 @@ import re
 import shutil
 
 from lxml import html as lhtml
-from agentos import http, shell
+from agentos import http, shell, provides, returns, timeout, web_read
 
 
+@returns("community")
+@provides(web_read, urls=["facebook.com/groups/*", "www.facebook.com/groups/*"])
+@timeout(35)
 def get_community(
     *,
     group: str = None,

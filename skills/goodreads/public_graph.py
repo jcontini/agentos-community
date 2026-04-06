@@ -7,7 +7,7 @@ import sys
 import time
 from typing import Any
 
-from agentos import http, molt, clean_html, parse_int, iso_from_ms
+from agentos import http, molt, connection, provides, returns, timeout, web_read, clean_html, iso_from_ms, parse_int
 
 
 USER_AGENT = "Mozilla/5.0 (compatible; AgentOS/1.0)"
@@ -931,11 +931,29 @@ def _extract_id_from_url(params: dict | None, url_key: str, id_key: str, pattern
     return _p(params, id_key)
 
 
+@returns("account")
+@connection("graphql")
+@timeout(15)
 def run_get_profile(*, user_id: str = "", limit: int = 10, **params) -> dict[str, Any]:
+    """Get a public Goodreads profile and import bounded public relationships like favorite books, currently reading, and shelves
+
+        Args:
+            user_id: User ID (e.g., '26631647')
+            limit: Max related books or shelves to import per profile section
+        """
     return get_public_profile(user_id=str(user_id), limit=int(limit))
 
 
+@returns("book")
+@provides(web_read, urls=["goodreads.com/book/show/*", "www.goodreads.com/book/show/*"])
+@connection("graphql")
 def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any]:
+    """Get structured public book details from Goodreads hydration and Apollo state
+
+        Args:
+            book_id: Book ID — optional if url is a goodreads.com/book/show/… link
+            url: Goodreads book page URL (web_read)
+        """
     if url:
         m = re.search(r"/book/show/(\d+)", url)
         if m:
@@ -943,23 +961,66 @@ def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any
     return get_public_book(str(book_id))
 
 
+@returns("review[]")
+@connection("graphql")
 def run_list_book_reviews(*, book_id: str = "", limit: int = 30, **params) -> Any:
+    """List public Goodreads reviews for a book via the AppSync GraphQL backend
+
+        Args:
+            book_id: Book ID
+            limit: Max reviews to return
+        """
     return list_book_reviews(book_id=str(book_id), limit=int(limit))
 
 
+@returns("book[]")
+@connection("graphql")
 def run_list_similar_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
+    """List similar books from Goodreads' public AppSync GraphQL backend
+
+        Args:
+            book_id: Book ID
+            limit: Max similar books to return
+        """
     return list_similar_books(book_id=str(book_id), limit=int(limit))
 
 
+@returns("book[]")
+@connection("graphql")
 def run_list_series_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
+    """List all books in a series, given any book that belongs to it
+
+        Args:
+            book_id: Book ID of any book in the series
+            limit: Max books to return
+        """
     return list_series_books(book_id=str(book_id), limit=int(limit))
 
 
+@returns("book[]")
+@connection("graphql")
+@timeout(15)
 def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any:
+    """Search for books by title, author, or ISBN via the public AppSync GraphQL backend
+
+        Args:
+            query: Search query (title, author, or ISBN)
+            limit: Max results
+        """
     return search_books(query=str(query), limit=int(limit))
 
 
+@returns("author")
+@provides(web_read, urls=["goodreads.com/author/show/*", "www.goodreads.com/author/show/*"])
+@connection("graphql")
 def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **params) -> dict[str, Any]:
+    """Get a public Goodreads author profile and import bounded authored books
+
+        Args:
+            author_id: Author ID — optional if url is a goodreads.com/author/show/… link
+            url: Goodreads author page URL (web_read)
+            limit: Max authored books to import
+        """
     if url:
         m = re.search(r"/author/show/(\d+)", url)
         if m:
@@ -967,7 +1028,15 @@ def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **par
     return get_public_author(author_id=str(author_id), limit=int(limit))
 
 
+@returns("book[]")
+@connection("graphql")
 def run_list_author_books(*, author_id: str = "", limit: int = 10, **params) -> list[dict[str, Any]]:
+    """List a public Goodreads author's books
+
+        Args:
+            author_id: Author ID
+            limit: Max books to return
+        """
     return parse_author_books(author_id=str(author_id), limit=int(limit))
 
 

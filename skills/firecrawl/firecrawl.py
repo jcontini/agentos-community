@@ -1,10 +1,13 @@
 """Firecrawl — browser-rendered web scraping via API."""
 
-from agentos import http
+from agentos import http, connection, provides, returns, web_read
 
 API_BASE = "https://api.firecrawl.dev/v1"
 
 
+@returns("webpage")
+@provides(web_read)
+@connection("api")
 def read_webpage(*, url: str, wait_for_js: int = 0, timeout: int = 30000, **params) -> dict:
     """Read a URL with browser rendering (handles JS-heavy sites)."""
     api_key = params.get("auth", {}).get("key", "")

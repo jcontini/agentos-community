@@ -9,7 +9,7 @@ forward-compatibility with engine-injected context.
 
 import json
 
-from agentos import shell, sql
+from agentos import shell, sql, returns
 
 DB_PATH = "~/Library/Messages/chat.db"
 
@@ -81,6 +81,7 @@ def _map_message(row):
 # ==============================================================================
 
 
+@returns("conversation[]")
 def op_list_conversations(*, limit=200, **params):
     """List all iMessage/SMS conversations."""
     rows = sql.query("""
@@ -115,6 +116,7 @@ def op_list_conversations(*, limit=200, **params):
     return [_map_conversation(r) for r in rows]
 
 
+@returns("conversation")
 def op_get_conversation(*, id, **params):
     """Get a specific conversation with metadata."""
     rows = sql.query("""
@@ -148,6 +150,7 @@ def op_get_conversation(*, id, **params):
 # ==============================================================================
 
 
+@returns("message[]")
 def op_list_messages(*, conversation_id, limit=200, **params):
     """List messages in a conversation."""
     return sql.query("""
@@ -175,6 +178,7 @@ def op_list_messages(*, conversation_id, limit=200, **params):
     return [_map_message(r) for r in rows]
 
 
+@returns("message")
 def op_get_message(*, id, **params):
     """Get a specific message by ID."""
     rows = sql.query("""
@@ -197,6 +201,7 @@ def op_get_message(*, id, **params):
     return _map_message(rows[0]) if rows else None
 
 
+@returns("message[]")
 def op_search_messages(*, query, limit=200, **params):
     """Search messages by text content."""
     return sql.query("""
@@ -230,6 +235,7 @@ def op_search_messages(*, query, limit=200, **params):
 # ==============================================================================
 
 
+@returns("void")
 def op_send_message(*, to, text, service="iMessage", **params):
     """Send an iMessage or SMS to a phone number or email."""
     result = shell.run("imsg", ["send", "--to", to, "--text", text, "--service", service, "--json"], timeout=15)

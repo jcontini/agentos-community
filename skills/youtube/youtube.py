@@ -9,6 +9,7 @@ import glob
 import sys
 import urllib.request
 import json
+from agentos import provides, returns, web_read
 
 # Add yt-dlp's own site-packages to path (stable symlink, version-agnostic)
 _ytdlp_paths = glob.glob("/opt/homebrew/opt/yt-dlp/libexec/lib/python*/site-packages")
@@ -116,30 +117,59 @@ def _ydl(extra: dict | None = None) -> yt_dlp.YoutubeDL:
 # Operations
 # ─────────────────────────────────────────────────────────────────────────────
 
+@returns("video[]")
 def search_videos(query: str, limit: int = 50) -> list[dict]:
+    """Search YouTube videos by query (returns results sorted by relevance)
+
+        Args:
+            query: Search query
+            limit: Number of results
+        """
     with _ydl({"extractFlat": "in_playlist"}) as ydl:
         info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
 
+@returns("video[]")
 def search_recent_video(query: str, limit: int = 50) -> list[dict]:
+    """Search YouTube videos by query sorted by upload date (newest first)
+
+        Args:
+            query: Search query
+            limit: Number of results
+        """
     with _ydl({"extractFlat": "in_playlist"}) as ydl:
         info = ydl.extract_info(f"ytsearchdate{limit}:{query}", download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
 
+@returns("video[]")
 def list_videos(url: str, limit: int = 50) -> list[dict]:
+    """List videos from a YouTube channel or playlist
+
+        Args:
+            url: YouTube channel URL (e.g., youtube.com/@channelname) or playlist URL
+            limit: Number of videos to return
+        """
     with _ydl({"extractFlat": "in_playlist", "playlistend": limit}) as ydl:
         info = ydl.extract_info(url, download=False)
     return [_map_flat_entry(e) for e in (info.get("entries") or [])]
 
 
+@returns("video")
 def get_video(url: str) -> dict:
+    """Get video metadata (title, creator, thumbnail, duration)
+
+        Args:
+            url: YouTube video URL
+        """
     with _ydl() as ydl:
         info = ydl.extract_info(url, download=False)
     return _map_full_info(info)
 
 
+@returns("video")
+@provides(web_read, urls=["youtube.com/*", "youtu.be/*", "music.youtube.com/*"])
 def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
     """Fetch video metadata + transcript. No temp files — captions fetched in memory."""
     with _ydl() as ydl:
@@ -204,7 +234,13 @@ def transcript_video(url: str, lang: str = "en", format: str = "text") -> dict:
     return vid
 
 
+@returns("channel")
 def get_channel(url: str) -> dict:
+    """Get YouTube channel metadata (avatar, description, subscriber count)
+
+        Args:
+            url: YouTube channel URL
+        """
     with _ydl({"extractFlat": True, "playlistend": 0}) as ydl:
         info = ydl.extract_info(url, download=False)
 
@@ -230,6 +266,7 @@ def get_channel(url: str) -> dict:
     }
 
 
+@returns("channel")
 def get_avatar_channel(url: str) -> dict:
     """Quick fetch of channel avatar via og:image — ~1s."""
     from agentos import http
@@ -242,6 +279,7 @@ def get_avatar_channel(url: str) -> dict:
     return {"url": url, "image": avatar}
 
 
+@returns("post[]")
 def list_posts(url: str, limit: int = 50) -> list[dict]:
     """List comments on a video as post entities."""
     opts = {

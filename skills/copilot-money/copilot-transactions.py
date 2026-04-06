@@ -11,7 +11,7 @@ import os
 import sys
 import argparse
 
-from agentos import sql
+from agentos import sql, returns
 
 WIDGET_DIR = os.path.expanduser(
     "~/Library/Group Containers/group.com.copilot.production/widget-data"
@@ -32,7 +32,14 @@ def load_categories():
         return {}
 
 
+@returns("transaction[]")
 def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
+    """Search transactions by merchant name or notes, with category tags (emoji + color)
+
+        Args:
+            query:
+            limit:
+        """
     categories = load_categories()
 
     base_sql = """

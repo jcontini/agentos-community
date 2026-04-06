@@ -12,7 +12,7 @@ Auth:     AWS Cognito (us-east-1) via USER_PASSWORD_AUTH
 import json
 import re
 import time
-from agentos import http
+from agentos import http, returns
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -488,6 +488,7 @@ def _get_id_token(credentials: str) -> str:
 # Operation entrypoints — called by the python: executor with kwargs
 # ---------------------------------------------------------------------------
 
+@returns("class[]")
 def op_get_schedule(
     location_id: int = AUSTIN_SPRINGDALE["id"],
     activity_ids: str = None,
@@ -509,6 +510,7 @@ def op_get_schedule(
     return [_booking_to_entity(b) for b in result.get("bookings", [])]
 
 
+@returns({"ok": "boolean", "message": "string"})
 def op_book_class(
     booking_instance_id: int,
     num_guests: int = 0,
@@ -521,6 +523,7 @@ def op_book_class(
     return {"ok": True, "message": "Booked successfully", "result": result}
 
 
+@returns({"ok": "boolean", "message": "string"})
 def op_cancel_booking(
     booking_instance_id: int,
     reservation_id: int,
@@ -533,6 +536,7 @@ def op_cancel_booking(
     return {"ok": True, "message": "Cancelled successfully", "result": result}
 
 
+@returns("array")
 def op_get_my_memberships(**params) -> list[dict]:
     """List active memberships for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
@@ -540,6 +544,7 @@ def op_get_my_memberships(**params) -> list[dict]:
     return get_my_memberships(id_token)
 
 
+@returns("array")
 def op_get_my_passes(**params) -> list[dict]:
     """List active class passes for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")

@@ -1,3 +1,29 @@
+---
+id: brave-browser
+name: Brave Browser
+description: "Browsing history, bookmarks, and cookies from Brave Browser on macOS — including session key extraction for claude.ai"
+color: "#F83B1D"
+website: "https://brave.com"
+
+connections:
+  history:
+    sqlite: ~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History
+  cookies_db:
+    sqlite: ~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies
+
+accounts:
+  list_via: list_accounts
+  id_field: name
+
+provides:
+- auth: cookies
+  via: cookie_get
+  account_param: domain
+  creation_timestamps: true
+  description: Extract decrypted cookies from Brave Browser's local database (including HttpOnly). Full Chromium cookie decryption
+    pipeline.
+---
+
 # Brave Browser
 
 Access browsing history, bookmarks, cookies, and session credentials from Brave Browser's local databases.

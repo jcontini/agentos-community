@@ -1,3 +1,26 @@
+---
+id: firefox
+name: Mozilla Firefox
+description: "Browsing history, bookmarks, and cookies from Firefox, including cookie provider access for runtime cookie matchmaking"
+color: "#FF7139"
+website: "https://www.mozilla.org/firefox"
+
+connections:
+  places:
+    sqlite:
+      macos: ~/Library/Application Support/Firefox/Profiles/*/places.sqlite
+  cookies_db:
+    sqlite:
+      macos: ~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite
+
+provides:
+- auth: cookies
+  via: cookie_get
+  account_param: domain
+  creation_timestamps: true
+  description: Extract plaintext Firefox cookies from local profiles for cookie-based connections.
+---
+
 # Mozilla Firefox
 
 Access browsing history, bookmarks, and cookies from Firefox's local databases.

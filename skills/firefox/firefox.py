@@ -6,7 +6,7 @@ Two databases: places.sqlite (history + bookmarks) and cookies.sqlite (cookies).
 All public functions accept **kw for forward-compatibility with engine context.
 """
 
-from agentos import sql
+from agentos import sql, connection, returns
 
 PLACES_DB = "~/Library/Application Support/Firefox/Profiles/*/places.sqlite"
 COOKIES_DB = "~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite"
@@ -35,6 +35,8 @@ def _map_webpage(row):
     }
 
 
+@returns("webpage[]")
+@connection("places")
 def op_list_webpages(*, limit=200, connection=None, **kw):
     """List recently visited pages from Firefox browsing history."""
     rows = sql.query("""
@@ -50,6 +52,8 @@ def op_list_webpages(*, limit=200, connection=None, **kw):
     return [_map_webpage(r) for r in rows]
 
 
+@returns("webpage[]")
+@connection("places")
 def op_search_webpages(*, query, limit=200, connection=None, **kw):
     """Search Firefox browsing history by URL or title."""
     rows = sql.query("""
@@ -74,6 +78,8 @@ def op_search_webpages(*, query, limit=200, connection=None, **kw):
 # ==============================================================================
 
 
+@returns({"title": "string", "url": "string", "dateAdded": "integer"})
+@connection("places")
 def op_list_bookmarks(*, limit=200, connection=None, **kw):
     """List Firefox bookmarks (excluding folders and separators)."""
     return sql.query("""
@@ -93,6 +99,8 @@ def op_list_bookmarks(*, limit=200, connection=None, **kw):
 # ==============================================================================
 
 
+@returns({"name": "string", "value": "string", "host": "string", "path": "string", "expiry": "integer", "isSecure": "integer", "isHttponly": "integer"})
+@connection("cookies_db")
 def op_list_cookies(*, domain, limit=200, connection=None, **kw):
     """List cookies for a domain from Firefox (plaintext, no decryption needed)."""
     return sql.query("""
@@ -109,6 +117,7 @@ def op_list_cookies(*, domain, limit=200, connection=None, **kw):
     })
 
 
+@returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
 def op_cookie_get(*, domain, names=None, limit=200, connection=None, **kw):
     """Extract cookies for a domain — provider interface for cookie matchmaking.
 

@@ -25,7 +25,7 @@ import time
 from typing import Any
 from urllib.parse import quote_plus
 
-from agentos import molt, parse_int, http, get_cookies, require_cookies
+from agentos import get_cookies, http, molt, connection, returns, timeout, parse_int, require_cookies
 from lxml import html as lhtml
 from lxml.html import HtmlElement
 
@@ -140,6 +140,9 @@ def _is_captcha(body: str) -> bool:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+@returns({"suggestions": "array", "count": "integer"})
+@connection("public")
+@timeout(15)
 def search_suggestions(
     query: str,
     department: str | None = None,
@@ -194,6 +197,8 @@ def search_suggestions(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+@returns("product[]")
+@connection("public")
 def search_products(
     query: str,
     department: str | None = None,
@@ -293,6 +298,8 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+@returns("product")
+@connection("public")
 def get_product(
     asin: str,
     marketplace: str | None = None,
@@ -504,6 +511,8 @@ SHIPMENT_STATUS_SEL = [
 DETAIL_STATUS_SEL = SHIPMENT_STATUS_SEL + ["h4"]
 
 
+@returns("order[]")
+@connection("web")
 def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
     """List Amazon orders from the order history page."""
     cookie_header = _require_cookies(params, "list_orders")
@@ -740,6 +749,8 @@ def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[
     return items
 
 
+@returns("product[]")
+@connection("web")
 def buy_again(**params) -> list[dict[str, Any]]:
     """Get products Amazon recommends for repurchase."""
     cookie_header = _require_cookies(params, "buy_again")
@@ -805,6 +816,9 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
     return products
 
 
+@returns({"subscriptions": "array", "subscriptionCount": "integer", "upcomingDeliveries": "array", "totalSavings": "string"})
+@connection("web")
+@timeout(45)
 def subscriptions(**params) -> dict[str, Any]:
     """List active Subscribe & Save subscriptions and upcoming deliveries."""
     cookie_header = _require_cookies(params, "subscriptions")
@@ -961,6 +975,8 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
     return items
 
 
+@returns("order")
+@connection("web")
 def get_order(*, order_id, **params) -> dict[str, Any]:
     """Fetch detailed info for a specific Amazon order."""
     cookie_header = _require_cookies(params, "get_order")
@@ -1129,6 +1145,8 @@ ITEM_REVIEW_COUNT_SEL = [
 MAX_LIST_PAGES = 20
 
 
+@returns("list[]")
+@connection("web")
 def list_lists(**params) -> list[dict[str, Any]]:
     """List all of the user's Amazon lists (wishlists, shopping lists, etc.)."""
     cookie_header = _require_cookies(params, "list_lists")
@@ -1190,6 +1208,9 @@ def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
     return lists
 
 
+@returns("list")
+@connection("web")
+@timeout(60)
 def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     """Get items from a specific Amazon list by list ID."""
     cookie_header = _require_cookies(params, "get_list")
@@ -1381,6 +1402,8 @@ def _parse_list_items(soup: HtmlElement) -> list[dict[str, Any]]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+@returns("account")
+@connection("web")
 def whoami(**params) -> dict[str, Any]:
     """Check session liveness and extract account identity.
 

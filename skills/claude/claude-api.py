@@ -19,7 +19,7 @@ import json
 import re
 import sys
 
-from agentos import http, get_cookies, parse_cookie
+from agentos import get_cookies, http, connection, provides, returns, timeout, web_read, parse_cookie
 
 BASE_URL = "https://claude.ai"
 
@@ -157,7 +157,15 @@ def _format_conversation(conv, org_uuid):
 
 # -- Operation entrypoints — called by the python: executor with auto-dispatch --
 
+@returns("conversation[]")
 def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
+    """List claude.ai web chat conversations, most recently updated first. Requires a valid session (run login flow if needed).
+
+        Args:
+            org: Org UUID to use (omit to use session default). Use list_orgs to discover available orgs.
+            limit: Max conversations to return (max 250)
+            offset: Pagination offset
+        """
     cookie_header = get_cookies(params)
     limit = int(limit)
     offset = int(offset)
@@ -167,7 +175,16 @@ def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
     return _format_conversation_list(convs, resolved_org)
 
 
+@returns("conversation")
+@provides(web_read, urls=["claude.ai/chat/*", "www.claude.ai/chat/*"])
 def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
+    """Get a full claude.ai web conversation with all messages. Returns the complete message history including both human and assistant turns.
+
+        Args:
+            id: Conversation UUID — optional if url is a claude.ai/chat/… link
+            url: Claude chat URL copied from the browser (web_read)
+            org: Org UUID (omit to use session default)
+        """
     cookie_header = get_cookies(params)
     conv_id = id
     if url:
@@ -182,7 +199,15 @@ def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
     return _format_conversation(conv, resolved_org)
 
 
+@returns("conversation[]")
 def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
+    """Search claude.ai web conversations by title/name. Fetches up to 250 conversations and filters locally (no server-side search). For full content search across message text, use import_conversation first, then search({ query: "...", types: ["message"] }) against the graph FTS index.
+
+        Args:
+            query: Text to search for in conversation titles
+            org: Org UUID (omit to use session default)
+            limit: Max results
+        """
     cookie_header = get_cookies(params)
     limit = int(limit)
 
@@ -208,7 +233,16 @@ def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
     return _format_conversation_list(results[:limit], resolved_org)
 
 
+@returns("message[]")
+@timeout(60)
 def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
+    """Import claude.ai conversations and all their messages into the graph. Each message becomes a message entity with full content FTS-indexed. After import, use search({ query: "...", types: ["message"] }) for content search. Safe to run repeatedly — deduplicates by message UUID. Use limit+offset to page through conversations in batches of 5-10.
+
+        Args:
+            org: Org UUID (omit to use session default)
+            limit: Conversations per batch (keep ≤10 to avoid DB lock)
+            offset: Pagination offset
+        """
     cookie_header = get_cookies(params)
     limit = int(limit)
     offset = int(offset)
@@ -246,7 +280,10 @@ def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
     return rows
 
 
+@returns({"uuid": "string", "name": "string", "capabilities": "array"})
+@timeout(15)
 def op_list_orgs(**params) -> list:
+    """List all organizations the user has access to. Returns org UUIDs, names, and capabilities. Use this to discover which org has chat history (look for "chat" in capabilities)."""
     cookie_header = get_cookies(params)
     with _client(cookie_header) as client:
         return _get_organizations(client)
@@ -254,6 +291,8 @@ def op_list_orgs(**params) -> list:
 
 # -- Session check — called by account.check with auto-dispatch ----------------
 
+@returns({"authenticated": "boolean", "identifier": "string", "display": "string"})
+@connection("web")
 def check_session(**params) -> dict:
     """Verify Claude.ai session and identify the logged-in account.
 
@@ -365,7 +404,14 @@ def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
     return None
 
 
+@returns({"magicLink": "string"})
+@timeout(10)
 def op_extract_magic_link(raw_email: str) -> dict:
+    """Extract the magic link URL from a raw base64url-encoded email body. Pass the raw RFC 2822 email body (e.g. from whichever integration exposes raw message bytes) and this will decode it and find the claude.ai magic link.
+
+        Args:
+            raw_email: Base64url-encoded raw RFC 2822 email content
+        """
     link = _extract_magic_link_from_raw_email(raw_email)
     if link:
         return {"magicLink": link}

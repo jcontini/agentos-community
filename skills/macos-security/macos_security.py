@@ -10,7 +10,7 @@ import os
 import re
 from pathlib import Path
 
-from agentos import shell, sql
+from agentos import shell, sql, returns, timeout
 
 
 # ── App discovery ──────────────────────────────────────────────────────────────
@@ -133,6 +133,7 @@ def _categorize(entry: dict) -> str | None:
 
 # ── Operations ────────────────────────────────────────────────────────────────
 
+@returns({"category": "string", "app": "string", "account": "string", "note": "string"})
 def cmd_audit(**kwargs) -> list[dict]:
     """
     Full credential inventory. Returns categorized entries sorted by category.
@@ -200,6 +201,8 @@ def cmd_audit(**kwargs) -> list[dict]:
     return results
 
 
+@returns({"service": "string", "account": "string", "value": "string", "format": "string", "note": "string"})
+@timeout(10)
 def cmd_get_token(service: str, account: str, **kwargs) -> dict:
     """
     Extract a token value from the Keychain.
@@ -229,6 +232,8 @@ def cmd_get_token(service: str, account: str, **kwargs) -> dict:
     }
 
 
+@returns({"app": "string", "installPath": "string", "bundleId": "string", "version": "string", "clientId": "string", "urlScheme": "string", "note": "string"})
+@timeout(60)
 def cmd_scan_google_oauth(**kwargs) -> list[dict]:
     """
     Scan all installed apps for Google OAuth client IDs.
@@ -271,6 +276,8 @@ def cmd_scan_google_oauth(**kwargs) -> list[dict]:
     return results
 
 
+@returns({"username": "string", "accountType": "string", "identifier": "string", "note": "string"})
+@timeout(15)
 def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
     """
     Scan macOS Internet Accounts (Account.framework).
@@ -373,6 +380,8 @@ def _account_type_note(account_type: str) -> str:
     return "macOS Internet Account"
 
 
+@returns({"name": "string"})
+@timeout(15)
 def cmd_list_electron_apps(**kwargs) -> list[dict]:
     """
     List all apps using the Electron Safe Storage pattern.

@@ -7,7 +7,7 @@ import time
 from glob import glob
 from pathlib import Path
 
-from agentos import shell
+from agentos import shell, returns, timeout
 
 
 KITTY_BINARY = "/Applications/kitty.app/Contents/MacOS/kitty"
@@ -226,14 +226,29 @@ def require_int(params: dict, name: str) -> int:
     fail(f"Param {name} must be an integer")
 
 
+@returns("array")
+@timeout(15)
 def command_list_os_windows(*, socket=None, **params) -> list[dict]:
+    """List Kitty OS windows with their focused tab state
+
+        Args:
+            socket: Optional Kitty remote-control socket (for example unix:/tmp/kitty-socket-12345)
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
     return [normalize_os_window(os_window) for os_window in kitty_ls(socket)]
 
 
+@returns("array")
+@timeout(15)
 def command_list_tabs(*, socket=None, os_window_id=None, **params) -> list[dict]:
+    """List Kitty tabs across all OS windows
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            os_window_id: Filter results to a single Kitty OS window id
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
@@ -246,7 +261,16 @@ def command_list_tabs(*, socket=None, os_window_id=None, **params) -> list[dict]
     return results
 
 
+@returns("array")
+@timeout(15)
 def command_list_panes(*, socket=None, os_window_id=None, tab_id=None, **params) -> list[dict]:
+    """List Kitty panes with cwd, process, and focus state
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            os_window_id: Filter results to a single Kitty OS window id
+            tab_id: Filter results to a single Kitty tab id
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         return []
@@ -262,7 +286,18 @@ def command_list_panes(*, socket=None, os_window_id=None, tab_id=None, **params)
     return results
 
 
+@returns({"socket": "string", "osWindowId": "integer", "tabId": "integer", "windowId": "integer", "title": "string"})
+@timeout(20)
 def command_launch_tab(*, socket=None, title=None, cwd=None, command=None, keep_focus=False, **params) -> dict:
+    """Launch a new Kitty tab, starting Kitty first if needed
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            title: Optional tab title
+            cwd: Working directory for the new tab
+            command: Optional shell command to run with /bin/zsh -lc
+            keep_focus: Keep focus on the current tab after launching the new one
+        """
     socket = normalize_socket(socket) or ensure_socket(True)
     args = ["launch", "--type=tab"]
 
@@ -295,7 +330,15 @@ def command_launch_tab(*, socket=None, title=None, cwd=None, command=None, keep_
     }
 
 
+@returns({"ok": "boolean", "socket": "string", "tabId": "integer"})
+@timeout(15)
 def command_focus_tab(*, socket=None, tab_id=None, **params) -> dict:
+    """Focus an existing Kitty tab by id
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            tab_id: Kitty tab id to focus
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
@@ -310,7 +353,15 @@ def command_focus_tab(*, socket=None, tab_id=None, **params) -> dict:
     return {"ok": True, "socket": socket, "tabId": tab_id}
 
 
+@returns({"ok": "boolean", "socket": "string", "osWindowId": "integer", "tabId": "integer", "windowId": "integer"})
+@timeout(15)
 def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict:
+    """Focus a Kitty OS window by targeting its active pane
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            os_window_id: Kitty OS window id to focus
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
@@ -341,7 +392,18 @@ def command_focus_os_window(*, socket=None, os_window_id=None, **params) -> dict
     }
 
 
+@returns({"ok": "boolean", "socket": "string", "tabId": "integer", "windowId": "integer"})
+@timeout(15)
 def command_send_text(*, socket=None, text=None, window_id=None, tab_id=None, press_enter=False, **params) -> dict:
+    """Send text to the active Kitty pane, a specific pane, or a whole tab
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            text: Text to send
+            window_id: Target Kitty pane id
+            tab_id: Target Kitty tab id
+            press_enter: Append carriage return after sending the text
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
@@ -379,7 +441,17 @@ def command_send_text(*, socket=None, text=None, window_id=None, tab_id=None, pr
     }
 
 
+@returns({"socket": "string", "windowId": "integer", "extent": "string", "text": "string"})
+@timeout(15)
 def command_get_text(*, socket=None, window_id=None, extent="screen", ansi=False, **params) -> dict:
+    """Read text currently visible in a Kitty pane
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            window_id: Target Kitty pane id; defaults to the active pane
+            extent: Kitty get-text extent such as screen, all, or selection
+            ansi: Include ANSI escape sequences in the returned text
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")
@@ -405,7 +477,15 @@ def command_get_text(*, socket=None, window_id=None, extent="screen", ansi=False
     }
 
 
+@returns({"ok": "boolean", "socket": "string", "tabId": "integer"})
+@timeout(15)
 def command_close_tab(*, socket=None, tab_id=None, **params) -> dict:
+    """Close a Kitty tab by id
+
+        Args:
+            socket: Optional Kitty remote-control socket
+            tab_id: Kitty tab id to close
+        """
     socket = normalize_socket(socket) or ensure_socket(False)
     if not socket:
         fail("Kitty is not running")

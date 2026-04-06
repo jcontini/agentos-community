@@ -5,7 +5,7 @@ All operations POST to the Linear GraphQL API with API key auth.
 """
 
 import re
-from agentos import http
+from agentos import http, provides, returns, web_read
 
 API_URL = "https://api.linear.app/graphql"
 
@@ -143,6 +143,7 @@ def _map_project(node):
 # Operations
 # ---------------------------------------------------------------------------
 
+@returns("task[]")
 def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **params) -> list:
     """List issues with optional filters."""
     query = """
@@ -162,6 +163,8 @@ def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **
     return [_map_task(n) for n in data["issues"]["nodes"]]
 
 
+@returns("task")
+@provides(web_read, urls=["linear.app/*/issue/*"])
 def get_task(*, id: str = None, url: str = None, **params) -> dict:
     """Get a single issue by ID or URL.
 
@@ -183,6 +186,7 @@ def get_task(*, id: str = None, url: str = None, **params) -> dict:
     return _map_task(data["issue"])
 
 
+@returns("task")
 def create_task(*, team_id: str, name: str, description: str = None,
                 priority: int = None, project_id: str = None,
                 parent_id: str = None, due: str = None, **params) -> dict:
@@ -205,6 +209,7 @@ def create_task(*, team_id: str, name: str, description: str = None,
     return _map_task(data["issueCreate"]["issue"])
 
 
+@returns("task")
 def update_task(*, id: str, name: str = None, description: str = None,
                 priority: int = None, state_id: str = None,
                 due: str = None, **params) -> dict:
@@ -227,6 +232,7 @@ def update_task(*, id: str, name: str = None, description: str = None,
     return _map_task(data["issueUpdate"]["issue"])
 
 
+@returns("void")
 def delete_task(*, id: str, **params) -> dict:
     """Delete an issue."""
     query = """
@@ -238,6 +244,7 @@ def delete_task(*, id: str, **params) -> dict:
     return data["issueDelete"]
 
 
+@returns("project[]")
 def list_projects(**params) -> list:
     """List all projects."""
     query = "{ projects { nodes { id name state } } }"
@@ -245,6 +252,7 @@ def list_projects(**params) -> list:
     return [_map_project(n) for n in data["projects"]["nodes"]]
 
 
+@returns({"organization.urlKey": "string", "organization.name": "string", "teams": "array", "viewer.id": "string", "viewer.name": "string", "viewer.email": "string"})
 def setup(**params) -> dict:
     """Auto-configure account params. Returns organization, teams, and viewer."""
     query = """
@@ -262,6 +270,7 @@ def setup(**params) -> dict:
     }
 
 
+@returns({"id": "string", "name": "string", "email": "string"})
 def whoami(**params) -> dict:
     """Get current authenticated user."""
     query = "{ viewer { id name email } }"
@@ -269,6 +278,7 @@ def whoami(**params) -> dict:
     return data["viewer"]
 
 
+@returns({"id": "string", "name": "string", "urlKey": "string"})
 def get_organization(**params) -> dict:
     """Get organization info including workspace URL slug."""
     query = "{ organization { id name urlKey } }"
@@ -276,6 +286,7 @@ def get_organization(**params) -> dict:
     return data["organization"]
 
 
+@returns({"id": "string", "key": "string", "name": "string"})
 def get_teams(**params) -> list:
     """List all teams."""
     query = "{ teams { nodes { id key name } } }"
@@ -283,6 +294,7 @@ def get_teams(**params) -> list:
     return data["teams"]["nodes"]
 
 
+@returns({"id": "string", "name": "string", "type": "string", "position": "number"})
 def get_workflow_states(*, team_id: str, **params) -> list:
     """List workflow states for a team."""
     query = """
@@ -296,6 +308,7 @@ def get_workflow_states(*, team_id: str, **params) -> list:
     return data["workflowStates"]["nodes"]
 
 
+@returns({"id": "string", "number": "integer", "startsAt": "datetime", "endsAt": "datetime"})
 def get_cycles(*, team_id: str, **params) -> list:
     """List cycles (sprints) for a team."""
     query = """
@@ -309,6 +322,7 @@ def get_cycles(*, team_id: str, **params) -> list:
     return data["team"]["cycles"]["nodes"]
 
 
+@returns({"blocks": "array", "blockedBy": "array", "related": "array"})
 def get_relations(*, id: str, **params) -> dict:
     """Get an issue's relationships (blocking, blocked by, related).
 
@@ -340,6 +354,7 @@ def get_relations(*, id: str, **params) -> dict:
     }
 
 
+@returns("void")
 def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
     """Add a blocking relationship (blocker_id blocks id)."""
     query = """
@@ -361,6 +376,7 @@ def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
     return {"success": result["success"], "id": result["issueRelation"]["id"]}
 
 
+@returns("void")
 def remove_relation(*, relation_id: str, **params) -> dict:
     """Remove a relationship by its ID."""
     query = """
@@ -372,6 +388,7 @@ def remove_relation(*, relation_id: str, **params) -> dict:
     return data["issueRelationDelete"]
 
 
+@returns("void")
 def add_related(*, id: str, related_id: str, **params) -> dict:
     """Link two issues as related."""
     query = """

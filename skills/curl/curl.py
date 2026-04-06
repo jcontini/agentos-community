@@ -1,9 +1,12 @@
 """Curl skill — simple URL fetching via HTTP GET."""
 
 from lxml import html
-from agentos import http
+from agentos import http, provides, returns, timeout, web_read
 
 
+@returns("webpage")
+@provides(web_read)
+@timeout(35)
 def read_webpage(*, url: str, **params) -> dict:
     """Fetch a URL and return its content, title, and content type."""
     resp = http.get(url, timeout=30.0)

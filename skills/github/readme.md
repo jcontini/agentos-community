@@ -1,3 +1,11 @@
+---
+id: github
+name: GitHub
+description: "Work with GitHub issues, pull requests, and repository files through the local gh CLI. Use when working with GitHub repos, issues, PRs, or reading files from a repo."
+color: "#24292F"
+website: "https://github.com"
+---
+
 # GitHub
 
 GitHub via the local `gh` CLI. This skill is intentionally scoped to high-signal workflows that are useful from AgentOS today: issues as `task` entities, pull request utilities, and repository file reads as `document` entities.

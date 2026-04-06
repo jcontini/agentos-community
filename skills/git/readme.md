@@ -1,3 +1,11 @@
+---
+id: git
+name: Git
+description: "Local git repository data — commits, branches, tags, and repo info"
+color: "#F05032"
+website: "https://git-scm.com"
+---
+
 # Git
 
 Local git repository data — commits, branches, tags, and repo info. Wraps the git CLI

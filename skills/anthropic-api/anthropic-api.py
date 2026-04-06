@@ -1,4 +1,4 @@
-from agentos import http
+from agentos import http, connection, returns, timeout
 
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -37,13 +37,29 @@ def _to_anthropic_msg(msg: dict) -> dict:
     return msg
 
 
+@returns("model[]")
+@connection("api")
 def list_models(**params) -> list:
+    """List available Claude models from Anthropic"""
     resp = http.get(f"{API_BASE}/models",
                     params={"limit": "1000"}, **http.headers(accept="json", extra=_headers(params)))
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
+@returns({"content": "{'type': 'string', 'description': 'Text response from Claude (null if only tool calls)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stopReason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage statistics'}"})
+@connection("api")
+@timeout(120)
 def chat(*, model: str, messages: list, tools: list = None,
+    """Send a chat completion request to Claude (Anthropic Messages API)
+
+        Args:
+            model: Model ID (e.g., claude-3-5-haiku-20241022, claude-4-sonnet-20250514)
+            messages: Array of message objects with role and content
+            tools: Optional array of tool definitions for function calling
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature (0 = deterministic for agents)
+            system: Optional system prompt
+        """
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
     body = {

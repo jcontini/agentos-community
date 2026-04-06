@@ -10,7 +10,7 @@ All public functions use keyword-only args and accept **params for
 forward-compatibility with engine-injected context.
 """
 
-from agentos import sql
+from agentos import sql, returns
 
 DB_PATH = "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite"
 CONTACTS_DB = "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ContactsV2.sqlite"
@@ -141,6 +141,7 @@ def _map_message(row):
 # ==============================================================================
 
 
+@returns("person[]")
 def op_list_persons(*, conversation_id=None, limit=200, **params):
     """Get WhatsApp contacts, or group participants when conversation_id is provided."""
     rows = sql.query("""
@@ -200,6 +201,7 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
 # ==============================================================================
 
 
+@returns("conversation[]")
 def op_list_conversations(*, archived=False, limit=200, **params):
     """List WhatsApp conversations. Defaults to active (non-archived) chats only."""
     rows = sql.query("""
@@ -227,6 +229,7 @@ def op_list_conversations(*, archived=False, limit=200, **params):
     return [_map_conversation(r) for r in rows]
 
 
+@returns("conversation")
 def op_get_conversation(*, id, **params):
     """Get a specific conversation with metadata."""
     rows = sql.query("""
@@ -254,6 +257,7 @@ def op_get_conversation(*, id, **params):
 # ==============================================================================
 
 
+@returns("message[]")
 def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **params):
     """List messages in a conversation. Use is_unread=True without conversation_id to get all unread."""
     rows = sql.query("""
@@ -298,6 +302,7 @@ def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **param
     return [_map_message(r) for r in rows]
 
 
+@returns("message")
 def op_get_message(*, id, **params):
     """Get a specific message by ID."""
     rows = sql.query("""
@@ -326,6 +331,7 @@ def op_get_message(*, id, **params):
     return _map_message(rows[0]) if rows else None
 
 
+@returns("message[]")
 def op_search_messages(*, query, limit=200, **params):
     """Search messages by text content."""
     rows = sql.query("""
