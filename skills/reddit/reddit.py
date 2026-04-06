@@ -5,10 +5,7 @@ from datetime import datetime, timezone
 
 from agentos import http, provides, returns, web_read, web_search
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-}
+_H = http.headers(accept="json")
 
 
 def _ts(epoch: int | float | None) -> str | None:
@@ -59,10 +56,15 @@ def _map_community(d: dict) -> dict:
 
 
 def _get_json(path: str, params: dict | None = None) -> dict:
-    resp = http.get(f"https://www.reddit.com{path}", headers=HEADERS, params=params)
+    resp = http.get(f"https://www.reddit.com{path}", **_H, params=params)
     status = resp.get("status")
     if status == 403:
-        raise RuntimeError("Reddit 403 — blocked by bot detection. Reddit now requires browser cookies for reliable access.")
+        raise RuntimeError("Reddit 403 — bot detection. See docs/specs/engine/http-header-passthrough.md")
+    data = resp["json"]
+    if data is None:
+        body_preview = (resp.get("body") or "")[:200]
+        raise RuntimeError(f"Reddit returned non-JSON (status {status}) for {path}: {body_preview}")
+    return data
     data = resp["json"]
     if data is None:
         body_preview = (resp.get("body") or "")[:200]
