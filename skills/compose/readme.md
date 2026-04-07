@@ -10,7 +10,7 @@ product:
   website: https://agentos.dev
   developer: agentOS
 
-operations:
+tools:
   draft:
     async: true
   review:

@@ -5,6 +5,11 @@ description: "Read your Goodreads profile, books, reviews, friends, and activity
 color: "#372213"
 website: "https://goodreads.com"
 
+product:
+  name: Goodreads
+  website: https://goodreads.com
+  developer: Amazon
+
 connections:
   graphql:
     description: Public AppSync GraphQL — API key auto-discovered from JS bundles

@@ -36,7 +36,7 @@ product:
   website: https://exa.ai
   developer: Exa AI, Inc.
 
-operations:
+tools:
   search:
     wraps_as: search
 

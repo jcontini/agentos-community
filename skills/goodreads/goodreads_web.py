@@ -501,7 +501,7 @@ def _get_person(
                 }
                 if author_name:
                     entry["author"] = author_name
-                    entry["written_by"] = {"id": author_id or author_name, "name": author_name}
+                    entry["writtenBy"] = {"id": author_id or author_name, "name": author_name}
                 currently_reading.append(entry)
 
     # Favorite genres
@@ -541,9 +541,9 @@ def _get_person(
         }],
     }
     if favorite_books:
-        person["favorite_books"] = favorite_books
+        person["favoriteBooks"] = favorite_books
     if currently_reading:
-        person["currently_reading"] = currently_reading
+        person["currentlyReading"] = currently_reading
 
     return person
 
@@ -646,7 +646,7 @@ def _parse_friends_page(doc: HtmlElement, user_id: str) -> list[dict[str, Any]]:
             "friendsCount": friends_count,
         }
         if currently_reading:
-            friend["currently_reading"] = currently_reading
+            friend["currentlyReading"] = currently_reading
         friends.append(friend)
 
     if friends:
@@ -1034,7 +1034,7 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
                 "shelfName": shelf,
             }
             if written_by:
-                entry["written_by"] = written_by
+                entry["writtenBy"] = written_by
             entry["references"] = {
                 "id": str(book_id),
                 "name": title,
@@ -1062,7 +1062,7 @@ def _parse_book_rows(doc: HtmlElement, as_reviews: bool = False) -> list[dict[st
                 "shelf": shelf,
             }
             if written_by:
-                entry["written_by"] = written_by
+                entry["writtenBy"] = written_by
             items.append(entry)
 
     return items
@@ -1396,13 +1396,13 @@ def _list_quotes(
                 "author": author_name,
             }
             if author_id or author_name:
-                quote["spoken_by"] = {
+                quote["spokenBy"] = {
                     "id": author_id or author_name,
                     "name": author_name,
                     "url": f"{BASE}/author/show/{author_id}" if author_id else None,
                 }
             if book_id:
-                quote["appears_in"] = {
+                quote["appearsIn"] = {
                     "id": book_id,
                     "name": book_title,
                     "url": f"{BASE}/book/show/{book_id}",

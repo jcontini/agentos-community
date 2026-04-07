@@ -349,7 +349,7 @@ def _extract_verdict(thread_text):
 
 @returns({"outline": "string", "problem": "string", "sections": "array"})
 @timeout(120)
-def op_outline(problem: str, domain: str = "",
+def outline(problem: str, domain: str = "",
                model: str = "sonnet", **params) -> dict:
     """Generate a lightweight outline before committing to a full draft."""
     domain_hint = f"\n\nDomain: {domain}" if domain else ""
@@ -373,7 +373,7 @@ def op_outline(problem: str, domain: str = "",
 
 @returns({"document": "string", "problem": "string", "sections": "integer", "tokens": "integer"})
 @timeout(600)
-def op_draft(problem: str, output: str, context: str = "",
+def draft(problem: str, output: str, context: str = "",
              domain: str = "", research: bool = True,
              model: str = "opus", **params) -> dict:
     """Research a problem and generate a structured proposal."""
@@ -431,7 +431,7 @@ def op_draft(problem: str, output: str, context: str = "",
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def op_review(document: str, context: str = "", domain: str = "",
+def review(document: str, context: str = "", domain: str = "",
               max_rounds: int = 3, model: str = "opus", **params) -> dict:
     """Start a scored review of a document."""
     progress.set_job_id(params.get("__job_id__", ""))
@@ -565,7 +565,7 @@ def op_review(document: str, context: str = "", domain: str = "",
 
 @returns({"phase": "string", "round": "integer", "score": "integer", "blockingIssues": "integer", "verdict": "string"})
 @timeout(15)
-def op_status(thread: str, **params) -> dict:
+def status(thread: str, **params) -> dict:
     """Check the current state of a review without resuming."""
     thread = str(Path(thread).resolve())
     if not Path(thread).exists():
@@ -584,7 +584,7 @@ def op_status(thread: str, **params) -> dict:
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def op_resume(thread: str, context: str = "", max_rounds: int = 2,
+def resume(thread: str, context: str = "", max_rounds: int = 2,
               model: str = "opus", **params) -> dict:
     """Resume an interrupted or ONE MORE ROUND review."""
     progress.set_job_id(params.get("__job_id__", ""))

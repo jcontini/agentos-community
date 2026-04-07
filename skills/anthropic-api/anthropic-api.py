@@ -54,7 +54,7 @@ def list_models(**params) -> list:
 
 
 @provides(llm, models=["opus", "sonnet", "haiku", "claude-opus-4-6", "claude-sonnet-4-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"])
-@returns({"content": "{'type': 'string', 'description': 'Text response from Claude (null if only tool calls)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage statistics'}"})
+@returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("api")
 @timeout(120)
 def chat(*, model: str, messages: list, tools: list = None,
@@ -87,8 +87,8 @@ def chat(*, model: str, messages: list, tools: list = None,
     blocks = data.get("content", [])
     return {
         "content": next((b["text"] for b in blocks if b.get("type") == "text"), None),
-        "toolCalls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
-                      for b in blocks if b.get("type") == "tool_use"],
-        "stopReason": data.get("stop_reason"),
+        "tool_calls": [{"id": b["id"], "name": b["name"], "input": b["input"]}
+                       for b in blocks if b.get("type") == "tool_use"],
+        "stop_reason": data.get("stop_reason"),
         "usage": data.get("usage"),
     }

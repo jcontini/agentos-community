@@ -120,12 +120,16 @@ def check_session(*, auth: dict = None, **params) -> dict:
 
 @returns({"status": "string", "email": "string", "hint": "string"})
 @connection("dashboard")
+@timeout(15)
 def send_login_code(*, email: str, **params) -> dict:
     """Trigger a verification code email for the given address.
 
     After calling this, the agent must:
       1. Check the user's email for the 6-digit code (subject: 'Sign in to Exa Dashboard')
       2. Call exa.verify_login_code with the email and code
+
+    Args:
+        email: Email address to send the verification code to
     """
     if not email:
         return {"__result__": {"error": "email is required"}}
@@ -150,6 +154,7 @@ def send_login_code(*, email: str, **params) -> dict:
 
 @returns({"status": "string", "email": "string", "team": "string", "userId": "string"})
 @connection("dashboard")
+@timeout(20)
 def verify_login_code(*, email: str, code: str, **params) -> dict:
     """Verify the 6-digit code and complete login — no browser needed.
 
@@ -241,11 +246,17 @@ def verify_login_code(*, email: str, code: str, **params) -> dict:
 
 @returns({"status": "string", "identifier": "string", "domain": "string", "userId": "string", "team": "string"})
 @connection("dashboard")
+@timeout(15)
 def store_session_cookies(*, email: str, session_token: str, cf_clearance: str = "", **params) -> dict:
     """Store browser-extracted session cookies for authenticated dashboard access.
 
     Fallback for when verify_login_code can't be used (e.g. Google SSO).
     Validates the session, then stores the cookies via __secrets__.
+
+    Args:
+        email: Account email address
+        session_token: next-auth.session-token cookie value
+        cf_clearance: Optional Cloudflare clearance cookie
     """
     if not email or not session_token:
         return {"__result__": {"error": "email and session_token are required"}}
@@ -303,6 +314,7 @@ def _require_session(client) -> dict:
 
 @returns({"apiKeys": "array", "count": "integer"})
 @connection("dashboard")
+@timeout(15)
 def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
     """List API keys from the Exa dashboard and optionally store the first enabled key.
 
@@ -311,6 +323,10 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
 
     If store=True (default), the first enabled key is stored via __secrets__
     so exa.search works immediately after.
+
+    Args:
+        cookies: Dashboard session cookies (auto-injected by engine)
+        store: Store the first enabled key as a credential (default True)
     """
     if not cookies:
         cookies = params.get("auth", {}).get("cookies")
@@ -364,8 +380,13 @@ def get_api_keys(*, cookies: dict = None, store: bool = True, **params) -> dict:
 
 @returns({"teams": "array", "count": "integer"})
 @connection("dashboard")
+@timeout(15)
 def get_teams(*, cookies: dict = None, **params) -> dict:
-    """Get team info including rate limits, credits, and usage from the dashboard."""
+    """Get team info including rate limits, credits, and usage from the dashboard.
+
+    Args:
+        cookies: Dashboard session cookies (auto-injected by engine)
+    """
     if not cookies:
         cookies = params.get("auth", {}).get("cookies")
     if not cookies:
@@ -404,8 +425,14 @@ def get_teams(*, cookies: dict = None, **params) -> dict:
 
 @returns({"status": "string", "keyName": "string", "domain": "string", "maskedKey": "string"})
 @connection("dashboard")
+@timeout(15)
 def create_api_key(*, cookies: dict = None, name: str = "agentOS", **params) -> dict:
-    """Create a new API key on the Exa dashboard and store it via __secrets__."""
+    """Create a new API key on the Exa dashboard and store it via __secrets__.
+
+    Args:
+        cookies: Dashboard session cookies (auto-injected by engine)
+        name: Name for the new API key (default "agentOS")
+    """
     if not cookies:
         cookies = params.get("auth", {}).get("cookies")
     if not cookies:
@@ -468,8 +495,16 @@ def _map_result(r: dict) -> dict:
 @returns("result[]")
 @provides(web_search)
 @connection("api")
+@timeout(30)
 def search(*, query: str, limit: int = 10, category: str = None, include_text: bool = True, **params) -> list[dict]:
-    """Search the web using Exa's neural/semantic search."""
+    """Search the web using Exa's neural/semantic search.
+
+    Args:
+        query: Search query
+        limit: Max results to return (default 10)
+        category: Optional category filter (e.g. "research paper", "company")
+        include_text: Include full text content in results (default True)
+    """
     api_key = params.get("auth", {}).get("key", "")
     body: dict = {
         "query": query,
@@ -492,8 +527,13 @@ def search(*, query: str, limit: int = 10, category: str = None, include_text: b
 @returns("webpage")
 @provides(web_read)
 @connection("api")
+@timeout(30)
 def read_webpage(*, url: str, **params) -> dict:
-    """Extract full content from a URL using Exa."""
+    """Extract full content from a URL using Exa.
+
+    Args:
+        url: URL to extract content from
+    """
     api_key = params.get("auth", {}).get("key", "")
     resp = http.post(
         f"{API_BASE}/contents",
@@ -509,11 +549,15 @@ def read_webpage(*, url: str, **params) -> dict:
 
 @returns({"status": "string", "hint": "string"})
 @connection("dashboard")
+@timeout(10)
 def logout(*, cookies: dict = None, **params) -> dict:
     """Sign out of the Exa dashboard and invalidate the session.
 
     Hits NextAuth's signout endpoint to invalidate the server-side session,
     then returns a signal to clear the stored credentials.
+
+    Args:
+        cookies: Dashboard session cookies (auto-injected by engine)
     """
     if not cookies:
         cookies = params.get("auth", {}).get("cookies")

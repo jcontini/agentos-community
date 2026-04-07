@@ -80,12 +80,12 @@ def _map_item(item: dict) -> dict:
 
 @returns("post[]")
 def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
-    """List Hacker News stories by feed type
+    """List Hacker News stories by feed type.
 
-        Args:
-            feed: Feed type: front, new, ask, show
-            limit: Number of stories (max 100)
-        """
+    Args:
+        feed: Feed type: front, new, ask, show
+        limit: Number of stories (max 100)
+    """
     endpoint = "search_by_date" if feed == "new" else "search"
     tag_map = {"new": "story", "ask": "ask_hn", "show": "show_hn"}
     tags = tag_map.get(feed, "front_page")
@@ -101,12 +101,12 @@ def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
 @returns("post[]")
 @provides(web_search)
 def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
-    """Search Hacker News stories
+    """Search Hacker News stories.
 
-        Args:
-            query: Search query
-            limit: Number of results (max 100)
-        """
+    Args:
+        query: Search query
+        limit: Number of results (max 100)
+    """
     resp = http.get(f"{BASE}/search", params={
         "query": query,
         "tags": "story",
@@ -119,12 +119,12 @@ def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
 @returns("post")
 @provides(web_read, urls=["news.ycombinator.com/item*"])
 def get_post(id: str = None, url: str = None, **params) -> dict:
-    """Get a Hacker News story with comments
+    """Get a Hacker News story with comments.
 
-        Args:
-            id: Story ID (optional if url is a news.ycombinator.com item link)
-            url: HN item URL with id= in the query (web_read)
-        """
+    Args:
+        id: Story ID (optional if url is a news.ycombinator.com item link)
+        url: HN item URL with id= in the query (web_read)
+    """
     if url and not id:
         import re
         m = re.search(r"[?&]id=(\d+)", url)
@@ -141,7 +141,11 @@ def get_post(id: str = None, url: str = None, **params) -> dict:
 
 @returns("post[]")
 def comments_post(id: str, **params) -> list[dict]:
-    """Flatten comment tree into a list with replies_to relations."""
+    """Flatten comment tree into a list with repliesTo relations.
+
+    Args:
+        id: Story ID to get comments for
+    """
     resp = http.get(f"{BASE}/items/{id}")
 
     item = resp["json"]
@@ -167,7 +171,7 @@ def comments_post(id: str, **params) -> list[dict]:
             } if author else None,
         }
         if parent_id:
-            post["replies_to"] = {"id": parent_id}
+            post["repliesTo"] = {"id": parent_id}
         result.append(post)
         for child in node.get("children", []):
             flatten(child, nid)

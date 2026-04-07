@@ -28,6 +28,7 @@ from agentos import crypto
 from agentos import oauth
 from agentos import shell
 from agentos import llm
+from agentos import progress
 
 # --- Operation decorators (read by engine via AST, no-ops at runtime) ---
 from agentos.decorators import returns, provides, connection, timeout
@@ -50,7 +51,7 @@ __all__ = [
     # Core modules
     "http", "molt", "shape",
     # Engine-dispatched modules
-    "sql", "crypto", "oauth", "shell", "llm",
+    "sql", "crypto", "oauth", "shell", "llm", "progress",
     # Operation decorators
     "returns", "provides", "connection", "timeout",
     # Standard tools

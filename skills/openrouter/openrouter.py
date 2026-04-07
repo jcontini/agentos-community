@@ -138,10 +138,10 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
     usage = data.get("usage") or {}
     return {
         "content": message.get("content"),
-        "toolCalls": tool_calls,
-        "stopReason": stop_reason,
+        "tool_calls": tool_calls,
+        "stop_reason": stop_reason,
         "usage": {
-            "inputTokens": usage.get("prompt_tokens", 0),
-            "outputTokens": usage.get("completion_tokens", 0),
+            "input_tokens": usage.get("prompt_tokens", 0),
+            "output_tokens": usage.get("completion_tokens", 0),
         },
     }

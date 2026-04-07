@@ -17,7 +17,7 @@ connections:
     label: API Key
     help_url: https://api-dashboard.search.brave.com/app/keys
 
-operations:
+tools:
   search:
     wraps_as: search
 ---

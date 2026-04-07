@@ -8,6 +8,8 @@ privacy_url: "https://www.anthropic.com/privacy"
 terms_url: "https://www.anthropic.com/terms-of-service"
 
 connections:
+  cli:
+    description: Claude Code binary — auth handled by the binary itself
   web:
     auth:
       type: cookies
@@ -205,10 +207,10 @@ remote control can be started programmatically. This is a real constraint: Agent
 fully automate onboarding for a brand-new user without browser access. The skill should
 detect this state and guide the user through it.
 
-### Operations
+### Tools
 
 ```yaml
-operations:
+tools:
   check_claude_code:
     description: Detect Claude Code installation, auth, and capability status
     returns: { installed, version, authenticated, subscription, remote_control_capable, cron_capable }
@@ -327,10 +329,10 @@ schedule:
     provider:          skill     # which skill runs this
 ```
 
-### Operations
+### Tools
 
 ```yaml
-operations:
+tools:
   track_scheduled_job:
     description: Record a schedule node for a job the agent created via CronCreate or RemoteTrigger
     params:

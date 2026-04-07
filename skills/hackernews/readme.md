@@ -7,6 +7,11 @@ website: "https://news.ycombinator.com"
 privacy_url: "https://www.ycombinator.com/legal#privacy"
 terms_url: "https://www.ycombinator.com/legal"
 
+product:
+  name: Hacker News
+  website: https://news.ycombinator.com
+  developer: Y Combinator
+
 test:
   list_posts:
     params:

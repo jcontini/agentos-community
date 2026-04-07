@@ -241,15 +241,15 @@ def op_chat(
     return {
         "content": msg.get("content") or None,
         "thinking": msg.get("thinking") or None,
-        "toolCalls": _normalize_tool_calls(raw_tools),
-        "stopReason": (
+        "tool_calls": _normalize_tool_calls(raw_tools),
+        "stop_reason": (
             "tool_use" if done_reason == "tool_calls"
             else "max_tokens" if done_reason == "length"
             else "end_turn"
         ),
         "usage": {
-            "inputTokens": resp.get("prompt_eval_count", 0),
-            "outputTokens": resp.get("eval_count", 0),
+            "input_tokens": resp.get("prompt_eval_count", 0),
+            "output_tokens": resp.get("eval_count", 0),
         },
     }
 
@@ -326,8 +326,8 @@ def op_generate(
     return {
         "response": resp.get("response", ""),
         "usage": {
-            "inputTokens": resp.get("prompt_eval_count", 0),
-            "outputTokens": resp.get("eval_count", 0),
+            "input_tokens": resp.get("prompt_eval_count", 0),
+            "output_tokens": resp.get("eval_count", 0),
         },
     }
 

@@ -178,10 +178,10 @@ def _discover_runtime(
     Returns (runtime, was_cached) — callers use was_cached to decide whether to
     write back via __cache__.
     """
-    if cache and cache.get("graphql_endpoint") and cache.get("x_api_key"):
+    if cache and cache.get("graphqlEndpoint") and cache.get("xApiKey"):
         return _make_runtime(
-            cache["graphql_endpoint"],
-            cache["x_api_key"],
+            cache["graphqlEndpoint"],
+            cache["xApiKey"],
             cache.get("source", "graph_cache"),
         ), True
 
@@ -213,8 +213,8 @@ def _wrap_result(result: Any, runtime: dict[str, Any], was_cached: bool) -> Any:
         return result
     return {
         "__cache__": {
-            "graphqlEndpoint": runtime["graphql_endpoint"],
-            "xApiKey": runtime["x_api_key"],
+            "graphqlEndpoint": runtime["graphqlEndpoint"],
+            "xApiKey": runtime["xApiKey"],
             "source": runtime.get("source", "discovered"),
         },
         "__result__": result,
@@ -234,7 +234,7 @@ def _graphql_request(
         headers.update(extra_headers)
     payload = json.dumps({"query": query, "variables": variables})
     body = _fetch_url(
-        runtime["graphql_endpoint"],
+        runtime["graphqlEndpoint"],
         extra_headers=headers,
         data=payload,
         method="POST",
@@ -303,10 +303,10 @@ def _load_book_page(book_id: str) -> dict[str, Any]:
 
 def _map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
     apollo = page["apollo"]
-    root_query = page["root_query"]
+    root_query = page["rootQuery"]
     book = page["book"]
-    work_details = page["work_details"] or {}
-    work_stats = page["work_stats"] or {}
+    work_details = page["workDetails"] or {}
+    work_stats = page["workStats"] or {}
     details = book.get("details") or {}
 
     primary_edge = book.get("primaryContributorEdge") or {}
@@ -398,7 +398,7 @@ def _map_book_payload(page: dict[str, Any]) -> dict[str, Any]:
         "toReadCount": social_counts.get("TO_READ"),
     }
     if author_id or author_name:
-        result["written_by"] = {
+        result["writtenBy"] = {
             "id": author_id or author_name,
             "name": author_name,
             "url": author_url,
@@ -445,7 +445,7 @@ def _map_review_list(apollo: dict[str, Any], edges: list[dict[str, Any]], book: 
             "shelfName": shelf.get("name"),
         }
         if reviewer_id or reviewer_name:
-            entry["posted_by"] = {
+            entry["postedBy"] = {
                 "id": reviewer_id,
                 "name": reviewer_name,
                 "url": creator.get("webUrl") or (f"https://goodreads.com/user/show/{reviewer_id}" if reviewer_id else None),
@@ -478,11 +478,11 @@ def _simple_book(book_id: Any, title: str | None, cover_url: str | None,
         "author": author,
     }
     if avg_rating is not None:
-        result["average_rating"] = avg_rating
+        result["averageRating"] = avg_rating
     if ratings_count is not None:
-        result["ratings_count"] = ratings_count
+        result["ratingsCount"] = ratings_count
     if author_id or author:
-        result["written_by"] = {
+        result["writtenBy"] = {
             "id": author_id or author,
             "name": author,
         }
@@ -501,7 +501,7 @@ def _list_book_reviews(book_id: str, limit: int, cache: dict[str, Any] | None = 
     apollo = page["apollo"]
     book = page["book"]
     if not work_id:
-        edges = (((page["root_query"].get("getReviews") or {}).get("edges")) or [])
+        edges = (((page["rootQuery"].get("getReviews") or {}).get("edges")) or [])
         return _map_review_list(apollo, edges, book)
 
     query = """
@@ -831,10 +831,10 @@ def _get_public_profile(user_id: str, limit: int) -> dict[str, Any]:
     }
     favorite_books = _parse_profile_favorite_books(html_text, limit)
     if favorite_books:
-        result["favorite_books"] = favorite_books
+        result["favoriteBooks"] = favorite_books
     currently_reading = _parse_profile_currently_reading(html_text, limit)
     if currently_reading:
-        result["currently_reading"] = currently_reading
+        result["currentlyReading"] = currently_reading
     shelves = _parse_profile_shelves(html_text, uid or 0, limit)
     if shelves:
         result["shelves"] = shelves
