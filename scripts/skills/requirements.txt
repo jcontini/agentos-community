@@ -1,2 +1,0 @@
-# For bulk_extract_skill_yaml.py (plan / apply validation)
-PyYAML>=6

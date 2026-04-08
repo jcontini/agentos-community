@@ -1,9 +1,0 @@
-# A video playlist. Playlists are lists that contain videos instead of products.
-#
-# Sources: YouTube
-playlist:
-  plural: playlists
-  subtitle: text
-  also: [list]        # a playlist is also a list
-  relations:
-    contains:          video[]
