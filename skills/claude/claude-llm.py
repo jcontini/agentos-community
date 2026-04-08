@@ -89,11 +89,17 @@ def _parse_tool_calls(text: str) -> tuple[str, list]:
 @provides(llm, models=["opus", "sonnet", "haiku", "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"])
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("cli")
-@timeout(300)
+@timeout(600)
 def chat(*, model: str, messages: list, tools: list = None,
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
-    """LLM inference via Claude Code CLI — uses existing auth, no API key."""
+    """LLM inference via Claude Code CLI — uses existing auth, no API key.
+
+    Timeout is 600s (10 min) to accommodate Opus with large context + tool
+    definitions. Multi-agent workflows (proposal-writing, compose) make
+    repeated calls with growing message histories. The previous 280s timeout
+    caused consistent failures on agent calls with 4+ context files.
+    """
     model_id = MODEL_ALIASES.get(model, model)
 
     prompt = _format_messages(messages)
@@ -108,7 +114,7 @@ def chat(*, model: str, messages: list, tools: list = None,
     if system:
         args.extend(["--system-prompt", system])
 
-    result = shell.run("claude", args=args, input=prompt, timeout=280)
+    result = shell.run("claude", args=args, input=prompt, timeout=580)
 
     stdout = result.get("stdout", "")
     exit_code = result.get("exit_code", 1)
