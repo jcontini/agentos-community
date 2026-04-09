@@ -382,7 +382,7 @@ async def write_proposal(problem: str, output: str, model: str = "opus",
         domain: Domain hint (sdk-design, product-strategy, etc.)
         threshold: Min score as fraction of max (default: 0.9)
     """
-    await progress.set_job_id(params.get("__job_id__", ""))
+    progress.set_job_id(params.get("__job_id__", ""))
 
     # Resolve inputs
     output_dir = str(Path(output).resolve())
