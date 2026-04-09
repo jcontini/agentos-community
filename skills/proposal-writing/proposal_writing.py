@@ -125,8 +125,8 @@ RESEARCH_TOOLS = [
     "hackernews.post.search_posts",
 ]
 
-FILE_READ = ["Read", "Glob", "Grep"]
-FILE_WRITE = ["Read", "Glob", "Grep", "Edit", "Write"]
+# Sub-agents don't get file tools — the orchestrator reads/writes files
+# and passes content inline in prompts. Agents get research tools only.
 
 
 # ---------------------------------------------------------------------------
@@ -201,8 +201,7 @@ async def _persona_write_rfp_section(persona, problem_text, context_paths, domai
     result = await llm.agent(
         prompt=prompt,
         system=_prompt("persona_rfp"),
-        tools=FILE_READ + RESEARCH_TOOLS,
-        files=context_paths,
+        tools=RESEARCH_TOOLS,
         model="opus",
     )
     return result.get("content", "")
@@ -233,13 +232,12 @@ async def _assemble_rfp(personas, sections, rfp_path, problem_text, context_path
         f"Write the complete RFP to: `{rfp_path}`"
     )
 
-    await llm.agent(
+    result = await llm.agent(
         prompt=prompt,
         system=_prompt("rfp_manager"),
-        tools=FILE_WRITE,
-        files=context_paths + [rfp_path],
         model="opus",
     )
+    Path(rfp_path).write_text(result.get("content", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -262,16 +260,16 @@ async def _write_proposal(rfp_path, proposal_path, context_paths, model):
         f"{context_hint}\n\n"
         f"Research solutions using web search. Find prior art and concrete "
         f"examples.\n\n"
-        f"Write the complete proposal to: `{proposal_path}`"
+        f"Write the complete proposal as your response."
     )
 
-    await llm.agent(
+    result = await llm.agent(
         prompt=prompt,
         system=_prompt("bidder"),
-        tools=FILE_WRITE + RESEARCH_TOOLS,
-        files=context_paths + [rfp_path, proposal_path],
+        tools=RESEARCH_TOOLS,
         model=model,
     )
+    Path(proposal_path).write_text(result.get("content", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -285,28 +283,27 @@ async def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
     Returns structured eval data via output_schema.
     """
     rfp_content = _read_file(rfp_path)
+    proposal_content = _read_file(proposal_path)
 
     prompt = (
         f"You are: **{persona['name']}** — {persona['role']}\n\n"
         f"This is evaluation round {round_num}.\n\n"
-        f"Read the proposal at `{proposal_path}` and score it against "
-        f"YOUR criteria from the RFP.\n\n"
+        f"Score the proposal against YOUR criteria from the RFP.\n\n"
         f"Your criteria are defined in the RFP under "
         f"'{persona['name']} evaluation criteria'.\n\n"
-        f"RFP for reference:\n---\n{rfp_content}\n---"
+        f"RFP:\n---\n{rfp_content}\n---\n\n"
+        f"Proposal:\n---\n{proposal_content}\n---"
     )
 
     if round_num > 1:
+        thread_content = _read_file(thread_path)
         prompt += (
-            f"\n\nRead the review thread at `{thread_path}` to see "
-            f"prior rounds and what the bidder changed."
+            f"\n\nReview thread (prior rounds):\n---\n{thread_content}\n---"
         )
 
     result = await llm.agent(
         prompt=prompt,
         system=_prompt("persona_evaluator"),
-        tools=FILE_READ,
-        files=[rfp_path, proposal_path, thread_path] + context_paths,
         model="opus",
         output_schema=EVAL_SCHEMA,
     )
@@ -343,21 +340,26 @@ async def _aggregate_evaluations(persona_evals, personas, round_num):
 async def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
                            round_num, model):
     """Bidder revises proposal based on evaluation feedback."""
+    rfp_content = _read_file(rfp_path)
+    proposal_content = _read_file(proposal_path)
+    thread_content = _read_file(thread_path)
+
     prompt = (
         f"This is revision round {round_num}.\n\n"
-        f"Read the evaluation feedback in the review thread at "
-        f"`{thread_path}`. Focus on BLOCKING issues first.\n\n"
-        f"Revise the proposal at `{proposal_path}` to address the feedback.\n"
-        f"The RFP is at `{rfp_path}` for reference."
+        f"Evaluation feedback:\n---\n{thread_content}\n---\n\n"
+        f"Focus on BLOCKING issues first.\n\n"
+        f"Current proposal:\n---\n{proposal_content}\n---\n\n"
+        f"RFP for reference:\n---\n{rfp_content}\n---\n\n"
+        f"Write the complete revised proposal as your response."
     )
 
     result = await llm.agent(
         prompt=prompt,
         system=_prompt("bidder_revise"),
-        tools=FILE_WRITE,
-        files=[rfp_path, proposal_path, thread_path] + context_paths,
+        tools=RESEARCH_TOOLS,
         model=model,
     )
+    Path(proposal_path).write_text(result.get("content", ""))
     return result.get("content", "")
 
 
