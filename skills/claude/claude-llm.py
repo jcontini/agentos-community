@@ -62,8 +62,8 @@ def _format_messages(messages: list) -> str:
 @connection("cli")
 @timeout(600)
 async def chat(*, model: str, messages: list, tools: list = None,
-         max_tokens: int = 4096, temperature: float = 0,
-         system: str = None, output_schema: dict = None, **params) -> dict:
+         temperature: float = 0, system: str = None,
+         output_schema: dict = None, **params) -> dict:
     """LLM inference via Claude Code CLI — uses existing auth, no API key.
 
     When tools are provided, attaches agentos as an MCP server so Claude
