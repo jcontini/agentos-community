@@ -11,6 +11,8 @@ product:
   developer: agentOS
 
 tools:
+  solve:
+    async: true
   write_rfp:
     async: true
   propose:
@@ -19,15 +21,13 @@ tools:
     async: true
   closeout:
     async: true
-  solve:
-    async: true
 
 test:
+  solve: { skip: true }
   write_rfp: { skip: true }
   propose: { skip: true }
   review: { skip: true }
   closeout: { skip: true }
-  solve: { skip: true }
 ---
 
 # Project Management
@@ -36,11 +36,11 @@ Manages the full project lifecycle: RFP, proposal, adversarial review, and close
 
 ## Operations
 
+- **solve** — Run the lifecycle from any phase: `start_from="rfp|propose|review|closeout"`. Orchestrates everything — propose ↔ review loops until 95+, then closeout.
 - **write_rfp** — Agent writes `0-rfp.md` from a problem statement
 - **propose** — Agent writes `1-proposal.md` responding to an RFP
 - **review** — Agent scores a proposal adversarially, writes `2-review.md`
 - **closeout** — Agent discovers commits, writes `3-closeout.md`
-- **solve** — Orchestrates the full loop: write_rfp -> propose <-> review until 95+
 
 ## Conventions
 

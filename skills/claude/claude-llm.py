@@ -41,6 +41,7 @@ ALLOWED_MCP = [
 ALLOWED_NATIVE = [
     "Read", "Glob", "Grep",           # codebase access (read-only)
     "WebSearch", "WebFetch",           # web research
+    "Agent",                           # subagents for deep investigation
 ]
 ALLOWED_TOOLS = ",".join(ALLOWED_MCP + ALLOWED_NATIVE)
 
@@ -99,7 +100,7 @@ async def chat(*, model: str, messages: list, tools: list = None,
     if system:
         args.extend(["--system-prompt", system])
 
-    # Always restrict to allowed tools — no Agent, no Bash, no Write
+    # Restrict tools — read-only codebase access + subagents + web + agentOS MCP
     args.extend(["--allowedTools", ALLOWED_TOOLS])
 
     # Native MCP tool calling — point at agentos mcp for tool dispatch

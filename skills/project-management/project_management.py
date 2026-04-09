@@ -39,34 +39,6 @@ PROJECTS_ROOT = REPO_ROOT / "_projects"
 ARCHIVE_DIR = PROJECTS_ROOT / "_archive"
 NOW_FILE = REPO_ROOT / "now.md"
 
-# ── Review output schema ─────────────────────────────────────────────────────
-
-REVIEW_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "scoring_table": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "criterion": {"type": "string"},
-                    "weight": {"type": "integer"},
-                    "score": {"type": "integer"},
-                    "justification": {"type": "string"},
-                },
-                "required": ["criterion", "weight", "score", "justification"],
-            },
-        },
-        "weighted_total": {"type": "number"},
-        "verdict": {"type": "string", "enum": ["implement", "revise", "rethink"]},
-        "blockers": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-    },
-    "required": ["scoring_table", "weighted_total", "verdict", "blockers"],
-}
-
 # ── System prompts ───────────────────────────────────────────────────────────
 # These ARE the conventions. When conventions change, prompts change.
 # Built dynamically: shared preamble + role-specific content.
@@ -96,6 +68,15 @@ You have agentOS MCP tools available:
 - mcp__agentos__search — full-text search: search({{ query: "filesystem" }})
 - mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
 Use these to look up project context, discover skills, or search the knowledge graph.
+
+After the document, you may include a feedback section for the humans reviewing
+your work. Use this exact format at the very end of your response:
+
+```feedback
+Your candid thoughts on this task: what was unclear, what was hard to find,
+what you wish the instructions said, concerns about the approach, anything
+you want the team to know. Be honest — this is your voice.
+```
 """
     return f"{role}\n\n{preamble}\n{body}"
 
@@ -194,11 +175,20 @@ To verify claims, READ THE ACTUAL SOURCE CODE. Don't trust the proposal's
 description of how things work — check the files it references. If the proposal
 says "the engine does X", verify by reading the engine code.
 
-Output format — you MUST include:
+Write the review as a markdown document with this YAML frontmatter:
+---
+title: "Evaluation — Round N"
+type: evaluation
+score: <weighted total, integer>
+verdict: implement | revise | rethink
+date: {date}
+---
+
+Then include:
 1. Scoring table: | # | Criterion | Weight | Score | Justification |
 2. Weighted total: sum(score_i * weight_i) / 100
 3. Verdict: 95+ = implement, 70-94 = address blockers, <70 = rethink
-4. Blockers list: specific things that MUST change (empty if score >= 95)
+4. ## Blockers section: specific things that MUST change (omit if score >= 95)
 
 Scoring must be calibrated:
 - 95+ means "ready to implement as-is, no significant gaps"
@@ -246,6 +236,16 @@ No LOC counts, no time tracking, no "lessons learned". Minimal or it won't get w
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
+def _extract_feedback(content: str) -> tuple[str, str]:
+    """Split agent response into (document, feedback). Strips ```feedback blocks."""
+    match = re.search(r"```feedback\s*\n(.*?)```", content, re.DOTALL)
+    if match:
+        feedback = match.group(1).strip()
+        document = content[:match.start()].rstrip() + "\n"
+        return document, feedback
+    return content, ""
+
+
 def _slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text[:60].lower()).strip("-")
 
@@ -275,55 +275,6 @@ def _parse_files_changed(proposal_text: str) -> list[str]:
         elif in_table and not line.startswith("|"):
             break
     return paths
-
-
-def _render_review_md(data: dict, round_num: int, today: str) -> str:
-    """Render structured review data into a markdown document."""
-    rows = data.get("scoring_table", [])
-    total = data.get("weighted_total", 0)
-    verdict = data.get("verdict", "revise")
-    blockers = data.get("blockers", [])
-    score_int = round(total)
-
-    verdict_label = {
-        "implement": "IMPLEMENT (95+ = ready to implement)",
-        "revise": "REVISE (70-94 = address blockers)",
-        "rethink": "RETHINK (<70 = fundamental problems)",
-    }.get(verdict, verdict.upper())
-
-    lines = [
-        "---",
-        f'title: "Evaluation — Round {round_num}"',
-        "type: evaluation",
-        f"score: {score_int}",
-        f"verdict: {verdict}",
-        f"date: {today}",
-        "---",
-        "",
-        f"# Evaluation (Round {round_num})",
-        "",
-        "| # | Criterion | Weight | Score | Justification |",
-        "|---|-----------|--------|-------|---------------|",
-    ]
-
-    for i, row in enumerate(rows, 1):
-        c = row.get("criterion", "")
-        w = row.get("weight", 0)
-        s = row.get("score", 0)
-        j = row.get("justification", "")
-        lines.append(f"| {i} | {c} | {w} | {s} | {j} |")
-
-    lines.extend(["", f"**Weighted total: {total:.1f}/100**", ""])
-    lines.append(f"**Verdict: {verdict_label}**")
-
-    if blockers:
-        lines.extend(["", "## Blockers", ""])
-        for i, b in enumerate(blockers, 1):
-            lines.append(f"{i}. {b}")
-
-    lines.append("")
-    return "\n".join(lines)
-
 
 def archive(project_dir: str) -> dict:
     """Move a completed project to _projects/_archive/.
@@ -384,15 +335,16 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
 
     await progress.progress(2, 3, "Saving RFP...")
 
+    document, feedback = _extract_feedback(result.get("content", ""))
     rfp_path = project_dir / "0-rfp.md"
-    rfp_path.write_text(result.get("content", ""))
+    rfp_path.write_text(document)
 
     # Update now.md — always exactly one line
     NOW_FILE.write_text(str(rfp_path) + "\n")
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"rfp_path": str(rfp_path)}}
+    return {"__result__": {"rfp_path": str(rfp_path), "agent_feedback": feedback}}
 
 
 @returns({"proposal_path": "string"})
@@ -410,14 +362,17 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     project_dir = rfp_path.parent
     rfp_content = rfp_path.read_text()
 
-    # Build prompt with RFP + optional prior review
+    # Build prompt with RFP + prior proposal/review for revision rounds
     prompt_parts = [f"## RFP\n\n{rfp_content}"]
 
     if round > 1:
         drafts_dir = project_dir / "_drafts"
+        prior_proposal = drafts_dir / f"v{round - 1}-proposal.md"
         prior_review = drafts_dir / f"v{round - 1}-review.md"
+        if prior_proposal.exists():
+            prompt_parts.append(f"\n\n## Your Previous Proposal (Round {round - 1})\n\n{prior_proposal.read_text()}")
         if prior_review.exists():
-            prompt_parts.append(f"\n\n## Previous Review (Round {round - 1})\n\n{prior_review.read_text()}")
+            prompt_parts.append(f"\n\n## Review Feedback (Round {round - 1})\n\n{prior_review.read_text()}")
 
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
@@ -444,11 +399,12 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         if not prev_dest.exists():
             proposal_path.rename(prev_dest)
 
-    proposal_path.write_text(result.get("content", ""))
+    document, feedback = _extract_feedback(result.get("content", ""))
+    proposal_path.write_text(document)
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"proposal_path": str(proposal_path)}}
+    return {"__result__": {"proposal_path": str(proposal_path), "agent_feedback": feedback}}
 
 
 @returns({"score": "integer", "verdict": "string", "review_path": "string"})
@@ -471,32 +427,36 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     await progress.progress(1, 3, "Reviewing proposal...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_REVIEW, output_file="2-review.md", body=BODY_REVIEW, today=today)
+    body = BODY_REVIEW.format(date=today)
+    system = _build_system(role=ROLE_REVIEW, output_file="2-review.md", body=body, today=today)
     result = await llm.agent(
         prompt=prompt,
         system=system,
         model="sonnet",
-        output_schema=REVIEW_SCHEMA,
+        tools=["exa.search", "exa.read_webpage"],
         timeout=1680,
     )
 
     await progress.progress(2, 3, "Saving review...")
 
-    data = result.get("data") or {}
-    total = data.get("weighted_total", 0)
-    score = round(total)
-    verdict = data.get("verdict", "revise")
+    content = result.get("content", "")
+    document, feedback = _extract_feedback(content)
 
-    # Python injects the date — agents don't determine dates
-    today = str(date.today())
-    review_md = _render_review_md(data, params.get("_round", 1), today)
+    # Parse score and verdict from the frontmatter the reviewer wrote
+    fm = _parse_frontmatter(document)
+    score = int(fm.get("score", 0))
+    verdict = fm.get("verdict", "revise")
+
+    # Guard: no frontmatter or score 0 likely means reviewer failed
+    if score == 0 and "score:" not in document[:500]:
+        return {"__result__": {"score": -1, "verdict": "error", "review_path": "", "agent_feedback": feedback or "Reviewer did not produce a valid review with frontmatter."}}
 
     review_path = project_dir / "2-review.md"
-    review_path.write_text(review_md)
+    review_path.write_text(document)
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"score": score, "verdict": verdict, "review_path": str(review_path)}}
+    return {"__result__": {"score": score, "verdict": verdict, "review_path": str(review_path), "agent_feedback": feedback}}
 
 
 @returns({"closeout_path": "string", "commits": "string"})
@@ -552,73 +512,136 @@ async def closeout(project: str, **params) -> dict:
 
     await progress.progress(3, 4, "Saving closeout...")
 
+    document, feedback = _extract_feedback(result.get("content", ""))
     closeout_path = project_dir / "3-closeout.md"
-    closeout_path.write_text(result.get("content", ""))
+    closeout_path.write_text(document)
 
     await progress.progress(4, 4, "Done")
 
-    return {"__result__": {"closeout_path": str(closeout_path), "commits": git_log}}
+    return {"__result__": {"closeout_path": str(closeout_path), "commits": git_log, "agent_feedback": feedback}}
+
+
+PHASES = ["rfp", "propose", "review", "closeout"]
 
 
 @returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "score": "integer", "rounds": "integer", "verdict": "string"})
 @timeout(1800)
-async def solve(problem: str, priority: int = 2, max_rounds: int = 3, **params) -> dict:
-    """Run the full project lifecycle: RFP -> propose <-> review until 90+.
+async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start_from: str = "rfp", project: str = "", **params) -> dict:
+    """Run the project lifecycle from any phase.
 
     Args:
-        problem: Problem statement or path to a file
+        problem: Problem statement or path to a file (required if start_from="rfp")
         priority: Priority level 1-3 (default 2)
         max_rounds: Max propose->review iterations (default 3)
+        start_from: Phase to start from: rfp, propose, review, closeout
+        project: Path to existing project dir (required if start_from != "rfp")
     """
     progress.set_job_id(params.get("__job_id__", ""))
-    total_steps = 2 + (max_rounds * 2)  # write_rfp + (propose + review) * rounds
 
-    # Step 1: Write RFP
-    await progress.progress(1, total_steps, "Writing RFP...")
-    rfp_result = await write_rfp(problem=problem, priority=priority, **params)
-    rfp_path = rfp_result["__result__"]["rfp_path"]
-    project_dir = Path(rfp_path).parent
-    proposal_path = str(project_dir / "1-proposal.md")
-    review_path = str(project_dir / "2-review.md")
+    start_idx = PHASES.index(start_from) if start_from in PHASES else 0
 
-    # Step 2..N: Propose <-> Review loop
+    # Resolve project dir and rfp path
+    if project:
+        project_dir = Path(project)
+        rfp_path = str(project_dir / "0-rfp.md")
+    elif start_idx == 0:
+        rfp_path = ""
+        project_dir = None
+    else:
+        return {"__result__": {"error": "project path required when start_from != 'rfp'"}}
+
+    proposal_path = ""
+    review_path = ""
     score = 0
-    verdict = "rethink"
+    verdict = ""
     round_num = 0
 
-    for round_num in range(1, max_rounds + 1):
-        step = 1 + (round_num - 1) * 2 + 1
+    # ── RFP phase ───────────────────────────────────────────────────────
+    if start_idx <= 0:
+        if not problem:
+            return {"__result__": {"error": "problem required for rfp phase"}}
+        await progress.progress(1, 4, "Writing RFP...")
+        rfp_result = await write_rfp(problem=problem, priority=priority, **params)
+        rfp_path = rfp_result["__result__"]["rfp_path"]
+        project_dir = Path(rfp_path).parent
 
-        # Propose
-        await progress.progress(step, total_steps, f"Proposing (round {round_num})...")
-        propose_result = await propose(rfp=rfp_path, round=round_num, **params)
-        proposal_path = propose_result["__result__"]["proposal_path"]
-
-        # Review
-        await progress.progress(step + 1, total_steps, f"Reviewing (round {round_num})...")
-        review_result = await review(
-            rfp=rfp_path,
-            proposal=proposal_path,
-            _round=round_num,
-            **params,
-        )
-        score = review_result["__result__"]["score"]
-        verdict = review_result["__result__"]["verdict"]
-        review_path = review_result["__result__"]["review_path"]
-
-        if score >= 95:
-            break
-
-        # Move rejected proposal + review to _drafts
-        if round_num < max_rounds:
+    # ── Propose <-> Review loop ─────────────────────────────────────────
+    if start_idx <= 2:
+        # Determine starting round from existing _drafts
+        start_round = 1
+        if start_idx >= 1 and project_dir:
             drafts_dir = project_dir / "_drafts"
-            drafts_dir.mkdir(exist_ok=True)
+            if drafts_dir.exists():
+                existing = [f.name for f in drafts_dir.glob("v*-proposal.md")]
+                if existing:
+                    start_round = max(int(f[1:].split("-")[0]) for f in existing) + 1
 
-            review_file = project_dir / "2-review.md"
-            if review_file.exists():
-                review_file.rename(drafts_dir / f"v{round_num}-review.md")
+        # If starting from review, just review the existing proposal
+        if start_idx == 2:
+            proposal_path = str(project_dir / "1-proposal.md")
+            await progress.progress(1, 2, f"Reviewing (round {start_round})...")
+            review_result = await review(
+                rfp=rfp_path, proposal=proposal_path, _round=start_round, **params
+            )
+            score = review_result["__result__"]["score"]
+            verdict = review_result["__result__"]["verdict"]
+            review_path = review_result["__result__"]["review_path"]
+            round_num = start_round
+        else:
+            # Propose -> review loop
+            total_steps = max_rounds * 2
+            for round_num in range(start_round, start_round + max_rounds):
+                step = (round_num - start_round) * 2
 
-    await progress.progress(total_steps, total_steps, f"Done — score {score}, verdict: {verdict}")
+                await progress.progress(step + 1, total_steps, f"Proposing (round {round_num})...")
+                propose_result = await propose(rfp=rfp_path, round=round_num, **params)
+                proposal_path = propose_result["__result__"]["proposal_path"]
+
+                # Save proposer feedback
+                drafts_dir = project_dir / "_drafts"
+                drafts_dir.mkdir(exist_ok=True)
+                pfb = propose_result["__result__"].get("agent_feedback", "")
+                if pfb:
+                    (drafts_dir / f"v{round_num}-propose-feedback.md").write_text(pfb)
+
+                await progress.progress(step + 2, total_steps, f"Reviewing (round {round_num})...")
+                review_result = await review(
+                    rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
+                )
+                score = review_result["__result__"]["score"]
+                verdict = review_result["__result__"]["verdict"]
+                review_path = review_result["__result__"]["review_path"]
+
+                # Retry once if reviewer returned empty (score -1)
+                if score == -1:
+                    await progress.progress(step + 2, total_steps, f"Review failed, retrying (round {round_num})...")
+                    review_result = await review(
+                        rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
+                    )
+                    score = review_result["__result__"]["score"]
+                    verdict = review_result["__result__"]["verdict"]
+                    review_path = review_result["__result__"]["review_path"]
+
+                # Save reviewer feedback
+                rfb = review_result["__result__"].get("agent_feedback", "")
+                if rfb:
+                    (drafts_dir / f"v{round_num}-review-feedback.md").write_text(rfb)
+
+                if score >= 95:
+                    break
+
+                # Move rejected to _drafts for next round
+                if round_num < start_round + max_rounds - 1:
+                    review_file = project_dir / "2-review.md"
+                    if review_file.exists():
+                        review_file.rename(drafts_dir / f"v{round_num}-review.md")
+
+    # ── Closeout phase ──────────────────────────────────────────────────
+    if start_idx <= 3 and (start_idx == 3 or (verdict == "implement" and score >= 95)):
+        await progress.progress(1, 1, "Writing closeout...")
+        closeout_result = await closeout(project=str(project_dir), **params)
+
+    await progress.progress(1, 1, f"Done — score {score}, verdict: {verdict}")
 
     return {
         "__result__": {
