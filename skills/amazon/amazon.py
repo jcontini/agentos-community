@@ -21,6 +21,7 @@ Transport notes (see docs/reverse-engineering/1-transport/):
 import json
 import re
 import sys
+import asyncio
 import time
 from typing import Any
 from urllib.parse import quote_plus
@@ -225,7 +226,7 @@ async def search_products(
 
     async with http.client() as c:
         await c.get(base, headers={"Accept": "text/html"})
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
         resp = await c.get(
             f"{base}/s",
             params=search_params,
@@ -314,7 +315,7 @@ async def get_product(
 
     async with http.client() as c:
         await c.get(base, headers={"Accept": "text/html"})
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
         resp = await c.get(
             f"{base}/dp/{asin}",
             headers={"Accept": "text/html,application/xhtml+xml"},
@@ -422,7 +423,7 @@ _require_cookies = require_cookies
 async def _warm_session(client) -> None:
     """Visit homepage first to provision session cookies and avoid bot detection on sensitive pages."""
     await client.get(BASE, headers={"Sec-Fetch-Site": "none"})
-    time.sleep(1.0)
+    await asyncio.sleep(1.0)
 
 
 def _is_login_redirect(resp: dict, body: str) -> bool:
@@ -1268,7 +1269,7 @@ async def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
             if not show_more:
                 break
 
-            time.sleep(1.0)
+            await asyncio.sleep(1.0)
             ajax_resp = await c.get(
                 f"{BASE}{show_more}" if show_more.startswith("/") else show_more,
                 headers={

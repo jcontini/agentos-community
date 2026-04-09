@@ -13,6 +13,7 @@ inference operations prefer api but auto-start the server via cli if needed.
 import json
 import shutil
 import sys
+import asyncio
 import time
 from pathlib import Path
 
@@ -89,7 +90,7 @@ async def _start_server(binary: str) -> bool:
     except Exception:
         pass  # timeout is expected — ollama serve runs forever
     for _ in range(16):
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
         if await _api_running():
             return True
     return False
@@ -196,10 +197,10 @@ async def op_chat(
     conn_name = _connection_name(connection)
 
     if conn_name == "cli":
-        return _chat_via_cli(model, messages, system, connection)
+        return await _chat_via_cli(model, messages, system, connection)
 
     # API path — auto-start if needed
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
 
     all_messages = []
@@ -307,7 +308,7 @@ async def op_generate(
             max_tokens:
             temperature:
         """
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
 
     body: dict = {

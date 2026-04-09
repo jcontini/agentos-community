@@ -366,7 +366,7 @@ async def list_trips(
     if next_page_token:
         variables["nextPageToken"] = next_page_token
 
-    data = _gql(cookie_header, "Activities", ACTIVITIES_QUERY, variables)
+    data = await _gql(cookie_header, "Activities", ACTIVITIES_QUERY, variables)
     activities = data.get("activities", {})
     past = activities.get("past", {})
     raw_trips = past.get("activities") or []
