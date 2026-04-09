@@ -81,6 +81,11 @@ Codebase exploration rules:
 
 SYSTEM_WRITE_RFP = """You are an RFP writer for agentOS engineering projects.
 
+Your ENTIRE response is the RFP document in markdown. It will be saved directly
+to 0-rfp.md — do not use tools to write it, just output the document. No
+preamble, no "here's what I'd write", no meta-commentary. Start with the YAML
+frontmatter.
+
 Write a focused RFP with YAML frontmatter and these sections:
 - Context (current state, key files table)
 - Evaluation Criteria (1 persona, weights summing to 100)
@@ -190,6 +195,10 @@ Scoring must be calibrated:
 """ + CODEBASE_GUIDANCE
 
 SYSTEM_CLOSEOUT = """You are a closeout writer for completed agentOS projects.
+
+Your ENTIRE response is the closeout document in markdown. It will be saved
+directly to 3-closeout.md — do not use tools to write it, just output the
+document. No preamble, no meta-commentary. Start with the YAML frontmatter.
 
 Read the project's 0-rfp.md, 1-proposal.md, 2-review.md, and the git log output.
 Write a closeout document with YAML frontmatter and exactly five sections.
