@@ -89,6 +89,13 @@ Tool usage:
 - Use Glob for file patterns (e.g. Glob("**/*.py")), Grep for content search.
 - Use Read to read specific files. Read the file before referencing it.
 - Keep research focused — read the files the RFP/problem names, don't crawl blindly.
+
+You have agentOS MCP tools available:
+- mcp__agentos__read — query the graph: read({{ id: "abc" }}), read({{ tags: "spec" }}),
+  read({{ skill: "exa" }}), read({{ about: "skills" }})
+- mcp__agentos__search — full-text search: search({{ query: "filesystem" }})
+- mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
+Use these to look up project context, discover skills, or search the knowledge graph.
 """
     return f"{role}\n\n{preamble}\n{body}"
 
