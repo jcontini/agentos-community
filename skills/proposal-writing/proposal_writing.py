@@ -3,307 +3,126 @@ proposal_writing.py — Multi-agent proposal writing with persona-based review c
 
 Modeled on government contracting:
     Phase 1: Identify personas/stakeholders from the problem
-    Phase 2: Each persona agent researches + writes their RFP section (problems + criteria)
+    Phase 2: Each persona agent researches + writes their RFP section (parallel)
              RFP Manager assembles the full RFP
     Phase 3: Bidder writes a proposal addressing all personas
-    Phase 4: Review committee (persona agents) scores proposal on their own criteria
-             Evaluator aggregates + sends feedback. Bidder revises. Repeat until ≥90%.
+    Phase 4: Review committee (persona agents) scores proposal (parallel)
+             Evaluator aggregates + sends feedback. Bidder revises. Repeat until >=90%.
     Phase 5: Final summary with score breakdown
 
-Each persona gets 100 points max. Total max = N_personas × 100.
+Each persona gets 100 points max. Total max = N_personas x 100.
 Threshold = 90% of max. Bidder iterates until they hit it (or max_rounds).
 
-All LLM calls via llm.agent() or llm.oneshot(). No subprocess spawning.
+All LLM calls via llm.agent() or llm.oneshot(). Parallel via asyncio.gather().
+Structured output via output_schema — no regex score extraction.
+Prompts live as external markdown files in prompts/.
 """
 
-import json
-import re
-import textwrap
+import asyncio
 from pathlib import Path
 
-from agentos import llm, progress, returns, timeout
+from agentos import checkpoint, llm, progress, returns, timeout
 
 
 # ---------------------------------------------------------------------------
-# System prompts
+# Prompt loading
 # ---------------------------------------------------------------------------
 
-PERSONA_IDENTIFIER_PROMPT = textwrap.dedent("""\
-    You identify the key personas/stakeholders affected by a problem.
+PROMPT_DIR = Path(__file__).parent / "prompts"
+
+
+def _prompt(name: str) -> str:
+    return (PROMPT_DIR / f"{name}.md").read_text()
+
+
+# ---------------------------------------------------------------------------
+# Output schemas for structured output
+# ---------------------------------------------------------------------------
+
+PERSONA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "personas": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "role": {"type": "string"},
+                    "interface": {"type": "string"},
+                },
+                "required": ["name", "role", "interface"],
+            },
+        }
+    },
+    "required": ["personas"],
+}
+
+EVAL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "personaName": {"type": "string"},
+        "score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "criteria": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "weight": {"type": "integer"},
+                    "score": {"type": "integer", "minimum": 0, "maximum": 5},
+                    "weighted": {"type": "number"},
+                    "justification": {"type": "string"},
+                },
+                "required": ["name", "weight", "score", "weighted", "justification"],
+            },
+        },
+        "blockingIssues": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+        "nonBlockingIssues": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "required": ["personaName", "score", "criteria", "blockingIssues", "nonBlockingIssues"],
+}
+
+AGGREGATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "totalScore": {"type": "integer"},
+        "maxScore": {"type": "integer"},
+        "personaScores": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "score": {"type": "integer"},
+                },
+                "required": ["name", "score"],
+            },
+        },
+        "blockingIssues": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+        "feedback": {"type": "string"},
+    },
+    "required": ["totalScore", "maxScore", "personaScores", "blockingIssues", "feedback"],
+}
+
+
+# ---------------------------------------------------------------------------
+# Research tools for agents that need web access
+# ---------------------------------------------------------------------------
 
-    Return a JSON array of persona objects. Each persona has:
-    - "name": short label (e.g., "Skill developer", "Runtime agent", "End user")
-    - "role": one-sentence description of who they are
-    - "interface": how they interact with the system
-
-    Return 3-5 personas. Focus on distinct roles with different problems
-    and different interfaces. No overlap.
-
-    Return ONLY valid JSON. No markdown, no explanation.
-""")
-
-PERSONA_RFP_PROMPT = textwrap.dedent("""\
-    You are a stakeholder writing YOUR section of a Request for Proposals (RFP).
-    You represent one specific persona. You care ONLY about YOUR problems.
-
-    ## Your job
-
-    1. **Research your pain points.** Use web search to find real-world evidence —
-       quotes, case studies, metrics, forum complaints. Don't guess.
-    2. **List your problems** as a prioritized table (P1/P2/P3) with evidence.
-    3. **Write detailed descriptions** of each problem with citations.
-    4. **Define YOUR evaluation criteria** — 3-5 criteria, weights summing to 100.
-       Each criterion gets a 0-5 scale with concrete anchors:
-       - What does a 5/5 look like for YOU?
-       - What does a 1/5 look like for YOU?
-
-    ## Output format
-
-    Write your section as markdown:
-
-    ```
-    ### [Your Persona Name] problems
-
-    | # | Pain point | Priority | Justification |
-    |---|-----------|----------|---------------|
-
-    **1. [Pain point title].**
-    [Detailed description with evidence...]
-
-    ...
-
-    ### [Your Persona Name] evaluation criteria
-
-    | # | Criterion | Weight | 5/5 | 1/5 |
-    |---|----------|--------|-----|-----|
-    ```
-
-    ## Rules
-
-    - **Problems only, no solutions.** You define WHAT needs solving, not HOW.
-    - **Evidence over intuition.** Every P1 must cite real-world evidence.
-    - **Stay in character.** You are this persona. Your problems reflect YOUR
-      daily experience, not the system architect's view.
-    - **Weights sum to 100.** This is YOUR 100 points. Spend them on what
-      matters most to YOU.
-""")
-
-RFP_MANAGER_PROMPT = textwrap.dedent("""\
-    You are the RFP Manager. Your job is to assemble persona sections into
-    a complete, coherent RFP document.
-
-    ## Your job
-
-    1. Read each persona's section (they've already been written).
-    2. Write the RFP preamble: title, problem summary, persona overview.
-    3. Assemble all persona sections into the document.
-    4. Add a combined scoring summary showing all personas and total max points.
-    5. Add a test case if the problem domain has one (read context files).
-
-    ## Output format
-
-    Write the complete RFP to the specified file. Use this structure:
-
-    ```
-    ---
-    title: "... — RFP"
-    type: rfp
-    labels: [...]
-    problem: |
-      One paragraph summary.
-    ---
-
-    # [Title] — Request for Proposals
-
-    ## Overview
-    [What this RFP covers, how scoring works]
-
-    ## Personas
-    [Brief intro to each persona]
-
-    ## Problems by Persona
-    [Each persona's section as written by them]
-
-    ## Combined Scoring
-    | Persona | Max Points | Criteria Count |
-    Total: N × 100 = XXX points
-
-    ## Test Case (if applicable)
-
-    ## Context: Current System
-    ```
-
-    ## Rules
-
-    - **Don't rewrite persona sections.** Include them as-is. They own their words.
-    - **Do add structure and context** around them.
-    - **Ensure scoring math is correct.** Each persona = 100 points max.
-""")
-
-BIDDER_PROMPT = textwrap.dedent("""\
-    You are a proposal writer responding to an RFP. Your job is to write a
-    comprehensive proposal that addresses every persona's problems and scores
-    well against ALL their criteria.
-
-    ## Principles
-
-    1. **Address every P1 problem from every persona.** P2s where possible.
-    2. **Show, don't describe.** Concrete artifacts: code examples, data
-       structures, CLI output, API calls.
-    3. **Be concrete about trade-offs.** Name what you're giving up.
-    4. **Demonstrate the test case** if the RFP includes one.
-    5. **Structure by solution, not by persona.** The proposal should be a
-       coherent design, not N separate answers glued together.
-    6. **Acknowledge what you don't know.** Open questions are honesty.
-
-    ## Output format
-
-    Write a complete markdown document:
-
-    ```
-    ---
-    title: "..."
-    priority: N
-    labels: [...]
-    problem: |
-      One paragraph.
-    success_criteria: |
-      Bullet list of measurable outcomes.
-    ---
-
-    # [Title]
-
-    ## The Problem (brief — RFP has details)
-    ## Proposed Design
-    ## Test Case Walkthrough
-    ## Persona Coverage
-      ### How this addresses [Persona 1]
-      ### How this addresses [Persona 2]
-      ...
-    ## Alternatives Considered
-    ## Trade-offs
-    ## Implementation Plan
-    ## Open Questions
-    ```
-""")
-
-PERSONA_EVALUATOR_PROMPT = textwrap.dedent("""\
-    You are a stakeholder evaluating a proposal against YOUR criteria only.
-    You represent one specific persona. Score ONLY your own criteria.
-
-    ## Your job
-
-    1. Read the proposal carefully. Read the RFP criteria carefully.
-    2. Score each of YOUR criteria 0-5 with concrete justification.
-       Be harsh and specific — if the RFP demands concrete code and the
-       proposal is vague, that's a 2 or 3, not a 4.
-    3. Calculate your weighted total (max 100).
-    4. List issues as BLOCKING or NON-BLOCKING.
-    5. For each issue, cite the specific criterion and what's missing.
-       "Progress visibility is weak" is useless feedback.
-       "Progress visibility (weight 30): no concrete event propagation
-       mechanism shown — need event type, Rust→Python flow, MCP surface"
-       is useful feedback.
-
-    ## Output format
-
-    ```
-    ### [Your Persona Name] — Round N
-
-    **Score: XX/100**
-
-    | Criterion | Weight | Score (0-5) | Weighted | Justification |
-    |---|---|---|---|---|
-
-    **BLOCKING:**
-    1. [Criterion name, weight]: [specific gap with evidence from proposal]
-
-    **NON-BLOCKING:**
-    1. [Criterion name, weight]: [specific gap]
-    ```
-
-    ## Rules
-
-    - **Only YOUR criteria.** Don't evaluate things outside your domain.
-    - **Score with math.** Weighted score = weight × score / 5.
-    - **Be honest about improvements.** If the proposal fixed something, raise the score.
-    - **Never suggest solutions.** Say what's missing, not what to do.
-    - **Cite evidence.** Quote or reference specific sections of the proposal.
-""")
-
-EVALUATOR_PROMPT = textwrap.dedent("""\
-    You are the Evaluation Coordinator. You aggregate persona scores into
-    feedback for the bidder.
-
-    You receive individual persona evaluations. Your job:
-
-    1. Calculate the total score across all personas.
-    2. List ALL blocking issues from ALL personas.
-    3. Summarize the feedback clearly — what must improve to hit threshold.
-    4. Be direct: which personas are satisfied, which aren't.
-
-    ## Output format
-
-    ```
-    ## Evaluation — Round N
-
-    ### Scores
-    | Persona | Score | Max | % |
-    |---|---|---|---|
-    | Total | XXX | YYY | ZZ% |
-
-    ### Blocking Issues (must fix)
-    1. [Persona]: [issue]
-
-    ### Non-blocking Issues (should fix)
-    1. [Persona]: [issue]
-
-    ### Feedback for Bidder
-    [Clear summary of what needs to change]
-    ```
-""")
-
-BIDDER_REVISE_PROMPT = textwrap.dedent("""\
-    You are revising your proposal based on evaluation feedback from the
-    review committee. Each persona scored their own criteria.
-
-    ## Rules
-
-    1. **Fix blocking issues first.** These are requirements.
-    2. **Show your changes.** For each issue, explain what you changed.
-    3. **Actually revise the proposal file.** Don't just describe changes.
-    4. **Push back with evidence** if you disagree — but back it up.
-    5. **Don't restructure everything.** Fix what was asked.
-
-    ## Output format (for the review thread)
-
-    ```
-    ## Revision — Round N
-
-    ### Addressing feedback
-
-    **[Persona]: [Issue]**
-    [What you changed and why]
-
-    ### Changes made
-    - [Specific change 1]
-    - [Specific change 2]
-    ```
-""")
-
-
-# Research tools for agents that need web access.
-# Format: "skill_id.entity.operation" — entity comes from @returns(), operation is the function name.
-# Verify with: load({ skill: "name" }) to see tool names, then check @returns in the .py file.
 RESEARCH_TOOLS = [
-    "exa.result.search",               # neural/semantic search — works
-    "exa.webpage.read_webpage",         # extract content from URL — works
-    "hackernews.post.search_posts",     # search HN stories — works
-    # Broken/unavailable (2026-04-08):
-    # "brave.result.search",            # API key expired, no refresh path
-    # "firecrawl.webpage.read_webpage", # API key expired
-    # "reddit.post.search_posts",       # 403 bot detection
-    # "youtube.result.transcript_video",# sandbox blocks yt-dlp socket import
+    "exa.result.search",
+    "exa.webpage.read_webpage",
+    "hackernews.post.search_posts",
 ]
 
 FILE_READ = ["Read", "Glob", "Grep"]
@@ -313,26 +132,6 @@ FILE_WRITE = ["Read", "Glob", "Grep", "Edit", "Write"]
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-async def _agent_call(*, prompt, system, tools, files=None, model="opus", max_iterations=20):
-    """Wrapper around await llm.agent() with error handling.
-
-    Returns the agent result dict. Raises RuntimeError if the agent fails,
-    so callers get a clear traceback instead of silently continuing with
-    empty strings.
-    """
-    result = await llm.agent(
-        prompt=prompt,
-        system=system,
-        tools=tools,
-        files=files or [],
-        model=model,
-        max_iterations=max_iterations,
-    )
-    if "__error__" in result:
-        raise RuntimeError(f"await llm.agent() failed: {result['__error__']}")
-    return result
-
 
 def _read_file(path):
     try:
@@ -344,19 +143,6 @@ def _read_file(path):
 def _append(path, content):
     with open(path, "a") as f:
         f.write(f"\n\n{content}\n")
-
-
-def _extract_persona_score(text, persona_name):
-    """Extract score for a specific persona from evaluation text."""
-    pattern = rf'{re.escape(persona_name)}.*?Score:\s*(\d+)\s*/\s*100'
-    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-    return int(match.group(1)) if match else None
-
-
-def _extract_total_score(text):
-    """Extract total score from evaluator aggregation."""
-    match = re.search(r'Total\s*\|\s*(\d+)', text)
-    return int(match.group(1)) if match else None
 
 
 def _resolve_problem(problem):
@@ -372,28 +158,24 @@ def _resolve_problem(problem):
 # ---------------------------------------------------------------------------
 
 async def _identify_personas(problem_text, domain):
-    """Use llm.oneshot to extract personas from the problem statement."""
+    """Use llm.agent with output_schema to extract personas."""
     domain_hint = f"\nDomain: {domain}" if domain else ""
-    result = await llm.oneshot(
+    result = await llm.agent(
         prompt=(
             f"Identify the key personas/stakeholders for this problem:\n\n"
             f"---\n{problem_text}\n---{domain_hint}\n\n"
-            f"Return a JSON array of 3-5 persona objects."
+            f"Return 3-5 personas."
         ),
-        system=PERSONA_IDENTIFIER_PROMPT,
+        system=_prompt("persona_identifier"),
         model="opus",
-        max_tokens=2048,
+        output_schema=PERSONA_SCHEMA,
     )
-    content = result.get("content", "[]")
-    # Extract JSON from response (may be wrapped in markdown code block)
-    json_match = re.search(r'\[.*\]', content, re.DOTALL)
-    if json_match:
-        return json.loads(json_match.group(0))
-    return []
+    data = result.get("data") or {}
+    return data.get("personas", [])
 
 
 # ---------------------------------------------------------------------------
-# Phase 2: RFP generation (persona agents + manager)
+# Phase 2: RFP generation (parallel persona agents + manager)
 # ---------------------------------------------------------------------------
 
 async def _persona_write_rfp_section(persona, problem_text, context_paths, domain):
@@ -416,9 +198,9 @@ async def _persona_write_rfp_section(persona, problem_text, context_paths, domai
         f"Define YOUR evaluation criteria (3-5 criteria, weights summing to 100)."
     )
 
-    result = await _agent_call(
+    result = await llm.agent(
         prompt=prompt,
-        system=PERSONA_RFP_PROMPT,
+        system=_prompt("persona_rfp"),
         tools=FILE_READ + RESEARCH_TOOLS,
         files=context_paths,
         model="opus",
@@ -445,15 +227,15 @@ async def _assemble_rfp(personas, sections, rfp_path, problem_text, context_path
         f"Personas ({len(personas)}): "
         + ", ".join(p["name"] for p in personas)
         + f"\n\nTotal max score: {len(personas) * 100} points "
-        f"({len(personas)} personas × 100 each)\n\n"
+        f"({len(personas)} personas x 100 each)\n\n"
         f"Persona sections:{sections_text}"
         f"{context_hint}\n\n"
         f"Write the complete RFP to: `{rfp_path}`"
     )
 
-    await _agent_call(
+    await llm.agent(
         prompt=prompt,
-        system=RFP_MANAGER_PROMPT,
+        system=_prompt("rfp_manager"),
         tools=FILE_WRITE,
         files=context_paths + [rfp_path],
         model="opus",
@@ -483,9 +265,9 @@ async def _write_proposal(rfp_path, proposal_path, context_paths, model):
         f"Write the complete proposal to: `{proposal_path}`"
     )
 
-    await _agent_call(
+    await llm.agent(
         prompt=prompt,
-        system=BIDDER_PROMPT,
+        system=_prompt("bidder"),
         tools=FILE_WRITE + RESEARCH_TOOLS,
         files=context_paths + [rfp_path, proposal_path],
         model=model,
@@ -493,12 +275,15 @@ async def _write_proposal(rfp_path, proposal_path, context_paths, model):
 
 
 # ---------------------------------------------------------------------------
-# Phase 4: Evaluation loop
+# Phase 4: Evaluation loop (parallel persona scoring + structured output)
 # ---------------------------------------------------------------------------
 
 async def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
-                      context_paths, round_num):
-    """One persona agent scores the proposal on THEIR criteria only."""
+                            context_paths, round_num):
+    """One persona agent scores the proposal on THEIR criteria only.
+
+    Returns structured eval data via output_schema.
+    """
     rfp_content = _read_file(rfp_path)
 
     prompt = (
@@ -517,38 +302,46 @@ async def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
             f"prior rounds and what the bidder changed."
         )
 
-    result = await _agent_call(
+    result = await llm.agent(
         prompt=prompt,
-        system=PERSONA_EVALUATOR_PROMPT,
+        system=_prompt("persona_evaluator"),
         tools=FILE_READ,
         files=[rfp_path, proposal_path, thread_path] + context_paths,
         model="opus",
+        output_schema=EVAL_SCHEMA,
     )
-    return result.get("content", "")
+    return result
 
 
 async def _aggregate_evaluations(persona_evals, personas, round_num):
     """Evaluator aggregates persona scores into a combined evaluation."""
-    evals_text = ""
-    for persona, eval_text in zip(personas, persona_evals):
-        evals_text += f"\n---\n{persona['name']}:\n{eval_text}\n"
+    evals_summary = ""
+    for persona, ev in zip(personas, persona_evals):
+        data = ev.get("data") or {}
+        score = data.get("score", "?")
+        blocking = data.get("blockingIssues", [])
+        evals_summary += (
+            f"\n---\n{persona['name']}: {score}/100\n"
+            f"Blocking: {blocking}\n"
+            f"Content: {ev.get('content', '')[:2000]}\n"
+        )
 
-    result = await llm.oneshot(
+    result = await llm.agent(
         prompt=(
             f"Aggregate these persona evaluations for round {round_num}.\n\n"
             f"Max score per persona: 100. Total max: {len(personas) * 100}.\n"
             f"Threshold: 90% = {int(len(personas) * 100 * 0.9)}.\n\n"
-            f"Persona evaluations:{evals_text}"
+            f"Persona evaluations:{evals_summary}"
         ),
-        system=EVALUATOR_PROMPT,
+        system=_prompt("evaluator"),
         model="opus",
-        max_tokens=4096,
+        output_schema=AGGREGATION_SCHEMA,
     )
-    return result.get("content", "")
+    return result
 
 
 async def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
-                     round_num, model):
+                           round_num, model):
     """Bidder revises proposal based on evaluation feedback."""
     prompt = (
         f"This is revision round {round_num}.\n\n"
@@ -558,30 +351,14 @@ async def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
         f"The RFP is at `{rfp_path}` for reference."
     )
 
-    result = await _agent_call(
+    result = await llm.agent(
         prompt=prompt,
-        system=BIDDER_REVISE_PROMPT,
+        system=_prompt("bidder_revise"),
         tools=FILE_WRITE,
         files=[rfp_path, proposal_path, thread_path] + context_paths,
         model=model,
     )
     return result.get("content", "")
-
-
-def _parse_total_score(aggregation_text, personas):
-    """Parse total score from evaluator aggregation. Fallback: sum persona scores."""
-    # Try to find total in the aggregation
-    total = _extract_total_score(aggregation_text)
-    if total:
-        return total
-
-    # Fallback: sum individual persona scores
-    total = 0
-    for persona in personas:
-        score = _extract_persona_score(aggregation_text, persona["name"])
-        if score:
-            total += score
-    return total
 
 
 # ---------------------------------------------------------------------------
@@ -591,10 +368,10 @@ def _parse_total_score(aggregation_text, personas):
 @returns({"rfp": "string", "proposal": "string", "score": "integer", "maxScore": "integer", "rounds": "integer", "personas": "integer"})
 @timeout(1800)
 async def write_proposal(problem: str, output: str, model: str = "opus",
-                   max_rounds: int = 5, context: str = "",
-                   domain: str = "", threshold: float = 0.9,
-                   **params) -> dict:
-    """Run the full proposal writing pipeline: personas → RFP → bid → evaluation loop → summary.
+                         max_rounds: int = 5, context: str = "",
+                         domain: str = "", threshold: float = 0.9,
+                         **params) -> dict:
+    """Run the full proposal writing pipeline: personas -> RFP -> bid -> evaluation loop -> summary.
 
     Args:
         problem: Raw problem statement, or path to a file containing one
@@ -626,115 +403,139 @@ async def write_proposal(problem: str, output: str, model: str = "opus",
     proposal_path = f"{output_dir}/proposal.md"
     thread_path = f"{output_dir}/review.md"
 
-    # Estimate steps: identify(1) + personas*rfp(N) + assemble(1) + bid(1)
-    #   + rounds*(personas*eval(N) + aggregate(1) + revise(1)) + summary(1)
-    # Use rough estimate, update as we learn persona count
-    step = 0
+    # --- Check for checkpoint (resume from prior run) ---
+    state = checkpoint.load(output_dir)
 
     # --- Phase 1: Identify Personas ---
-    step += 1
-    await progress.progress(step, 20, "Identifying personas...")
-
-    personas = await _identify_personas(problem_text, domain)
-    if not personas:
-        return {"__result__": {"error": "Could not identify personas"}}
+    if state and state.get("phase", 0) >= 1:
+        personas = state["personas"]
+    else:
+        await progress.progress(1, 20, "Identifying personas...")
+        personas = await _identify_personas(problem_text, domain)
+        if not personas:
+            return {"__result__": {"error": "Could not identify personas"}}
+        checkpoint.save(output_dir, {"phase": 1, "personas": personas})
 
     n = len(personas)
     max_score = n * 100
     threshold_score = int(max_score * threshold)
-    total_steps = 1 + n + 1 + 1 + (max_rounds * (n + 2)) + 1
+    total_steps = 1 + 1 + 1 + 1 + (max_rounds * 3) + 1  # phases, not individual agents
 
-    await progress.progress(step, total_steps,
-                      f"Found {n} personas: "
-                      + ", ".join(p["name"] for p in personas))
+    await progress.progress(1, total_steps,
+                            f"Found {n} personas: "
+                            + ", ".join(p["name"] for p in personas))
 
-    # --- Phase 2: RFP Generation ---
-    sections = []
-    for i, persona in enumerate(personas):
-        step += 1
-        await progress.progress(step, total_steps,
-                          f"RFP: {persona['name']} researching...")
+    # --- Phase 2: RFP Generation (parallel persona agents) ---
+    if state and state.get("phase", 0) >= 2:
+        pass  # RFP already on disk
+    else:
+        await progress.progress(2, total_steps,
+                                f"RFP: {n} persona agents researching in parallel...")
 
-        section = await _persona_write_rfp_section(
-            persona, problem_text, context_paths, domain)
-        sections.append(section)
+        sections = await asyncio.gather(*[
+            _persona_write_rfp_section(persona, problem_text, context_paths, domain)
+            for persona in personas
+        ])
 
-    step += 1
-    await progress.progress(step, total_steps, "RFP Manager assembling document...")
-    await _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths)
+        await progress.progress(3, total_steps, "RFP Manager assembling document...")
+        await _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths)
 
-    if not Path(rfp_path).exists():
-        return {"__result__": {"error": "RFP generation failed"}}
+        if not Path(rfp_path).exists():
+            return {"__result__": {"error": "RFP generation failed"}}
 
-    await progress.progress(step, total_steps, "RFP complete")
+        checkpoint.save(output_dir, {"phase": 2, "personas": personas})
+
+    await progress.progress(3, total_steps, "RFP complete")
 
     # --- Phase 3: Proposal Bid ---
-    step += 1
-    await progress.progress(step, total_steps, "Bidder writing proposal...")
-    await _write_proposal(rfp_path, proposal_path, context_paths, model)
+    if state and state.get("phase", 0) >= 3:
+        pass  # Proposal already on disk
+    else:
+        await progress.progress(4, total_steps, "Bidder writing proposal...")
+        await _write_proposal(rfp_path, proposal_path, context_paths, model)
 
-    if not Path(proposal_path).exists():
-        return {"__result__": {"error": "Proposal generation failed"}}
+        if not Path(proposal_path).exists():
+            return {"__result__": {"error": "Proposal generation failed"}}
 
-    # Initialize review thread
-    thread_header = textwrap.dedent(f"""\
-        # Proposal Review
-
-        > **RFP:** `{rfp_path}`
-        > **Proposal:** `{proposal_path}`
-        > **Personas:** {', '.join(p['name'] for p in personas)}
-        > **Threshold:** {threshold_score}/{max_score} ({int(threshold*100)}%)
-
-        ---
-    """)
-    Path(thread_path).write_text(thread_header)
+        # Initialize review thread
+        thread_header = (
+            f"# Proposal Review\n\n"
+            f"> **RFP:** `{rfp_path}`\n"
+            f"> **Proposal:** `{proposal_path}`\n"
+            f"> **Personas:** {', '.join(p['name'] for p in personas)}\n"
+            f"> **Threshold:** {threshold_score}/{max_score} ({int(threshold*100)}%)\n\n"
+            f"---\n"
+        )
+        Path(thread_path).write_text(thread_header)
+        checkpoint.save(output_dir, {"phase": 3, "personas": personas})
 
     # --- Phase 4: Evaluation Loop ---
+    start_round = 1
+    if state and state.get("phase", 0) >= 4:
+        start_round = state.get("completedRounds", 0) + 1
+
     final_score = 0
     round_num = 0
 
-    for round_num in range(1, max_rounds + 1):
-        # Each persona evaluates
-        persona_evals = []
-        for i, persona in enumerate(personas):
-            step += 1
-            await progress.progress(step, total_steps,
-                              f"Round {round_num}: {persona['name']} evaluating...")
+    for round_num in range(start_round, max_rounds + 1):
+        step_base = 4 + (round_num - 1) * 3
 
-            eval_text = await _persona_evaluate(
-                persona, rfp_path, proposal_path, thread_path,
-                context_paths, round_num)
-            persona_evals.append(eval_text)
-            _append(thread_path, eval_text)
+        # Parallel persona evaluation
+        await progress.progress(step_base + 1, total_steps,
+                                f"Round {round_num}: {n} persona evaluators in parallel...")
 
-        # Evaluator aggregates
-        step += 1
-        await progress.progress(step, total_steps,
-                          f"Round {round_num}: aggregating scores...")
+        eval_results = await asyncio.gather(*[
+            _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
+                              context_paths, round_num)
+            for persona in personas
+        ])
 
-        aggregation = await _aggregate_evaluations(persona_evals, personas, round_num)
-        _append(thread_path, aggregation)
+        # Write eval content to review thread
+        for persona, ev in zip(personas, eval_results):
+            data = ev.get("data") or {}
+            _append(thread_path,
+                    f"### {persona['name']} — Round {round_num}\n\n"
+                    f"**Score: {data.get('score', '?')}/100**\n\n"
+                    f"{ev.get('content', '')}")
 
-        final_score = _parse_total_score(aggregation, personas)
-        await progress.progress(step, total_steps,
-                          f"Round {round_num}: {final_score}/{max_score} "
-                          f"(need {threshold_score})")
+        # Aggregate evaluations (structured output)
+        await progress.progress(step_base + 2, total_steps,
+                                f"Round {round_num}: aggregating scores...")
+
+        agg_result = await _aggregate_evaluations(eval_results, personas, round_num)
+        agg_data = agg_result.get("data") or {}
+        final_score = agg_data.get("totalScore", 0)
+        feedback = agg_data.get("feedback", "")
+
+        _append(thread_path,
+                f"## Evaluation — Round {round_num}\n\n"
+                f"**Total: {final_score}/{max_score}**\n\n"
+                f"{feedback}\n\n{agg_result.get('content', '')}")
+
+        await progress.progress(step_base + 2, total_steps,
+                                f"Round {round_num}: {final_score}/{max_score} "
+                                f"(need {threshold_score})")
+
+        checkpoint.save(output_dir, {
+            "phase": 4,
+            "personas": personas,
+            "completedRounds": round_num,
+            "lastScore": final_score,
+        })
 
         # Check threshold
         if final_score >= threshold_score:
-            await progress.progress(step, total_steps,
-                              f"Threshold met! {final_score}/{max_score}")
+            await progress.progress(step_base + 3, total_steps,
+                                    f"Threshold met! {final_score}/{max_score}")
             break
 
         # Bidder revises
-        step += 1
-        await progress.progress(step, total_steps,
-                          f"Round {round_num}: bidder revising...")
-
+        await progress.progress(step_base + 3, total_steps,
+                                f"Round {round_num}: bidder revising...")
         revision = await _revise_proposal(
             rfp_path, proposal_path, thread_path, context_paths,
             round_num, model)
-        _append(thread_path, revision)
+        _append(thread_path, f"## Revision — Round {round_num}\n\n{revision}")
 
     # --- Phase 5: Summary ---
     summary_path = f"{output_dir}/summary.md"
@@ -753,8 +554,11 @@ async def write_proposal(problem: str, output: str, model: str = "opus",
     )
     Path(summary_path).write_text(summary_content)
 
+    # Clear checkpoint on success
+    checkpoint.clear(output_dir)
+
     await progress.progress(total_steps, total_steps,
-                      f"Complete — {final_score}/{max_score}")
+                            f"Complete — {final_score}/{max_score}")
 
     return {"__result__": {
         "rfp": rfp_path,
@@ -778,45 +582,39 @@ async def status(output: str, **params) -> dict:
     if not Path(output_dir).exists():
         return {"__result__": {"error": f"Not found: {output_dir}"}}
 
+    # Try checkpoint first — most reliable
+    state = checkpoint.load(output_dir)
+    if state:
+        personas = state.get("personas", [])
+        n = len(personas)
+        phase_num = state.get("phase", 0)
+        phases = {1: "identifying_personas", 2: "writing_rfp", 3: "writing_proposal", 4: "evaluating"}
+        return {"__result__": {
+            "phase": phases.get(phase_num, "unknown"),
+            "score": state.get("lastScore", 0),
+            "maxScore": n * 100,
+            "rounds": state.get("completedRounds", 0),
+            "personas": n,
+        }}
+
+    # No checkpoint — check artifacts
     rfp_exists = Path(f"{output_dir}/rfp.md").exists()
     proposal_exists = Path(f"{output_dir}/proposal.md").exists()
-    thread_exists = Path(f"{output_dir}/review.md").exists()
+    summary_exists = Path(f"{output_dir}/summary.md").exists()
 
-    if not rfp_exists:
+    if summary_exists:
+        phase = "complete"
+    elif not rfp_exists:
         phase = "writing_rfp"
     elif not proposal_exists:
         phase = "writing_proposal"
-    elif not thread_exists:
-        phase = "pending_review"
     else:
-        thread = _read_file(f"{output_dir}/review.md")
-        if "ACCEPTED" in thread or Path(f"{output_dir}/summary.md").exists():
-            phase = "complete"
-        else:
-            phase = "evaluating"
-
-    # Try to extract score from thread
-    score = 0
-    rounds = 0
-    if thread_exists:
-        thread = _read_file(f"{output_dir}/review.md")
-        total = _extract_total_score(thread)
-        if total:
-            score = total
-        rounds = len(re.findall(r'## Evaluation — Round', thread))
-
-    # Count personas from thread header
-    personas = 0
-    if thread_exists:
-        thread = _read_file(f"{output_dir}/review.md")
-        match = re.search(r'Personas:\*\*\s*(.+)', thread)
-        if match:
-            personas = len(match.group(1).split(","))
+        phase = "complete"  # no checkpoint + artifacts = finished
 
     return {"__result__": {
         "phase": phase,
-        "score": score,
-        "maxScore": personas * 100,
-        "rounds": rounds,
-        "personas": personas,
+        "score": 0,
+        "maxScore": 0,
+        "rounds": 0,
+        "personas": 0,
     }}

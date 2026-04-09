@@ -82,44 +82,44 @@ The human decides whether to accept, revise, or re-run with different parameters
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ Phase 0: Human Interview (calling agent ↔ human)    │
+│ Phase 0: Human Interview (calling agent <-> human)  │
 │   Understand requirements, constraints, scope       │
 │   Draft RFP, iterate with human until approved      │
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 1: Identify Personas                          │
-│   llm.oneshot → extract 3-5 personas from problem   │
+│ Phase 1: Identify Personas (structured output)      │
+│   llm.agent + output_schema -> 3-5 typed personas   │
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 2: RFP Generation                             │
-│   For each persona (sequential llm.agent):          │
-│     Research pain points (web search, HN)           │
-│     Write RFP section: problems + criteria (100 pts)│
+│ Phase 2: RFP Generation (parallel)                  │
+│   asyncio.gather: all persona agents run concurrently│
+│     Each: research pain points, write RFP section   │
 │   RFP Manager assembles + validates full RFP        │
+│   checkpoint.save() after completion                │
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
 │ Phase 3: Proposal Bid                               │
 │   Bidder reads RFP, researches solutions            │
 │   Writes complete proposal addressing all personas  │
+│   checkpoint.save() after completion                │
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 4: Evaluation Loop (repeat until ≥90%)        │
-│   For each persona (sequential llm.agent):          │
-│     Score proposal on THEIR criteria only (0-100)   │
-│   Evaluator aggregates scores + sends feedback      │
+│ Phase 4: Evaluation Loop (repeat until >=90%)       │
+│   asyncio.gather: all persona evaluators in parallel │
+│     Each scores via output_schema (structured JSON) │
+│   Evaluator aggregates scores (structured output)   │
 │   Bidder revises proposal                           │
-│   Repeat until total ≥ 90% of max possible          │
+│   checkpoint.save() after each round                │
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
 │ Phase 5: Final Summary                              │
 │   Score breakdown per persona                       │
-│   What changed across rounds                        │
-│   Final verdict                                     │
+│   checkpoint.clear() on success                     │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -299,25 +299,19 @@ run({ skill: "brave", tool: "search", params: { query: "...", limit: 20 } })
 
 ## Architecture Notes
 
-### llm.agent() constraints
+### Key patterns used
 
-- **No nesting.** `llm.agent()` has a depth=1 hard cap in the engine.
-  Agents cannot spawn sub-agents. All orchestration must be done in Python
-  with sequential `llm.agent()` calls.
-- **Sequential only.** `llm.agent()` blocks the Python worker thread.
-  No way to run multiple agents in parallel from a skill.
-- **Text output only.** Agents return `{"content": str}`. Scores and
-  structured data must be extracted via regex from the text. Use strict
-  output format prompts to make this reliable.
-- **No memory between calls.** Each `llm.agent()` starts a fresh
-  conversation. Context must be passed via files on disk.
-
-### Workarounds in this skill
-
-- "Persona agents" are sequential `llm.agent()` calls with persona-specific
-  system prompts — not actual sub-agents.
-- Scores are extracted with regex from evaluator output. Prompts enforce
-  strict `**Score: XX/100**` format.
+- **Parallel agents via asyncio.gather()** — persona research and evaluation
+  run concurrently. With 3 personas, Phase 2 takes ~3.5 min parallel vs ~9
+  min sequential.
+- **Structured output via output_schema** — persona identification, evaluation
+  scores, and aggregation all use JSON Schema. No regex extraction.
+- **Checkpoint/resume** — `checkpoint.save()` after each phase. If the skill
+  crashes mid-run, it resumes from the last completed phase.
+- **Prompts as external markdown** — all system prompts live in `prompts/`
+  as readable markdown files, not embedded Python strings.
+- **Agent nesting** — the top-level skill orchestrates sub-agents via
+  `llm.agent()` calls. Each persona agent can use tools independently.
 - All context is passed through files: rfp.md, proposal.md, review.md.
   Each agent reads the files it needs.
 - The review thread (review.md) is append-only. Each round's evaluations,
