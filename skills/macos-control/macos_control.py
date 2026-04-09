@@ -126,31 +126,31 @@ def _read_params() -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def _run_json_command(args, input_text=None):
-    result = shell.run(args[0], args[1:], input=input_text)
+async def _run_json_command(args, input_text=None):
+    result = await shell.run(args[0], args[1:], input=input_text)
     if result["exit_code"] != 0:
         raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
     stdout = result["stdout"].strip()
     return json.loads(stdout) if stdout else None
 
 
-def _run_text_command(args):
-    result = shell.run(args[0], args[1:])
+async def _run_text_command(args):
+    result = await shell.run(args[0], args[1:])
     if result["exit_code"] != 0:
         raise RuntimeError(result["stderr"].strip() or f"Command failed: {args[0]}")
     return result["stdout"]
 
 
-def _run_swift_json(script: str):
-    return _run_json_command(["swift", "-e", script])
+async def _run_swift_json(script: str):
+    return await _run_json_command(["swift", "-e", script])
 
 
-def _run_jxa_json(script: str):
-    return _run_json_command(["osascript", "-l", "JavaScript", "-e", script])
+async def _run_jxa_json(script: str):
+    return await _run_json_command(["osascript", "-l", "JavaScript", "-e", script])
 
 
-def _load_display_names():
-    data = _run_json_command(["system_profiler", "SPDisplaysDataType", "-json"])
+async def _load_display_names():
+    data = await _run_json_command(["system_profiler", "SPDisplaysDataType", "-json"])
     names = {}
     for gpu in data.get("SPDisplaysDataType", []):
         for display in gpu.get("spdisplays_ndrvs", []):
@@ -167,9 +167,9 @@ def _load_display_names():
     return names
 
 
-def _load_displays():
-    displays = _run_swift_json(APP_SYSTEM_PROFILER_SWIFT)
-    metadata = _load_display_names()
+async def _load_displays():
+    displays = await _run_swift_json(APP_SYSTEM_PROFILER_SWIFT)
+    metadata = await _load_display_names()
     primary = next((display for display in displays if display.get("is_primary")), None)
     primary_center_x = _frame_center_x(primary["frame"]) if primary else None
     primary_center_y = _frame_center_y(primary["frame"]) if primary else None
@@ -210,9 +210,9 @@ def _load_displays():
 
 @returns({"displays": "{'type': 'array', 'description': 'Connected displays'}", "count": "integer"})
 @timeout(15)
-def list_displays(**params):
+async def list_displays(**params):
     """List connected displays with geometry for left/right monitor reasoning"""
-    displays = _load_displays()
+    displays = await _load_displays()
     return {
         "displays": displays,
         "count": len(displays),
@@ -221,13 +221,13 @@ def list_displays(**params):
 
 @returns({"apps": "{'type': 'array', 'description': 'Installed applications'}", "count": "integer"})
 @timeout(60)
-def list_apps(*, limit=None, **params):
+async def list_apps(*, limit=None, **params):
     """List installed macOS applications using system_profiler
 
         Args:
             limit: Optional maximum number of apps to return
         """
-    data = _run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
+    data = await _run_json_command(["system_profiler", "SPApplicationsDataType", "-json"])
     apps = []
     for item in data.get("SPApplicationsDataType", []):
         path = item.get("path")
@@ -256,13 +256,13 @@ def list_apps(*, limit=None, **params):
 
 @returns({"processes": "{'type': 'array', 'description': 'Running processes'}", "count": "integer"})
 @timeout(15)
-def list_processes(*, limit=None, **params):
+async def list_processes(*, limit=None, **params):
     """List running macOS processes with stable fields from ps
 
         Args:
             limit: Optional maximum number of processes to return
         """
-    output = _run_text_command(
+    output = await _run_text_command(
         [
             "ps",
             "-axo",
@@ -307,15 +307,15 @@ def list_processes(*, limit=None, **params):
 
 
 @returns({"windows": "{'type': 'array', 'description': 'User-facing application windows'}", "count": "integer"})
-def list_windows(*, limit=None, **params):
+async def list_windows(*, limit=None, **params):
     """List useful user-facing application windows with capture eligibility
 
         Args:
             limit: Optional maximum number of windows to return
         """
-    displays = _load_displays()
-    cg_windows = _run_swift_json(CG_WINDOWS_SWIFT)
-    jxa_apps = _run_jxa_json(JXA_WINDOWS_SCRIPT)
+    displays = await _load_displays()
+    cg_windows = await _run_swift_json(CG_WINDOWS_SWIFT)
+    jxa_apps = await _run_jxa_json(JXA_WINDOWS_SCRIPT)
 
     normalized = []
     for app in jxa_apps:
@@ -391,7 +391,7 @@ def list_windows(*, limit=None, **params):
 
 @returns("image")
 @timeout(20)
-def screenshot_display(*, display_id=None, display_index=None, path=None, **params):
+async def screenshot_display(*, display_id=None, display_index=None, path=None, **params):
     """Capture a screenshot of a display by display_id or display_index
 
         Args:
@@ -399,7 +399,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
             display_index: 1-based display index from list_displays
             path: Optional output path for the PNG file
         """
-    displays = _load_displays()
+    displays = await _load_displays()
     target = None
 
     if display_index is not None:
@@ -419,7 +419,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
         raise ValueError("Display not found")
 
     resolved_path = _resolve_output_path(path, f"display-{target['display_id']}")
-    result = shell.run("screencapture", ["-x", "-D", str(target["display_index"]), resolved_path])
+    result = await shell.run("screencapture", ["-x", "-D", str(target["display_index"]), resolved_path])
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
     return {
@@ -438,7 +438,7 @@ def screenshot_display(*, display_id=None, display_index=None, path=None, **para
 
 @returns("image")
 @timeout(20)
-def screenshot_window(*, window_id, path=None, **params):
+async def screenshot_window(*, window_id, path=None, **params):
     """Capture a screenshot of a specific application window by window_id
 
         Args:
@@ -454,7 +454,7 @@ def screenshot_window(*, window_id, path=None, **params):
         raise ValueError("Window is not capture_eligible")
 
     resolved_path = _resolve_output_path(path, f"window-{target_window_id}")
-    result = shell.run("screencapture", ["-x", "-l", str(target_window_id), resolved_path])
+    result = await shell.run("screencapture", ["-x", "-l", str(target_window_id), resolved_path])
     if result["exit_code"] != 0:
         raise RuntimeError(f"screencapture failed: {result['stderr'].strip()}")
     frame = target.get("frame", {})
@@ -616,17 +616,17 @@ def _resolve_output_path(value, label):
 
 @returns({"text": "string"})
 @timeout(5)
-def clipboard_read(**_kwargs):
+async def clipboard_read(**_kwargs):
     """Read the current macOS clipboard contents."""
-    result = shell.run("pbpaste", [])
+    result = await shell.run("pbpaste", [])
     return {"content": result["stdout"]}
 
 
 @returns({"status": "string", "length": "integer"})
 @timeout(5)
-def clipboard_write(*, text, **_kwargs):
+async def clipboard_write(*, text, **_kwargs):
     """Write text to the macOS clipboard."""
-    result = shell.run("pbcopy", [], input=text)
+    result = await shell.run("pbcopy", [], input=text)
     if result["exit_code"] != 0:
         raise RuntimeError(f"pbcopy failed: {result['stderr'].strip()}")
     return {"status": "ok", "length": len(text)}
@@ -717,7 +717,7 @@ SORT_KEYS = {
 @returns({"path": "string", "entries": "{'type': 'array', 'description': 'File and folder entries with shape-compatible fields'}", "count": "integer"})
 @provides(file_list)
 @timeout(10)
-def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
+async def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
     """List contents of a directory. Returns file and folder shapes."""
     resolved = os.path.expanduser(path or "~")
     resolved = os.path.abspath(resolved)
@@ -747,7 +747,7 @@ def list_directory(*, path=None, show_hidden=False, sort=None, **_kwargs):
 @returns({"name": "string", "path": "string", "content": "string", "encoding": "string", "mimeType": "string", "size": "integer"})
 @provides(file_read)
 @timeout(10)
-def read_file(*, path, **_kwargs):
+async def read_file(*, path, **_kwargs):
     """Read file contents. Text as UTF-8 string, binary as base64."""
     resolved = os.path.expanduser(path)
     resolved = os.path.abspath(resolved)
@@ -782,10 +782,10 @@ def read_file(*, path, **_kwargs):
     }
 
 
-def _get_volumes():
+async def _get_volumes():
     """Get mounted volumes via diskutil."""
     try:
-        result = shell.run("diskutil", ["list", "-plist"])
+        result = await shell.run("diskutil", ["list", "-plist"])
         if result["exit_code"] != 0:
             return _get_volumes_fallback()
 
@@ -971,7 +971,7 @@ def _get_finder_favorites():
 @returns({"provider": "string", "providerName": "string", "home": "string", "specialFolders": "{'type': 'object', 'description': 'Well-known folders: desktop, documents, downloads'}", "volumes": "{'type': 'array', 'description': 'Mounted volumes with capacity and filesystem info'}"})
 @provides(file_info)
 @timeout(15)
-def get_info(**_kwargs):
+async def get_info(**_kwargs):
     """Get filesystem info — home dir, special folders, volumes, Finder favorites."""
     home = os.path.expanduser("~")
     username = os.path.basename(home)
@@ -982,7 +982,7 @@ def get_info(**_kwargs):
         if os.path.isdir(folder):
             special_folders[name.lower()] = folder
 
-    volumes = _get_volumes()
+    volumes = await _get_volumes()
     favorites = _get_finder_favorites()
 
     return {
@@ -998,7 +998,7 @@ def get_info(**_kwargs):
 
 @returns({"name": "string", "path": "string", "kind": "string", "size": "integer", "sizeOnDisk": "integer", "created": "string", "modified": "string", "accessed": "string", "mimeType": "string", "permissions": "string", "owner": "string", "group": "string", "hidden": "boolean", "readOnly": "boolean"})
 @timeout(10)
-def get_file_info(*, path, **_kwargs):
+async def get_file_info(*, path, **_kwargs):
     """Get detailed file/folder properties — like XP Properties dialog."""
     resolved = os.path.expanduser(path)
     resolved = os.path.abspath(resolved)

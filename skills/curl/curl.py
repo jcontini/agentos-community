@@ -7,13 +7,13 @@ from agentos import http, provides, returns, timeout, web_read
 @returns("webpage")
 @provides(web_read)
 @timeout(35)
-def read_webpage(*, url: str, **params) -> dict:
+async def read_webpage(*, url: str, **params) -> dict:
     """Fetch a URL and return its content, title, and content type.
 
     Args:
         url: URL to fetch
     """
-    resp = http.get(url, timeout=30.0)
+    resp = await http.get(url, timeout=30.0)
 
     content = resp["body"]
     content_type = resp["headers"].get("content-type", "text/plain")

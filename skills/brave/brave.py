@@ -8,14 +8,14 @@ API_BASE = "https://api.search.brave.com/res/v1"
 @returns("result[]")
 @provides(web_search)
 @connection("api")
-def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> list[dict]:
+async def search(*, query: str, limit: int = 20, freshness: str = None, **params) -> list[dict]:
     """Search the web using Brave's independent index."""
     api_key = params.get("auth", {}).get("key", "")
     q_params: dict = {"q": query, "count": limit}
     if freshness:
         q_params["freshness"] = freshness
 
-    resp = http.get(
+    resp = await http.get(
         f"{API_BASE}/web/search",
         params=q_params,
         **http.headers(accept="json", extra={

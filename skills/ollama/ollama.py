@@ -51,57 +51,57 @@ def _connection_name(connection: dict | None) -> str:
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 
-def _http_get(url: str, timeout: int = 10) -> dict:
-    resp = http.get(url, **http.headers(accept="json"), timeout=timeout)
+async def _http_get(url: str, timeout: int = 10) -> dict:
+    resp = await http.get(url, **http.headers(accept="json"), timeout=timeout)
     if not resp.get("ok"):
         raise RuntimeError(f"HTTP GET {url} failed: {resp.get('status', 0)}")
     return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
-def _http_post(url: str, body: dict, timeout: int = 300) -> dict:
-    resp = http.post(url, json=body, **http.headers(accept="json"), timeout=timeout)
+async def _http_post(url: str, body: dict, timeout: int = 300) -> dict:
+    resp = await http.post(url, json=body, **http.headers(accept="json"), timeout=timeout)
     if not resp.get("ok"):
         raise RuntimeError(f"HTTP POST {url} failed: {resp.get('status', 0)}")
     return resp.get("json") or json.loads(resp.get("body", "{}"))
 
 
-def _http_delete(url: str, body: dict, timeout: int = 30) -> int:
-    resp = http.delete(url, json=body, **http.headers(accept="json"), timeout=timeout)
+async def _http_delete(url: str, body: dict, timeout: int = 30) -> int:
+    resp = await http.delete(url, json=body, **http.headers(accept="json"), timeout=timeout)
     return resp.get("status", 0)
 
 
 # ── Server management ─────────────────────────────────────────────────────────
 
-def _api_running(base_url: str = DEFAULT_BASE_URL) -> bool:
+async def _api_running(base_url: str = DEFAULT_BASE_URL) -> bool:
     try:
-        _http_get(f"{base_url}/api/version", timeout=3)
+        await _http_get(f"{base_url}/api/version", timeout=3)
         return True
     except Exception:
         return False
 
 
-def _start_server(binary: str) -> bool:
+async def _start_server(binary: str) -> bool:
     """Start `ollama serve` in background. Polls up to 8s for readiness."""
     try:
         # shell.run is synchronous, so we use it to invoke `ollama serve` via
         # a background shell command. The serve process detaches itself.
-        shell.run(binary, ["serve"], timeout=2)
+        await shell.run(binary, ["serve"], timeout=2)
     except Exception:
         pass  # timeout is expected — ollama serve runs forever
     for _ in range(16):
         time.sleep(0.5)
-        if _api_running():
+        if await _api_running():
             return True
     return False
 
 
-def _ensure_api_running(connection: dict | None, cli_connection: dict | None = None) -> None:
+async def _ensure_api_running(connection: dict | None, cli_connection: dict | None = None) -> None:
     """Ensure the Ollama REST API is reachable, starting it via CLI if not."""
     base = _base_url(connection)
-    if _api_running(base):
+    if await _api_running(base):
         return
     binary = _binary(cli_connection or connection)
-    started = _start_server(binary)
+    started = await _start_server(binary)
     if not started:
         raise RuntimeError(
             "Ollama server is not running and could not be started automatically. "
@@ -113,21 +113,21 @@ def _ensure_api_running(connection: dict | None, cli_connection: dict | None = N
 
 @returns({"running": "{'type': 'boolean'}", "version": "{'type': 'string'}", "started": "{'type': 'boolean'}", "message": "{'type': 'string'}"})
 @connection("cli")
-def op_status(connection: dict | None = None, **kwargs) -> dict:
+async def op_status(connection: dict | None = None, **kwargs) -> dict:
     """Check if Ollama is running; start it if not. Returns running state + version."""
     binary = _binary(connection)
     base = DEFAULT_BASE_URL
-    running = _api_running(base)
+    running = await _api_running(base)
     started = False
 
     if not running:
-        started = _start_server(binary)
+        started = await _start_server(binary)
         running = started
 
     version = None
     if running:
         try:
-            resp = _http_get(f"{base}/api/version", timeout=5)
+            resp = await _http_get(f"{base}/api/version", timeout=5)
             version = resp.get("version")
         except Exception:
             pass
@@ -171,7 +171,7 @@ def _normalize_tool_calls(raw: list) -> list:
 @returns({"content": "{'type': 'string', 'description': 'Text response (null if tool calls only)'}", "thinking": "{'type': 'string', 'description': 'Reasoning trace (only for thinking models)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token counts: input_tokens, output_tokens'}"})
 @connection(["api", "cli"])
 @timeout(300)
-def op_chat(
+async def op_chat(
     model: str,
     messages: list,
     tools: list = None,
@@ -254,7 +254,7 @@ def op_chat(
     }
 
 
-def _chat_via_cli(
+async def _chat_via_cli(
     model: str,
     messages: list,
     system: str | None,
@@ -271,7 +271,7 @@ def _chat_via_cli(
         parts.append(f"{role}: {content}")
 
     prompt = "\n\n".join(parts)
-    result = shell.run(binary, ["run", model, "--nowordwrap"], input=prompt, timeout=300)
+    result = await shell.run(binary, ["run", model, "--nowordwrap"], input=prompt, timeout=300)
     if result["exit_code"] != 0:
         raise RuntimeError(f"ollama run failed: {result['stderr'].strip()}")
 
@@ -289,7 +289,7 @@ def _chat_via_cli(
 @returns({"response": "{'type': 'string'}", "usage": "{'type': 'object', 'description': 'input_tokens, output_tokens'}"})
 @connection("api")
 @timeout(300)
-def op_generate(
+async def op_generate(
     model: str,
     prompt: str,
     system: str = None,
@@ -334,20 +334,20 @@ def op_generate(
 
 # ── List models ───────────────────────────────────────────────────────────────
 
-def _op_list_models(connection: dict | None = None, **params) -> list:
+async def _op_list_models(connection: dict | None = None, **params) -> list:
     conn_name = _connection_name(connection)
     if conn_name == "cli":
-        return _list_models_via_cli(connection)
+        return await _list_models_via_cli(connection)
 
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
-    resp = _http_get(f"{base}/api/tags")
+    resp = await _http_get(f"{base}/api/tags")
     return resp.get("models", [])
 
 
-def _list_models_via_cli(connection: dict | None) -> list:
+async def _list_models_via_cli(connection: dict | None) -> list:
     binary = _binary(connection)
-    result = shell.run(binary, ["list", "--json"], timeout=15)
+    result = await shell.run(binary, ["list", "--json"], timeout=15)
     if result["exit_code"] == 0 and result["stdout"].strip():
         try:
             data = json.loads(result["stdout"])
@@ -356,7 +356,7 @@ def _list_models_via_cli(connection: dict | None) -> list:
             pass
 
     # Fallback: parse text table output
-    result2 = shell.run(binary, ["list"], timeout=15)
+    result2 = await shell.run(binary, ["list"], timeout=15)
     return _parse_list_text(result2["stdout"])
 
 
@@ -381,7 +381,7 @@ def _parse_list_text(text: str) -> list:
 @returns({"status": "{'type': 'string'}", "model": "{'type': 'string'}", "message": "{'type': 'string'}"})
 @connection(["cli", "api"])
 @timeout(600)
-def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+async def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     """Download a model from the Ollama registry. Uses the CLI by default for reliable progress on large downloads; can also use the REST API. Timeout is 10 minutes — large models (e.g. 19GB GLM) take several minutes.
 
         Args:
@@ -389,13 +389,13 @@ def op_pull_model(model: str, connection: dict | None = None, **kwargs) -> dict:
         """
     conn_name = _connection_name(connection)
     if conn_name == "api":
-        return _pull_via_api(model, connection)
-    return _pull_via_cli(model, connection)
+        return await _pull_via_api(model, connection)
+    return await _pull_via_cli(model, connection)
 
 
-def _pull_via_cli(model: str, connection: dict | None) -> dict:
+async def _pull_via_cli(model: str, connection: dict | None) -> dict:
     binary = _binary(connection)
-    result = shell.run(binary, ["pull", model], timeout=600)
+    result = await shell.run(binary, ["pull", model], timeout=600)
     if result["exit_code"] != 0:
         raise RuntimeError(f"ollama pull failed: {result['stderr'].strip()}")
     return {
@@ -405,10 +405,10 @@ def _pull_via_cli(model: str, connection: dict | None) -> dict:
     }
 
 
-def _pull_via_api(model: str, connection: dict | None) -> dict:
-    _ensure_api_running(connection)
+async def _pull_via_api(model: str, connection: dict | None) -> dict:
+    await _ensure_api_running(connection)
     base = _base_url(connection)
-    resp = _http_post(f"{base}/api/pull", {"name": model, "stream": False}, timeout=600)
+    resp = await _http_post(f"{base}/api/pull", {"name": model, "stream": False}, timeout=600)
     if "error" in resp:
         raise RuntimeError(f"Pull failed: {resp['error']}")
     return {
@@ -422,7 +422,7 @@ def _pull_via_api(model: str, connection: dict | None) -> dict:
 
 @returns({"status": "{'type': 'string'}", "model": "{'type': 'string'}", "message": "{'type': 'string'}"})
 @connection(["api", "cli"])
-def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+async def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     """Delete a downloaded model, freeing disk space.
 
         Args:
@@ -430,11 +430,11 @@ def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dic
         """
     conn_name = _connection_name(connection)
     if conn_name == "cli":
-        return _delete_via_cli(model, connection)
+        return await _delete_via_cli(model, connection)
 
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
-    status = _http_delete(f"{base}/api/delete", {"name": model}, timeout=30)
+    status = await _http_delete(f"{base}/api/delete", {"name": model}, timeout=30)
     if status == 404:
         raise RuntimeError(f"Model {model!r} not found")
     if status >= 400:
@@ -442,9 +442,9 @@ def op_delete_model(model: str, connection: dict | None = None, **kwargs) -> dic
     return {"status": "success", "model": model, "message": f"Deleted {model}"}
 
 
-def _delete_via_cli(model: str, connection: dict | None) -> dict:
+async def _delete_via_cli(model: str, connection: dict | None) -> dict:
     binary = _binary(connection)
-    result = shell.run(binary, ["rm", model], timeout=30)
+    result = await shell.run(binary, ["rm", model], timeout=30)
     if result["exit_code"] != 0:
         raise RuntimeError(f"ollama rm failed: {result['stderr'].strip()}")
     return {"status": "success", "model": model, "message": f"Deleted {model}"}
@@ -455,15 +455,15 @@ def _delete_via_cli(model: str, connection: dict | None) -> dict:
 @returns({"name": "{'type': 'string'}", "format": "{'type': 'string'}", "family": "{'type': 'string'}", "parameterSize": "{'type': 'string'}", "quantizationLevel": "{'type': 'string'}", "contextLength": "{'type': 'integer'}", "template": "{'type': 'string'}", "systemPrompt": "{'type': 'string'}"})
 @connection("api")
 @timeout(15)
-def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
+async def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
     """Show detailed model info: architecture, parameter count, quantization, context window length, template, and system prompt.
 
         Args:
             model: Model name
         """
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
-    resp = _http_post(f"{base}/api/show", {"name": model}, timeout=15)
+    resp = await _http_post(f"{base}/api/show", {"name": model}, timeout=15)
 
     details = resp.get("details") or {}
     model_info = resp.get("model_info") or {}
@@ -492,9 +492,9 @@ def op_show_model(model: str, connection: dict | None = None, **kwargs) -> dict:
 @returns("model[]")
 @connection("api")
 @timeout(15)
-def list_models(connection: dict | None = None, **params) -> list[dict]:
+async def list_models(connection: dict | None = None, **params) -> list[dict]:
     """List downloaded models, shape-native (id=name, published, size, details)."""
-    raw = _op_list_models(connection)
+    raw = await _op_list_models(connection)
     return [
         {
             "id": m.get("name"),
@@ -513,9 +513,9 @@ def list_models(connection: dict | None = None, **params) -> list[dict]:
 @returns("model[]")
 @connection("cli")
 @timeout(15)
-def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
+async def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
     """List models via the Ollama CLI binary (for when the REST server may not be running)."""
-    raw = _list_models_via_cli(connection)
+    raw = await _list_models_via_cli(connection)
     return [
         {
             "id": m.get("name"),
@@ -534,11 +534,11 @@ def list_models_cli(connection: dict | None = None, **params) -> list[dict]:
 @returns("loaded_model[]")
 @connection("api")
 @timeout(15)
-def ps(connection: dict | None = None, **params) -> list[dict]:
+async def ps(connection: dict | None = None, **params) -> list[dict]:
     """List currently loaded models (in GPU/unified RAM), shape-native."""
-    _ensure_api_running(connection)
+    await _ensure_api_running(connection)
     base = _base_url(connection)
-    resp = _http_get(f"{base}/api/ps")
+    resp = await _http_get(f"{base}/api/ps")
     return [
         {
             "id": m.get("name"),

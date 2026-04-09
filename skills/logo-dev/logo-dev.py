@@ -8,7 +8,7 @@ def _base_url(path: str, token: str, size: int, format: str) -> str:
 @returns({"url": "string"})
 @connection("api")
 @timeout(5)
-def logo_url(*, domain: str, size: int = 128, format: str = "png",
+async def logo_url(*, domain: str, size: int = 128, format: str = "png",
              theme: str = "auto", **params) -> dict:
     """Return CDN URL for a company logo by domain
 
@@ -26,7 +26,7 @@ def logo_url(*, domain: str, size: int = 128, format: str = "png",
 @returns({"url": "string"})
 @connection("api")
 @timeout(5)
-def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
+async def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
                **params) -> dict:
     """Return CDN URL for a company logo by stock ticker
 
@@ -42,7 +42,7 @@ def ticker_url(*, ticker: str, size: int = 128, format: str = "png",
 @returns({"url": "string"})
 @connection("api")
 @timeout(5)
-def name_url(*, name: str, size: int = 128, format: str = "png",
+async def name_url(*, name: str, size: int = 128, format: str = "png",
              **params) -> dict:
     """Return CDN URL for a company logo by name
 
@@ -59,7 +59,7 @@ def name_url(*, name: str, size: int = 128, format: str = "png",
 @returns({"url": "string"})
 @connection("api")
 @timeout(5)
-def crypto_url(*, symbol: str, size: int = 128, format: str = "png",
+async def crypto_url(*, symbol: str, size: int = 128, format: str = "png",
                **params) -> dict:
     """Return CDN URL for a cryptocurrency logo
 

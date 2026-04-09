@@ -55,8 +55,8 @@ def _map_community(d: dict) -> dict:
     }
 
 
-def _get_json(path: str, params: dict | None = None) -> dict:
-    resp = http.get(f"https://www.reddit.com{path}", **_H, params=params)
+async def _get_json(path: str, params: dict | None = None) -> dict:
+    resp = await http.get(f"https://www.reddit.com{path}", **_H, params=params)
     status = resp.get("status")
     if status == 403:
         raise RuntimeError("Reddit 403 — bot detection. See docs/specs/engine/http-header-passthrough.md")
@@ -74,7 +74,7 @@ def _get_json(path: str, params: dict | None = None) -> dict:
 
 @returns("post[]")
 @provides(web_search)
-def search_posts(query: str, limit: int = 25, sort: str = "relevance", **params) -> list[dict]:
+async def search_posts(query: str, limit: int = 25, sort: str = "relevance", **params) -> list[dict]:
     """Search posts across Reddit
 
         Args:
@@ -82,12 +82,12 @@ def search_posts(query: str, limit: int = 25, sort: str = "relevance", **params)
             limit: Number of results (max 100)
             sort: Sort by: relevance, hot, top, new, comments
         """
-    data = _get_json("/search.json", {"q": query, "limit": limit, "sort": sort})
+    data = await _get_json("/search.json", {"q": query, "limit": limit, "sort": sort})
     return [_map_post(c["data"]) for c in data.get("data", {}).get("children", [])]
 
 
 @returns("post[]")
-def list_posts(subreddit: str, sort: str = "hot", limit: int = 25, **params) -> list[dict]:
+async def list_posts(subreddit: str, sort: str = "hot", limit: int = 25, **params) -> list[dict]:
     """List posts from a subreddit
 
         Args:
@@ -95,13 +95,13 @@ def list_posts(subreddit: str, sort: str = "hot", limit: int = 25, **params) -> 
             sort: Sort by: hot, new, top, rising
             limit: Number of posts (max 100)
         """
-    data = _get_json(f"/r/{subreddit}/{sort}.json", {"limit": limit})
+    data = await _get_json(f"/r/{subreddit}/{sort}.json", {"limit": limit})
     return [_map_post(c["data"]) for c in data.get("data", {}).get("children", [])]
 
 
 @returns("post")
 @provides(web_read, urls=["reddit.com/*/comments/*", "reddit.com/r/*/comments/*"])
-def get_post(id: str = None, url: str = None, comment_limit: int = None, **params) -> dict:
+async def get_post(id: str = None, url: str = None, comment_limit: int = None, **params) -> dict:
     """Get a Reddit post with comments. Pass either an id or a full Reddit URL.
 
         Args:
@@ -121,7 +121,7 @@ def get_post(id: str = None, url: str = None, comment_limit: int = None, **param
     if comment_limit:
         params["limit"] = comment_limit
 
-    data = _get_json(f"/comments/{id}.json", params)
+    data = await _get_json(f"/comments/{id}.json", params)
     post_data = data[0]["data"]["children"][0]["data"]
     post = _map_post(post_data)
 
@@ -161,13 +161,13 @@ def get_post(id: str = None, url: str = None, comment_limit: int = None, **param
 
 
 @returns("post[]")
-def comments_post(id: str, comment_limit: int = None, **params) -> list[dict]:
+async def comments_post(id: str, comment_limit: int = None, **params) -> list[dict]:
     """Flatten comment tree into a list with replies_to relations."""
     params = {}
     if comment_limit:
         params["limit"] = comment_limit
 
-    data = _get_json(f"/comments/{id}.json", params)
+    data = await _get_json(f"/comments/{id}.json", params)
     post_data = data[0]["data"]["children"][0]["data"]
     result = [_map_post(post_data)]
 
@@ -203,23 +203,23 @@ def comments_post(id: str, comment_limit: int = None, **params) -> list[dict]:
 
 
 @returns("community")
-def get_community(subreddit: str, **params) -> dict:
+async def get_community(subreddit: str, **params) -> dict:
     """Get subreddit metadata
 
         Args:
             subreddit: Subreddit name (without r/)
         """
-    data = _get_json(f"/r/{subreddit}/about.json")
+    data = await _get_json(f"/r/{subreddit}/about.json")
     return _map_community(data.get("data", {}))
 
 
 @returns("community[]")
-def search_communities(query: str, limit: int = 25, **params) -> list[dict]:
+async def search_communities(query: str, limit: int = 25, **params) -> list[dict]:
     """Search for subreddits
 
         Args:
             query: Search query
             limit: Number of results (max 100)
         """
-    data = _get_json("/subreddits/search.json", {"q": query, "limit": limit})
+    data = await _get_json("/subreddits/search.json", {"q": query, "limit": limit})
     return [_map_community(c["data"]) for c in data.get("data", {}).get("children", [])]

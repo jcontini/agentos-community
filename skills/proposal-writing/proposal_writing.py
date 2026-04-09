@@ -314,14 +314,14 @@ FILE_WRITE = ["Read", "Glob", "Grep", "Edit", "Write"]
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _agent_call(*, prompt, system, tools, files=None, model="opus", max_iterations=20):
-    """Wrapper around llm.agent() with error handling.
+async def _agent_call(*, prompt, system, tools, files=None, model="opus", max_iterations=20):
+    """Wrapper around await llm.agent() with error handling.
 
     Returns the agent result dict. Raises RuntimeError if the agent fails,
     so callers get a clear traceback instead of silently continuing with
     empty strings.
     """
-    result = llm.agent(
+    result = await llm.agent(
         prompt=prompt,
         system=system,
         tools=tools,
@@ -330,7 +330,7 @@ def _agent_call(*, prompt, system, tools, files=None, model="opus", max_iteratio
         max_iterations=max_iterations,
     )
     if "__error__" in result:
-        raise RuntimeError(f"llm.agent() failed: {result['__error__']}")
+        raise RuntimeError(f"await llm.agent() failed: {result['__error__']}")
     return result
 
 
@@ -371,10 +371,10 @@ def _resolve_problem(problem):
 # Phase 1: Identify personas
 # ---------------------------------------------------------------------------
 
-def _identify_personas(problem_text, domain):
+async def _identify_personas(problem_text, domain):
     """Use llm.oneshot to extract personas from the problem statement."""
     domain_hint = f"\nDomain: {domain}" if domain else ""
-    result = llm.oneshot(
+    result = await llm.oneshot(
         prompt=(
             f"Identify the key personas/stakeholders for this problem:\n\n"
             f"---\n{problem_text}\n---{domain_hint}\n\n"
@@ -396,7 +396,7 @@ def _identify_personas(problem_text, domain):
 # Phase 2: RFP generation (persona agents + manager)
 # ---------------------------------------------------------------------------
 
-def _persona_write_rfp_section(persona, problem_text, context_paths, domain):
+async def _persona_write_rfp_section(persona, problem_text, context_paths, domain):
     """One persona agent researches + writes their RFP section."""
     domain_hint = f"\nDomain: {domain}" if domain else ""
     context_hint = ""
@@ -416,7 +416,7 @@ def _persona_write_rfp_section(persona, problem_text, context_paths, domain):
         f"Define YOUR evaluation criteria (3-5 criteria, weights summing to 100)."
     )
 
-    result = _agent_call(
+    result = await _agent_call(
         prompt=prompt,
         system=PERSONA_RFP_PROMPT,
         tools=FILE_READ + RESEARCH_TOOLS,
@@ -426,7 +426,7 @@ def _persona_write_rfp_section(persona, problem_text, context_paths, domain):
     return result.get("content", "")
 
 
-def _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths):
+async def _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths):
     """RFP Manager assembles persona sections into a complete RFP."""
     sections_text = ""
     for persona, section in zip(personas, sections):
@@ -451,7 +451,7 @@ def _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths):
         f"Write the complete RFP to: `{rfp_path}`"
     )
 
-    _agent_call(
+    await _agent_call(
         prompt=prompt,
         system=RFP_MANAGER_PROMPT,
         tools=FILE_WRITE,
@@ -464,7 +464,7 @@ def _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths):
 # Phase 3: Proposal bid
 # ---------------------------------------------------------------------------
 
-def _write_proposal(rfp_path, proposal_path, context_paths, model):
+async def _write_proposal(rfp_path, proposal_path, context_paths, model):
     """Bidder writes a proposal responding to the RFP."""
     rfp_content = _read_file(rfp_path)
     context_hint = ""
@@ -483,7 +483,7 @@ def _write_proposal(rfp_path, proposal_path, context_paths, model):
         f"Write the complete proposal to: `{proposal_path}`"
     )
 
-    _agent_call(
+    await _agent_call(
         prompt=prompt,
         system=BIDDER_PROMPT,
         tools=FILE_WRITE + RESEARCH_TOOLS,
@@ -496,7 +496,7 @@ def _write_proposal(rfp_path, proposal_path, context_paths, model):
 # Phase 4: Evaluation loop
 # ---------------------------------------------------------------------------
 
-def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
+async def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
                       context_paths, round_num):
     """One persona agent scores the proposal on THEIR criteria only."""
     rfp_content = _read_file(rfp_path)
@@ -517,7 +517,7 @@ def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
             f"prior rounds and what the bidder changed."
         )
 
-    result = _agent_call(
+    result = await _agent_call(
         prompt=prompt,
         system=PERSONA_EVALUATOR_PROMPT,
         tools=FILE_READ,
@@ -527,13 +527,13 @@ def _persona_evaluate(persona, rfp_path, proposal_path, thread_path,
     return result.get("content", "")
 
 
-def _aggregate_evaluations(persona_evals, personas, round_num):
+async def _aggregate_evaluations(persona_evals, personas, round_num):
     """Evaluator aggregates persona scores into a combined evaluation."""
     evals_text = ""
     for persona, eval_text in zip(personas, persona_evals):
         evals_text += f"\n---\n{persona['name']}:\n{eval_text}\n"
 
-    result = llm.oneshot(
+    result = await llm.oneshot(
         prompt=(
             f"Aggregate these persona evaluations for round {round_num}.\n\n"
             f"Max score per persona: 100. Total max: {len(personas) * 100}.\n"
@@ -547,7 +547,7 @@ def _aggregate_evaluations(persona_evals, personas, round_num):
     return result.get("content", "")
 
 
-def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
+async def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
                      round_num, model):
     """Bidder revises proposal based on evaluation feedback."""
     prompt = (
@@ -558,7 +558,7 @@ def _revise_proposal(rfp_path, proposal_path, thread_path, context_paths,
         f"The RFP is at `{rfp_path}` for reference."
     )
 
-    result = _agent_call(
+    result = await _agent_call(
         prompt=prompt,
         system=BIDDER_REVISE_PROMPT,
         tools=FILE_WRITE,
@@ -590,7 +590,7 @@ def _parse_total_score(aggregation_text, personas):
 
 @returns({"rfp": "string", "proposal": "string", "score": "integer", "maxScore": "integer", "rounds": "integer", "personas": "integer"})
 @timeout(1800)
-def write_proposal(problem: str, output: str, model: str = "opus",
+async def write_proposal(problem: str, output: str, model: str = "opus",
                    max_rounds: int = 5, context: str = "",
                    domain: str = "", threshold: float = 0.9,
                    **params) -> dict:
@@ -605,7 +605,7 @@ def write_proposal(problem: str, output: str, model: str = "opus",
         domain: Domain hint (sdk-design, product-strategy, etc.)
         threshold: Min score as fraction of max (default: 0.9)
     """
-    progress.set_job_id(params.get("__job_id__", ""))
+    await progress.set_job_id(params.get("__job_id__", ""))
 
     # Resolve inputs
     output_dir = str(Path(output).resolve())
@@ -633,9 +633,9 @@ def write_proposal(problem: str, output: str, model: str = "opus",
 
     # --- Phase 1: Identify Personas ---
     step += 1
-    progress.progress(step, 20, "Identifying personas...")
+    await progress.progress(step, 20, "Identifying personas...")
 
-    personas = _identify_personas(problem_text, domain)
+    personas = await _identify_personas(problem_text, domain)
     if not personas:
         return {"__result__": {"error": "Could not identify personas"}}
 
@@ -644,7 +644,7 @@ def write_proposal(problem: str, output: str, model: str = "opus",
     threshold_score = int(max_score * threshold)
     total_steps = 1 + n + 1 + 1 + (max_rounds * (n + 2)) + 1
 
-    progress.progress(step, total_steps,
+    await progress.progress(step, total_steps,
                       f"Found {n} personas: "
                       + ", ".join(p["name"] for p in personas))
 
@@ -652,26 +652,26 @@ def write_proposal(problem: str, output: str, model: str = "opus",
     sections = []
     for i, persona in enumerate(personas):
         step += 1
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"RFP: {persona['name']} researching...")
 
-        section = _persona_write_rfp_section(
+        section = await _persona_write_rfp_section(
             persona, problem_text, context_paths, domain)
         sections.append(section)
 
     step += 1
-    progress.progress(step, total_steps, "RFP Manager assembling document...")
-    _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths)
+    await progress.progress(step, total_steps, "RFP Manager assembling document...")
+    await _assemble_rfp(personas, sections, rfp_path, problem_text, context_paths)
 
     if not Path(rfp_path).exists():
         return {"__result__": {"error": "RFP generation failed"}}
 
-    progress.progress(step, total_steps, "RFP complete")
+    await progress.progress(step, total_steps, "RFP complete")
 
     # --- Phase 3: Proposal Bid ---
     step += 1
-    progress.progress(step, total_steps, "Bidder writing proposal...")
-    _write_proposal(rfp_path, proposal_path, context_paths, model)
+    await progress.progress(step, total_steps, "Bidder writing proposal...")
+    await _write_proposal(rfp_path, proposal_path, context_paths, model)
 
     if not Path(proposal_path).exists():
         return {"__result__": {"error": "Proposal generation failed"}}
@@ -698,10 +698,10 @@ def write_proposal(problem: str, output: str, model: str = "opus",
         persona_evals = []
         for i, persona in enumerate(personas):
             step += 1
-            progress.progress(step, total_steps,
+            await progress.progress(step, total_steps,
                               f"Round {round_num}: {persona['name']} evaluating...")
 
-            eval_text = _persona_evaluate(
+            eval_text = await _persona_evaluate(
                 persona, rfp_path, proposal_path, thread_path,
                 context_paths, round_num)
             persona_evals.append(eval_text)
@@ -709,29 +709,29 @@ def write_proposal(problem: str, output: str, model: str = "opus",
 
         # Evaluator aggregates
         step += 1
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"Round {round_num}: aggregating scores...")
 
-        aggregation = _aggregate_evaluations(persona_evals, personas, round_num)
+        aggregation = await _aggregate_evaluations(persona_evals, personas, round_num)
         _append(thread_path, aggregation)
 
         final_score = _parse_total_score(aggregation, personas)
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"Round {round_num}: {final_score}/{max_score} "
                           f"(need {threshold_score})")
 
         # Check threshold
         if final_score >= threshold_score:
-            progress.progress(step, total_steps,
+            await progress.progress(step, total_steps,
                               f"Threshold met! {final_score}/{max_score}")
             break
 
         # Bidder revises
         step += 1
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"Round {round_num}: bidder revising...")
 
-        revision = _revise_proposal(
+        revision = await _revise_proposal(
             rfp_path, proposal_path, thread_path, context_paths,
             round_num, model)
         _append(thread_path, revision)
@@ -753,7 +753,7 @@ def write_proposal(problem: str, output: str, model: str = "opus",
     )
     Path(summary_path).write_text(summary_content)
 
-    progress.progress(total_steps, total_steps,
+    await progress.progress(total_steps, total_steps,
                       f"Complete — {final_score}/{max_score}")
 
     return {"__result__": {
@@ -768,7 +768,7 @@ def write_proposal(problem: str, output: str, model: str = "opus",
 
 @returns({"phase": "string", "score": "integer", "maxScore": "integer", "rounds": "integer", "personas": "integer"})
 @timeout(15)
-def status(output: str, **params) -> dict:
+async def status(output: str, **params) -> dict:
     """Check the current state of a proposal writing run.
 
     Args:

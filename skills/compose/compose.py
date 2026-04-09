@@ -255,13 +255,13 @@ PROMPTS = {
 # Agent runner — all LLM calls go through llm.agent()
 # ---------------------------------------------------------------------------
 
-def _run_agent(role, prompt, files_to_read, files_to_write=None, model="opus"):
+async def _run_agent(role, prompt, files_to_read, files_to_write=None, model="opus"):
     """Run an LLM agent with a role-specific system prompt."""
     tools = ["Read", "Glob", "Grep"]
     if files_to_write:
         tools.extend(["Edit", "Write"])
 
-    result = llm.agent(
+    result = await llm.agent(
         prompt=prompt,
         system=PROMPTS[role],
         tools=tools,
@@ -349,7 +349,7 @@ def _extract_verdict(thread_text):
 
 @returns({"outline": "string", "problem": "string", "sections": "array"})
 @timeout(120)
-def outline(problem: str, domain: str = "",
+async def outline(problem: str, domain: str = "",
                model: str = "sonnet", **params) -> dict:
     """Generate a lightweight outline before committing to a full draft."""
     domain_hint = f"\n\nDomain: {domain}" if domain else ""
@@ -359,7 +359,7 @@ def outline(problem: str, domain: str = "",
         f"{domain_hint}\n\n"
         f"Keep it under 500 words. This is a sketch to align on scope."
     )
-    output = _run_agent("outliner", prompt, files_to_read=[], model=model)
+    output = await _run_agent("outliner", prompt, files_to_read=[], model=model)
 
     sections = [line.strip()[3:] for line in output.split("\n")
                 if line.strip().startswith("## ")]
@@ -373,11 +373,11 @@ def outline(problem: str, domain: str = "",
 
 @returns({"document": "string", "problem": "string", "sections": "integer", "tokens": "integer"})
 @timeout(600)
-def draft(problem: str, output: str, context: str = "",
+async def draft(problem: str, output: str, context: str = "",
              domain: str = "", research: bool = True,
              model: str = "opus", **params) -> dict:
     """Research a problem and generate a structured proposal."""
-    progress.set_job_id(params.get("__job_id__", ""))
+    await progress.set_job_id(params.get("__job_id__", ""))
 
     output = str(Path(output).resolve())
     Path(output).parent.mkdir(parents=True, exist_ok=True)
@@ -404,9 +404,9 @@ def draft(problem: str, output: str, context: str = "",
         f"context should understand the problem, the design, and the trade-offs."
     )
 
-    progress.progress(1, 2, "Drafting proposal...")
+    await progress.progress(1, 2, "Drafting proposal...")
 
-    agent_output = _run_agent(
+    agent_output = await _run_agent(
         "drafter", prompt,
         files_to_read=context_paths,
         files_to_write=[output],
@@ -419,7 +419,7 @@ def draft(problem: str, output: str, context: str = "",
     content = Path(output).read_text()
     word_count = len(content.split())
 
-    progress.progress(2, 2, "Draft complete")
+    await progress.progress(2, 2, "Draft complete")
 
     return {"__result__": {
         "document": output,
@@ -431,10 +431,10 @@ def draft(problem: str, output: str, context: str = "",
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def review(document: str, context: str = "", domain: str = "",
+async def review(document: str, context: str = "", domain: str = "",
               max_rounds: int = 3, model: str = "opus", **params) -> dict:
     """Start a scored review of a document."""
-    progress.set_job_id(params.get("__job_id__", ""))
+    await progress.set_job_id(params.get("__job_id__", ""))
 
     document = str(Path(document).resolve())
     if not Path(document).exists():
@@ -461,12 +461,12 @@ def review(document: str, context: str = "", domain: str = "",
         f"against them.{domain_hint}\n\n"
         f"Document content:\n\n{doc_content}"
     )
-    reviewer_output = _run_agent("reviewer", reviewer_prompt,
+    reviewer_output = await _run_agent("reviewer", reviewer_prompt,
                                  files_to_read=[document], model=model)
     _append_to_thread(thread, reviewer_output)
     step += 1
     score = _extract_score(_read_file(thread))
-    progress.progress(step, total_steps,
+    await progress.progress(step, total_steps,
                       f"Initial review: {score or '?'}/500")
 
     # --- Phase 1: Author <-> Reviewer iteration ---
@@ -477,25 +477,25 @@ def review(document: str, context: str = "", domain: str = "",
             "Read the review thread, then revise the document to address "
             "the feedback. Write your response for the thread."
         )
-        author_output = _run_agent("author", author_prompt,
+        author_output = await _run_agent("author", author_prompt,
                                    files_to_read=[document, thread],
                                    files_to_write=[document], model=model)
         _append_to_thread(thread, author_output)
         step += 1
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"Round {round_num}: Author revised")
 
         reviewer_prompt = (
             "The Author has revised the document. Re-read both the document "
             "and thread, then rescore. Identify any remaining issues."
         )
-        reviewer_output = _run_agent("reviewer", reviewer_prompt,
+        reviewer_output = await _run_agent("reviewer", reviewer_prompt,
                                      files_to_read=[document, thread],
                                      model=model)
         _append_to_thread(thread, reviewer_output)
         step += 1
         score = _extract_score(_read_file(thread))
-        progress.progress(step, total_steps,
+        await progress.progress(step, total_steps,
                           f"Round {round_num}: Reviewer scored {score or '?'}/500")
 
         if _scores_converging(_read_file(thread)):
@@ -504,18 +504,18 @@ def review(document: str, context: str = "", domain: str = "",
     # --- Phase 2: Red Team audit ---
 
     red_team_files = [document, thread] + context_paths
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team",
         "Audit this document and its review thread. You have fresh eyes. "
         "Check claims against the actual files. Identify shared blind spots.",
         files_to_read=red_team_files, model=model)
     _append_to_thread(thread, red_team_output)
     step += 1
-    progress.progress(step, total_steps, "Red Team audit complete")
+    await progress.progress(step, total_steps, "Red Team audit complete")
 
     # --- Phase 3: Author addresses Red Team findings ---
 
-    author_output = _run_agent(
+    author_output = await _run_agent(
         "author",
         "The Red Team found issues you and the Reviewer both missed. "
         "Revise the document to address BLOCKING and HIGH issues.",
@@ -523,9 +523,9 @@ def review(document: str, context: str = "", domain: str = "",
         files_to_write=[document], model=model)
     _append_to_thread(thread, author_output)
     step += 1
-    progress.progress(step, total_steps, "Author addressed Red Team findings")
+    await progress.progress(step, total_steps, "Author addressed Red Team findings")
 
-    reviewer_output = _run_agent(
+    reviewer_output = await _run_agent(
         "reviewer",
         "The Author has addressed Red Team findings. Rescore incorporating "
         "both your criteria and the Red Team's findings.",
@@ -533,12 +533,12 @@ def review(document: str, context: str = "", domain: str = "",
     _append_to_thread(thread, reviewer_output)
     step += 1
     score = _extract_score(_read_file(thread))
-    progress.progress(step, total_steps,
+    await progress.progress(step, total_steps,
                       f"Post-Red-Team score: {score or '?'}/500")
 
     # --- Phase 4: Red Team validates ---
 
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team_validate",
         "Final validation — were blocking issues resolved? "
         "Read the updated document and full thread.",
@@ -550,7 +550,7 @@ def review(document: str, context: str = "", domain: str = "",
     final_score = _extract_score(final_thread)
     verdict = _extract_verdict(final_thread)
 
-    progress.progress(step, total_steps,
+    await progress.progress(step, total_steps,
                       f"Complete: {final_score or '?'}/500 — {verdict}")
 
     return {"__result__": {
@@ -565,7 +565,7 @@ def review(document: str, context: str = "", domain: str = "",
 
 @returns({"phase": "string", "round": "integer", "score": "integer", "blockingIssues": "integer", "verdict": "string"})
 @timeout(15)
-def status(thread: str, **params) -> dict:
+async def status(thread: str, **params) -> dict:
     """Check the current state of a review without resuming."""
     thread = str(Path(thread).resolve())
     if not Path(thread).exists():
@@ -584,10 +584,10 @@ def status(thread: str, **params) -> dict:
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def resume(thread: str, context: str = "", max_rounds: int = 2,
+async def resume(thread: str, context: str = "", max_rounds: int = 2,
               model: str = "opus", **params) -> dict:
     """Resume an interrupted or ONE MORE ROUND review."""
-    progress.set_job_id(params.get("__job_id__", ""))
+    await progress.set_job_id(params.get("__job_id__", ""))
 
     thread = str(Path(thread).resolve())
     if not Path(thread).exists():
@@ -609,47 +609,47 @@ def resume(thread: str, context: str = "", max_rounds: int = 2,
 
     if phase == "phase1_convergence":
         for _ in range(max_rounds):
-            author_output = _run_agent(
+            author_output = await _run_agent(
                 "author", "Continue addressing the Reviewer's latest feedback.",
                 files_to_read=[document, thread],
                 files_to_write=[document], model=model)
             _append_to_thread(thread, author_output)
             step += 1
-            progress.progress(step, total_steps, "Author revised")
+            await progress.progress(step, total_steps, "Author revised")
 
-            reviewer_output = _run_agent(
+            reviewer_output = await _run_agent(
                 "reviewer", "Rescore the revised document.",
                 files_to_read=[document, thread], model=model)
             _append_to_thread(thread, reviewer_output)
             step += 1
             score = _extract_score(_read_file(thread))
-            progress.progress(step, total_steps, f"Reviewer scored {score or '?'}/500")
+            await progress.progress(step, total_steps, f"Reviewer scored {score or '?'}/500")
 
             if _scores_converging(_read_file(thread)):
                 break
 
         red_team_files = [document, thread] + context_paths
-        red_team_output = _run_agent(
+        red_team_output = await _run_agent(
             "red_team", "Audit this document and thread with fresh eyes.",
             files_to_read=red_team_files, model=model)
         _append_to_thread(thread, red_team_output)
         step += 1
-        progress.progress(step, total_steps, "Red Team audit complete")
+        await progress.progress(step, total_steps, "Red Team audit complete")
 
     if phase in ("phase2_red_team", "phase1_convergence"):
-        author_output = _run_agent(
+        author_output = await _run_agent(
             "author", "Address the Red Team's BLOCKING and HIGH findings.",
             files_to_read=[document, thread],
             files_to_write=[document], model=model)
         _append_to_thread(thread, author_output)
 
-        reviewer_output = _run_agent(
+        reviewer_output = await _run_agent(
             "reviewer", "Rescore incorporating Red Team findings.",
             files_to_read=[document, thread], model=model)
         _append_to_thread(thread, reviewer_output)
 
     red_team_files = [document, thread] + context_paths
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team_validate", "Final validation — were blocking issues resolved?",
         files_to_read=red_team_files, model=model)
     _append_to_thread(thread, red_team_output)
@@ -658,7 +658,7 @@ def resume(thread: str, context: str = "", max_rounds: int = 2,
     final_score = _extract_score(final_thread)
     verdict = _extract_verdict(final_thread)
 
-    progress.progress(total_steps, total_steps,
+    await progress.progress(total_steps, total_steps,
                       f"Complete: {final_score or '?'}/500 — {verdict}")
 
     return {"__result__": {

@@ -10,7 +10,7 @@ from agentos import http, shell, provides, returns, timeout, web_read
 @returns("community")
 @provides(web_read, urls=["facebook.com/groups/*", "www.facebook.com/groups/*"])
 @timeout(35)
-def get_community(
+async def get_community(
     *,
     group: str = None,
     url: str = None,
@@ -28,7 +28,7 @@ def get_community(
     group_url = f"https://www.facebook.com/groups/{group_name}/"
 
     # Fetch the page
-    resp = http.get(group_url, timeout=30.0)
+    resp = await http.get(group_url, timeout=30.0)
 
     html = resp["body"]
     if not html:
@@ -59,7 +59,7 @@ def get_community(
         chromium = _find_chromium()
         if chromium:
             try:
-                result = shell.run(chromium, ["--headless", "--dump-dom", group_url], timeout=20)
+                result = await shell.run(chromium, ["--headless", "--dump-dom", group_url], timeout=20)
                 dom = result["stdout"]
                 if dom:
                     mc = re.search(r"([\d,.]+K?)\s*members?", dom)

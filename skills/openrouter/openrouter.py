@@ -34,9 +34,9 @@ def _ts_to_iso(ts) -> str | None:
 
 @returns("model[]")
 @connection("api")
-def list_models(**params) -> list[dict]:
+async def list_models(**params) -> list[dict]:
     """List available AI models from all providers via OpenRouter."""
-    resp = http.get(f"{API_BASE}/models", **http.headers(accept="json", extra=_auth_header(params)))
+    resp = await http.get(f"{API_BASE}/models", **http.headers(accept="json", extra=_auth_header(params)))
     return [
         {
             "id": m.get("id"),
@@ -81,7 +81,7 @@ def _to_openai_msg(msg: dict) -> dict:
 @provides(llm, models=["opus", "sonnet", "haiku", "gpt-4o", "gpt-4o-mini", "llama3.3", "claude-opus-4-6", "claude-sonnet-4-5"])
 @returns({"content": "{'type': 'string', 'description': 'Text response from the model (null if tool calls only)'}", "tool_calls": "{'type': 'array', 'description': 'Tool calls the model wants to make'}", "stop_reason": "{'type': 'string', 'enum': ['end_turn', 'tool_use', 'max_tokens']}", "usage": "{'type': 'object', 'description': 'Token usage (input_tokens, output_tokens)'}"})
 @connection("api")
-def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:
+async def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 4096, temperature: float = 0, system: str = None, **params) -> dict:
     """Send a chat completion request through OpenRouter."""
     model = MODEL_ALIASES.get(model, model)
     openai_messages = []
@@ -108,7 +108,7 @@ def chat(*, model: str, messages: list, tools: list = None, max_tokens: int = 40
             for t in tools
         ]
 
-    resp = http.post(f"{API_BASE}/chat/completions",
+    resp = await http.post(f"{API_BASE}/chat/completions",
                      json=body, **http.headers(accept="json", extra=_auth_header(params)))
     data = resp["json"]
     choices = data.get("choices") or [{}]

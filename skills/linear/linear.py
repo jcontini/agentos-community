@@ -15,14 +15,14 @@ def _auth_header(params):
     return {"Authorization": key}
 
 
-def _gql(params, query, variables=None):
+async def _gql(params, query, variables=None):
     """Execute a GraphQL query against the Linear API."""
     headers = _auth_header(params)
     body = {"query": query}
     if variables:
         # Strip None values so Linear doesn't choke on null filters
         body["variables"] = {k: v for k, v in variables.items() if v is not None}
-    resp = http.post(API_URL, json=body, **http.headers(accept="json", extra=headers))
+    resp = await http.post(API_URL, json=body, **http.headers(accept="json", extra=headers))
     data = resp["json"]
     if data.get("errors"):
         raise Exception(f"GraphQL error: {data['errors']}")
@@ -144,7 +144,7 @@ def _map_project(node):
 # ---------------------------------------------------------------------------
 
 @returns("task[]")
-def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **params) -> list:
+async def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **params) -> list:
     """List issues with optional filters."""
     query = """
         query($limit: Int, $teamId: ID, $stateId: ID) {
@@ -159,13 +159,13 @@ def list_tasks(*, limit: int = 50, team_id: str = None, state_id: str = None, **
           }
         }
     """ % _ISSUE_FIELDS
-    data = _gql(params, query, {"limit": limit, "teamId": team_id, "stateId": state_id})
+    data = await _gql(params, query, {"limit": limit, "teamId": team_id, "stateId": state_id})
     return [_map_task(n) for n in data["issues"]["nodes"]]
 
 
 @returns("task")
 @provides(web_read, urls=["linear.app/*/issue/*"])
-def get_task(*, id: str = None, url: str = None, **params) -> dict:
+async def get_task(*, id: str = None, url: str = None, **params) -> dict:
     """Get a single issue by ID or URL.
 
     If url is provided, extracts the identifier (e.g. PROJ-123) from the URL.
@@ -182,12 +182,12 @@ def get_task(*, id: str = None, url: str = None, **params) -> dict:
           issue(id: $id) { %s }
         }
     """ % _ISSUE_FIELDS_FULL
-    data = _gql(params, query, {"id": id})
+    data = await _gql(params, query, {"id": id})
     return _map_task(data["issue"])
 
 
 @returns("task")
-def create_task(*, team_id: str, name: str, description: str = None,
+async def create_task(*, team_id: str, name: str, description: str = None,
                 priority: int = None, project_id: str = None,
                 parent_id: str = None, due: str = None, **params) -> dict:
     """Create a new issue."""
@@ -205,12 +205,12 @@ def create_task(*, team_id: str, name: str, description: str = None,
     if project_id is not None: input_vars["projectId"] = project_id
     if parent_id is not None: input_vars["parentId"] = parent_id
     if due is not None: input_vars["dueDate"] = due
-    data = _gql(params, query, {"input": input_vars})
+    data = await _gql(params, query, {"input": input_vars})
     return _map_task(data["issueCreate"]["issue"])
 
 
 @returns("task")
-def update_task(*, id: str, name: str = None, description: str = None,
+async def update_task(*, id: str, name: str = None, description: str = None,
                 priority: int = None, state_id: str = None,
                 due: str = None, **params) -> dict:
     """Update an existing issue."""
@@ -228,32 +228,32 @@ def update_task(*, id: str, name: str = None, description: str = None,
     if priority is not None: input_vars["priority"] = priority
     if state_id is not None: input_vars["stateId"] = state_id
     if due is not None: input_vars["dueDate"] = due
-    data = _gql(params, query, {"id": id, "input": input_vars})
+    data = await _gql(params, query, {"id": id, "input": input_vars})
     return _map_task(data["issueUpdate"]["issue"])
 
 
 @returns({"ok": "boolean"})
-def delete_task(*, id: str, **params) -> dict:
+async def delete_task(*, id: str, **params) -> dict:
     """Delete an issue."""
     query = """
         mutation($id: String!) {
           issueDelete(id: $id) { success }
         }
     """
-    data = _gql(params, query, {"id": id})
+    data = await _gql(params, query, {"id": id})
     return data["issueDelete"]
 
 
 @returns("project[]")
-def list_projects(**params) -> list:
+async def list_projects(**params) -> list:
     """List all projects."""
     query = "{ projects { nodes { id name state } } }"
-    data = _gql(params, query)
+    data = await _gql(params, query)
     return [_map_project(n) for n in data["projects"]["nodes"]]
 
 
 @returns({"organization.urlKey": "string", "organization.name": "string", "teams": "array", "viewer.id": "string", "viewer.name": "string", "viewer.email": "string"})
-def setup(**params) -> dict:
+async def setup(**params) -> dict:
     """Auto-configure account params. Returns organization, teams, and viewer."""
     query = """
         {
@@ -262,7 +262,7 @@ def setup(**params) -> dict:
           viewer { id name email }
         }
     """
-    data = _gql(params, query)
+    data = await _gql(params, query)
     return {
         "organization": data["organization"],
         "teams": data["teams"]["nodes"],
@@ -271,31 +271,31 @@ def setup(**params) -> dict:
 
 
 @returns({"id": "string", "name": "string", "email": "string"})
-def whoami(**params) -> dict:
+async def whoami(**params) -> dict:
     """Get current authenticated user."""
     query = "{ viewer { id name email } }"
-    data = _gql(params, query)
+    data = await _gql(params, query)
     return data["viewer"]
 
 
 @returns({"id": "string", "name": "string", "urlKey": "string"})
-def get_organization(**params) -> dict:
+async def get_organization(**params) -> dict:
     """Get organization info including workspace URL slug."""
     query = "{ organization { id name urlKey } }"
-    data = _gql(params, query)
+    data = await _gql(params, query)
     return data["organization"]
 
 
 @returns({"id": "string", "key": "string", "name": "string"})
-def get_teams(**params) -> list:
+async def get_teams(**params) -> list:
     """List all teams."""
     query = "{ teams { nodes { id key name } } }"
-    data = _gql(params, query)
+    data = await _gql(params, query)
     return data["teams"]["nodes"]
 
 
 @returns({"id": "string", "name": "string", "type": "string", "position": "number"})
-def get_workflow_states(*, team_id: str, **params) -> list:
+async def get_workflow_states(*, team_id: str, **params) -> list:
     """List workflow states for a team."""
     query = """
         query($teamId: ID!) {
@@ -304,12 +304,12 @@ def get_workflow_states(*, team_id: str, **params) -> list:
           }
         }
     """
-    data = _gql(params, query, {"teamId": team_id})
+    data = await _gql(params, query, {"teamId": team_id})
     return data["workflowStates"]["nodes"]
 
 
 @returns({"id": "string", "number": "integer", "startsAt": "datetime", "endsAt": "datetime"})
-def get_cycles(*, team_id: str, **params) -> list:
+async def get_cycles(*, team_id: str, **params) -> list:
     """List cycles (sprints) for a team."""
     query = """
         query($teamId: String!) {
@@ -318,12 +318,12 @@ def get_cycles(*, team_id: str, **params) -> list:
           }
         }
     """
-    data = _gql(params, query, {"teamId": team_id})
+    data = await _gql(params, query, {"teamId": team_id})
     return data["team"]["cycles"]["nodes"]
 
 
 @returns({"blocks": "array", "blockedBy": "array", "related": "array"})
-def get_relations(*, id: str, **params) -> dict:
+async def get_relations(*, id: str, **params) -> dict:
     """Get an issue's relationships (blocking, blocked by, related).
 
     Returns relation_id needed for remove_relation.
@@ -346,7 +346,7 @@ def get_relations(*, id: str, **params) -> dict:
           }
         }
     """
-    data = _gql(params, query, {"id": id})
+    data = await _gql(params, query, {"id": id})
     issue = data["issue"]
     return {
         "blocks": issue["relations"]["nodes"],
@@ -355,7 +355,7 @@ def get_relations(*, id: str, **params) -> dict:
 
 
 @returns({"ok": "boolean"})
-def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
+async def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
     """Add a blocking relationship (blocker_id blocks id)."""
     query = """
         mutation($input: IssueRelationCreateInput!) {
@@ -365,7 +365,7 @@ def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
           }
         }
     """
-    data = _gql(params, query, {
+    data = await _gql(params, query, {
         "input": {
             "issueId": blocker_id,
             "relatedIssueId": id,
@@ -377,19 +377,19 @@ def add_blocker(*, id: str, blocker_id: str, **params) -> dict:
 
 
 @returns({"ok": "boolean"})
-def remove_relation(*, relation_id: str, **params) -> dict:
+async def remove_relation(*, relation_id: str, **params) -> dict:
     """Remove a relationship by its ID."""
     query = """
         mutation($id: String!) {
           issueRelationDelete(id: $id) { success }
         }
     """
-    data = _gql(params, query, {"id": relation_id})
+    data = await _gql(params, query, {"id": relation_id})
     return data["issueRelationDelete"]
 
 
 @returns({"ok": "boolean"})
-def add_related(*, id: str, related_id: str, **params) -> dict:
+async def add_related(*, id: str, related_id: str, **params) -> dict:
     """Link two issues as related."""
     query = """
         mutation($input: IssueRelationCreateInput!) {
@@ -399,7 +399,7 @@ def add_related(*, id: str, related_id: str, **params) -> dict:
           }
         }
     """
-    data = _gql(params, query, {
+    data = await _gql(params, query, {
         "input": {
             "issueId": id,
             "relatedIssueId": related_id,

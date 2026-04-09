@@ -85,9 +85,9 @@ def _map_conversation(row):
 
 
 @returns("email[]")
-def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **params):
+async def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **params):
     """List emails, optionally filtered by mailbox, account, or flags."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZSUBJECT as subject,
@@ -140,9 +140,9 @@ def list_emails(*, account=None, mailbox=None, is_unread=None, limit=1000, **par
 
 
 @returns("email")
-def get_email(*, id, **params):
+async def get_email(*, id, **params):
     """Get a specific email with full body content and headers."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZSUBJECT as subject,
@@ -186,9 +186,9 @@ def get_email(*, id, **params):
 
 
 @returns("email[]")
-def search_emails(*, query, account=None, limit=1000, **params):
+async def search_emails(*, query, account=None, limit=1000, **params):
     """Search emails by subject, snippet, body text, or sender."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZSUBJECT as subject,
@@ -239,9 +239,9 @@ def search_emails(*, query, account=None, limit=1000, **params):
 
 
 @returns("conversation[]")
-def list_conversations(*, account=None, limit=1000, **params):
+async def list_conversations(*, account=None, limit=1000, **params):
     """List email threads with latest message info."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           t.Z_PK as id,
           a.ZNAME as account_email,
@@ -264,9 +264,9 @@ def list_conversations(*, account=None, limit=1000, **params):
 
 
 @returns("conversation")
-def get_conversation(*, id, **params):
+async def get_conversation(*, id, **params):
     """Get all messages in an email thread."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           t.Z_PK as id,
           a.ZNAME as account_email,
@@ -289,9 +289,9 @@ def get_conversation(*, id, **params):
 
 
 @returns({"id": "integer", "name": "string", "role": "string", "unreadCount": "integer", "totalCount": "integer", "accountEmail": "string"})
-def list_mailboxes(*, account=None, **params):
+async def list_mailboxes(*, account=None, **params):
     """List mailboxes/labels for an account."""
-    return sql.query("""
+    return await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZNAME as name,
@@ -321,9 +321,9 @@ def list_mailboxes(*, account=None, **params):
 
 
 @returns({"id": "integer", "name": "string", "email": "string", "color": "string"})
-def list_accounts(**params):
+async def list_accounts(**params):
     """List configured email accounts with their primary email address."""
-    return sql.query("""
+    return await sql.query("""
         SELECT
           a.Z_PK as id,
           a.ZNAME as name,
@@ -342,7 +342,7 @@ def list_accounts(**params):
 
 @returns({"accessToken": "string", "refreshToken": "string", "clientId": "string", "tokenUrl": "string"})
 @provides(oauth_auth, service="google", account_param="account")
-def credential_get(*, account, **params):
+async def credential_get(*, account, **params):
     """Get a live Google OAuth access token from Mimestream's keychain.
 
     Reads the NSKeyedArchiver binary plist, extracts the refresh token and
@@ -367,7 +367,7 @@ def credential_get(*, account, **params):
     # Mimestream's Google grant typically includes:
     #   mail.google.com, calendar.events, contacts, contacts.other.readonly,
     #   directory.readonly, gmail.settings.basic, userinfo.profile
-    token_response = oauth.exchange(
+    token_response = await oauth.exchange(
         token_url=fields["token_url"],
         refresh_token=fields["refresh_token"],
         client_id=fields["client_id"],

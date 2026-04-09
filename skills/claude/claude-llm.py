@@ -90,7 +90,7 @@ def _parse_tool_calls(text: str) -> tuple[str, list]:
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("cli")
 @timeout(600)
-def chat(*, model: str, messages: list, tools: list = None,
+async def chat(*, model: str, messages: list, tools: list = None,
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
     """LLM inference via Claude Code CLI — uses existing auth, no API key.
@@ -114,7 +114,7 @@ def chat(*, model: str, messages: list, tools: list = None,
     if system:
         args.extend(["--system-prompt", system])
 
-    result = shell.run("claude", args=args, input=prompt, timeout=580)
+    result = await shell.run("claude", args=args, input=prompt, timeout=580)
 
     stdout = result.get("stdout", "")
     exit_code = result.get("exit_code", 1)

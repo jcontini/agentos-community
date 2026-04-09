@@ -299,7 +299,7 @@ def _update_person_fields(body):
 
 @returns("person[]")
 @connection("api")
-def list_contacts(*, limit=100, page_token=None, **params):
+async def list_contacts(*, limit=100, page_token=None, **params):
     """List contacts sorted by last modified."""
     headers = _auth_header(params)
     query = {
@@ -310,7 +310,7 @@ def list_contacts(*, limit=100, page_token=None, **params):
     if page_token:
         query["pageToken"] = page_token
 
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/people/me/connections",
         params=query,
         **http.headers(accept="json", extra=headers),
@@ -323,12 +323,12 @@ def list_contacts(*, limit=100, page_token=None, **params):
 @returns("person")
 @connection("api")
 @timeout(15)
-def get_contact(*, id, **params):
+async def get_contact(*, id, **params):
     """Get full details of a specific contact."""
     headers = _auth_header(params)
     resource = id if id.startswith("people/") else f"people/{id}"
 
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/{resource}",
         params={"personFields": PERSON_FIELDS},
         **http.headers(accept="json", extra=headers),
@@ -339,7 +339,7 @@ def get_contact(*, id, **params):
 @returns("person[]")
 @connection("api")
 @timeout(15)
-def search_contacts(*, query, limit=30, **params):
+async def search_contacts(*, query, limit=30, **params):
     """Search contacts by name, email, phone, or any text."""
     headers = _auth_header(params)
     query_params = {
@@ -348,7 +348,7 @@ def search_contacts(*, query, limit=30, **params):
         "pageSize": str(min(limit, 30)),
     }
 
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/people:searchContacts",
         params=query_params,
         **http.headers(accept="json", extra=headers),
@@ -361,7 +361,7 @@ def search_contacts(*, query, limit=30, **params):
 @returns("person")
 @connection("api")
 @timeout(15)
-def create_contact(*, first_name=None, last_name=None, organization=None,
+async def create_contact(*, first_name=None, last_name=None, organization=None,
                    job_title=None, department=None, emails=None, phones=None,
                    addresses=None, urls=None, birthday=None, notes=None, **params):
     """Create a new contact."""
@@ -372,7 +372,7 @@ def create_contact(*, first_name=None, last_name=None, organization=None,
         addresses=addresses, urls=urls, birthday=birthday, notes=notes,
     )
 
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/people:createContact",
         params={"personFields": PERSON_FIELDS},
         json=body,
@@ -384,7 +384,7 @@ def create_contact(*, first_name=None, last_name=None, organization=None,
 @returns("person")
 @connection("api")
 @timeout(15)
-def update_contact(*, id, first_name=None, last_name=None, organization=None,
+async def update_contact(*, id, first_name=None, last_name=None, organization=None,
                    job_title=None, department=None, emails=None, phones=None,
                    addresses=None, urls=None, birthday=None, notes=None, **params):
     """Update an existing contact. Fetches current etag first."""
@@ -392,7 +392,7 @@ def update_contact(*, id, first_name=None, last_name=None, organization=None,
     resource = id if id.startswith("people/") else f"people/{id}"
 
     # Fetch current contact for etag (required by API)
-    current = http.get(
+    current = await http.get(
         f"{BASE_URL}/{resource}",
         params={"personFields": PERSON_FIELDS},
         **http.headers(accept="json", extra=headers),
@@ -408,7 +408,7 @@ def update_contact(*, id, first_name=None, last_name=None, organization=None,
 
     mask = _update_person_fields(body)
 
-    resp = http.patch(
+    resp = await http.patch(
         f"{BASE_URL}/{resource}:updateContact",
         params={"updatePersonFields": mask, "personFields": PERSON_FIELDS},
         json=body,
@@ -420,12 +420,12 @@ def update_contact(*, id, first_name=None, last_name=None, organization=None,
 @returns({"ok": "boolean"})
 @connection("api")
 @timeout(15)
-def delete_contact(*, id, **params):
+async def delete_contact(*, id, **params):
     """Delete a contact permanently."""
     headers = _auth_header(params)
     resource = id if id.startswith("people/") else f"people/{id}"
 
-    http.delete(
+    await http.delete(
         f"{BASE_URL}/{resource}:deleteContact",
         **http.headers(accept="json", extra=headers),
     )

@@ -36,10 +36,10 @@ def _find_all_apps() -> list[Path]:
     return apps
 
 
-def _read_plist_json(plist_path: Path) -> dict | None:
+async def _read_plist_json(plist_path: Path) -> dict | None:
     """Parse an Info.plist file to a dict via plutil."""
     try:
-        result = shell.run("plutil", ["-convert", "json", str(plist_path), "-o", "-"], timeout=5)
+        result = await shell.run("plutil", ["-convert", "json", str(plist_path), "-o", "-"], timeout=5)
         if result["exit_code"] != 0:
             return None
         return json.loads(result["stdout"])
@@ -49,14 +49,14 @@ def _read_plist_json(plist_path: Path) -> dict | None:
 
 # ── Keychain helpers ───────────────────────────────────────────────────────────
 
-def _security(*args) -> str:
+async def _security(*args) -> str:
     """Run a `security` CLI command, return stdout."""
-    result = shell.run("security", list(args))
+    result = await shell.run("security", list(args))
     return result["stdout"].strip()
 
 
-def _dump_keychain() -> str:
-    return _security("dump-keychain")
+async def _dump_keychain() -> str:
+    return await _security("dump-keychain")
 
 
 def _parse_keychain_entries(dump: str) -> list[dict]:
@@ -134,11 +134,11 @@ def _categorize(entry: dict) -> str | None:
 # ── Operations ────────────────────────────────────────────────────────────────
 
 @returns({"category": "string", "app": "string", "account": "string", "note": "string"})
-def cmd_audit(**kwargs) -> list[dict]:
+async def cmd_audit(**kwargs) -> list[dict]:
     """
     Full credential inventory. Returns categorized entries sorted by category.
     """
-    dump = _dump_keychain()
+    dump = await _dump_keychain()
     raw_entries = _parse_keychain_entries(dump)
     interesting = [e for e in raw_entries if _is_interesting(e)]
 
@@ -203,12 +203,12 @@ def cmd_audit(**kwargs) -> list[dict]:
 
 @returns({"service": "string", "account": "string", "value": "string", "format": "string", "note": "string"})
 @timeout(10)
-def cmd_get_token(service: str, account: str, **kwargs) -> dict:
+async def cmd_get_token(service: str, account: str, **kwargs) -> dict:
     """
     Extract a token value from the Keychain.
     Returns the raw string value (or hex for binary plist entries).
     """
-    value = _security(
+    value = await _security(
         "find-generic-password",
         "-s", service,
         "-a", account,
@@ -234,7 +234,7 @@ def cmd_get_token(service: str, account: str, **kwargs) -> dict:
 
 @returns({"app": "string", "installPath": "string", "bundleId": "string", "version": "string", "clientId": "string", "urlScheme": "string", "note": "string"})
 @timeout(60)
-def cmd_scan_google_oauth(**kwargs) -> list[dict]:
+async def cmd_scan_google_oauth(**kwargs) -> list[dict]:
     """
     Scan all installed apps for Google OAuth client IDs.
     Searches /Applications, /Applications/Setapp, ~/Applications, /System/Applications.
@@ -248,7 +248,7 @@ def cmd_scan_google_oauth(**kwargs) -> list[dict]:
         if not plist_path.exists():
             continue
 
-        plist = _read_plist_json(plist_path)
+        plist = await _read_plist_json(plist_path)
         if plist is None:
             continue
 
@@ -278,7 +278,7 @@ def cmd_scan_google_oauth(**kwargs) -> list[dict]:
 
 @returns({"username": "string", "accountType": "string", "identifier": "string", "note": "string"})
 @timeout(15)
-def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
+async def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
     """
     Scan macOS Internet Accounts (Account.framework).
     These are OS-level OAuth connections added via System Settings → Internet Accounts.
@@ -303,7 +303,7 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
 
     try:
         # Check schema
-        tables_rows = sql.query("SELECT name FROM sqlite_master WHERE type='table'", db=db)
+        tables_rows = await sql.query("SELECT name FROM sqlite_master WHERE type='table'", db=db)
         tables = {r["name"] for r in tables_rows}
 
         if "ZACCOUNT" not in tables:
@@ -312,7 +312,7 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
         has_type_table = "ZACCOUNTTYPE" in tables
 
         if has_type_table:
-            rows = sql.query("""
+            rows = await sql.query("""
                 SELECT
                     a.ZUSERNAME   AS username,
                     a.ZIDENTIFIER AS identifier,
@@ -322,7 +322,7 @@ def cmd_scan_macos_accounts(**kwargs) -> list[dict]:
                 ORDER BY t.ZIDENTIFIER, a.ZUSERNAME
             """, db=db)
         else:
-            rows = sql.query("""
+            rows = await sql.query("""
                 SELECT ZUSERNAME AS username, ZIDENTIFIER AS identifier, NULL AS account_type
                 FROM ZACCOUNT
                 ORDER BY ZUSERNAME
@@ -382,13 +382,13 @@ def _account_type_note(account_type: str) -> str:
 
 @returns({"name": "string"})
 @timeout(15)
-def cmd_list_electron_apps(**kwargs) -> list[dict]:
+async def cmd_list_electron_apps(**kwargs) -> list[dict]:
     """
     List all apps using the Electron Safe Storage pattern.
     Each stores a master encryption key in the Keychain that encrypts all
     locally stored credentials, cookies, and session data.
     """
-    dump = _dump_keychain()
+    dump = await _dump_keychain()
     names: set[str] = set()
     for line in dump.splitlines():
         if "Safe Storage" not in line:

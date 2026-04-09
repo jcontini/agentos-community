@@ -46,9 +46,9 @@ def _to_anthropic_msg(msg: dict) -> dict:
 
 @returns("model[]")
 @connection("api")
-def list_models(**params) -> list:
+async def list_models(**params) -> list:
     """List available Claude models from Anthropic"""
-    resp = http.get(f"{API_BASE}/models",
+    resp = await http.get(f"{API_BASE}/models",
                     params={"limit": "1000"}, **http.headers(accept="json", extra=_headers(params)))
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
@@ -57,7 +57,7 @@ def list_models(**params) -> list:
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("api")
 @timeout(120)
-def chat(*, model: str, messages: list, tools: list = None,
+async def chat(*, model: str, messages: list, tools: list = None,
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
     """Send a chat completion request to Claude (Anthropic Messages API)
@@ -81,7 +81,7 @@ def chat(*, model: str, messages: list, tools: list = None,
         body["tools"] = tools
     if system:
         body["system"] = system
-    resp = http.post(f"{API_BASE}/messages",
+    resp = await http.post(f"{API_BASE}/messages",
                      json=body, **http.headers(accept="json", extra=_headers(params)))
     data = resp["json"]
     blocks = data.get("content", [])

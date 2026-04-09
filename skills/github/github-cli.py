@@ -18,15 +18,15 @@ def _read_payload():
     return json.loads(raw)
 
 
-def _run_gh(args):
-    result = shell.run("gh", list(args))
+async def _run_gh(args):
+    result = await shell.run("gh", list(args))
     if result["exit_code"] != 0:
         _fail(result["stderr"].strip() or result["stdout"].strip() or "gh command failed", result["exit_code"])
     return result["stdout"]
 
 
 @returns("task[]")
-def list_tasks(*, repo, state="open", limit=30, **params):
+async def list_tasks(*, repo, state="open", limit=30, **params):
     """List issues for a repository
 
         Args:
@@ -35,7 +35,7 @@ def list_tasks(*, repo, state="open", limit=30, **params):
             limit: Maximum number of issues to return
         """
     limit = str(limit)
-    output = _run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
+    output = await _run_gh(["api", f"repos/{repo}/issues?state={state}&per_page={limit}"])
     data = json.loads(output)
     result = []
     for item in data:
@@ -93,7 +93,7 @@ def _task_shape(item: dict, repo: str) -> dict:
 
 @returns("task")
 @provides(web_read, urls=["github.com/*/issues/*", "github.com/*/pull/*"])
-def get_task(*, repo=None, number=None, url=None, **params):
+async def get_task(*, repo=None, number=None, url=None, **params):
     """Get a single issue by number
 
         Args:
@@ -109,10 +109,10 @@ def get_task(*, repo=None, number=None, url=None, **params):
     if not repo or number is None:
         _fail("repo and number are required (or pass url)")
     number = str(number)
-    output = _run_gh(["api", f"repos/{repo}/issues/{number}"])
+    output = await _run_gh(["api", f"repos/{repo}/issues/{number}"])
     item = json.loads(output)
     if item.get("pull_request"):
-        pr_out = _run_gh(["api", f"repos/{repo}/pulls/{number}"])
+        pr_out = await _run_gh(["api", f"repos/{repo}/pulls/{number}"])
         pr = json.loads(pr_out)
         return _task_shape(
             {
@@ -133,7 +133,7 @@ def get_task(*, repo=None, number=None, url=None, **params):
 
 
 @returns({"url": "string", "number": "integer", "title": "string"})
-def create_task(*, repo, title, body="", **params):
+async def create_task(*, repo, title, body="", **params):
     """Create a new GitHub issue
 
         Args:
@@ -141,36 +141,36 @@ def create_task(*, repo, title, body="", **params):
             title: Issue title
             body: Issue body
         """
-    url = _run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
+    url = await _run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
     return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
 @returns({"ok": "boolean", "url": "string"})
-def close_task(*, repo, number, **params):
+async def close_task(*, repo, number, **params):
     """Close an issue
 
         Args:
             number: Issue number
         """
     number = str(number)
-    _run_gh(["issue", "close", number, "--repo", repo])
+    await _run_gh(["issue", "close", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
 @returns({"ok": "boolean", "url": "string"})
-def reopen_task(*, repo, number, **params):
+async def reopen_task(*, repo, number, **params):
     """Reopen a closed issue
 
         Args:
             number: Issue number
         """
     number = str(number)
-    _run_gh(["issue", "reopen", number, "--repo", repo])
+    await _run_gh(["issue", "reopen", number, "--repo", repo])
     return {"ok": True, "url": f"https://github.com/{repo}/issues/{number}"}
 
 
 @returns({"items": "array"})
-def list_pull_requests(*, repo, state="open", limit=30, **params):
+async def list_pull_requests(*, repo, state="open", limit=30, **params):
     """List pull requests for a repository
 
         Args:
@@ -179,7 +179,7 @@ def list_pull_requests(*, repo, state="open", limit=30, **params):
             limit: Maximum number of pull requests to return
         """
     limit = str(limit)
-    output = _run_gh(
+    output = await _run_gh(
         [
             "pr",
             "list",
@@ -197,7 +197,7 @@ def list_pull_requests(*, repo, state="open", limit=30, **params):
 
 
 @returns({"url": "string"})
-def create_pull_request(*, repo, title, head, body="", base=None, **params):
+async def create_pull_request(*, repo, title, head, body="", base=None, **params):
     """Create a pull request
 
         Args:
@@ -221,7 +221,7 @@ def create_pull_request(*, repo, title, head, body="", base=None, **params):
     ]
     if base:
         args.extend(["--base", base])
-    url = _run_gh(args).strip()
+    url = await _run_gh(args).strip()
     return {"url": url}
 
 
@@ -236,7 +236,7 @@ def _contents_endpoint(repo, path=None, ref=None):
 
 
 @returns("file[]")
-def list_documents(*, repo, path=None, ref=None, **params):
+async def list_documents(*, repo, path=None, ref=None, **params):
     """List files and folders at a repository path
 
         Args:
@@ -245,7 +245,7 @@ def list_documents(*, repo, path=None, ref=None, **params):
             ref: Branch, tag, or commit
         """
     endpoint = _contents_endpoint(repo, path, ref)
-    output = _run_gh(["api", endpoint])
+    output = await _run_gh(["api", endpoint])
     data = json.loads(output)
     items = data if isinstance(data, list) else [data]
     result = []
@@ -287,7 +287,7 @@ def _parse_blob_or_raw_url(url: str) -> tuple[str, str, str] | None:
 
 @returns("file")
 @provides(web_read, urls=["github.com/*/blob/*", "raw.githubusercontent.com/*"])
-def read_document(*, repo=None, path=None, ref=None, url=None, **params):
+async def read_document(*, repo=None, path=None, ref=None, url=None, **params):
     """Read a text file from a repository
 
         Args:
@@ -304,7 +304,7 @@ def read_document(*, repo=None, path=None, ref=None, url=None, **params):
     if not repo or not path:
         _fail("repo and path are required (or pass url)")
     endpoint = _contents_endpoint(repo, path, ref)
-    output = _run_gh(["api", endpoint])
+    output = await _run_gh(["api", endpoint])
     data = json.loads(output)
     content = data.get("content")
     if content is not None:
@@ -322,9 +322,9 @@ def read_document(*, repo=None, path=None, ref=None, url=None, **params):
 
 
 @returns({"output": "string"})
-def status(**params):
+async def status(**params):
     """Show GitHub CLI status for the current machine"""
-    output = _run_gh(["status"])
+    output = await _run_gh(["status"])
     return {"output": output}
 
 

@@ -33,7 +33,7 @@ def _load_categories():
 
 
 @returns("transaction[]")
-def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
+async def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     """Search transactions by merchant name or notes, with category tags (emoji + color)
 
         Args:
@@ -77,7 +77,7 @@ def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     base_sql += " ORDER BY t.date DESC LIMIT :limit"
     params["limit"] = limit
 
-    rows = sql.query(base_sql, db=DB_PATH, params=params)
+    rows = await sql.query(base_sql, db=DB_PATH, params=params)
 
     results = []
     for r in rows:

@@ -339,10 +339,10 @@ def _extract_event_id_from_url(url):
 @returns("calendar[]")
 @connection("api")
 @timeout(15)
-def list_calendars(*, account=None, **params):
+async def list_calendars(*, account=None, **params):
     """List all calendars the user can see."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/users/me/calendarList", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/users/me/calendarList", **http.headers(accept="json", extra=headers))
     items = (resp["json"] or {}).get("items", [])
     return [
         {
@@ -359,7 +359,7 @@ def list_calendars(*, account=None, **params):
 
 @returns("event[]")
 @connection("api")
-def list_events(*, calendar_id="primary", days=7, past=False,
+async def list_events(*, calendar_id="primary", days=7, past=False,
                 query=None, limit=50, page_token=None,
                 exclude_all_day=False, **params):
     """List events within a date range, optionally filtered by search."""
@@ -385,7 +385,7 @@ def list_events(*, calendar_id="primary", days=7, past=False,
     if page_token:
         query_params["pageToken"] = page_token
 
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/calendars/{calendar_id}/events",
         params=query_params, **http.headers(accept="json", extra=headers),
     )
@@ -402,7 +402,7 @@ def list_events(*, calendar_id="primary", days=7, past=False,
 @provides(web_read, urls=["calendar.google.com/*"])
 @connection("api")
 @timeout(15)
-def get_event(*, id=None, url=None, calendar_id="primary", **params):
+async def get_event(*, id=None, url=None, calendar_id="primary", **params):
     """Get full details of a specific event."""
     if url and not id:
         id = _extract_event_id_from_url(url)
@@ -410,7 +410,7 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
         raise ValueError("Either id or url is required")
 
     headers = _auth_header(params)
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
         **http.headers(accept="json", extra=headers),
     )
@@ -420,7 +420,7 @@ def get_event(*, id=None, url=None, calendar_id="primary", **params):
 @returns("event")
 @connection("api")
 @timeout(15)
-def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
+async def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
                  location=None, description=None, attendees=None,
                  recurrence=None, timezone=None, meet=False, **params):
     """Create a new calendar event."""
@@ -468,7 +468,7 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
     if meet:
         url += "?conferenceDataVersion=1"
 
-    resp = http.post(
+    resp = await http.post(
         url,
         json=body, **http.headers(accept="json", extra=headers),
     )
@@ -478,7 +478,7 @@ def create_event(*, title, start, end=None, all_day=None, calendar_id="primary",
 @returns("event")
 @connection("api")
 @timeout(15)
-def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
+async def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
                  location=None, description=None, attendees=None, **params):
     """Update an existing event (PATCH — only provided fields change)."""
     headers = _auth_header(params)
@@ -497,7 +497,7 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
     if attendees is not None:
         body["attendees"] = [{"email": e} for e in attendees]
 
-    resp = http.patch(
+    resp = await http.patch(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
         json=body, **http.headers(accept="json", extra=headers),
     )
@@ -506,7 +506,7 @@ def update_event(*, id, calendar_id="primary", title=None, start=None, end=None,
 
 @returns("event[]")
 @connection("api")
-def search_events(*, calendar_id="primary", days=30, past=False,
+async def search_events(*, calendar_id="primary", days=30, past=False,
                    query=None, limit=25, **params):
     """Search events — thin wrapper over list_events with search-oriented defaults."""
     return list_events(
@@ -518,10 +518,10 @@ def search_events(*, calendar_id="primary", days=30, past=False,
 @returns({"ok": "boolean"})
 @connection("api")
 @timeout(15)
-def delete_event(*, id, calendar_id="primary", **params):
+async def delete_event(*, id, calendar_id="primary", **params):
     """Delete a calendar event."""
     headers = _auth_header(params)
-    http.delete(
+    await http.delete(
         f"{BASE_URL}/calendars/{calendar_id}/events/{id}",
         **http.headers(accept="json", extra=headers),
     )

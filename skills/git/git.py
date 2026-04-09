@@ -5,9 +5,9 @@ import re
 from agentos import shell, returns
 
 
-def _git(*args, cwd=None):
+async def _git(*args, cwd=None):
     """Run a git command and return stdout. Raises on timeout or nonzero exit."""
-    result = shell.run("git", list(args), cwd=cwd, timeout=30)
+    result = await shell.run("git", list(args), cwd=cwd, timeout=30)
     if result["exit_code"] != 0:
         raise RuntimeError(result["stderr"].strip() or f"git exited {result['exit_code']}")
     return result["stdout"]
@@ -95,7 +95,7 @@ def _commits_with_stats(raw):
 
 
 @returns("git_commit[]")
-def list_git_commits(path, limit=100, branch=None, author=None, **params):
+async def list_git_commits(path, limit=100, branch=None, author=None, **params):
     """List recent commits in a git repository. Returns commits newest first with diff stats."""
     args = ["log"]
     if branch:
@@ -107,14 +107,14 @@ def list_git_commits(path, limit=100, branch=None, author=None, **params):
         f"--pretty=format:COMMIT_SEP%n{_COMMIT_FORMAT}",
         "--shortstat",
     ])
-    raw = _git(*args, cwd=path)
+    raw = await _git(*args, cwd=path)
     return _commits_with_stats(raw)
 
 
 @returns("git_commit")
-def get_git_commit(path, id, **params):
+async def get_git_commit(path, id, **params):
     """Get a single commit with full details and diff stats."""
-    raw = _git(
+    raw = await _git(
         "show", id,
         f"--pretty=format:{_COMMIT_FORMAT}",
         "--shortstat",
@@ -136,7 +136,7 @@ def get_git_commit(path, id, **params):
 
 
 @returns("git_commit[]")
-def search_git_commits(path, query, limit=100, **params):
+async def search_git_commits(path, query, limit=100, **params):
     """Search commit messages by keyword."""
     args = [
         "log",
@@ -146,14 +146,14 @@ def search_git_commits(path, query, limit=100, **params):
         f"--pretty=format:COMMIT_SEP%n{_COMMIT_FORMAT}",
         "--shortstat",
     ]
-    raw = _git(*args, cwd=path)
+    raw = await _git(*args, cwd=path)
     return _commits_with_stats(raw)
 
 
 @returns("branch[]")
-def list_branches(path, **params):
+async def list_branches(path, **params):
     """List all branches (local and remote) in a repository."""
-    raw = _git(
+    raw = await _git(
         "branch", "-a",
         "--format=%(refname:short)|%(upstream:short)|%(HEAD)",
         cwd=path,
@@ -177,9 +177,9 @@ def list_branches(path, **params):
 
 
 @returns("branch")
-def get_branch(path, name, **params):
+async def get_branch(path, name, **params):
     """Get info about a specific branch."""
-    raw = _git(
+    raw = await _git(
         "branch", "-a",
         "--format=%(refname:short)|%(upstream:short)|%(HEAD)",
         cwd=path,
@@ -204,19 +204,19 @@ def get_branch(path, name, **params):
 
 
 @returns("repository")
-def get_repository(path, **params):
+async def get_repository(path, **params):
     """Get repository info from the local git repo -- remote URL, platform, branch."""
     try:
-        remote = _git("remote", "get-url", "origin", cwd=path).strip()
+        remote = await _git("remote", "get-url", "origin", cwd=path).strip()
     except RuntimeError:
         remote = ""
 
     try:
-        branch = _git("branch", "--show-current", cwd=path).strip()
+        branch = await _git("branch", "--show-current", cwd=path).strip()
     except RuntimeError:
         branch = ""
 
-    toplevel = _git("rev-parse", "--show-toplevel", cwd=path).strip()
+    toplevel = await _git("rev-parse", "--show-toplevel", cwd=path).strip()
     repo_name = toplevel.rsplit("/", 1)[-1]
 
     # Extract owner/repo from remote URL
@@ -234,9 +234,9 @@ def get_repository(path, **params):
 
 
 @returns("tag[]")
-def list_tags(path, **params):
+async def list_tags(path, **params):
     """List all tags in the repository."""
-    raw = _git(
+    raw = await _git(
         "tag", "-l",
         "--format=%(refname:short)|%(objectname:short)|%(creatordate:iso-strict)|%(subject)|%(objecttype)",
         cwd=path,
@@ -259,9 +259,9 @@ def list_tags(path, **params):
 
 
 @returns("tag")
-def get_tag(path, name, **params):
+async def get_tag(path, name, **params):
     """Get info about a specific tag."""
-    raw = _git(
+    raw = await _git(
         "tag", "-l", name,
         "--format=%(refname:short)|%(objectname:short)|%(creatordate:iso-strict)|%(subject)|%(objecttype)",
         cwd=path,
@@ -282,33 +282,33 @@ def get_tag(path, name, **params):
 
 
 @returns({"value": "string"})
-def status(path, **params):
+async def status(path, **params):
     """Show working tree status -- modified, staged, and untracked files."""
-    branch = _git("branch", "--show-current", cwd=path).strip()
+    branch = await _git("branch", "--show-current", cwd=path).strip()
 
     try:
-        tracking = _git("rev-parse", "--abbrev-ref", "@{u}", cwd=path).strip()
+        tracking = await _git("rev-parse", "--abbrev-ref", "@{u}", cwd=path).strip()
     except RuntimeError:
         tracking = ""
 
     ahead = behind = 0
     if tracking:
         try:
-            ahead = int(_git("rev-list", "--count", f"{tracking}..HEAD", cwd=path).strip())
+            ahead = int(await _git("rev-list", "--count", f"{tracking}..HEAD", cwd=path).strip())
         except (RuntimeError, ValueError):
             pass
         try:
-            behind = int(_git("rev-list", "--count", f"HEAD..{tracking}", cwd=path).strip())
+            behind = int(await _git("rev-list", "--count", f"HEAD..{tracking}", cwd=path).strip())
         except (RuntimeError, ValueError):
             pass
 
-    staged_raw = _git("diff", "--cached", "--name-only", cwd=path).strip()
+    staged_raw = await _git("diff", "--cached", "--name-only", cwd=path).strip()
     staged = len(staged_raw.split("\n")) if staged_raw else 0
 
-    modified_raw = _git("diff", "--name-only", cwd=path).strip()
+    modified_raw = await _git("diff", "--name-only", cwd=path).strip()
     modified = len(modified_raw.split("\n")) if modified_raw else 0
 
-    untracked_raw = _git("ls-files", "--others", "--exclude-standard", cwd=path).strip()
+    untracked_raw = await _git("ls-files", "--others", "--exclude-standard", cwd=path).strip()
     untracked = len(untracked_raw.split("\n")) if untracked_raw else 0
 
     return {
@@ -323,7 +323,7 @@ def status(path, **params):
 
 
 @returns({"value": "string"})
-def diff(path, staged=False, ref1=None, ref2=None, **params):
+async def diff(path, staged=False, ref1=None, ref2=None, **params):
     """Show the diff of working tree changes, staged changes, or between two refs."""
     args = ["diff"]
     if ref1:
@@ -332,14 +332,14 @@ def diff(path, staged=False, ref1=None, ref2=None, **params):
             args.append(ref2)
     elif staged:
         args.append("--cached")
-    return _git(*args, cwd=path)
+    return await _git(*args, cwd=path)
 
 
 @returns({"value": "string"})
-def log(path, format=None, limit=100, branch=None, **params):
+async def log(path, format=None, limit=100, branch=None, **params):
     """Raw git log output with flexible formatting."""
     args = ["log"]
     if branch:
         args.append(branch)
     args.extend([f"-{limit}", f"--format={format or 'oneline'}"])
-    return _git(*args, cwd=path)
+    return await _git(*args, cwd=path)

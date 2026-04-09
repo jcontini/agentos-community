@@ -142,9 +142,9 @@ def _map_message(row):
 
 
 @returns("person[]")
-def op_list_persons(*, conversation_id=None, limit=200, **params):
+async def op_list_persons(*, conversation_id=None, limit=200, **params):
     """Get WhatsApp contacts, or group participants when conversation_id is provided."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT DISTINCT
           -- Identity
           COALESCE(cs.ZCONTACTJID, gm.ZMEMBERJID) as jid,
@@ -202,9 +202,9 @@ def op_list_persons(*, conversation_id=None, limit=200, **params):
 
 
 @returns("conversation[]")
-def op_list_conversations(*, archived=False, limit=200, **params):
+async def op_list_conversations(*, archived=False, limit=200, **params):
     """List WhatsApp conversations. Defaults to active (non-archived) chats only."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           cs.Z_PK as id,
           cs.ZPARTNERNAME as name,
@@ -230,9 +230,9 @@ def op_list_conversations(*, archived=False, limit=200, **params):
 
 
 @returns("conversation")
-def op_get_conversation(*, id, **params):
+async def op_get_conversation(*, id, **params):
     """Get a specific conversation with metadata."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           cs.Z_PK as id,
           cs.ZPARTNERNAME as name,
@@ -258,9 +258,9 @@ def op_get_conversation(*, id, **params):
 
 
 @returns("message[]")
-def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **params):
+async def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **params):
     """List messages in a conversation. Use is_unread=True without conversation_id to get all unread."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
@@ -303,9 +303,9 @@ def op_list_messages(*, conversation_id=None, is_unread=None, limit=200, **param
 
 
 @returns("message")
-def op_get_message(*, id, **params):
+async def op_get_message(*, id, **params):
     """Get a specific message by ID."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,
@@ -332,9 +332,9 @@ def op_get_message(*, id, **params):
 
 
 @returns("message[]")
-def op_search_messages(*, query, limit=200, **params):
+async def op_search_messages(*, query, limit=200, **params):
     """Search messages by text content."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.Z_PK as id,
           m.ZCHATSESSION as conversation_id,

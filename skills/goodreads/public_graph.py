@@ -934,7 +934,7 @@ def _extract_id_from_url(params: dict | None, url_key: str, id_key: str, pattern
 @returns("account")
 @connection("graphql")
 @timeout(15)
-def run_get_profile(*, user_id: str = "", limit: int = 10, **params) -> dict[str, Any]:
+async def run_get_profile(*, user_id: str = "", limit: int = 10, **params) -> dict[str, Any]:
     """Get a public Goodreads profile and import bounded public relationships like favorite books, currently reading, and shelves
 
         Args:
@@ -947,7 +947,7 @@ def run_get_profile(*, user_id: str = "", limit: int = 10, **params) -> dict[str
 @returns("book")
 @provides(web_read, urls=["goodreads.com/book/show/*", "www.goodreads.com/book/show/*"])
 @connection("graphql")
-def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any]:
+async def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any]:
     """Get structured public book details from Goodreads hydration and Apollo state
 
         Args:
@@ -963,7 +963,7 @@ def run_get_book(*, book_id: str = "", url: str = "", **params) -> dict[str, Any
 
 @returns("review[]")
 @connection("graphql")
-def run_list_book_reviews(*, book_id: str = "", limit: int = 30, **params) -> Any:
+async def run_list_book_reviews(*, book_id: str = "", limit: int = 30, **params) -> Any:
     """List public Goodreads reviews for a book via the AppSync GraphQL backend
 
         Args:
@@ -975,7 +975,7 @@ def run_list_book_reviews(*, book_id: str = "", limit: int = 30, **params) -> An
 
 @returns("book[]")
 @connection("graphql")
-def run_list_similar_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
+async def run_list_similar_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
     """List similar books from Goodreads' public AppSync GraphQL backend
 
         Args:
@@ -987,7 +987,7 @@ def run_list_similar_books(*, book_id: str = "", limit: int = 20, **params) -> A
 
 @returns("book[]")
 @connection("graphql")
-def run_list_series_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
+async def run_list_series_books(*, book_id: str = "", limit: int = 20, **params) -> Any:
     """List all books in a series, given any book that belongs to it
 
         Args:
@@ -1000,7 +1000,7 @@ def run_list_series_books(*, book_id: str = "", limit: int = 20, **params) -> An
 @returns("book[]")
 @connection("graphql")
 @timeout(15)
-def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any:
+async def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any:
     """Search for books by title, author, or ISBN via the public AppSync GraphQL backend
 
         Args:
@@ -1013,7 +1013,7 @@ def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any:
 @returns("author")
 @provides(web_read, urls=["goodreads.com/author/show/*", "www.goodreads.com/author/show/*"])
 @connection("graphql")
-def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **params) -> dict[str, Any]:
+async def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **params) -> dict[str, Any]:
     """Get a public Goodreads author profile and import bounded authored books
 
         Args:
@@ -1030,7 +1030,7 @@ def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **par
 
 @returns("book[]")
 @connection("graphql")
-def run_list_author_books(*, author_id: str = "", limit: int = 10, **params) -> list[dict[str, Any]]:
+async def run_list_author_books(*, author_id: str = "", limit: int = 10, **params) -> list[dict[str, Any]]:
     """List a public Goodreads author's books
 
         Args:

@@ -51,36 +51,36 @@ def _format_launch(launch: dict) -> dict:
 
 
 @returns("event[]")
-def list_upcoming(limit: int = 10, **params) -> list[dict]:
+async def list_upcoming(limit: int = 10, **params) -> list[dict]:
     """List upcoming SpaceX launches.
 
     Args:
         limit: Maximum number of launches to return (default 10)
     """
-    resp = http.get(f"{BASE}/upcoming")
+    resp = await http.get(f"{BASE}/upcoming")
     launches = resp["json"]
     return [_format_launch(l) for l in launches[:limit]]
 
 
 @returns("event[]")
-def list_past(limit: int = 10, **params) -> list[dict]:
+async def list_past(limit: int = 10, **params) -> list[dict]:
     """List recent past SpaceX launches, newest first.
 
     Args:
         limit: Maximum number of launches to return (default 10)
     """
-    resp = http.get(f"{BASE}/past")
+    resp = await http.get(f"{BASE}/past")
     launches = resp["json"]
     launches.reverse()
     return [_format_launch(l) for l in launches[:limit]]
 
 
 @returns("event")
-def get_launch(id: str, **params) -> dict:
+async def get_launch(id: str, **params) -> dict:
     """Get details for a specific SpaceX launch by ID.
 
     Args:
         id: The launch ID (e.g. 5eb87d46ffd86e000604b388)
     """
-    resp = http.get(f"{BASE}/{id}")
+    resp = await http.get(f"{BASE}/{id}")
     return _format_launch(resp["json"])

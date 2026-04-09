@@ -256,7 +256,7 @@ RED_TEAM_VALIDATE_PROMPT = textwrap.dedent("""\
 # Agent runner
 # ---------------------------------------------------------------------------
 
-def _run_agent(role: str, prompt: str, files_to_read: list[str],
+async def _run_agent(role: str, prompt: str, files_to_read: list[str],
                files_to_write: list[str] = None, model: str = "opus") -> str:
     """Run a Claude agent with a role-specific system prompt.
 
@@ -313,7 +313,7 @@ def _run_agent(role: str, prompt: str, files_to_read: list[str],
         args.extend(["--add-dir", str(d)])
 
     # Pass prompt via stdin — --add-dir is variadic and eats trailing positional args
-    result = shell.run("claude", args=args, input=full_prompt, timeout=300)
+    result = await shell.run("claude", args=args, input=full_prompt, timeout=300)
 
     return result.get("stdout", "") if isinstance(result, dict) else str(result)
 
@@ -396,7 +396,7 @@ def _scores_converging(thread_text: str, threshold: int = 15) -> bool:
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def op_start(document: str, context: str = "", domain: str = "",
+async def op_start(document: str, context: str = "", domain: str = "",
              max_rounds: int = 3, model: str = "opus", **params) -> dict:
     """Start a scored review of a document."""
     document = str(Path(document).resolve())
@@ -421,7 +421,7 @@ def op_start(document: str, context: str = "", domain: str = "",
         f"Document content:\n\n{doc_content}"
     )
 
-    reviewer_output = _run_agent(
+    reviewer_output = await _run_agent(
         "reviewer", reviewer_prompt,
         files_to_read=[document],
         model=model,
@@ -440,7 +440,7 @@ def op_start(document: str, context: str = "", domain: str = "",
             f"the feedback. Write your response for the thread explaining "
             f"what you changed and why."
         )
-        author_output = _run_agent(
+        author_output = await _run_agent(
             "author", author_prompt,
             files_to_read=[document, thread],
             files_to_write=[document],
@@ -454,7 +454,7 @@ def op_start(document: str, context: str = "", domain: str = "",
             f"feedback. Re-read both the document and thread, then rescore. "
             f"Identify any remaining issues."
         )
-        reviewer_output = _run_agent(
+        reviewer_output = await _run_agent(
             "reviewer", reviewer_prompt,
             files_to_read=[document, thread],
             model=model,
@@ -474,7 +474,7 @@ def op_start(document: str, context: str = "", domain: str = "",
         f"you were not part of the Author↔Reviewer dialogue. Check claims "
         f"against the actual files. Identify shared blind spots."
     )
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team", red_team_prompt,
         files_to_read=red_team_files,
         model=model,
@@ -488,7 +488,7 @@ def op_start(document: str, context: str = "", domain: str = "",
         f"issues that you and the Reviewer both missed. Read their findings, "
         f"then revise the document to address BLOCKING and HIGH issues."
     )
-    author_output = _run_agent(
+    author_output = await _run_agent(
         "author", author_prompt,
         files_to_read=[document, thread],
         files_to_write=[document],
@@ -502,7 +502,7 @@ def op_start(document: str, context: str = "", domain: str = "",
         f"everything and provide a final score incorporating both your "
         f"criteria and the Red Team's findings."
     )
-    reviewer_output = _run_agent(
+    reviewer_output = await _run_agent(
         "reviewer", reviewer_prompt,
         files_to_read=[document, thread],
         model=model,
@@ -511,7 +511,7 @@ def op_start(document: str, context: str = "", domain: str = "",
 
     # ─── Phase 4: Red Team validates ────────────────────────────────────
 
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team_validate",
         "Validate that the BLOCKING issues from your earlier audit were "
         "resolved. Read the updated document and full thread.",
@@ -545,7 +545,7 @@ def op_start(document: str, context: str = "", domain: str = "",
 
 @returns({"phase": "string", "round": "integer", "score": "integer", "blockingIssues": "integer", "verdict": "string"})
 @timeout(15)
-def op_status(thread: str, **params) -> dict:
+async def op_status(thread: str, **params) -> dict:
     """Read the current state of a review."""
     thread = str(Path(thread).resolve())
     if not Path(thread).exists():
@@ -578,7 +578,7 @@ def op_status(thread: str, **params) -> dict:
 
 @returns({"thread": "string", "document": "string", "score": "integer", "verdict": "string", "rounds": "integer", "phase": "string"})
 @timeout(600)
-def op_resume(thread: str, context: str = "", max_rounds: int = 2,
+async def op_resume(thread: str, context: str = "", max_rounds: int = 2,
               model: str = "opus", **params) -> dict:
     """Resume an interrupted or ONE MORE ROUND review."""
     thread = str(Path(thread).resolve())
@@ -602,7 +602,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
     if phase == "phase1_convergence":
         # Continue Author↔Reviewer rounds
         for _ in range(max_rounds):
-            author_output = _run_agent(
+            author_output = await _run_agent(
                 "author",
                 "Continue addressing the Reviewer's latest feedback.",
                 files_to_read=[document, thread],
@@ -611,7 +611,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
             )
             _append_to_thread(thread, author_output)
 
-            reviewer_output = _run_agent(
+            reviewer_output = await _run_agent(
                 "reviewer",
                 "Rescore the revised document.",
                 files_to_read=[document, thread],
@@ -624,7 +624,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
 
         # Proceed to Red Team
         red_team_files = [document, thread] + context_paths
-        red_team_output = _run_agent(
+        red_team_output = await _run_agent(
             "red_team",
             "Audit this document and its review thread with fresh eyes.",
             files_to_read=red_team_files,
@@ -634,7 +634,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
 
     if phase in ("phase2_red_team", "phase1_convergence"):
         # Author addresses Red Team
-        author_output = _run_agent(
+        author_output = await _run_agent(
             "author",
             "Address the Red Team's BLOCKING and HIGH findings.",
             files_to_read=[document, thread],
@@ -644,7 +644,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
         _append_to_thread(thread, author_output)
 
         # Reviewer rescores
-        reviewer_output = _run_agent(
+        reviewer_output = await _run_agent(
             "reviewer",
             "Rescore incorporating Red Team findings.",
             files_to_read=[document, thread],
@@ -654,7 +654,7 @@ def op_resume(thread: str, context: str = "", max_rounds: int = 2,
 
     # Final validation
     red_team_files = [document, thread] + context_paths
-    red_team_output = _run_agent(
+    red_team_output = await _run_agent(
         "red_team_validate",
         "Final validation — were blocking issues resolved?",
         files_to_read=red_team_files,

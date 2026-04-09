@@ -79,7 +79,7 @@ def _map_item(item: dict) -> dict:
 
 
 @returns("post[]")
-def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
+async def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
     """List Hacker News stories by feed type.
 
     Args:
@@ -90,7 +90,7 @@ def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
     tag_map = {"new": "story", "ask": "ask_hn", "show": "show_hn"}
     tags = tag_map.get(feed, "front_page")
 
-    resp = http.get(f"{BASE}/{endpoint}", params={
+    resp = await http.get(f"{BASE}/{endpoint}", params={
         "tags": tags,
         "hitsPerPage": str(limit),
     })
@@ -100,14 +100,14 @@ def list_posts(feed: str = "front", limit: int = 30, **params) -> list[dict]:
 
 @returns("post[]")
 @provides(web_search)
-def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
+async def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
     """Search Hacker News stories.
 
     Args:
         query: Search query
         limit: Number of results (max 100)
     """
-    resp = http.get(f"{BASE}/search", params={
+    resp = await http.get(f"{BASE}/search", params={
         "query": query,
         "tags": "story",
         "hitsPerPage": str(limit),
@@ -118,7 +118,7 @@ def search_posts(query: str, limit: int = 30, **params) -> list[dict]:
 
 @returns("post")
 @provides(web_read, urls=["news.ycombinator.com/item*"])
-def get_post(id: str = None, url: str = None, **params) -> dict:
+async def get_post(id: str = None, url: str = None, **params) -> dict:
     """Get a Hacker News story with comments.
 
     Args:
@@ -134,19 +134,19 @@ def get_post(id: str = None, url: str = None, **params) -> dict:
         from agentos import skill_error
         return skill_error("Either id or url with id= parameter is required")
 
-    resp = http.get(f"{BASE}/items/{id}")
+    resp = await http.get(f"{BASE}/items/{id}")
 
     return _map_item(resp["json"])
 
 
 @returns("post[]")
-def comments_post(id: str, **params) -> list[dict]:
+async def comments_post(id: str, **params) -> list[dict]:
     """Flatten comment tree into a list with repliesTo relations.
 
     Args:
         id: Story ID to get comments for
     """
-    resp = http.get(f"{BASE}/items/{id}")
+    resp = await http.get(f"{BASE}/items/{id}")
 
     item = resp["json"]
     result = []

@@ -201,13 +201,13 @@ query GetTrip($tripUUID: String!) {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _gql(cookie_header: str, operation_name: str, query: str, variables: dict | None = None) -> dict:
+async def _gql(cookie_header: str, operation_name: str, query: str, variables: dict | None = None) -> dict:
     """Execute a GraphQL query against riders.uber.com.
 
     Uses http.headers() for browser-grade headers — we're acting as Brave,
     so we should always send what Brave sends. See docs/skills/sdk.md.
     """
-    resp = http.post(
+    resp = await http.post(
         GRAPHQL_URL,
         cookies=cookie_header,
         json={
@@ -275,14 +275,14 @@ def _parse_fare(fare_str: str) -> tuple[float | None, str | None]:
 
 @returns({"authenticated": "boolean", "identifier": "string", "display": "string", "domain": "string"})
 @connection("web")
-def check_session(**params) -> dict:
+async def check_session(**params) -> dict:
     """Validate session and return account identity."""
     cookie_header = get_cookies(params)
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
     try:
-        data = _gql(cookie_header, "CurrentUserRidersWeb", CURRENT_USER_QUERY)
+        data = await _gql(cookie_header, "CurrentUserRidersWeb", CURRENT_USER_QUERY)
     except RuntimeError as e:
         return {"authenticated": False, "error": str(e)}
 
@@ -300,11 +300,11 @@ def check_session(**params) -> dict:
 
 @returns({"id": "string", "name": "string", "email": "string", "phone": "string", "rating": "string", "hasUberOne": "boolean", "paymentMethods": "array", "profiles": "array", "country": "string"})
 @connection("web")
-def whoami(**params) -> dict:
+async def whoami(**params) -> dict:
     """Get current user profile with full details."""
     cookie_header = require_cookies(params, "whoami")
 
-    data = _gql(cookie_header, "CurrentUserRidersWeb", CURRENT_USER_QUERY)
+    data = await _gql(cookie_header, "CurrentUserRidersWeb", CURRENT_USER_QUERY)
 
     user = data.get("currentUser", {})
     benefits = user.get("membershipBenefits") or {}
@@ -342,7 +342,7 @@ def whoami(**params) -> dict:
 
 @returns("trip[]")
 @connection("web")
-def list_trips(
+async def list_trips(
     limit: int = 10,
     next_page_token: str | None = None,
     profile_type: str = "PERSONAL",
@@ -396,7 +396,7 @@ def list_trips(
 
 @returns("trip")
 @connection("web")
-def get_trip(trip_id: str, **params) -> dict:
+async def get_trip(trip_id: str, **params) -> dict:
     """Get full trip details.
 
     Returns: trip with driver→person, origin→place, destination→place, legs→leg[].
@@ -404,7 +404,7 @@ def get_trip(trip_id: str, **params) -> dict:
     """
     cookie_header = require_cookies(params, "get_trip")
 
-    data = _gql(
+    data = await _gql(
         cookie_header,
         "GetTrip",
         GET_TRIP_QUERY,
@@ -505,14 +505,14 @@ def get_trip(trip_id: str, **params) -> dict:
 # Connection docs: agentos-community/docs/skills/connections.md
 # ---------------------------------------------------------------------------
 
-def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None) -> dict:
+async def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None) -> dict:
     """POST to Uber Eats RPC API. Endpoint is just the operation name (e.g. 'getPastOrdersV1').
 
     Uses http.headers() for proper browser UA/sec-ch-* headers — some Eats endpoints
     (notably getReceiptByWorkflowUuidV1) return 500 without them.
     See docs/skills/sdk.md for http.headers() knobs.
     """
-    resp = http.post(
+    resp = await http.post(
         f"{EATS_API_BASE}/{endpoint}",
         cookies=cookie_header,
         json=body or {},
@@ -553,14 +553,14 @@ def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None) -> d
 
 @returns({"authenticated": "boolean", "identifier": "string", "display": "string", "domain": "string"})
 @connection("eats")
-def check_eats_session(**params) -> dict:
+async def check_eats_session(**params) -> dict:
     """Validate Uber Eats session cookies."""
     cookie_header = get_cookies(params)
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
     try:
-        data = _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
+        data = await _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
     except RuntimeError as e:
         return {"authenticated": False, "error": str(e)}
 
@@ -579,7 +579,7 @@ def check_eats_session(**params) -> dict:
 
 @returns({"id": "string", "name": "string", "email": "string", "phone": "string", "subscription": "object", "savedAddresses": "array", "paymentMethods": "array"})
 @connection("eats")
-def get_eats_profile(**params) -> dict:
+async def get_eats_profile(**params) -> dict:
     """Get Uber Eats user profile — name, photo, subscription, business profiles.
 
     Backed by getUserV1 + getProfilesForUserV1. Returns account-shaped entity.
@@ -588,7 +588,7 @@ def get_eats_profile(**params) -> dict:
     """
     cookie_header = require_cookies(params, "get_eats_profile")
 
-    data = _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
+    data = await _eats_post(cookie_header, "getUserV1", {"shouldGetSubsMetadata": True})
 
     # getUserV1 shape: {firstName, lastName, pictureUrl, hashedEmail,
     #   subscriptionMeta, creationTime, geoIpCountryCode, hasConfirmedMobile}
@@ -618,7 +618,7 @@ def get_eats_profile(**params) -> dict:
 
     # getProfilesForUserV1 — business vs personal profiles
     try:
-        profiles_data = _eats_post(cookie_header, "getProfilesForUserV1", {})
+        profiles_data = await _eats_post(cookie_header, "getProfilesForUserV1", {})
         profiles_list = profiles_data.get("profiles") or []
         selected = profiles_data.get("selectedProfile") or {}
         if profiles_list:
@@ -640,7 +640,7 @@ def get_eats_profile(**params) -> dict:
 
 @returns("order[]")
 @connection("eats")
-def list_deliveries(cursor: str = "", **params) -> list:
+async def list_deliveries(cursor: str = "", **params) -> list:
     """List Uber Eats order history as order-shaped entities.
 
     Returns: order[] — each with store relation (organization) and shipping_address (place).
@@ -648,7 +648,7 @@ def list_deliveries(cursor: str = "", **params) -> list:
     """
     cookie_header = require_cookies(params, "list_deliveries")
 
-    data = _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": cursor})
+    data = await _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": cursor})
 
     order_uuids = data.get("orderUuids") or []
     orders_map = data.get("ordersMap") or {}
@@ -745,7 +745,7 @@ def list_deliveries(cursor: str = "", **params) -> list:
 
 @returns("order")
 @connection("eats")
-def get_delivery(order_uuid: str, **params) -> dict:
+async def get_delivery(order_uuid: str, **params) -> dict:
     """Get full delivery details including items, quantities, and fare breakdown.
 
     Uses getReceiptByWorkflowUuidV1 for item data (HTML parsing with lxml)
@@ -756,7 +756,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
     cookie_header = require_cookies(params, "get_delivery")
 
     # Fetch receipt (items, fare) and order metadata (store) in sequence
-    data = _eats_post(cookie_header, "getReceiptByWorkflowUuidV1", {
+    data = await _eats_post(cookie_header, "getReceiptByWorkflowUuidV1", {
         "contentType": "WEB_HTML",
         "workflowUuid": order_uuid,
     })
@@ -765,7 +765,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
     store_ref = None
     order_meta = {}
     try:
-        past_data = _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": ""})
+        past_data = await _eats_post(cookie_header, "getPastOrdersV1", {"lastWorkflowUUID": ""})
         orders_map = past_data.get("ordersMap") or {}
         if order_uuid in orders_map:
             order_meta = orders_map[order_uuid]
@@ -897,7 +897,7 @@ def get_delivery(order_uuid: str, **params) -> dict:
 
 @returns("place")
 @connection("eats")
-def get_store(store_uuid: str, **params) -> dict:
+async def get_store(store_uuid: str, **params) -> dict:
     """Get store details and full product catalog.
 
     Backed by getStoreV1. Returns store metadata (open/orderable, ETA, rating)
@@ -906,7 +906,7 @@ def get_store(store_uuid: str, **params) -> dict:
     """
     cookie_header = require_cookies(params, "get_store")
 
-    data = _eats_post(cookie_header, "getStoreV1", {"storeUuid": store_uuid})
+    data = await _eats_post(cookie_header, "getStoreV1", {"storeUuid": store_uuid})
 
     if not data.get("title"):
         raise RuntimeError(f"getStoreV1 returned no store data for {store_uuid} — session may be stale")
@@ -1088,7 +1088,7 @@ def get_store(store_uuid: str, **params) -> dict:
 @returns("product")
 @connection("eats")
 @timeout(15)
-def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str = "", subsection_uuid: str = "", **params) -> dict:
+async def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str = "", subsection_uuid: str = "", **params) -> dict:
     """Get customization options for a menu item (toppings, sizes, sides, etc.).
 
     Uses getMenuItemV1. The section/subsection UUIDs come from the item's _raw
@@ -1114,7 +1114,7 @@ def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str =
         ],
     }
 
-    data = _eats_post(cookie_header, "getMenuItemV1", body)
+    data = await _eats_post(cookie_header, "getMenuItemV1", body)
 
     # Parse customization groups
     groups = []
@@ -1179,7 +1179,7 @@ def get_item_customizations(store_uuid: str, item_uuid: str, section_uuid: str =
 @returns("product[]")
 @connection("eats")
 @timeout(15)
-def search_products(store_uuid: str, query: str, **params) -> list:
+async def search_products(store_uuid: str, query: str, **params) -> list:
     """Search products within a store. Server-side search via getInStoreSearchV1.
 
     Returns richer data than get_store catalog: dietary tags (VEGAN, Non-GMO, SNAP),
@@ -1189,7 +1189,7 @@ def search_products(store_uuid: str, query: str, **params) -> list:
     """
     cookie_header = require_cookies(params, "search_products")
 
-    data = _eats_post(cookie_header, "getInStoreSearchV1", {
+    data = await _eats_post(cookie_header, "getInStoreSearchV1", {
         "diningMode": "DELIVERY",
         "storeUUIDs": [store_uuid],
         "userQuery": query,
@@ -1302,7 +1302,7 @@ def search_products(store_uuid: str, query: str, **params) -> list:
 @returns("place[]")
 @provides(geocoding)
 @connection("eats")
-def search_address(query: str, resolve: bool = True, **params) -> list:
+async def search_address(query: str, resolve: bool = True, **params) -> list:
     """Search for addresses worldwide — autocomplete + geocoding.
 
     Backed by mapsSearchV1 (typeahead) + getDeliveryLocationV2 (coordinate resolution).
@@ -1313,7 +1313,7 @@ def search_address(query: str, resolve: bool = True, **params) -> list:
     """
     cookie_header = require_cookies(params, "search_address")
 
-    results = _eats_post(cookie_header, "mapsSearchV1", {"query": query})
+    results = await _eats_post(cookie_header, "mapsSearchV1", {"query": query})
     if not isinstance(results, list):
         results = []
 
@@ -1333,7 +1333,7 @@ def search_address(query: str, resolve: bool = True, **params) -> list:
         # Resolve coordinates + structured address if requested
         if resolve and place_id and provider:
             try:
-                detail = _eats_post(cookie_header, "getDeliveryLocationV2", {
+                detail = await _eats_post(cookie_header, "getDeliveryLocationV2", {
                     "placeId": place_id,
                     "provider": provider,
                     "source": "manual_auto_complete",
@@ -1366,7 +1366,7 @@ def search_address(query: str, resolve: bool = True, **params) -> list:
 @returns("place[]")
 @connection("eats")
 @timeout(15)
-def list_addresses(**params) -> list:
+async def list_addresses(**params) -> list:
     """List saved and suggested delivery addresses.
 
     Backed by getDeliveryLocationsV2. Returns place-shaped entities with
@@ -1374,7 +1374,7 @@ def list_addresses(**params) -> list:
     """
     cookie_header = require_cookies(params, "list_addresses")
 
-    data = _eats_post(cookie_header, "getDeliveryLocationsV2", {})
+    data = await _eats_post(cookie_header, "getDeliveryLocationsV2", {})
     locs = data.get("deliveryLocations") or {}
 
     places = []
@@ -1430,7 +1430,7 @@ def list_addresses(**params) -> list:
 @returns("order")
 @connection("eats")
 @timeout(15)
-def get_messages(order_uuid: str, **params) -> dict:
+async def get_messages(order_uuid: str, **params) -> dict:
     """Get delivery chat messages for an order.
 
     Backed by getEaterMessagingContentV1. Returns chat content between
@@ -1439,7 +1439,7 @@ def get_messages(order_uuid: str, **params) -> dict:
     """
     cookie_header = require_cookies(params, "get_messages")
 
-    data = _eats_post(cookie_header, "getEaterMessagingContentV1", {
+    data = await _eats_post(cookie_header, "getEaterMessagingContentV1", {
         "orderUuid": order_uuid,
     })
 
@@ -1459,7 +1459,7 @@ def get_messages(order_uuid: str, **params) -> dict:
 @returns("place[]")
 @connection("eats")
 @timeout(15)
-def search_stores(query: str = "", **params) -> list:
+async def search_stores(query: str = "", **params) -> list:
     """Search for stores/restaurants on Uber Eats by name or cuisine.
 
     Backed by getSearchFeedV1 (server-side search). Returns place-shaped entities.
@@ -1469,7 +1469,7 @@ def search_stores(query: str = "", **params) -> list:
 
     if not query:
         # Return search suggestions and history
-        data = _eats_post(cookie_header, "getSearchHomeV2", {"dropPastOrders": True})
+        data = await _eats_post(cookie_header, "getSearchHomeV2", {"dropPastOrders": True})
         suggestions = []
         for section in (data.get("suggestedSections") or []):
             for item in (section.get("items") or []):
@@ -1478,7 +1478,7 @@ def search_stores(query: str = "", **params) -> list:
         return [{"suggestions": [s for s in suggestions if s], "recentSearches": [h for h in history if h]}]
 
     # Server-side search via getSearchFeedV1 (discovered via CDP RE 2026-04-05)
-    data = _eats_post(cookie_header, "getSearchFeedV1", {
+    data = await _eats_post(cookie_header, "getSearchFeedV1", {
         "userQuery": query,
         "date": "",
         "startTime": 0,
@@ -1509,7 +1509,7 @@ def search_stores(query: str = "", **params) -> list:
 
 @returns("place[]")
 @connection("eats")
-def list_nearby_stores(**params) -> list:
+async def list_nearby_stores(**params) -> list:
     """List nearby stores/restaurants available for delivery.
 
     Backed by getFeedV1. Returns place-shaped entities (POIs) with
@@ -1518,7 +1518,7 @@ def list_nearby_stores(**params) -> list:
     """
     cookie_header = require_cookies(params, "list_nearby_stores")
 
-    data = _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
+    data = await _eats_post(cookie_header, "getFeedV1?localeCode=en-US", {})
 
     currency = data.get("currencyCode")
     favorites = data.get("favorites") or {}
@@ -1754,7 +1754,7 @@ def _build_cart_item(product: dict, store_uuid: str) -> dict:
 @returns("order")
 @connection("eats")
 @timeout(60)
-def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **params) -> dict:
+async def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **params) -> dict:
     """Add items to an Uber Eats cart for a store.
 
     items: list of product dicts from get_store (must include _raw field).
@@ -1775,10 +1775,10 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
         return {"error": "no items to add"}
 
     # Discard any existing draft for this store so we start clean
-    drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
+    drafts_data = await _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
     for draft in (drafts_data.get("draftOrders") or []):
         if draft.get("storeUuid") == store_uuid:
-            _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft["uuid"]})
+            await _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft["uuid"]})
 
     # Build cart items from raw catalog data (replay, don't reconstruct)
     cart_items = [_build_cart_item(item, store_uuid) for item in items]
@@ -1805,7 +1805,7 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
         "analyticsRelevantData": {"profileSource": ""},
         "businessDetails": {},
     }
-    data = _eats_post(cookie_header, "createDraftOrderV2", create_body)
+    data = await _eats_post(cookie_header, "createDraftOrderV2", create_body)
 
     # Extract result from the create response
     draft = data.get("draftOrder", data)
@@ -1841,14 +1841,14 @@ def add_to_cart(store_uuid: str, items: list, currency_code: str = "USD", **para
 
 @returns("order[]")
 @connection("eats")
-def get_cart(**params) -> list:
+async def get_cart(**params) -> list:
     """Get current Uber Eats carts as order-shaped entities (status: draft).
 
     Returns: order[] — each draft order with store (organization) and contains (product[]).
     """
     cookie_header = require_cookies(params, "get_cart")
 
-    drafts_data = _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
+    drafts_data = await _eats_post(cookie_header, "getDraftOrdersByEaterUuidV1", {"removeAdapters": True})
     orders = []
     for draft in (drafts_data.get("draftOrders") or []):
         cart = draft.get("shoppingCart") or {}
@@ -1894,17 +1894,17 @@ def get_cart(**params) -> list:
 
 @returns({"status": "string", "draftOrderUuid": "string"})
 @connection("eats")
-def clear_cart(draft_order_uuid: str, **params) -> dict:
+async def clear_cart(draft_order_uuid: str, **params) -> dict:
     """Discard a draft order (clear the cart for a store)."""
     cookie_header = require_cookies(params, "clear_cart")
-    _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft_order_uuid})
+    await _eats_post(cookie_header, "discardDraftOrderV2", {"draftOrderUUID": draft_order_uuid})
     return {"status": "cleared", "draftOrderUuid": draft_order_uuid}
 
 
 @returns("order")
 @connection("eats")
 @timeout(60)
-def checkout(draft_order_uuid: str, **params) -> dict:
+async def checkout(draft_order_uuid: str, **params) -> dict:
     """Place an Uber Eats order from a draft cart.
 
     WRITE operation — spends money. Requires explicit user consent via firewall.
@@ -1919,7 +1919,7 @@ def checkout(draft_order_uuid: str, **params) -> dict:
 
     # Step 1: Get checkout presentation — we need the checkout session UUID,
     # payment profile, and total fare from this response.
-    presentation = _eats_post(cookie_header, "getCheckoutPresentationV1", {
+    presentation = await _eats_post(cookie_header, "getCheckoutPresentationV1", {
         "payloadTypes": [
             "paymentBarPayload", "total", "subtotal", "upfrontTipping",
             "promotion", "fareBreakdown", "eta", "restrictedItems",
@@ -1987,7 +1987,7 @@ def checkout(draft_order_uuid: str, **params) -> dict:
         "skipOrderRequestedEvent": False,
     }
 
-    data = _eats_post(cookie_header, "checkoutOrdersByDraftOrdersV1", checkout_body)
+    data = await _eats_post(cookie_header, "checkoutOrdersByDraftOrdersV1", checkout_body)
 
     total_amount = total_e5 / 100000 if total_e5 else None
 
@@ -2004,7 +2004,7 @@ def checkout(draft_order_uuid: str, **params) -> dict:
 
 @returns("order")
 @connection("eats")
-def track_delivery(order_uuid: str = "", **params) -> dict:
+async def track_delivery(order_uuid: str = "", **params) -> dict:
     """Track a live Uber Eats delivery — courier location, ETA, progress, item fulfillment.
 
     Backed by getActiveOrdersV1 + getOrderEntityByUuidV1.
@@ -2016,7 +2016,7 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
 
     # Discover active order UUID if not provided
     if not order_uuid:
-        discover_data = _eats_post(cookie_header, "getActiveOrdersV1", {
+        discover_data = await _eats_post(cookie_header, "getActiveOrdersV1", {
             "orderUuid": None,
             "timezone": "America/Chicago",
             "showAppUpsellIllustration": True,
@@ -2040,14 +2040,14 @@ def track_delivery(order_uuid: str = "", **params) -> dict:
                     "_debug_keys": list(first.keys()),
                     "_debug_orderInfo_keys": list(first.get("orderInfo", {}).keys())}
 
-    active_data = _eats_post(cookie_header, "getActiveOrdersV1", {
+    active_data = await _eats_post(cookie_header, "getActiveOrdersV1", {
         "orderUuid": order_uuid,
         "timezone": "America/Chicago",
         "showAppUpsellIllustration": True,
         "isDirectTracking": False,
     })
 
-    entity_data = _eats_post(cookie_header, "getOrderEntityByUuidV1", {
+    entity_data = await _eats_post(cookie_header, "getOrderEntityByUuidV1", {
         "orderUUID": order_uuid,
         "workflowUuid": order_uuid,
     })

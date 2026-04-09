@@ -34,10 +34,10 @@ def _map_webpage(row):
 
 @returns("webpage[]")
 @connection("history")
-def op_list_webpages(*, limit=200, **kw):
+async def op_list_webpages(*, limit=200, **kw):
     """List recently visited pages from Brave browsing history."""
     db = HISTORY_DB
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
         FROM urls
@@ -50,10 +50,10 @@ def op_list_webpages(*, limit=200, **kw):
 
 @returns("webpage[]")
 @connection("history")
-def op_search_webpages(*, query, limit=200, **kw):
+async def op_search_webpages(*, query, limit=200, **kw):
     """Search Brave browsing history by URL or title."""
     db = HISTORY_DB
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT url, title, visit_count,
                CAST((last_visit_time / 1000000) - 11644473600 AS INTEGER) AS last_visit_unix
         FROM urls
@@ -71,7 +71,7 @@ def op_search_webpages(*, query, limit=200, **kw):
 
 
 @returns({"name": "string", "path": "string"})
-def op_list_accounts(**kw):
+async def op_list_accounts(**kw):
     """List Brave browser profiles with their display name and email."""
     profiles = []
     for prefs_path in sorted(glob.glob(os.path.join(BRAVE_BASE, "*/Preferences"))):
@@ -93,7 +93,7 @@ def op_list_accounts(**kw):
 
 
 @returns({"key": "string"})
-def op_get_cookie_key(**kw):
+async def op_get_cookie_key(**kw):
     """Derive the AES-128 decryption key for Brave cookies on macOS.
 
     Reads the password from macOS Keychain ("Brave Safe Storage" / "Brave"),
@@ -101,7 +101,7 @@ def op_get_cookie_key(**kw):
     Returns the hex-encoded 16-byte key.
     """
     password = keychain.read(service="Brave Safe Storage", account="Brave")
-    hex_key = crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
+    hex_key = await crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
     return {"key": hex_key}
 
 
@@ -112,10 +112,10 @@ def op_get_cookie_key(**kw):
 
 @returns({"name": "string", "hostKey": "string", "path": "string", "encryptedValue": "string", "isSecure": "integer", "isHttponly": "integer", "expiresUtc": "integer"})
 @connection("cookies_db")
-def op_list_cookies(*, domain, limit=1000, **kw):
+async def op_list_cookies(*, domain, limit=1000, **kw):
     """List cookies for a domain with hex-encoded encrypted values."""
     db = COOKIES_DB
-    return sql.query("""
+    return await sql.query("""
         SELECT name, host_key, path, hex(encrypted_value) as encrypted_value,
                is_secure, is_httponly, expires_utc, creation_utc
         FROM cookies

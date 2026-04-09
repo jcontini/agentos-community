@@ -66,7 +66,7 @@ def _classify_account(data, credit_ids):
 
 
 @returns("account[]")
-def load_accounts(**params):
+async def load_accounts(**params):
     """List all financial accounts with balances and institution info"""
     credit_ids = _load_credit_ids()
     pattern = os.path.join(WIDGET_DIR, "widgets-account-account_*.json")

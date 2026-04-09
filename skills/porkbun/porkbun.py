@@ -45,10 +45,10 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
 
 @returns("domain[]")
 @connection("api")
-def list_domains(**params) -> list[dict]:
+async def list_domains(**params) -> list[dict]:
     """List all domains in your Porkbun account"""
     api_key, secret_key = _auth(params)
-    resp = http.post(f"{API_BASE}/domain/listAll",
+    resp = await http.post(f"{API_BASE}/domain/listAll",
                      json={"apikey": api_key, "secretapikey": secret_key},
                      **http.headers(accept="json"))
     return [_map_domain(d) for d in (resp["json"] or {}).get("domains", [])]
@@ -56,14 +56,14 @@ def list_domains(**params) -> list[dict]:
 
 @returns("dns_record[]")
 @connection("api")
-def list_dns_records(*, domain: str, **params) -> list[dict]:
+async def list_dns_records(*, domain: str, **params) -> list[dict]:
     """List all DNS records for a domain
 
         Args:
             domain: Domain name, for example example.com
         """
     api_key, secret_key = _auth(params)
-    resp = http.post(f"{API_BASE}/dns/retrieve/{domain}",
+    resp = await http.post(f"{API_BASE}/dns/retrieve/{domain}",
                      json={"apikey": api_key, "secretapikey": secret_key},
                      **http.headers(accept="json"))
     return [_map_dns_record(r, domain) for r in (resp["json"] or {}).get("records", [])]
@@ -71,7 +71,7 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
 
 @returns({"ok": "boolean"})
 @connection("api")
-def create_dns_record(*, domain: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
+async def create_dns_record(*, domain: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
     """Create a new DNS record for a domain
 
         Args:
@@ -90,13 +90,13 @@ def create_dns_record(*, domain: str, type: str, content: str, name: str = "", t
     }
     if prio is not None:
         body["prio"] = prio
-    resp = http.post(f"{API_BASE}/dns/create/{domain}", json=body, **http.headers(accept="json"))
+    resp = await http.post(f"{API_BASE}/dns/create/{domain}", json=body, **http.headers(accept="json"))
     return resp["json"]
 
 
 @returns({"ok": "boolean"})
 @connection("api")
-def update_dns_record(*, domain: str, id: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
+async def update_dns_record(*, domain: str, id: str, type: str, content: str, name: str = "", ttl: int = 600, prio: int = None, **params) -> dict:
     """Update an existing DNS record
 
         Args:
@@ -116,13 +116,13 @@ def update_dns_record(*, domain: str, id: str, type: str, content: str, name: st
     }
     if prio is not None:
         body["prio"] = prio
-    resp = http.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body, **http.headers(accept="json"))
+    resp = await http.post(f"{API_BASE}/dns/edit/{domain}/{id}", json=body, **http.headers(accept="json"))
     return resp["json"]
 
 
 @returns({"ok": "boolean"})
 @connection("api")
-def delete_dns_record(*, domain: str, id: str, **params) -> dict:
+async def delete_dns_record(*, domain: str, id: str, **params) -> dict:
     """Delete a DNS record from a domain
 
         Args:
@@ -130,7 +130,7 @@ def delete_dns_record(*, domain: str, id: str, **params) -> dict:
             id: Porkbun DNS record ID
         """
     api_key, secret_key = _auth(params)
-    resp = http.post(f"{API_BASE}/dns/delete/{domain}/{id}",
+    resp = await http.post(f"{API_BASE}/dns/delete/{domain}/{id}",
                      json={"apikey": api_key, "secretapikey": secret_key},
                      **http.headers(accept="json"))
     return resp["json"]

@@ -141,9 +141,9 @@ def _workspace_path_to_slug(path):
     return path.lstrip("/").replace("/", "-")
 
 
-def _read_composer_metadata(db_path):
+async def _read_composer_metadata(db_path):
     try:
-        rows = sql.query(
+        rows = await sql.query(
             "SELECT value FROM ItemTable WHERE key = 'composer.composerData'",
             db=db_path,
         )
@@ -154,7 +154,7 @@ def _read_composer_metadata(db_path):
         return []
 
 
-def _discover_workspaces():
+async def _discover_workspaces():
     workspaces = {}
     if not os.path.isdir(WORKSPACE_STORAGE):
         return workspaces
@@ -176,7 +176,7 @@ def _discover_workspaces():
         except (json.JSONDecodeError, IOError):
             continue
 
-        composers = _read_composer_metadata(state_db)
+        composers = await _read_composer_metadata(state_db)
         if composers:
             workspaces[workspace_path] = {"db": state_db, "composers": composers}
 
@@ -192,8 +192,8 @@ def _get_jsonl_conversations():
     return conversations
 
 
-def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
-    workspaces = _discover_workspaces()
+async def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
+    workspaces = await _discover_workspaces()
     exclude_ids = exclude_ids or set()
     conversations = {}
 
@@ -217,7 +217,7 @@ def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
         try:
             prefix = f"bubbleId:{cid}:"
             end_prefix = prefix[:-1] + chr(ord(":") + 1)
-            rows = sql.query(
+            rows = await sql.query(
                 "SELECT value FROM cursorDiskKV WHERE key >= :start AND key < :end",
                 db=GLOBAL_STATE_DB,
                 params={"start": prefix, "end": end_prefix},
@@ -270,7 +270,7 @@ def _get_backfill_conversations(workspace_filter=None, exclude_ids=None):
     return conversations
 
 
-def _get_session_by_id(conv_id):
+async def _get_session_by_id(conv_id):
     pattern = os.path.join(
         CURSOR_PROJECTS, "*", "agent-transcripts", conv_id, f"{conv_id}.jsonl"
     )
@@ -278,7 +278,7 @@ def _get_session_by_id(conv_id):
     if matches:
         return _parse_jsonl_conversation(matches[0])
 
-    workspaces = _discover_workspaces()
+    workspaces = await _discover_workspaces()
     for ws_path, ws_data in workspaces.items():
         for composer in ws_data["composers"]:
             if composer.get("composerId") == conv_id:
@@ -289,7 +289,7 @@ def _get_session_by_id(conv_id):
                 try:
                     prefix = f"bubbleId:{conv_id}:"
                     end_prefix = prefix[:-1] + chr(ord(":") + 1)
-                    rows = sql.query(
+                    rows = await sql.query(
                         "SELECT value FROM cursorDiskKV WHERE key >= :start AND key < :end",
                         db=GLOBAL_STATE_DB,
                         params={"start": prefix, "end": end_prefix},
@@ -327,9 +327,9 @@ def _get_session_by_id(conv_id):
 # ── Research extraction ────────────────────────────────────────────────────────
 
 
-def _sql_query(query_str, db_path, params=None):
+async def _sql_query(query_str, db_path, params=None):
     """Wrapper around sql.query for cursor DBs."""
-    return sql.query(query_str, db=db_path, params=params or {})
+    return await sql.query(query_str, db=db_path, params=params or {})
 
 
 def _parse_task_blob(blob_value):
@@ -415,7 +415,7 @@ def _build_workspace_map():
     return ws_map
 
 
-def _build_conversation_index():
+async def _build_conversation_index():
     ws_map = _build_workspace_map()
     convos = {}
     for ws_hash, folder in ws_map.items():
@@ -423,7 +423,7 @@ def _build_conversation_index():
         if not os.path.exists(db_path):
             continue
         try:
-            rows = _sql_query(
+            rows = await _sql_query(
                 "SELECT value FROM ItemTable WHERE key = 'composer.composerData'",
                 db_path,
             )
@@ -459,7 +459,7 @@ def _generate_title(parsed, blob_key=""):
 # ── MCP configuration ──────────────────────────────────────────────────────────
 
 
-def _find_agentos_binary():
+async def _find_agentos_binary():
     """Discover the agentos binary via: running engine PID → existing mcp.json → PATH."""
     # 1. Engine PID → lsof
     pid_file = os.path.join(AGENTOS_HOME, "engine.pid")
@@ -467,7 +467,7 @@ def _find_agentos_binary():
         try:
             with open(pid_file) as f:
                 pid = int(f.read().strip())
-            result = shell.run("lsof", ["-p", str(pid), "-a", "-d", "txt", "-F", "n"], timeout=5)
+            result = await shell.run("lsof", ["-p", str(pid), "-a", "-d", "txt", "-F", "n"], timeout=5)
             for line in result["stdout"].splitlines():
                 if line.startswith("n") and "agentos" in line.lower():
                     path = line[1:]
@@ -489,7 +489,7 @@ def _find_agentos_binary():
             pass
 
     # 3. PATH
-    result = shell.run("which", ["agentos"])
+    result = await shell.run("which", ["agentos"])
     if result["exit_code"] == 0:
         path = result["stdout"].strip()
         if os.path.isfile(path):
@@ -518,7 +518,7 @@ def _write_json_atomic(path, data):
 
 @returns({"status": "string", "path": "string", "config": "string", "message": "string"})
 @timeout(15)
-def install_mcp(binary_path=None, client="cursor", **params):
+async def install_mcp(binary_path=None, client="cursor", **params):
     """Install agentOS MCP server into a client's config file."""
     config_path = MCP_CONFIG_PATHS.get(client)
     if not config_path:
@@ -527,7 +527,7 @@ def install_mcp(binary_path=None, client="cursor", **params):
         )
 
     if not binary_path:
-        binary_path = _find_agentos_binary()
+        binary_path = await _find_agentos_binary()
         if not binary_path:
             raise RuntimeError(
                 "Could not auto-detect the agentos binary. "
@@ -566,7 +566,7 @@ def install_mcp(binary_path=None, client="cursor", **params):
 
 @returns({"status": "string", "config": "string", "message": "string"})
 @timeout(15)
-def uninstall_mcp(client="cursor", **params):
+async def uninstall_mcp(client="cursor", **params):
     """Remove agentOS MCP server from a client's config file."""
     config_path = MCP_CONFIG_PATHS.get(client)
     if not config_path:
@@ -607,7 +607,7 @@ def uninstall_mcp(client="cursor", **params):
 
 @returns("session[]")
 @timeout(60)
-def op_list_sessions(**params):
+async def op_list_sessions(**params):
     """List sessions from JSONL transcripts (fast, sub-second)."""
     conversations = _get_jsonl_conversations()
     return sorted(
@@ -619,10 +619,10 @@ def op_list_sessions(**params):
 
 @returns("session[]")
 @timeout(300)
-def op_backfill_session(workspace=None, **params):
+async def op_backfill_session(workspace=None, **params):
     """List sessions including full SQLite history."""
     conversations = _get_jsonl_conversations()
-    backfill = _get_backfill_conversations(
+    backfill = await _get_backfill_conversations(
         workspace_filter=workspace,
         exclude_ids=set(conversations.keys()),
     )
@@ -635,9 +635,9 @@ def op_backfill_session(workspace=None, **params):
 
 
 @returns("session")
-def op_get_session(id, **params):
+async def op_get_session(id, **params):
     """Get a session by UUID (checks JSONL then SQLite)."""
-    conv = _get_session_by_id(id)
+    conv = await _get_session_by_id(id)
     if not conv:
         raise ValueError(f"No transcript found for {id}")
     return conv
@@ -645,19 +645,19 @@ def op_get_session(id, **params):
 
 @returns("file[]")
 @timeout(120)
-def op_pull_document(**params):
+async def op_pull_document(**params):
     """Pull sub-agent research blobs from Cursor's global SQLite store."""
     if not os.path.isfile(GLOBAL_STATE_DB):
         return []
 
-    blobs = _sql_query(
+    blobs = await _sql_query(
         "SELECT key, value FROM cursorDiskKV "
         "WHERE key LIKE 'agentKv:blob:%' "
         "AND CAST(value AS TEXT) LIKE '%\"toolName\":\"Task\"%'",
         GLOBAL_STATE_DB,
     )
 
-    convos = _build_conversation_index()
+    convos = await _build_conversation_index()
 
     items = []
     for row in blobs:

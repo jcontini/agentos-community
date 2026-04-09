@@ -45,33 +45,33 @@ def _map_dns_record(r: dict, domain: str = "") -> dict:
 
 @returns("domain[]")
 @connection("api")
-def list_domains(**params) -> list[dict]:
+async def list_domains(**params) -> list[dict]:
     """List all domains in your Gandi account"""
-    resp = http.get(f"{GANDI_BASE}/domain/domains", **http.headers(accept="json", extra=_auth_header(params)))
+    resp = await http.get(f"{GANDI_BASE}/domain/domains", **http.headers(accept="json", extra=_auth_header(params)))
     return [_map_domain(d) for d in (resp["json"] or [])]
 
 
 @returns("domain")
 @connection("api")
-def get_domain(*, domain: str, **params) -> dict:
+async def get_domain(*, domain: str, **params) -> dict:
     """Get details for a single domain
 
         Args:
             domain: Domain name, for example example.com
         """
-    resp = http.get(f"{GANDI_BASE}/domain/domains/{domain}", **http.headers(accept="json", extra=_auth_header(params)))
+    resp = await http.get(f"{GANDI_BASE}/domain/domains/{domain}", **http.headers(accept="json", extra=_auth_header(params)))
     return _map_domain(resp["json"])
 
 
 @returns("dns_record[]")
 @connection("api")
-def list_dns_records(*, domain: str, **params) -> list[dict]:
+async def list_dns_records(*, domain: str, **params) -> list[dict]:
     """List DNS records for a domain
 
         Args:
             domain: Domain name
         """
-    resp = http.get(
+    resp = await http.get(
         f"{GANDI_BASE}/livedns/domains/{domain}/records",
         **http.headers(accept="json", extra=_auth_header(params)),
     )
@@ -80,7 +80,7 @@ def list_dns_records(*, domain: str, **params) -> list[dict]:
 
 @returns("dns_record")
 @connection("api")
-def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
+async def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
     """Get one DNS record by name and type
 
         Args:
@@ -88,7 +88,7 @@ def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
             name: Record name, use @ for the apex
             type: Record type such as A, AAAA, CNAME, MX, or TXT
         """
-    resp = http.get(
+    resp = await http.get(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
         **http.headers(accept="json", extra=_auth_header(params)),
     )
@@ -97,7 +97,7 @@ def get_dns_record(*, domain: str, name: str, type: str, **params) -> dict:
 
 @returns({"ok": "boolean"})
 @connection("api")
-def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: int = 3600, **params) -> dict:
+async def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: int = 3600, **params) -> dict:
     """Create or replace a DNS record
 
         Args:
@@ -107,7 +107,7 @@ def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: i
             values: Array of record values
             ttl: TTL in seconds
         """
-    resp = http.put(
+    resp = await http.put(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
         json={"rrset_ttl": ttl or 3600, "rrset_values": values},
         **http.headers(accept="json", extra=_auth_header(params)),
@@ -117,7 +117,7 @@ def upsert_dns_record(*, domain: str, name: str, type: str, values: list, ttl: i
 
 @returns({"ok": "boolean"})
 @connection("api")
-def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
+async def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
     """Delete a DNS record
 
         Args:
@@ -125,7 +125,7 @@ def delete_dns_record(*, domain: str, name: str, type: str, **params) -> None:
             name: Record name, use @ for the apex
             type: Record type
         """
-    http.delete(
+    await http.delete(
         f"{GANDI_BASE}/livedns/domains/{domain}/records/{name}/{type}",
         **http.headers(accept="json", extra=_auth_header(params)),
     )

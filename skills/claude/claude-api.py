@@ -42,8 +42,8 @@ def _client(cookie_header: str):
 # -- API operations ------------------------------------------------------------
 
 
-def _get_organizations(client):
-    resp = client.get(f"{BASE_URL}/api/organizations")
+async def _get_organizations(client):
+    resp = await client.get(f"{BASE_URL}/api/organizations")
     data = resp["json"]
     # API returns a list of org dicts on success, or an error dict on failure
     if isinstance(data, dict) and "error" in data:
@@ -58,7 +58,7 @@ def _get_organizations(client):
     return data
 
 
-def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
+async def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
     """Resolve the org UUID for chat operations.
 
     Priority: explicit org_uuid > lastActiveOrg cookie (probed) > /api/organizations.
@@ -73,14 +73,14 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
             # Validate it looks like a UUID before probing
             import re as _re
             if _re.match(r'^[0-9a-fA-F-]{36}$', last_active):
-                probe = client.get(
+                probe = await client.get(
                     f"{BASE_URL}/api/organizations/{last_active}"
                     f"/chat_conversations?limit=1"
                 )
                 if probe["status"] == 200:
                     return last_active
     # Slow path: fetch all orgs, find chat-capable one.
-    orgs = _get_organizations(client)
+    orgs = await _get_organizations(client)
     for org in orgs:
         if "chat" in org.get("capabilities", []):
             return org["uuid"]
@@ -89,20 +89,20 @@ def _resolve_org_uuid(client, org_uuid=None, cookie_header=None):
     raise RuntimeError("No organizations found for this account")
 
 
-def _get_conversations(client, org_uuid, limit=50, offset=0):
+async def _get_conversations(client, org_uuid, limit=50, offset=0):
     path = f"/api/organizations/{org_uuid}/chat_conversations?limit={limit}&offset={offset}"
-    resp = client.get(f"{BASE_URL}{path}")
+    resp = await client.get(f"{BASE_URL}{path}")
     if resp.get("status", 0) >= 400:
         raise RuntimeError(f"Conversations API returned {resp.get('status')}: {resp.get('body', resp.get('json', ''))}")
     return resp["json"]
 
 
-def _get_conversation(client, org_uuid, conv_uuid):
+async def _get_conversation(client, org_uuid, conv_uuid):
     path = (
         f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}"
         "?tree=True&rendering_mode=messages&render_all_tools=true"
     )
-    resp = client.get(f"{BASE_URL}{path}")
+    resp = await client.get(f"{BASE_URL}{path}")
     return resp["json"]
 
 
@@ -158,7 +158,7 @@ def _format_conversation(conv, org_uuid):
 # -- Operation entrypoints — called by the python: executor with auto-dispatch --
 
 @returns("conversation[]")
-def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
+async def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
     """List claude.ai web chat conversations, most recently updated first. Requires a valid session (run login flow if needed).
 
         Args:
@@ -169,15 +169,15 @@ def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
     cookie_header = get_cookies(params)
     limit = int(limit)
     offset = int(offset)
-    with _client(cookie_header) as client:
-        resolved_org = _resolve_org_uuid(client, org, cookie_header)
-        convs = _get_conversations(client, resolved_org, limit=limit, offset=offset)
+    async with _client(cookie_header) as client:
+        resolved_org = await _resolve_org_uuid(client, org, cookie_header)
+        convs = await _get_conversations(client, resolved_org, limit=limit, offset=offset)
     return _format_conversation_list(convs, resolved_org)
 
 
 @returns("conversation")
 @provides(web_read, urls=["claude.ai/chat/*", "www.claude.ai/chat/*"])
-def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
+async def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
     """Get a full claude.ai web conversation with all messages. Returns the complete message history including both human and assistant turns.
 
         Args:
@@ -193,14 +193,14 @@ def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
             conv_id = m.group(1)
     if not conv_id:
         raise ValueError("id or url is required for get_conversation")
-    with _client(cookie_header) as client:
-        resolved_org = _resolve_org_uuid(client, org, cookie_header)
-        conv = _get_conversation(client, resolved_org, conv_id)
+    async with _client(cookie_header) as client:
+        resolved_org = await _resolve_org_uuid(client, org, cookie_header)
+        conv = await _get_conversation(client, resolved_org, conv_id)
     return _format_conversation(conv, resolved_org)
 
 
 @returns("conversation[]")
-def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
+async def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
     """Search claude.ai web conversations by title/name. Fetches up to 250 conversations and filters locally (no server-side search). For full content search across message text, use import_conversation first, then search({ query: "...", types: ["message"] }) against the graph FTS index.
 
         Args:
@@ -216,10 +216,10 @@ def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
     offset = 0
     page_size = 50
 
-    with _client(cookie_header) as client:
-        resolved_org = _resolve_org_uuid(client, org, cookie_header)
+    async with _client(cookie_header) as client:
+        resolved_org = await _resolve_org_uuid(client, org, cookie_header)
         while offset < 250:
-            page = _get_conversations(client, resolved_org, limit=page_size, offset=offset)
+            page = await _get_conversations(client, resolved_org, limit=page_size, offset=offset)
             if not page:
                 break
             for conv in page:
@@ -235,7 +235,7 @@ def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
 
 @returns("message[]")
 @timeout(60)
-def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
+async def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
     """Import claude.ai conversations and all their messages into the graph. Each message becomes a message entity with full content FTS-indexed. After import, use search({ query: "...", types: ["message"] }) for content search. Safe to run repeatedly — deduplicates by message UUID. Use limit+offset to page through conversations in batches of 5-10.
 
         Args:
@@ -248,14 +248,14 @@ def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
     offset = int(offset)
 
     rows = []
-    with _client(cookie_header) as client:
-        resolved_org = _resolve_org_uuid(client, org, cookie_header)
-        convs = _get_conversations(client, resolved_org, limit=limit, offset=offset)
+    async with _client(cookie_header) as client:
+        resolved_org = await _resolve_org_uuid(client, org, cookie_header)
+        convs = await _get_conversations(client, resolved_org, limit=limit, offset=offset)
         for conv_stub in convs:
             conv_uuid = conv_stub["uuid"]
             conv_name = conv_stub.get("name") or "(untitled)"
             try:
-                conv = _get_conversation(client, resolved_org, conv_uuid)
+                conv = await _get_conversation(client, resolved_org, conv_uuid)
             except Exception:
                 continue
             for msg in conv.get("chat_messages", []):
@@ -282,18 +282,18 @@ def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
 
 @returns({"uuid": "string", "name": "string", "capabilities": "array"})
 @timeout(15)
-def op_list_orgs(**params) -> list:
+async def op_list_orgs(**params) -> list:
     """List all organizations the user has access to. Returns org UUIDs, names, and capabilities. Use this to discover which org has chat history (look for "chat" in capabilities)."""
     cookie_header = get_cookies(params)
-    with _client(cookie_header) as client:
-        return _get_organizations(client)
+    async with _client(cookie_header) as client:
+        return await _get_organizations(client)
 
 
 # -- Session check — called by account.check with auto-dispatch ----------------
 
 @returns({"authenticated": "boolean", "identifier": "string", "display": "string"})
 @connection("web")
-def check_session(**params) -> dict:
+async def check_session(**params) -> dict:
     """Verify Claude.ai session and identify the logged-in account.
 
     Validates operational access by resolving the chat org (which probes
@@ -304,11 +304,11 @@ def check_session(**params) -> dict:
         return {"authenticated": False, "error": "no cookies"}
 
     try:
-        with _client(cookie_header) as client:
+        async with _client(cookie_header) as client:
             # Validate session: resolve org (probes lastActiveOrg, falls back to /api/organizations).
-            _resolve_org_uuid(client, cookie_header=cookie_header)
+            await _resolve_org_uuid(client, cookie_header=cookie_header)
             # Session is valid — resolve identity from orgs list.
-            orgs = _get_organizations(client)
+            orgs = await _get_organizations(client)
             return _identify_from_orgs(orgs)
     except Exception:
         return {"authenticated": False}
@@ -406,7 +406,7 @@ def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
 
 @returns({"magicLink": "string"})
 @timeout(10)
-def op_extract_magic_link(raw_email: str, **params) -> dict:
+async def op_extract_magic_link(raw_email: str, **params) -> dict:
     """Extract the magic link URL from a raw base64url-encoded email body. Pass the raw RFC 2822 email body (e.g. from whichever integration exposes raw message bytes) and this will decode it and find the claude.ai magic link.
 
         Args:

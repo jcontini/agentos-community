@@ -45,17 +45,17 @@ def _map_website(w: dict) -> dict:
 
 @returns("website[]")
 @connection("api")
-def list_websites(**params) -> list[dict]:
+async def list_websites(**params) -> list[dict]:
     """List all your published sites (requires authentication)"""
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    resp = http.get(f"{BASE_URL}/publishes", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/publishes", **http.headers(accept="json", extra=headers))
     return [_map_website(w) for w in (resp["json"] or {}).get("publishes", [])]
 
 
 @returns({"ok": "boolean"})
 @connection("api")
-def delete_website(*, slug: str, **params) -> dict:
+async def delete_website(*, slug: str, **params) -> dict:
     """Delete a published site (requires authentication)
 
         Args:
@@ -63,13 +63,13 @@ def delete_website(*, slug: str, **params) -> dict:
         """
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    http.delete(f"{BASE_URL}/publish/{slug}", **http.headers(accept="json", extra=headers))
+    await http.delete(f"{BASE_URL}/publish/{slug}", **http.headers(accept="json", extra=headers))
     return {"success": True, "id": slug}
 
 
 @returns({"success": "boolean", "slug": "string"})
 @connection("api")
-def claim_website(*, slug: str, claim_token: str, **params) -> dict:
+async def claim_website(*, slug: str, claim_token: str, **params) -> dict:
     """Claim an anonymous publish to make it permanent. Requires authentication. The claim_token is in entity.data.claim_token — returned once at publish time, never again.
 
         Args:
@@ -78,7 +78,7 @@ def claim_website(*, slug: str, claim_token: str, **params) -> dict:
         """
     token = params.get("auth", {}).get("key", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    http.post(
+    await http.post(
         f"{BASE_URL}/publish/{slug}/claim",
         json={"claimToken": claim_token},
         **http.headers(accept="json", extra=headers),
@@ -87,13 +87,13 @@ def claim_website(*, slug: str, claim_token: str, **params) -> dict:
 
 
 @returns({"sent": "boolean", "message": "string"})
-def op_signup(*, email: str, **params) -> dict:
+async def op_signup(*, email: str, **params) -> dict:
     """Send a magic link to the user's email. They click it, land on the here.now dashboard, and copy their API key. Then add it to AgentOS credentials for permanent publishes (no 24h expiry, 60/hour rate limit). After getting the key: POST /sys/accounts { "skill": "here-now", "account": "default", "api_key": "..." }
 
         Args:
             email: User's email address
         """
-    http.post("https://here.now/api/auth/login", json={"email": email}, **http.headers(accept="json"))
+    await http.post("https://here.now/api/auth/login", json={"email": email}, **http.headers(accept="json"))
     return {
         "sent": True,
         "message": (
@@ -106,7 +106,7 @@ def op_signup(*, email: str, **params) -> dict:
 
 @returns({"success": "boolean"})
 @connection("api")
-def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl: int = None, **params) -> dict:
+async def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl: int = None, **params) -> dict:
     """Update site title, description, or TTL without redeploying files
 
         Args:
@@ -126,7 +126,7 @@ def patch_metadata(*, slug: str, title: str = None, description: str = None, ttl
         viewer["description"] = description
     if viewer:
         body["viewer"] = viewer
-    http.patch(
+    await http.patch(
         f"{BASE_URL}/publish/{slug}/metadata",
         json=body, **http.headers(accept="json", extra=headers),
     )
@@ -254,7 +254,7 @@ def _do_publish(
 
 @returns("website")
 @timeout(60)
-def op_create_website(
+async def op_create_website(
     content,
     filename="index.html",
     content_type="text/html; charset=utf-8",
@@ -278,7 +278,7 @@ def op_create_website(
 
 @returns("website")
 @timeout(60)
-def op_update_website(
+async def op_update_website(
     slug,
     content,
     filename="index.html",

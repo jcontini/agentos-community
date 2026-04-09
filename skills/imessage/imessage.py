@@ -82,9 +82,9 @@ def _map_message(row):
 
 
 @returns("conversation[]")
-def op_list_conversations(*, limit=200, **params):
+async def op_list_conversations(*, limit=200, **params):
     """List all iMessage/SMS conversations."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           c.ROWID as id,
           COALESCE(c.display_name, c.chat_identifier) as name,
@@ -117,9 +117,9 @@ def op_list_conversations(*, limit=200, **params):
 
 
 @returns("conversation")
-def op_get_conversation(*, id, **params):
+async def op_get_conversation(*, id, **params):
     """Get a specific conversation with metadata."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           c.ROWID as id,
           COALESCE(c.display_name, c.chat_identifier) as name,
@@ -151,9 +151,9 @@ def op_get_conversation(*, id, **params):
 
 
 @returns("message[]")
-def op_list_messages(*, conversation_id, limit=200, **params):
+async def op_list_messages(*, conversation_id, limit=200, **params):
     """List messages in a conversation."""
-    return sql.query("""
+    return await sql.query("""
         SELECT
           m.ROWID as id,
           :conversation_id as conversation_id,
@@ -179,9 +179,9 @@ def op_list_messages(*, conversation_id, limit=200, **params):
 
 
 @returns("message")
-def op_get_message(*, id, **params):
+async def op_get_message(*, id, **params):
     """Get a specific message by ID."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT
           m.ROWID as id,
           c.ROWID as conversation_id,
@@ -202,9 +202,9 @@ def op_get_message(*, id, **params):
 
 
 @returns("message[]")
-def op_search_messages(*, query, limit=200, **params):
+async def op_search_messages(*, query, limit=200, **params):
     """Search messages by text content."""
-    return sql.query("""
+    return await sql.query("""
         SELECT
           m.ROWID as id,
           c.ROWID as conversation_id,
@@ -236,9 +236,9 @@ def op_search_messages(*, query, limit=200, **params):
 
 
 @returns({"ok": "boolean"})
-def op_send_message(*, to, text, service="iMessage", **params):
+async def op_send_message(*, to, text, service="iMessage", **params):
     """Send an iMessage or SMS to a phone number or email."""
-    result = shell.run("imsg", ["send", "--to", to, "--text", text, "--service", service, "--json"], timeout=15)
+    result = await shell.run("imsg", ["send", "--to", to, "--text", text, "--service", service, "--json"], timeout=15)
     if result["exit_code"] != 0:
         raise RuntimeError(f"imsg send failed: {result['stderr'].strip()}")
     return json.loads(result["stdout"]) if result["stdout"].strip() else None

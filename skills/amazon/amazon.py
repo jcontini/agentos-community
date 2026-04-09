@@ -143,7 +143,7 @@ def _is_captcha(body: str) -> bool:
 @returns({"suggestions": "array", "count": "integer"})
 @connection("public")
 @timeout(15)
-def search_suggestions(
+async def search_suggestions(
     query: str,
     department: str | None = None,
     personalized: bool = False,
@@ -175,7 +175,7 @@ def search_suggestions(
 
     url = f"https://completion.amazon.{tld}/api/2017/suggestions"
 
-    resp = http.get(url, params=params)
+    resp = await http.get(url, params=params)
     data = resp["json"]
 
     suggestions = [
@@ -200,7 +200,7 @@ def search_suggestions(
 
 @returns("product[]")
 @connection("public")
-def search_products(
+async def search_products(
     query: str,
     department: str | None = None,
     page: int = 1,
@@ -223,10 +223,10 @@ def search_products(
     if alias != "aps":
         search_params["i"] = alias
 
-    with http.client() as c:
-        c.get(base, headers={"Accept": "text/html"})
+    async with http.client() as c:
+        await c.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
-        resp = c.get(
+        resp = await c.get(
             f"{base}/s",
             params=search_params,
             headers={"Accept": "text/html,application/xhtml+xml"},
@@ -302,7 +302,7 @@ def _parse_search_results(body: str, tld: str) -> list[dict[str, Any]]:
 
 @returns("product")
 @connection("public")
-def get_product(
+async def get_product(
     asin: str,
     marketplace: str | None = None,
     **params,
@@ -312,10 +312,10 @@ def get_product(
     tld = mp["tld"]
     base = f"https://www.amazon.{tld}"
 
-    with http.client() as c:
-        c.get(base, headers={"Accept": "text/html"})
+    async with http.client() as c:
+        await c.get(base, headers={"Accept": "text/html"})
         time.sleep(0.5)
-        resp = c.get(
+        resp = await c.get(
             f"{base}/dp/{asin}",
             headers={"Accept": "text/html,application/xhtml+xml"},
         )
@@ -419,9 +419,9 @@ _SKIP_COOKIES = ["csd-key", "csm-hit", "aws-waf-token"]
 _require_cookies = require_cookies
 
 
-def _warm_session(client) -> None:
+async def _warm_session(client) -> None:
     """Visit homepage first to provision session cookies and avoid bot detection on sensitive pages."""
-    client.get(BASE, headers={"Sec-Fetch-Site": "none"})
+    await client.get(BASE, headers={"Sec-Fetch-Site": "none"})
     time.sleep(1.0)
 
 
@@ -516,7 +516,7 @@ DETAIL_STATUS_SEL = SHIPMENT_STATUS_SEL + ["h4"]
 
 @returns("order[]")
 @connection("web")
-def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
+async def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
     """List Amazon orders from the order history page."""
     cookie_header = _require_cookies(params, "list_orders")
     order_filter = filter or "last30"
@@ -526,10 +526,10 @@ def list_orders(*, filter=None, page=1, **params) -> list[dict[str, Any]]:
     if page > 1:
         url_params["startIndex"] = str((page - 1) * 10)
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
 
-        resp = c.get(
+        resp = await c.get(
             f"{BASE}/your-orders/orders",
             params=url_params,
             headers={"Referer": f"{BASE}/gp/homepage.html"},
@@ -754,13 +754,13 @@ def _parse_order_items(card: HtmlElement, *, detail_page: bool = False) -> list[
 
 @returns("product[]")
 @connection("web")
-def buy_again(**params) -> list[dict[str, Any]]:
+async def buy_again(**params) -> list[dict[str, Any]]:
     """Get products Amazon recommends for repurchase."""
     cookie_header = _require_cookies(params, "buy_again")
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
-        resp = c.get(
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
+        resp = await c.get(
             f"{BASE}/gp/buyagain",
             headers={"Referer": f"{BASE}/your-orders/orders"},
         )
@@ -822,14 +822,14 @@ def _parse_buy_again(body: str) -> list[dict[str, Any]]:
 @returns({"subscriptions": "array", "subscriptionCount": "integer", "upcomingDeliveries": "array", "totalSavings": "string"})
 @connection("web")
 @timeout(45)
-def subscriptions(**params) -> dict[str, Any]:
+async def subscriptions(**params) -> dict[str, Any]:
     """List active Subscribe & Save subscriptions and upcoming deliveries."""
     cookie_header = _require_cookies(params, "subscriptions")
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
 
-        mgmt_resp = c.get(
+        mgmt_resp = await c.get(
             f"{BASE}/gp/subscribe-and-save/manager/viewsubscriptions",
             headers={"Referer": f"{BASE}/your-orders/orders"},
         )
@@ -881,7 +881,7 @@ def subscriptions(**params) -> dict[str, Any]:
 
         items: list[dict[str, Any]] = []
         if ship_id:
-            ajax_resp = c.get(
+            ajax_resp = await c.get(
                 f"{BASE}/auto-deliveries/ajax/subscriptionList",
                 params={
                     "deviceType": "desktop",
@@ -980,16 +980,16 @@ def _parse_subscriptions(body: str) -> list[dict[str, Any]]:
 
 @returns("order")
 @connection("web")
-def get_order(*, order_id, **params) -> dict[str, Any]:
+async def get_order(*, order_id, **params) -> dict[str, Any]:
     """Fetch detailed info for a specific Amazon order."""
     cookie_header = _require_cookies(params, "get_order")
     if not order_id:
         raise ValueError("order_id is required")
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
 
-        resp = c.get(
+        resp = await c.get(
             f"{BASE}/gp/your-account/order-details",
             params={"orderID": order_id},
             headers={"Referer": f"{BASE}/your-orders/orders"},
@@ -1150,13 +1150,13 @@ MAX_LIST_PAGES = 20
 
 @returns("list[]")
 @connection("web")
-def list_lists(**params) -> list[dict[str, Any]]:
+async def list_lists(**params) -> list[dict[str, Any]]:
     """List all of the user's Amazon lists (wishlists, shopping lists, etc.)."""
     cookie_header = _require_cookies(params, "list_lists")
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
-        resp = c.get(
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
+        resp = await c.get(
             f"{BASE}/hz/wishlist/ls",
             headers={"Referer": BASE},
         )
@@ -1214,7 +1214,7 @@ def _parse_lists_nav(body: str) -> list[dict[str, Any]]:
 @returns("list")
 @connection("web")
 @timeout(60)
-def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
+async def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     """Get items from a specific Amazon list by list ID."""
     cookie_header = _require_cookies(params, "get_list")
     if not list_id:
@@ -1227,10 +1227,10 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
     list_privacy = None
     list_type = None
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
 
-        resp = c.get(
+        resp = await c.get(
             f"{BASE}/hz/wishlist/ls/{list_id}",
             params={"filter": item_filter, "sort": "date-added", "viewType": "list"},
             headers={"Referer": BASE},
@@ -1269,7 +1269,7 @@ def get_list(*, list_id, filter=None, **params) -> dict[str, Any]:
                 break
 
             time.sleep(1.0)
-            ajax_resp = c.get(
+            ajax_resp = await c.get(
                 f"{BASE}{show_more}" if show_more.startswith("/") else show_more,
                 headers={
                     "X-Requested-With": "XMLHttpRequest",
@@ -1407,7 +1407,7 @@ def _parse_list_items(soup: HtmlElement) -> list[dict[str, Any]]:
 
 @returns("account")
 @connection("web")
-def whoami(**params) -> dict[str, Any]:
+async def whoami(**params) -> dict[str, Any]:
     """Check session liveness and extract account identity.
 
     Fetches two pages:
@@ -1418,9 +1418,9 @@ def whoami(**params) -> dict[str, Any]:
     """
     cookie_header = _require_cookies(params, "whoami")
 
-    with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
-        _warm_session(c)
-        resp = c.get(f"{BASE}/gp/css/homepage.html")
+    async with http.client(cookies=cookie_header, skip_cookies=_SKIP_COOKIES, **http.headers(waf="cf", mode="navigate", accept="html", extra={"Host": "www.amazon.com"})) as c:
+        await _warm_session(c)
+        resp = await c.get(f"{BASE}/gp/css/homepage.html")
 
         if resp["status"] != 200:
             return {"authenticated": False, "statusCode": resp["status"]}
@@ -1450,7 +1450,7 @@ def whoami(**params) -> dict[str, Any]:
 
         # Fetch Login & Security page to get the account email.
         email = None
-        manage_resp = c.get(f"{BASE}/ax/account/manage")
+        manage_resp = await c.get(f"{BASE}/ax/account/manage")
         if manage_resp["status"] == 200 and "ap/signin" not in str(manage_resp["url"]):
             email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", manage_resp["body"])
             if email_match:

@@ -190,7 +190,7 @@ OUTLINER_PROMPT = textwrap.dedent("""\
 # Agent runner
 # ---------------------------------------------------------------------------
 
-def _run_agent(system_prompt: str, prompt: str, files_to_read: list[str],
+async def _run_agent(system_prompt: str, prompt: str, files_to_read: list[str],
                files_to_write: list[str] = None, allow_web: bool = False,
                model: str = "opus") -> str:
     """Run a Claude agent with the given system prompt."""
@@ -231,7 +231,7 @@ def _run_agent(system_prompt: str, prompt: str, files_to_read: list[str],
         args.extend(["--add-dir", str(d)])
 
     # Pass prompt via stdin — --add-dir is variadic and eats trailing positional args
-    result = shell.run("claude", args=args, input=full_prompt, timeout=300)
+    result = await shell.run("claude", args=args, input=full_prompt, timeout=300)
     return result.get("stdout", "") if isinstance(result, dict) else str(result)
 
 
@@ -241,7 +241,7 @@ def _run_agent(system_prompt: str, prompt: str, files_to_read: list[str],
 
 @returns({"document": "string", "problem": "string", "sections": "integer", "tokens": "integer"})
 @timeout(600)
-def op_draft(problem: str, output: str, context: str = "",
+async def op_draft(problem: str, output: str, context: str = "",
              domain: str = "", research: bool = True,
              model: str = "opus", **params) -> dict:
     """Research a problem and generate a structured proposal."""
@@ -275,7 +275,7 @@ def op_draft(problem: str, output: str, context: str = "",
         f"responses) — don't just describe what they'd look like."
     )
 
-    agent_output = _run_agent(
+    agent_output = await _run_agent(
         system_prompt=DRAFTER_PROMPT,
         prompt=prompt,
         files_to_read=context_paths,
@@ -304,7 +304,7 @@ def op_draft(problem: str, output: str, context: str = "",
 
 @returns({"outline": "string", "problem": "string", "sections": "array"})
 @timeout(120)
-def op_outline(problem: str, domain: str = "",
+async def op_outline(problem: str, domain: str = "",
                model: str = "sonnet", **params) -> dict:
     """Generate a lightweight outline before committing to a full draft."""
     domain_hint = f"\n\nDomain: {domain}" if domain else ""
@@ -316,7 +316,7 @@ def op_outline(problem: str, domain: str = "",
         f"Keep it under 500 words. This is a sketch to align on scope."
     )
 
-    output = _run_agent(
+    output = await _run_agent(
         system_prompt=OUTLINER_PROMPT,
         prompt=prompt,
         files_to_read=[],

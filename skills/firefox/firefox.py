@@ -37,9 +37,9 @@ def _map_webpage(row):
 
 @returns("webpage[]")
 @connection("places")
-def op_list_webpages(*, limit=200, connection=None, **kw):
+async def op_list_webpages(*, limit=200, connection=None, **kw):
     """List recently visited pages from Firefox browsing history."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT p.url, p.title, p.visit_count,
                CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
         FROM moz_places p
@@ -54,9 +54,9 @@ def op_list_webpages(*, limit=200, connection=None, **kw):
 
 @returns("webpage[]")
 @connection("places")
-def op_search_webpages(*, query, limit=200, connection=None, **kw):
+async def op_search_webpages(*, query, limit=200, connection=None, **kw):
     """Search Firefox browsing history by URL or title."""
-    rows = sql.query("""
+    rows = await sql.query("""
         SELECT p.url, p.title, p.visit_count,
                CAST(p.last_visit_date / 1000000 AS INTEGER) AS last_visit_unix
         FROM moz_places p
@@ -80,9 +80,9 @@ def op_search_webpages(*, query, limit=200, connection=None, **kw):
 
 @returns({"title": "string", "url": "string", "dateAdded": "integer"})
 @connection("places")
-def op_list_bookmarks(*, limit=200, connection=None, **kw):
+async def op_list_bookmarks(*, limit=200, connection=None, **kw):
     """List Firefox bookmarks (excluding folders and separators)."""
-    return sql.query("""
+    return await sql.query("""
         SELECT b.title AS bookmark_title, p.url, p.title,
                CAST(b.dateAdded / 1000000 AS INTEGER) AS date_added_unix
         FROM moz_bookmarks b
@@ -101,9 +101,9 @@ def op_list_bookmarks(*, limit=200, connection=None, **kw):
 
 @returns({"name": "string", "value": "string", "host": "string", "path": "string", "expiry": "integer", "isSecure": "integer", "isHttponly": "integer"})
 @connection("cookies_db")
-def op_list_cookies(*, domain, limit=200, connection=None, **kw):
+async def op_list_cookies(*, domain, limit=200, connection=None, **kw):
     """List cookies for a domain from Firefox (plaintext, no decryption needed)."""
-    return sql.query("""
+    return await sql.query("""
         SELECT name, value, host, path, expiry,
                isSecure AS is_secure, isHttpOnly AS is_httponly,
                (creationTime / 1000000) AS created
@@ -119,12 +119,12 @@ def op_list_cookies(*, domain, limit=200, connection=None, **kw):
 
 @returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
 @provides(cookie_auth, account_param="domain", creation_timestamps=True, description="Extract plaintext Firefox cookies from local profiles")
-def op_cookie_get(*, domain, names=None, limit=200, connection=None, **kw):
+async def op_cookie_get(*, domain, names=None, limit=200, connection=None, **kw):
     """Extract cookies for a domain — provider interface for cookie matchmaking.
 
     Returns { domain, cookies, count, source } for the runtime to consume.
     """
-    cookies = sql.query("""
+    cookies = await sql.query("""
         SELECT name, value, host, path, expiry,
                isSecure AS is_secure, isHttpOnly AS is_httponly,
                (creationTime / 1000000) AS created

@@ -113,16 +113,16 @@ def _map_offer(r: dict) -> dict:
     }
 
 
-def _flight_get(query: dict, **params) -> dict:
+async def _flight_get(query: dict, **params) -> dict:
     q = {**_auth_params(params), **{k: v for k, v in query.items() if v is not None}}
-    resp = http.get(SEARCH_URL, params=q, **http.headers(accept="json"))
+    resp = await http.get(SEARCH_URL, params=q, **http.headers(accept="json"))
     return resp["json"]
 
 
 @returns("offer[]")
 @provides(flight_search)
 @connection("api")
-def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, adults: int = 1, children: int = None, stops: int = None, max_price: int = None, sort_by: int = None, include_airlines: str = None, exclude_airlines: str = None, currency: str = "USD", hl: str = "en", gl: str = None, deep_search: bool = None, **params) -> list[dict]:
+async def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, adults: int = 1, children: int = None, stops: int = None, max_price: int = None, sort_by: int = None, include_airlines: str = None, exclude_airlines: str = None, currency: str = "USD", hl: str = "en", gl: str = None, deep_search: bool = None, **params) -> list[dict]:
     """Search Google Flights for flight offers between airports
 
         Args:
@@ -164,13 +164,13 @@ def search_offers(*, departure_id: str, arrival_id: str, outbound_date: str, ret
         "gl": gl,
         "deepSearch": str(deep_search).lower() if deep_search is not None else None,
     }
-    data = _flight_get(q, **params)
+    data = await _flight_get(q, **params)
     return [_map_offer(r) for r in (data.get("other_flights") or [])]
 
 
 @returns("offer[]")
 @connection("api")
-def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
+async def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, travel_class: int = 1, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
     """Get the best/recommended flight offers (may not always be available)
 
         Args:
@@ -194,13 +194,13 @@ def list_offers(*, departure_id: str, arrival_id: str, outbound_date: str, retur
         "currency": currency,
         "hl": hl,
     }
-    data = _flight_get(q, **params)
+    data = await _flight_get(q, **params)
     return [_map_offer(r) for r in (data.get("best_flights") or [])]
 
 
 @returns("offer[]")
 @connection("api")
-def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
+async def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **params) -> list[dict]:
     """Get return flight offers using a departure token from a previous search
 
         Args:
@@ -214,13 +214,13 @@ def get_offer(*, departure_token: str, currency: str = "USD", hl: str = "en", **
         "currency": currency,
         "hl": hl,
     }
-    data = _flight_get(q, **params)
+    data = await _flight_get(q, **params)
     return [_map_offer(r) for r in (data.get("other_flights") or [])]
 
 
 @returns({"bookingOptions": "array", "price": "number"})
 @connection("api")
-def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = "en", **params) -> dict:
+async def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = "en", **params) -> dict:
     """Get booking options for selected flights using a booking token
 
         Args:
@@ -234,7 +234,7 @@ def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = 
         "currency": currency,
         "hl": hl,
     }
-    data = _flight_get(q, **params)
+    data = await _flight_get(q, **params)
     return {
         "bookingOptions": data.get("booking_options", []),
         "price": data.get("price"),
@@ -243,7 +243,7 @@ def get_booking_options(*, booking_token: str, currency: str = "USD", hl: str = 
 
 @returns({"lowestPrice": "number", "priceLevel": "string", "typicalPriceRange": "array", "priceHistory": "array"})
 @connection("api")
-def get_price_insights(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, currency: str = "USD", **params) -> dict:
+async def get_price_insights(*, departure_id: str, arrival_id: str, outbound_date: str, return_date: str = None, type: int = 1, currency: str = "USD", **params) -> dict:
     """Get price insights for a flight route (typical price range, price level, history)
 
         Args:
@@ -263,6 +263,6 @@ def get_price_insights(*, departure_id: str, arrival_id: str, outbound_date: str
         "type": str(type),
         "currency": currency,
     }
-    data = _flight_get(q, **params)
+    data = await _flight_get(q, **params)
     insights = data.get("price_insights") or {}
     return insights

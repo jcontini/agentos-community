@@ -37,19 +37,19 @@ def _get_master_key() -> str:
     return keychain.read(service="Brave Safe Storage", account="Brave")
 
 
-def _derive_key(password: str) -> str:
+async def _derive_key(password: str) -> str:
     """Derive AES-128 key using PBKDF2-HMAC-SHA1 (Chromium cookie encryption).
 
     Returns hex-encoded 16-byte key.
     """
-    return crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
+    return await crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
 
 
-def _decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
+async def _decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
     """Decrypt a Chromium v10 cookie value.
 
     encrypted_hex: hex-encoded bytes from the database (encrypted_value blob).
-    key_hex: hex-encoded 16-byte AES key from _derive_key().
+    key_hex: hex-encoded 16-byte AES key from await _derive_key().
 
     Chromium v10 encryption: AES-128-CBC with IV = 16 space bytes (0x20).
     The first 32 bytes of decrypted output are garbled (CBC IV mismatch artifact).
@@ -75,7 +75,7 @@ def _decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
     iv_hex = "20" * 16
 
     try:
-        plaintext_hex = crypto.aes_decrypt(key=key_hex, data=ciphertext.hex(), iv=iv_hex)
+        plaintext_hex = await crypto.aes_decrypt(key=key_hex, data=ciphertext.hex(), iv=iv_hex)
         plaintext = bytes.fromhex(plaintext_hex)
         # Skip first 32 bytes — garbled CBC IV mismatch artifact
         return plaintext[32:].decode("utf-8")
@@ -83,7 +83,7 @@ def _decrypt_cookie_value(encrypted_hex: str, key_hex: str) -> str | None:
         return None
 
 
-def _get_cookies(domain: str, names: list[str] | None = None,
+async def _get_cookies(domain: str, names: list[str] | None = None,
                 host: str | None = None, profile: str = "Default") -> list[dict]:
     """Extract and decrypt cookies for a domain from Brave's cookie DB."""
     cookies_db = os.path.expanduser(
@@ -93,7 +93,7 @@ def _get_cookies(domain: str, names: list[str] | None = None,
         raise FileNotFoundError(f"Brave Cookies database not found: {cookies_db}")
 
     password = _get_master_key()
-    key_hex = _derive_key(password)
+    key_hex = await _derive_key(password)
 
     # Copy to temp to avoid lock conflicts with running Brave.
     # Also copy journal/WAL files so SQLite can replay uncommitted writes.
@@ -131,7 +131,7 @@ def _get_cookies(domain: str, names: list[str] | None = None,
             """
             params = {"match": f"%{domain}%"}
 
-        rows = sql.query(query, db=tmp_db, params=params)
+        rows = await sql.query(query, db=tmp_db, params=params)
 
         cookies = []
         for row in rows:
@@ -139,7 +139,7 @@ def _get_cookies(domain: str, names: list[str] | None = None,
             if not encrypted_hex:
                 continue
 
-            value = _decrypt_cookie_value(encrypted_hex, key_hex)
+            value = await _decrypt_cookie_value(encrypted_hex, key_hex)
             if value is None:
                 continue
 
@@ -194,7 +194,7 @@ def _domain_matches(cookie_domain: str, request_host: str) -> bool:
 @returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
 @provides(cookie_auth, account_param="domain", creation_timestamps=True, description="Extract decrypted cookies from Brave Browser's local database")
 @timeout(15)
-def op_cookie_get(
+async def op_cookie_get(
     domain: str,
     names: str = None,
     host: str = None,

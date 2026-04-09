@@ -117,7 +117,7 @@ def _ydl(extra: dict | None = None) -> yt_dlp.YoutubeDL:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @returns("video[]")
-def search_videos(query: str, limit: int = 50, **params) -> list[dict]:
+async def search_videos(query: str, limit: int = 50, **params) -> list[dict]:
     """Search YouTube videos by query (returns results sorted by relevance)
 
         Args:
@@ -130,7 +130,7 @@ def search_videos(query: str, limit: int = 50, **params) -> list[dict]:
 
 
 @returns("video[]")
-def search_recent_video(query: str, limit: int = 50, **params) -> list[dict]:
+async def search_recent_video(query: str, limit: int = 50, **params) -> list[dict]:
     """Search YouTube videos by query sorted by upload date (newest first)
 
         Args:
@@ -143,7 +143,7 @@ def search_recent_video(query: str, limit: int = 50, **params) -> list[dict]:
 
 
 @returns("video[]")
-def list_videos(url: str, limit: int = 50, **params) -> list[dict]:
+async def list_videos(url: str, limit: int = 50, **params) -> list[dict]:
     """List videos from a YouTube channel or playlist
 
         Args:
@@ -156,7 +156,7 @@ def list_videos(url: str, limit: int = 50, **params) -> list[dict]:
 
 
 @returns("video")
-def get_video(url: str, **params) -> dict:
+async def get_video(url: str, **params) -> dict:
     """Get video metadata (title, creator, thumbnail, duration)
 
         Args:
@@ -169,7 +169,7 @@ def get_video(url: str, **params) -> dict:
 
 @returns("video")
 @provides(web_read, urls=["youtube.com/*", "youtu.be/*", "music.youtube.com/*"])
-def transcript_video(url: str, lang: str = "en", format: str = "text", **params) -> dict:
+async def transcript_video(url: str, lang: str = "en", format: str = "text", **params) -> dict:
     """Fetch video metadata + transcript. No temp files — captions fetched in memory."""
     with _ydl() as ydl:
         info = ydl.extract_info(url, download=False)
@@ -193,7 +193,7 @@ def transcript_video(url: str, lang: str = "en", format: str = "text", **params)
     cap_entry = next((c for c in captions if c.get("ext") == "json3"), captions[0])
     source_type = "auto_caption" if cap_entry in captions else "manual"
 
-    cap_resp = http.get(cap_entry["url"], timeout=30.0)
+    cap_resp = await http.get(cap_entry["url"], timeout=30.0)
     cap_data = cap_resp["json"] if cap_resp.get("json") else json.loads(cap_resp["body"])
 
     events = [
@@ -234,7 +234,7 @@ def transcript_video(url: str, lang: str = "en", format: str = "text", **params)
 
 
 @returns("channel")
-def get_channel(url: str, **params) -> dict:
+async def get_channel(url: str, **params) -> dict:
     """Get YouTube channel metadata (avatar, description, subscriber count)
 
         Args:
@@ -266,10 +266,10 @@ def get_channel(url: str, **params) -> dict:
 
 
 @returns("channel")
-def get_avatar_channel(url: str, **params) -> dict:
+async def get_avatar_channel(url: str, **params) -> dict:
     """Quick fetch of channel avatar via og:image — ~1s."""
     from agentos import http
-    resp = http.get(url, timeout=10)
+    resp = await http.get(url, timeout=10)
     html = resp["body"]
 
     import re
@@ -279,7 +279,7 @@ def get_avatar_channel(url: str, **params) -> dict:
 
 
 @returns("post[]")
-def list_posts(url: str, limit: int = 50, **params) -> list[dict]:
+async def list_posts(url: str, limit: int = 50, **params) -> list[dict]:
     """List comments on a video as post entities."""
     opts = {
         "getcomments": True,

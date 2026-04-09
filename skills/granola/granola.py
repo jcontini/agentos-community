@@ -76,9 +76,9 @@ def _get_token(con: dict | None = None) -> str:
         _die(f"Could not parse Granola auth file: {e}")
 
 
-def _api_post(token: str, endpoint: str, body: dict, con: dict | None = None) -> object:
+async def _api_post(token: str, endpoint: str, body: dict, con: dict | None = None) -> object:
     url = f"{_api_base(con)}{endpoint}"
-    resp = http.post(url, json=body, **http.headers(accept="json", extra={
+    resp = await http.post(url, json=body, **http.headers(accept="json", extra={
         "Authorization": f"Bearer {token}",
     }))
     if not resp.get("ok"):
@@ -191,15 +191,15 @@ def _normalize_meeting(doc: dict) -> dict:
     }
 
 
-def _cmd_list(token: str, limit: int, page: int, con: dict | None = None) -> list:
-    result = _api_post(token, "/v2/get-documents", {"limit": limit, "offset": page * limit}, con)
+async def _cmd_list(token: str, limit: int, page: int, con: dict | None = None) -> list:
+    result = await _api_post(token, "/v2/get-documents", {"limit": limit, "offset": page * limit}, con)
     docs = result.get("docs", []) if isinstance(result, dict) else result
     return [_normalize_meeting(d) for d in docs]
 
 
-def _cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
+async def _cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
     # Fetch document metadata
-    batch = _api_post(token, "/v1/get-documents-batch", {"document_ids": [doc_id]}, con)
+    batch = await _api_post(token, "/v1/get-documents-batch", {"document_ids": [doc_id]}, con)
     docs = batch.get("docs", batch) if isinstance(batch, dict) else batch
     if not docs:
         _die(f"Document {doc_id} not found")
@@ -207,7 +207,7 @@ def _cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
     meeting = _normalize_meeting(doc)
 
     # Fetch transcript
-    utterances = _api_post(token, "/v1/get-document-transcript", {"document_id": doc_id}, con)
+    utterances = await _api_post(token, "/v1/get-document-transcript", {"document_id": doc_id}, con)
     if utterances and isinstance(utterances, list):
         start_str = meeting.get("start") or doc.get("created_at")
         meeting_start = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
@@ -223,7 +223,7 @@ def _cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
         meeting["duration_ms"] = 0
 
     # Fetch AI summary panels
-    panels = _api_post(token, "/v1/get-document-panels", {"document_id": doc_id}, con)
+    panels = await _api_post(token, "/v1/get-document-panels", {"document_id": doc_id}, con)
     if panels and isinstance(panels, list):
         parts = [_html_to_markdown(p.get("original_content", "")) for p in panels]
         meeting["summary_text"] = "\n\n".join(p for p in parts if p)
@@ -233,15 +233,15 @@ def _cmd_get(token: str, doc_id: str, con: dict | None = None) -> dict:
     return meeting
 
 
-def _cmd_list_conversations(token: str, document_id: str, con: dict | None = None) -> list:
+async def _cmd_list_conversations(token: str, document_id: str, con: dict | None = None) -> list:
     """List Q&A chat threads linked to a meeting document."""
     # get-entity-set returns IDs only; we need batch to get grouping_key
-    set_resp = _api_post(token, "/v1/get-entity-set", {"entity_type": "chat_thread"}, con)
+    set_resp = await _api_post(token, "/v1/get-entity-set", {"entity_type": "chat_thread"}, con)
     thread_ids = [e["id"] for e in (set_resp.get("data") or [])]
     if not thread_ids:
         return []
 
-    batch_resp = _api_post(token, "/v1/get-entity-batch", {
+    batch_resp = await _api_post(token, "/v1/get-entity-batch", {
         "entity_type": "chat_thread",
         "entity_ids": thread_ids,
     }, con)
@@ -262,10 +262,10 @@ def _cmd_list_conversations(token: str, document_id: str, con: dict | None = Non
     return sorted(threads, key=lambda x: (x["updatedAt"] or ""), reverse=True)
 
 
-def _cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) -> dict:
+async def _cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) -> dict:
     """Get a Q&A conversation thread with all messages."""
     # Fetch thread
-    batch_resp = _api_post(token, "/v1/get-entity-batch", {
+    batch_resp = await _api_post(token, "/v1/get-entity-batch", {
         "entity_type": "chat_thread",
         "entity_ids": [thread_id],
     }, con)
@@ -275,12 +275,12 @@ def _cmd_get_conversation(token: str, thread_id: str, con: dict | None = None) -
     thread = threads[0]
 
     # Fetch all messages and filter by thread_id
-    set_resp = _api_post(token, "/v1/get-entity-set", {"entity_type": "chat_message"}, con)
+    set_resp = await _api_post(token, "/v1/get-entity-set", {"entity_type": "chat_message"}, con)
     msg_ids = [e["id"] for e in (set_resp.get("data") or [])]
     if not msg_ids:
         messages = []
     else:
-        msg_batch = _api_post(token, "/v1/get-entity-batch", {
+        msg_batch = await _api_post(token, "/v1/get-entity-batch", {
             "entity_type": "chat_message",
             "entity_ids": msg_ids,
         }, con)
@@ -412,14 +412,14 @@ def _connection_mode(con: object | None) -> str:
 
 @returns("meeting[]")
 @connection(["api", "cache"])
-def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None, **_kwargs) -> list:
+async def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = None, **_kwargs) -> list:
     """Entry point for python: executor. `connection` is injected by AgentOS (api vs cache)."""
     mode = _connection_mode(connection)
     if mode == "cache":
         return _cmd_list_from_cache(limit, page, connection)
     if mode == "api":
         token = _get_token(connection)
-        return _cmd_list(token, limit, page, connection)
+        return await _cmd_list(token, limit, page, connection)
     _die(f"Unknown connection {mode!r}")
 
 
@@ -427,7 +427,7 @@ def op_list_meetings(limit: int = 20, page: int = 0, connection: dict | None = N
 @provides(web_read, urls=["app.granola.ai/docs/*"])
 @connection("api")
 @timeout(60)
-def op_get_meeting(id: str = None, url: str = None, connection: dict | None = None, **_kwargs) -> dict:
+async def op_get_meeting(id: str = None, url: str = None, connection: dict | None = None, **_kwargs) -> dict:
     """API only — local cache does not include full transcripts.
 
     Accepts either a direct `id` (UUID) or a Granola `url`
@@ -441,12 +441,12 @@ def op_get_meeting(id: str = None, url: str = None, connection: dict | None = No
     if not doc_id:
         _die("Either id or url is required for get_meeting")
     token = _get_token(connection)
-    return _cmd_get(token, doc_id, connection)
+    return await _cmd_get(token, doc_id, connection)
 
 
 @returns("conversation[]")
 @connection(["api", "cache"])
-def op_list_conversations(document_id: str, connection: dict | None = None, **_kwargs) -> list:
+async def op_list_conversations(document_id: str, connection: dict | None = None, **_kwargs) -> list:
     """List Q&A/AI chat threads linked to a meeting transcript
 
         Args:
@@ -457,13 +457,13 @@ def op_list_conversations(document_id: str, connection: dict | None = None, **_k
         return _cmd_list_conversations_from_cache(document_id, connection)
     if mode == "api":
         token = _get_token(connection)
-        return _cmd_list_conversations(token, document_id, connection)
+        return await _cmd_list_conversations(token, document_id, connection)
     _die(f"Unknown connection {mode!r}")
 
 
 @returns("conversation")
 @connection(["api", "cache"])
-def op_get_conversation(thread_id: str, connection: dict | None = None, **_kwargs) -> dict:
+async def op_get_conversation(thread_id: str, connection: dict | None = None, **_kwargs) -> dict:
     """Get a Q&A conversation with full message history
 
         Args:
@@ -474,7 +474,7 @@ def op_get_conversation(thread_id: str, connection: dict | None = None, **_kwarg
         return _cmd_get_conversation_from_cache(thread_id, connection)
     if mode == "api":
         token = _get_token(connection)
-        out = _cmd_get_conversation(token, thread_id, connection)
+        out = await _cmd_get_conversation(token, thread_id, connection)
         out["source"] = "api"
         return out
     _die(f"Unknown connection {mode!r}")

@@ -62,14 +62,14 @@ def _client(cookie_header: str):
 @returns("account")
 @connection("web")
 @timeout(20)
-def check_session(**params) -> dict:
+async def check_session(**params) -> dict:
     """Verify Chase session and identify the account holder."""
     cookie_header = (params.get("auth") or {}).get("cookies", "")
     if not cookie_header:
         return {"authenticated": False, "error": "no cookies"}
 
-    with _client(cookie_header) as client:
-        resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
+    async with _client(cookie_header) as client:
+        resp = await client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
         if resp["status"] != 200:
             return {"authenticated": False, "error": f"HTTP {resp['status']}"}
         data = resp["json"]
@@ -93,12 +93,12 @@ def check_session(**params) -> dict:
 
 @returns("account[]")
 @timeout(20)
-def get_accounts(**params) -> list | dict:
+async def get_accounts(**params) -> list | dict:
     """List all Chase accounts with current balances. Returns checking, savings, and credit card accounts. Balance = current balance. Available = available to spend/credit available."""
     cookie_header = require_cookies(params, "list_accounts")
 
-    with _client(cookie_header) as client:
-        resp = client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
+    async with _client(cookie_header) as client:
+        resp = await client.post(f"{BASE}/svc/rl/accounts/l4/v1/app/data/list")
         if resp["status"] in (401, 403):
             raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp['status']}")
         if resp["status"] != 200:
@@ -157,7 +157,7 @@ def _normalize_account(t: dict) -> dict:
 
 @returns("transaction[]")
 @timeout(20)
-def get_transactions(*, account_id, limit=30, **params) -> list | dict:
+async def get_transactions(*, account_id, limit=30, **params) -> list | dict:
     """List recent transactions for a Chase checking or savings account (DDA accounts only). Returns transactions with date, description, signed amount (negative=debit), running balance, and category. Credit card transactions require a different endpoint (not yet implemented).
 
         Args:
@@ -178,8 +178,8 @@ def get_transactions(*, account_id, limit=30, **params) -> list | dict:
         f"/inquiry-maintenance/etu-dda-transactions/v3/transactions?{query}"
     )
 
-    with _client(cookie_header) as client:
-        resp = client.get(path, headers={"network-channel-group-code": "DIGITAL"})
+    async with _client(cookie_header) as client:
+        resp = await client.get(path, headers={"network-channel-group-code": "DIGITAL"})
         if resp["status"] in (401, 403):
             raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp['status']}")
         if resp["status"] != 200:

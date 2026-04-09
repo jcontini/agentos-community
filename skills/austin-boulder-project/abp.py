@@ -489,7 +489,7 @@ def _get_id_token(credentials: str) -> str:
 # ---------------------------------------------------------------------------
 
 @returns("class[]")
-def op_get_schedule(
+async def op_get_schedule(
     location_id: int = AUSTIN_SPRINGDALE["id"],
     activity_ids: str = None,
     date: str = None,
@@ -511,7 +511,7 @@ def op_get_schedule(
 
 
 @returns({"ok": "boolean", "message": "string"})
-def op_book_class(
+async def op_book_class(
     booking_instance_id: int,
     num_guests: int = 0,
     **params,
@@ -524,7 +524,7 @@ def op_book_class(
 
 
 @returns({"ok": "boolean", "message": "string"})
-def op_cancel_booking(
+async def op_cancel_booking(
     booking_instance_id: int,
     reservation_id: int,
     **params,
@@ -537,7 +537,7 @@ def op_cancel_booking(
 
 
 @returns({"items": "array"})
-def op_get_my_memberships(**params) -> list[dict]:
+async def op_get_my_memberships(**params) -> list[dict]:
     """List active memberships for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)
@@ -545,7 +545,7 @@ def op_get_my_memberships(**params) -> list[dict]:
 
 
 @returns({"items": "array"})
-def op_get_my_passes(**params) -> list[dict]:
+async def op_get_my_passes(**params) -> list[dict]:
     """List active class passes for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
     id_token = _get_id_token(credentials)

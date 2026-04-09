@@ -481,7 +481,7 @@ def _build_raw(to, subject, body_text, html_body=None, cc=None, bcc=None,
 @returns("email[]")
 @connection("gmail")
 @timeout(60)
-def list_email_stubs(*, query="", limit=20, label_ids=None, page_token=None, **params):
+async def list_email_stubs(*, query="", limit=20, label_ids=None, page_token=None, **params):
     """List email IDs/stubs only — no full message content."""
     headers = _auth_header(params)
     query_params = {"maxResults": str(limit)}
@@ -492,14 +492,14 @@ def list_email_stubs(*, query="", limit=20, label_ids=None, page_token=None, **p
     if page_token:
         query_params["pageToken"] = page_token
 
-    resp = http.get(f"{BASE_URL}/messages", params=query_params, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/messages", params=query_params, **http.headers(accept="json", extra=headers))
     return resp["json"].get("messages", [])
 
 
 @returns("email")
 @provides(web_read, urls=["mail.google.com/*"])
 @connection("gmail")
-def get_email(*, id=None, url=None, **params):
+async def get_email(*, id=None, url=None, **params):
     """Get a specific email with full body content, headers, and attachment metadata."""
     # Extract ID from URL if provided
     if url and not id:
@@ -508,14 +508,14 @@ def get_email(*, id=None, url=None, **params):
         id = [seg for seg in fragment.split("/") if seg][-1]
 
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/messages/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/messages/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
     return _map_email(resp["json"])
 
 
 @returns("email[]")
 @connection("gmail")
 @timeout(120)
-def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **params):
+async def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **params):
     """List emails with full content — fetches stubs then hydrates each via get_email."""
     stubs = list_email_stubs(query=query, limit=limit, label_ids=label_ids,
                              page_token=page_token, **params)
@@ -527,7 +527,7 @@ def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **params
 @returns("email[]")
 @connection("gmail")
 @timeout(120)
-def search_emails(*, query, limit=20, **params):
+async def search_emails(*, query, limit=20, **params):
     """Search emails with full content using Gmail query syntax."""
     stubs = list_email_stubs(query=query, limit=limit, **params)
     if not stubs:
@@ -538,7 +538,7 @@ def search_emails(*, query, limit=20, **params):
 @returns("conversation[]")
 @connection("gmail")
 @timeout(60)
-def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, **params):
+async def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, **params):
     """List email threads with snippets."""
     headers = _auth_header(params)
     query_params = {"maxResults": str(limit)}
@@ -549,7 +549,7 @@ def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, *
     if page_token:
         query_params["pageToken"] = page_token
 
-    resp = http.get(f"{BASE_URL}/threads", params=query_params, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/threads", params=query_params, **http.headers(accept="json", extra=headers))
     threads = resp["json"].get("threads", [])
     # Threads from list API only have id/snippet/historyId — map what's available
     return [_map_conversation(t) for t in threads]
@@ -557,20 +557,20 @@ def list_conversations(*, query="", label_ids=None, limit=20, page_token=None, *
 
 @returns("conversation")
 @connection("gmail")
-def get_conversation(*, id, **params):
+async def get_conversation(*, id, **params):
     """Get a full email thread with all messages, headers, and body content."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/threads/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/threads/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
     return _map_conversation(resp["json"])
 
 
 @returns({"emailAddress": "string", "messagesTotal": "integer", "threadsTotal": "integer", "historyId": "string"})
 @connection("gmail")
 @timeout(15)
-def get_profile(**params):
+async def get_profile(**params):
     """Get Gmail account profile (email address, message count, history ID)."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/profile", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/profile", **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
@@ -587,19 +587,19 @@ def _map_label(label):
 @returns("tag[]")
 @connection("gmail")
 @timeout(15)
-def list_labels(**params):
+async def list_labels(**params):
     """List all Gmail labels (system and user-created) as tags."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/labels", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/labels", **http.headers(accept="json", extra=headers))
     return [_map_label(l) for l in resp["json"].get("labels", [])]
 
 
 @returns("file")
 @connection("gmail")
-def get_attachment(*, message_id, attachment_id, **params):
+async def get_attachment(*, message_id, attachment_id, **params):
     """Download an email attachment as a file with base64url-encoded content."""
     headers = _auth_header(params)
-    resp = http.get(
+    resp = await http.get(
         f"{BASE_URL}/messages/{message_id}/attachments/{attachment_id}",
         **http.headers(accept="json", extra=headers),
     )
@@ -615,16 +615,16 @@ def get_attachment(*, message_id, attachment_id, **params):
 
 @returns({"raw": "string", "id": "string", "threadId": "string"})
 @connection("gmail")
-def get_raw(*, id, **params):
+async def get_raw(*, id, **params):
     """Get the full RFC 2822 raw source of an email (base64url-encoded)."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/messages/{id}", params={"format": "raw"}, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/messages/{id}", params={"format": "raw"}, **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
 @returns({"history": "array", "historyId": "string", "nextPageToken": "string"})
 @connection("gmail")
-def get_history(*, start_history_id, label_id=None, history_types=None,
+async def get_history(*, start_history_id, label_id=None, history_types=None,
                 limit=100, page_token=None, **params):
     """Get incremental changes since a history ID."""
     headers = _auth_header(params)
@@ -636,23 +636,23 @@ def get_history(*, start_history_id, label_id=None, history_types=None,
     if page_token:
         query_params["pageToken"] = page_token
 
-    resp = http.get(f"{BASE_URL}/history", params=query_params, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/history", params=query_params, **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
 @returns({"enableAutoReply": "boolean", "responseSubject": "string", "responseBodyPlainText": "string"})
 @connection("gmail")
 @timeout(15)
-def get_vacation(**params):
+async def get_vacation(**params):
     """Get vacation/auto-reply settings."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/settings/vacation", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/settings/vacation", **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
 @returns("email[]")
 @connection("gmail")
-def list_drafts(*, query="", limit=20, page_token=None, **params):
+async def list_drafts(*, query="", limit=20, page_token=None, **params):
     """List drafts with full email content — fetches stubs then hydrates each via get_draft."""
     headers = _auth_header(params)
     query_params = {"maxResults": str(limit)}
@@ -661,7 +661,7 @@ def list_drafts(*, query="", limit=20, page_token=None, **params):
     if page_token:
         query_params["pageToken"] = page_token
 
-    resp = http.get(f"{BASE_URL}/drafts", params=query_params, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/drafts", params=query_params, **http.headers(accept="json", extra=headers))
     stubs = resp["json"].get("drafts", [])
     if not stubs:
         return []
@@ -670,10 +670,10 @@ def list_drafts(*, query="", limit=20, page_token=None, **params):
 
 @returns("email")
 @connection("gmail")
-def get_draft(*, id, **params):
+async def get_draft(*, id, **params):
     """Get a draft with full message content, mapped to the email shape."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/drafts/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/drafts/{id}", params={"format": "full"}, **http.headers(accept="json", extra=headers))
     draft = resp["json"]
     email = _map_email(draft.get("message", {}))
     if email:
@@ -684,20 +684,20 @@ def get_draft(*, id, **params):
 @returns({"id": "string", "criteria": "string", "action": "string"})
 @connection("gmail")
 @timeout(15)
-def list_filters(**params):
+async def list_filters(**params):
     """List all server-side email filters/rules."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/settings/filters", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/settings/filters", **http.headers(accept="json", extra=headers))
     return resp["json"].get("filter", [])
 
 
 @returns({"sendAsEmail": "string", "displayName": "string", "isDefault": "boolean", "isPrimary": "boolean"})
 @connection("gmail")
 @timeout(15)
-def list_send_as(**params):
+async def list_send_as(**params):
     """List send-as aliases (email addresses you can send from)."""
     headers = _auth_header(params)
-    resp = http.get(f"{BASE_URL}/settings/sendAs", **http.headers(accept="json", extra=headers))
+    resp = await http.get(f"{BASE_URL}/settings/sendAs", **http.headers(accept="json", extra=headers))
     return resp["json"].get("sendAs", [])
 
 
@@ -708,7 +708,7 @@ def list_send_as(**params):
 
 @returns({"status": "string", "threadId": "string", "messageId": "string"})
 @connection("gmail")
-def unsubscribe_email(*, id, **params):
+async def unsubscribe_email(*, id, **params):
     """Unsubscribe from a mailing list using RFC 8058 one-click.
 
     Fetches the email, checks for List-Unsubscribe + List-Unsubscribe-Post
@@ -735,7 +735,7 @@ def unsubscribe_email(*, id, **params):
         }
 
     # RFC 8058: POST with form data List-Unsubscribe=One-Click
-    resp = http.post(unsub_url, data={"List-Unsubscribe": "One-Click"})
+    resp = await http.post(unsub_url, data={"List-Unsubscribe": "One-Click"})
     status_code = resp.get("status", 0)
 
     return {
@@ -769,7 +769,7 @@ SYNC_BASE = "https://mail.google.com/sync/u/0/i/s"
 @returns({"status": "string", "threadId": "string"})
 @connection("sync")
 @timeout(15)
-def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None, **params):
+async def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None, **params):
     """Record an unsubscribe in Gmail's internal state via the sync protocol.
 
     Applies ^punsub (unsubscribed) and ^punsub_sat (satisfied) internal labels
@@ -812,7 +812,7 @@ def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None,
         2
     ]
 
-    resp = http.post(
+    resp = await http.post(
         SYNC_BASE,
         params={"hl": "en", "c": "0", "rt": "r", "pt": "ji"},
         json=payload,
@@ -837,11 +837,11 @@ def sync_unsubscribe(*, msg_id, thread_id, message_id_header="", label_ids=None,
 
 @returns("email")
 @connection("gmail")
-def send_email(*, to, subject, body, html_body=None, cc=None, bcc=None, **params):
+async def send_email(*, to, subject, body, html_body=None, cc=None, bcc=None, **params):
     """Send a new email (plain text or HTML)."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
     headers = _auth_header(params)
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/messages/send",
         json={"raw": raw},
         **http.headers(accept="json", extra=headers),
@@ -851,7 +851,7 @@ def send_email(*, to, subject, body, html_body=None, cc=None, bcc=None, **params
 
 @returns("email")
 @connection("gmail")
-def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
+async def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
                 cc=None, bcc=None, references=None, **params):
     """Reply to an email (stays in the same thread)."""
     raw = _build_raw(
@@ -860,7 +860,7 @@ def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
         in_reply_to=in_reply_to, references=references,
     )
     headers = _auth_header(params)
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/messages/send",
         json={"raw": raw, "threadId": thread_id},
         **http.headers(accept="json", extra=headers),
@@ -870,7 +870,7 @@ def reply_email(*, to, thread_id, in_reply_to, subject, body, html_body=None,
 
 @returns("email")
 @connection("gmail")
-def forward_email(*, to, subject, body, html_body=None, cc=None, bcc=None,
+async def forward_email(*, to, subject, body, html_body=None, cc=None, bcc=None,
                   thread_id=None, **params):
     """Forward an email."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
@@ -878,44 +878,44 @@ def forward_email(*, to, subject, body, html_body=None, cc=None, bcc=None,
     payload = {"raw": raw}
     if thread_id:
         payload["threadId"] = thread_id
-    resp = http.post(f"{BASE_URL}/messages/send", json=payload, **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/messages/send", json=payload, **http.headers(accept="json", extra=headers))
     return _map_email(resp["json"])
 
 
 @returns("email")
 @connection("gmail")
-def modify_email(*, id, add_labels=None, remove_labels=None, **params):
+async def modify_email(*, id, add_labels=None, remove_labels=None, **params):
     """Modify email labels — mark read/unread, star/unstar, archive, move to spam."""
     headers = _auth_header(params)
     body = {
         "addLabelIds": add_labels or [],
         "removeLabelIds": remove_labels or [],
     }
-    resp = http.post(f"{BASE_URL}/messages/{id}/modify", json=body, **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/messages/{id}/modify", json=body, **http.headers(accept="json", extra=headers))
     return _map_email(resp["json"])
 
 
 @returns("email")
 @connection("gmail")
-def trash_email(*, id, **params):
+async def trash_email(*, id, **params):
     """Move an email to trash."""
     headers = _auth_header(params)
-    resp = http.post(f"{BASE_URL}/messages/{id}/trash", **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/messages/{id}/trash", **http.headers(accept="json", extra=headers))
     return _map_email(resp["json"])
 
 
 @returns("email")
 @connection("gmail")
-def untrash_email(*, id, **params):
+async def untrash_email(*, id, **params):
     """Remove an email from trash."""
     headers = _auth_header(params)
-    resp = http.post(f"{BASE_URL}/messages/{id}/untrash", **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/messages/{id}/untrash", **http.headers(accept="json", extra=headers))
     return _map_email(resp["json"])
 
 
 @returns({"ok": "boolean"})
 @connection("gmail")
-def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
+async def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
     """Modify labels on multiple emails at once (max 1000 IDs)."""
     headers = _auth_header(params)
     body = {
@@ -923,17 +923,17 @@ def batch_modify_email(*, ids, add_labels=None, remove_labels=None, **params):
         "addLabelIds": add_labels or [],
         "removeLabelIds": remove_labels or [],
     }
-    resp = http.post(f"{BASE_URL}/messages/batchModify", json=body, **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/messages/batchModify", json=body, **http.headers(accept="json", extra=headers))
     # 204 No Content on success
     return {}
 
 
 @returns({"ok": "boolean"})
 @connection("gmail")
-def batch_delete_email(*, ids, **params):
+async def batch_delete_email(*, ids, **params):
     """Permanently delete multiple emails (max 1000 IDs). CANNOT BE UNDONE."""
     headers = _auth_header(params)
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/messages/batchDelete",
         json={"ids": ids},
         **http.headers(accept="json", extra=headers),
@@ -943,7 +943,7 @@ def batch_delete_email(*, ids, **params):
 
 @returns("email")
 @connection("gmail")
-def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
+async def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
                  thread_id=None, **params):
     """Create a new draft email."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
@@ -951,7 +951,7 @@ def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
     message = {"raw": raw}
     if thread_id:
         message["threadId"] = thread_id
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/drafts",
         json={"message": message},
         **http.headers(accept="json", extra=headers),
@@ -965,11 +965,11 @@ def create_draft(*, to, subject, body, html_body=None, cc=None, bcc=None,
 
 @returns("email")
 @connection("gmail")
-def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **params):
+async def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **params):
     """Update an existing draft."""
     raw = _build_raw(to, subject, body, html_body=html_body, cc=cc, bcc=bcc)
     headers = _auth_header(params)
-    resp = http.put(
+    resp = await http.put(
         f"{BASE_URL}/drafts/{id}",
         json={"message": {"raw": raw}},
         **http.headers(accept="json", extra=headers),
@@ -983,10 +983,10 @@ def update_draft(*, id, to, subject, body, html_body=None, cc=None, bcc=None, **
 
 @returns("email")
 @connection("gmail")
-def send_draft(*, id, **params):
+async def send_draft(*, id, **params):
     """Send an existing draft."""
     headers = _auth_header(params)
-    resp = http.post(
+    resp = await http.post(
         f"{BASE_URL}/drafts/send",
         json={"id": id},
         **http.headers(accept="json", extra=headers),
@@ -996,17 +996,17 @@ def send_draft(*, id, **params):
 
 @returns({"status": "string"})
 @connection("gmail")
-def delete_draft(*, id, **params):
+async def delete_draft(*, id, **params):
     """Permanently delete a draft."""
     headers = _auth_header(params)
-    resp = http.delete(f"{BASE_URL}/drafts/{id}", **http.headers(accept="json", extra=headers))
+    resp = await http.delete(f"{BASE_URL}/drafts/{id}", **http.headers(accept="json", extra=headers))
     return {"status": "deleted"}
 
 
 @returns({"enableAutoReply": "boolean", "responseSubject": "string"})
 @connection("gmail")
 @timeout(15)
-def set_vacation(*, enabled, subject=None, body=None, html_body=None,
+async def set_vacation(*, enabled, subject=None, body=None, html_body=None,
                  contacts_only=False, domain_only=False,
                  start_time=None, end_time=None, **params):
     """Set or disable vacation/auto-reply."""
@@ -1024,14 +1024,14 @@ def set_vacation(*, enabled, subject=None, body=None, html_body=None,
     if end_time is not None:
         payload["endTime"] = end_time
 
-    resp = http.put(f"{BASE_URL}/settings/vacation", json=payload, **http.headers(accept="json", extra=headers))
+    resp = await http.put(f"{BASE_URL}/settings/vacation", json=payload, **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
 @returns("tag")
 @connection("gmail")
 @timeout(15)
-def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **params):
+async def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **params):
     """Create a new Gmail label, returned as a tag."""
     headers = _auth_header(params)
     payload = {
@@ -1039,14 +1039,14 @@ def create_label(*, name, show_in_label_list=None, show_in_message_list=None, **
         "labelListVisibility": show_in_label_list or "labelShow",
         "messageListVisibility": show_in_message_list or "show",
     }
-    resp = http.post(f"{BASE_URL}/labels", json=payload, **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/labels", json=payload, **http.headers(accept="json", extra=headers))
     return _map_label(resp["json"])
 
 
 @returns("tag")
 @connection("gmail")
 @timeout(15)
-def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list=None, **params):
+async def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list=None, **params):
     """Update a Gmail label (name, visibility)."""
     headers = _auth_header(params)
     payload = {}
@@ -1057,24 +1057,24 @@ def update_label(*, id, name=None, show_in_label_list=None, show_in_message_list
     if show_in_message_list is not None:
         payload["messageListVisibility"] = show_in_message_list
 
-    resp = http.patch(f"{BASE_URL}/labels/{id}", json=payload, **http.headers(accept="json", extra=headers))
+    resp = await http.patch(f"{BASE_URL}/labels/{id}", json=payload, **http.headers(accept="json", extra=headers))
     return _map_label(resp["json"])
 
 
 @returns({"status": "string"})
 @connection("gmail")
 @timeout(15)
-def delete_label(*, id, **params):
+async def delete_label(*, id, **params):
     """Delete a Gmail label (does not delete emails, just removes the label)."""
     headers = _auth_header(params)
-    resp = http.delete(f"{BASE_URL}/labels/{id}", **http.headers(accept="json", extra=headers))
+    resp = await http.delete(f"{BASE_URL}/labels/{id}", **http.headers(accept="json", extra=headers))
     return {"status": "deleted"}
 
 
 @returns({"id": "string"})
 @connection("gmail")
 @timeout(15)
-def create_filter(*, from_addr=None, to=None, subject=None, query=None,
+async def create_filter(*, from_addr=None, to=None, subject=None, query=None,
                   has_attachment=False, add_labels=None, remove_labels=None,
                   forward_to=None, **params):
     """Create a server-side email filter/rule."""
@@ -1099,15 +1099,15 @@ def create_filter(*, from_addr=None, to=None, subject=None, query=None,
         action["forward"] = forward_to
 
     payload = {"criteria": criteria, "action": action}
-    resp = http.post(f"{BASE_URL}/settings/filters", json=payload, **http.headers(accept="json", extra=headers))
+    resp = await http.post(f"{BASE_URL}/settings/filters", json=payload, **http.headers(accept="json", extra=headers))
     return resp["json"]
 
 
 @returns({"status": "string"})
 @connection("gmail")
 @timeout(15)
-def delete_filter(*, id, **params):
+async def delete_filter(*, id, **params):
     """Delete a server-side email filter/rule."""
     headers = _auth_header(params)
-    resp = http.delete(f"{BASE_URL}/settings/filters/{id}", **http.headers(accept="json", extra=headers))
+    resp = await http.delete(f"{BASE_URL}/settings/filters/{id}", **http.headers(accept="json", extra=headers))
     return {"status": "deleted"}
