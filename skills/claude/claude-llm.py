@@ -30,8 +30,19 @@ MCP_CONFIG = json.dumps({
     }
 })
 
-# Tools claude -p is allowed to call via MCP.
-ALLOWED_TOOLS = "mcp__agentos__run,mcp__agentos__read,mcp__agentos__search"
+# Tools the agent is allowed to use. MCP tools for engine access,
+# Claude Code native tools for file/web access. Explicitly listed so
+# the agent CANNOT use Agent (sub-agent spawning) or Bash.
+ALLOWED_MCP = [
+    "mcp__agentos__run",
+    "mcp__agentos__read",
+    "mcp__agentos__search",
+]
+ALLOWED_NATIVE = [
+    "Read", "Glob", "Grep",           # codebase access (read-only)
+    "WebSearch", "WebFetch",           # web research
+]
+ALLOWED_TOOLS = ",".join(ALLOWED_MCP + ALLOWED_NATIVE)
 
 
 
@@ -61,7 +72,7 @@ def _format_messages(messages: list) -> str:
           features=["tool_calling", "structured_output", "structured_output_with_tools"])
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("cli")
-@timeout(600)
+@timeout(1800)
 async def chat(*, model: str, messages: list, tools: list = None,
          temperature: float = 0, system: str = None,
          output_schema: dict = None, **params) -> dict:
@@ -88,16 +99,18 @@ async def chat(*, model: str, messages: list, tools: list = None,
     if system:
         args.extend(["--system-prompt", system])
 
+    # Always restrict to allowed tools — no Agent, no Bash, no Write
+    args.extend(["--allowedTools", ALLOWED_TOOLS])
+
     # Native MCP tool calling — point at agentos mcp for tool dispatch
     if tools:
         args.extend(["--mcp-config", MCP_CONFIG])
-        args.extend(["--allowedTools", ALLOWED_TOOLS])
 
     # Native structured output via --json-schema
     if output_schema:
         args.extend(["--json-schema", json.dumps(output_schema)])
 
-    result = await shell.run("claude", args=args, input=prompt, timeout=580)
+    result = await shell.run("claude", args=args, input=prompt, timeout=1740)
 
     stdout = result.get("stdout", "")
     exit_code = result.get("exit_code", 1)
