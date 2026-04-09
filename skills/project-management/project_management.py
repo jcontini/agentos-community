@@ -69,24 +69,35 @@ REVIEW_SCHEMA = {
 
 # ── System prompts ───────────────────────────────────────────────────────────
 # These ARE the conventions. When conventions change, prompts change.
+# Built dynamically: shared preamble + role-specific content.
 
-# Shared guidance appended to all prompts that do codebase research
-CODEBASE_GUIDANCE = """
-Codebase exploration rules:
+
+def _build_system(*, role: str, output_file: str, body: str, today: str = "") -> str:
+    """Build a system prompt with shared preamble + role-specific body."""
+    if not today:
+        today = str(date.today())
+
+    preamble = f"""Today is {today}.
+
+Your ENTIRE response is the document in markdown. It will be saved directly
+to {output_file} — do not use tools to write it, just output the document.
+Do not summarize, describe, or talk about what you'd write — write the actual
+document. No preamble, no meta-commentary. Start with the YAML frontmatter.
+
+Tool usage:
 - NEVER use `find`. It crawls build artifacts (target/, node_modules/) and hangs.
 - Use Glob for file patterns (e.g. Glob("**/*.py")), Grep for content search.
 - Use Read to read specific files. Read the file before referencing it.
-- Keep research focused — read the files the RFP names, don't crawl the whole repo.
+- Keep research focused — read the files the RFP/problem names, don't crawl blindly.
 """
+    return f"{role}\n\n{preamble}\n{body}"
 
-SYSTEM_WRITE_RFP = """You are an RFP writer for agentOS engineering projects.
 
-Your ENTIRE response is the RFP document in markdown. It will be saved directly
-to 0-rfp.md — do not use tools to write it, just output the document. No
-preamble, no "here's what I'd write", no meta-commentary. Start with the YAML
-frontmatter.
+# ── Role-specific prompt bodies ─────────────────────────────────────────────
 
-Write a focused RFP with YAML frontmatter and these sections:
+ROLE_WRITE_RFP = "You are an RFP writer."
+
+BODY_WRITE_RFP = """Write a focused RFP with YAML frontmatter and these sections:
 - Context (current state, key files table)
 - Evaluation Criteria (1 persona, weights summing to 100)
 - Gate Tests (concrete `agentos call` commands, not prose)
@@ -112,23 +123,17 @@ Gate test format — each test is an `agentos call` command with expected output
 
 Scoring thresholds: 95+ = implement, 70-94 = address blockers, <70 = rethink.
 Keep the RFP under 300 lines.
-""" + CODEBASE_GUIDANCE
+"""
 
-SYSTEM_PROPOSE = """You are a proposal writer for agentOS engineering projects.
+ROLE_PROPOSE = "You are a proposal writer."
 
-Your ENTIRE response is the proposal document in markdown. It will be saved
-directly to 1-proposal.md — do not use tools to write it, just output the
-document. Do not summarize, describe, or talk about the proposal — write the
-actual document. No preamble, no "here's what I'd write", no meta-commentary.
-Start with the YAML frontmatter.
-
-Read the RFP carefully. The proposal MUST have this exact structure:
+BODY_PROPOSE = """Read the RFP carefully. The proposal MUST have this exact structure:
 
 ---
 title: "<Name> — Proposal"
 type: proposal
 rfp: <project-slug>
-date: {date}
+date: {{date}}
 ---
 
 ## Methodology
@@ -166,11 +171,11 @@ Requirements:
   You MUST address ALL blockers. Do not hand-wave — show exactly what changed.
 
 Keep the proposal under 500 lines. Concrete > comprehensive.
-""" + CODEBASE_GUIDANCE
+"""
 
-SYSTEM_REVIEW = """You are an adversarial evaluator for agentOS engineering proposals.
+ROLE_REVIEW = "You are an adversarial evaluator."
 
-Your job is to find gaps, not confirm assumptions. Be harsh but fair.
+BODY_REVIEW = """Your job is to find gaps, not confirm assumptions. Be harsh but fair.
 
 Score the proposal against EACH criterion from the RFP's evaluation criteria table.
 For each criterion:
@@ -192,22 +197,18 @@ Scoring must be calibrated:
 - 95+ means "ready to implement as-is, no significant gaps"
 - 70-94 means "good design but specific things need fixing"
 - <70 means "fundamental approach problems, needs rethinking"
-""" + CODEBASE_GUIDANCE
+"""
 
-SYSTEM_CLOSEOUT = """You are a closeout writer for completed agentOS projects.
+ROLE_CLOSEOUT = "You are a closeout writer."
 
-Your ENTIRE response is the closeout document in markdown. It will be saved
-directly to 3-closeout.md — do not use tools to write it, just output the
-document. No preamble, no meta-commentary. Start with the YAML frontmatter.
-
-Read the project's 0-rfp.md, 1-proposal.md, 2-review.md, and the git log output.
+BODY_CLOSEOUT = """Read the project's 0-rfp.md, 1-proposal.md, 2-review.md, and the git log output.
 Write a closeout document with YAML frontmatter and exactly five sections.
 
 YAML frontmatter:
   title: "<Name> — Closeout"
   type: closeout
   rfp: <project-slug>
-  date: {date}
+  date: {{date}}
   verdict: shipped | partial | abandoned
   commits: [<short-hashes>]
 
@@ -364,7 +365,8 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
 
     # Agent writes the RFP content
     today = str(date.today())
-    system = SYSTEM_WRITE_RFP.format(priority=priority, date=today)
+    body = BODY_WRITE_RFP.format(priority=priority)
+    system = _build_system(role=ROLE_WRITE_RFP, output_file="0-rfp.md", body=body, today=today)
     result = await llm.agent(
         prompt=f"Write an RFP for this problem:\n\n{problem}",
         system=system,
@@ -413,7 +415,7 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
     today = str(date.today())
-    system = SYSTEM_PROPOSE.format(date=today)
+    system = _build_system(role=ROLE_PROPOSE, output_file="1-proposal.md", body=BODY_PROPOSE, today=today)
 
     result = await llm.agent(
         prompt="\n".join(prompt_parts),
@@ -461,9 +463,11 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     await progress.progress(1, 3, "Reviewing proposal...")
 
+    today = str(date.today())
+    system = _build_system(role=ROLE_REVIEW, output_file="2-review.md", body=BODY_REVIEW, today=today)
     result = await llm.agent(
         prompt=prompt,
-        system=SYSTEM_REVIEW,
+        system=system,
         model="sonnet",
         output_schema=REVIEW_SCHEMA,
         timeout=1680,
@@ -524,7 +528,7 @@ async def closeout(project: str, **params) -> dict:
     await progress.progress(2, 4, "Writing closeout...")
 
     today = str(date.today())
-    system = SYSTEM_CLOSEOUT.format(date=today)
+    system = _build_system(role=ROLE_CLOSEOUT, output_file="3-closeout.md", body=BODY_CLOSEOUT, today=today)
     prompt = (
         f"## RFP\n\n{rfp_content}\n\n"
         f"## Proposal\n\n{proposal_content}\n\n"
