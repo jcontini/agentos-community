@@ -34,6 +34,49 @@ MCP_CONFIG = json.dumps({
 ALLOWED_TOOLS = "mcp__agentos__run,mcp__agentos__read,mcp__agentos__search"
 
 
+MODELS = [
+    {
+        "name": "Claude Opus 4.6",
+        "provider": "anthropic",
+        "modelType": "chat",
+        "contextWindow": 200000,
+        "maxOutput": 32000,
+        "modality": ["text", "vision"],
+        "id": "claude-opus-4-6",
+    },
+    {
+        "name": "Claude Sonnet 4.6",
+        "provider": "anthropic",
+        "modelType": "chat",
+        "contextWindow": 200000,
+        "maxOutput": 16000,
+        "modality": ["text", "vision"],
+        "id": "claude-sonnet-4-6",
+    },
+    {
+        "name": "Claude Haiku 4.5",
+        "provider": "anthropic",
+        "modelType": "chat",
+        "contextWindow": 200000,
+        "maxOutput": 32000,
+        "modality": ["text", "vision"],
+        "id": "claude-haiku-4-5-20251001",
+    },
+]
+
+
+@returns("model[]")
+@connection("cli")
+async def list_models(**params) -> list:
+    """List Claude models available through the CLI.
+
+    Returns model shapes with provider, context window, and output limits.
+    These are the same Anthropic models — the CLI is a different interface
+    backed by the user's existing subscription (no API key needed).
+    """
+    return MODELS
+
+
 def _format_messages(messages: list) -> str:
     """Convert chat messages to a single prompt string for claude -p.
 
