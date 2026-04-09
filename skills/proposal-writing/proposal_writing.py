@@ -120,9 +120,9 @@ AGGREGATION_SCHEMA = {
 # ---------------------------------------------------------------------------
 
 RESEARCH_TOOLS = [
-    "exa.result.search",
-    "exa.webpage.read_webpage",
-    "hackernews.post.search_posts",
+    "exa.search",
+    "exa.read_webpage",
+    "hackernews.search_posts",
 ]
 
 # Sub-agents don't get file tools — the orchestrator reads/writes files
