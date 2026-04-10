@@ -43,16 +43,18 @@ All developer documentation lives in the [agentOS SDK repo](https://github.com/j
 ```bash
 git clone https://github.com/jcontini/agentos-community
 cd agentos-community
-npm install    # sets up pre-commit hooks
+# Install the SDK once — it ships the validator used by pre-commit
+pip install -e ../agentos-sdk/skills-sdk
 ```
 
 Useful commands:
 
 ```bash
-npm run validate -- exa
-npm run lint:semantic -- exa
-npm run mcp:call -- --skill exa --tool search --params '{"query":"rust","limit":1}'
-npm run mcp:test -- exa --verbose
+agent-sdk validate                  # lint every skill in this repo
+agent-sdk validate exa              # single skill
+agent-sdk validate --sandbox        # only the banned-import sandbox check
+agent-sdk new-skill my-skill        # scaffold a new skill
+agent-sdk shapes                    # list available shapes
 ```
 
 ---

@@ -139,9 +139,8 @@ async def _post(path: str, body: dict = None, auth_params: dict = None) -> dict:
     return resp["json"]
 
 
-def _delete(path: str, auth_params: dict = None) -> dict:
-    resp = http.request(
-        "DELETE",
+async def _delete(path: str, auth_params: dict = None) -> dict:
+    resp = await http.delete(
         f"{BASE}/{path.lstrip('/')}",
         **http.headers(accept="json", extra=_auth_header(auth_params or {})),
     )
@@ -260,7 +259,7 @@ async def delete_post(*, id: str, **params) -> dict:
         Args:
             id: Moltbook post id
         """
-    data = _delete(f"posts/{id}", params)
+    data = await _delete(f"posts/{id}", params)
     return {"success": data.get("success", True)}
 
 
@@ -393,7 +392,7 @@ async def unsubscribe_community(*, name: str, **params) -> dict:
         Args:
             name: Submolt name
         """
-    return _delete(f"submolts/{name}/subscribe", params)
+    return await _delete(f"submolts/{name}/subscribe", params)
 
 
 # ── Accounts ──────────────────────────────────────────────────────────────────
@@ -437,7 +436,7 @@ async def unfollow_account(*, name: str, **params) -> dict:
         Args:
             name: Moltbook agent name
         """
-    return _delete(f"agents/{name}/follow", params)
+    return await _delete(f"agents/{name}/follow", params)
 
 
 @returns({"status": "string"})
@@ -456,8 +455,7 @@ async def update_account(*, description: str = None, metadata: dict = None, **pa
             description: New agent description
             metadata: Arbitrary metadata object
         """
-    resp = http.request(
-        "PATCH",
+    resp = await http.patch(
         f"{BASE}/agents/me",
         json={"description": description, "metadata": metadata},
         **http.headers(accept="json", extra=_auth_header(params)),

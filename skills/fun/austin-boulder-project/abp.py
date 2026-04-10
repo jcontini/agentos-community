@@ -9,9 +9,8 @@ Portal:   https://boulderingproject.portal.approach.app
 Auth:     AWS Cognito (us-east-1) via USER_PASSWORD_AUTH
 """
 
-import json
+import asyncio
 import re
-import time
 from agentos import http, returns
 
 # ---------------------------------------------------------------------------
@@ -61,13 +60,13 @@ AUSTIN_WESTGATE = {
 # Step 1: Discover the Cognito config from the portal
 # ---------------------------------------------------------------------------
 
-def _get_region() -> str:
+async def _get_region() -> str:
     """
     GET /region?namespace=boulderingproject
     Returns the AWS region for Cognito auth.
     Confirmed working without auth or API key.
     """
-    data = json.loads(_fetch(f"{PORTAL_API}/region?namespace={NAMESPACE}"))
+    data = await _request(f"{PORTAL_API}/region", params={"namespace": NAMESPACE})
     return data["DEFAULT_REGION"]
 
 
@@ -75,43 +74,62 @@ def _get_region() -> str:
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
-_DELETE_SENTINEL = b"__DELETE__"
-
-
-def _fetch(
+async def _request(
     url: str,
     *,
     headers: dict | None = None,
-    data: bytes | None = None,
+    params: dict | None = None,
+    json_body: dict | None = None,
     method: str | None = None,
-) -> bytes:
+) -> dict | str:
     """
-    Fetch a URL via http.request(), retrying on transient errors.
+    Dispatch an HTTP request through the SDK with retry on transient errors.
 
     http.headers(accept="json") provides browser-like Sec-CH-UA + Sec-Fetch headers
     needed to pass CloudFront WAF JA4 fingerprinting.
+
+    Returns the parsed JSON body when the response is application/json, otherwise
+    the raw text body. Raises RuntimeError on non-retryable 4xx or exhausted retries.
     """
     if method is None:
-        method = "POST" if data is not None else "GET"
-    last_err = None
+        method = "POST" if json_body is not None else "GET"
+    verb = method.upper()
+    call = {
+        "GET":    http.get,
+        "POST":   http.post,
+        "DELETE": http.delete,
+        "PATCH":  http.patch,
+        "PUT":    http.put,
+    }.get(verb)
+    if call is None:
+        raise ValueError(f"unsupported HTTP method: {method}")
+
+    last_err: Exception | None = None
     for attempt in range(3):
         try:
-            resp = http.request(method, url, content=data, **http.headers(accept="json", extra=headers))
+            kwargs = dict(http.headers(accept="json", extra=headers))
+            if params is not None:
+                kwargs["params"] = params
+            if json_body is not None:
+                kwargs["json"] = json_body
+            resp = await call(url, **kwargs)
             status = resp["status"]
             if status >= 400:
                 if status not in {429, 500, 502, 503, 504} or attempt == 2:
-                    raise RuntimeError(f"HTTP {status} for {method} {url}: {resp['body'][:200]}")
+                    body_preview = resp.get("body", "")
+                    if isinstance(body_preview, (bytes, bytearray)):
+                        body_preview = body_preview.decode("utf-8", errors="replace")
+                    raise RuntimeError(f"HTTP {status} for {verb} {url}: {body_preview[:200]}")
                 last_err = RuntimeError(f"HTTP {status}")
             else:
-                body = resp["body"]
-                return body.encode("utf-8") if isinstance(body, str) else body
+                return resp["json"] if resp.get("json") is not None else resp.get("body", "")
         except RuntimeError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             last_err = e
             if attempt == 2:
                 raise
-        time.sleep(1.5 * (attempt + 1))
+        await asyncio.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"Request failed: {last_err}")
 
 
@@ -119,7 +137,7 @@ def _fetch(
 # Config discovery
 # ---------------------------------------------------------------------------
 
-def _discover_config(force: bool = False) -> dict:
+async def _discover_config(force: bool = False) -> dict:
     """
     Extract live config from the Tilefive app bundle.
 
@@ -152,17 +170,23 @@ def _discover_config(force: bool = False) -> dict:
 
     try:
         # Step 1: get the portal HTML and find the bundle filename
-        html = _fetch(PORTAL_ORIGIN).decode("utf-8", errors="replace")
-        m = _RE_BUNDLE_URL.search(html)
+        html = await _request(PORTAL_ORIGIN)
+        if isinstance(html, (bytes, bytearray)):
+            html = html.decode("utf-8", errors="replace")
+        m = _RE_BUNDLE_URL.search(html or "")
         if not m:
             return fallback
         bundle_url = f"{PORTAL_ORIGIN}/assets/{m.group(1)}"
 
         # Step 2: fetch the bundle (may fail if CDN blocks non-browser origin)
-        bundle = _fetch(bundle_url, headers={
+        bundle = await _request(bundle_url, headers={
             "Referer": f"{PORTAL_ORIGIN}/",
             "Origin": PORTAL_ORIGIN,
-        }).decode("utf-8", errors="replace")
+        })
+        if isinstance(bundle, (bytes, bytearray)):
+            bundle = bundle.decode("utf-8", errors="replace")
+        if not isinstance(bundle, str):
+            return fallback
 
         # If the CDN returned HTML instead of JS, fall back
         if bundle.lstrip().startswith("<!"):
@@ -183,7 +207,7 @@ def _discover_config(force: bool = False) -> dict:
         return fallback
 
 
-def _widgets_headers(access_token: str | None = None) -> dict:
+async def _widgets_headers(access_token: str | None = None) -> dict:
     """
     Headers required for all widgets.api.prod.tilefive.com calls.
 
@@ -192,7 +216,7 @@ def _widgets_headers(access_token: str | None = None) -> dict:
     The API Gateway uses this for tenant routing. When a user IS logged in,
     the authenticated portal API (Ie()) uses a real Cognito IdToken instead.
     """
-    cfg = _discover_config()
+    cfg = await _discover_config()
     headers = {
         "X-Api-Key": cfg["widgetsApiKey"],   # casing from bundle: "X-Api-Key"
         "Authorization": access_token or NAMESPACE,  # namespace when unauthenticated
@@ -202,16 +226,16 @@ def _widgets_headers(access_token: str | None = None) -> dict:
     return headers
 
 
-def _get_locations() -> list[dict]:
+async def _get_locations() -> list[dict]:
     """
     GET https://widgets.api.prod.tilefive.com/locations
     Returns all Bouldering Project locations.
     Requires X-Api-Key + Authorization: namespace (see _widgets_headers()).
     """
-    return json.loads(_fetch(f"{WIDGETS_API}/locations", headers=_widgets_headers()))
+    return await _request(f"{WIDGETS_API}/locations", headers=await _widgets_headers())
 
 
-def _get_location_settings(location_id: int) -> dict:
+async def _get_location_settings(location_id: int) -> dict:
     """
     GET https://widgets.api.prod.tilefive.com/locationsettings/{locationId}/portal
     Returns portal config for a location.
@@ -219,20 +243,20 @@ def _get_location_settings(location_id: int) -> dict:
       { locationId: 6, setting: { membershipTypeIds: [418], passTypeIds: [307], ... } }
     """
     url = f"{WIDGETS_API}/locationsettings/{location_id}/portal"
-    return json.loads(_fetch(url, headers=_widgets_headers()))
+    return await _request(url, headers=await _widgets_headers())
 
 
-def _get_activities() -> list[dict]:
+async def _get_activities() -> list[dict]:
     """
     GET https://widgets.api.prod.tilefive.com/activities
     Returns all activity categories.
     Key IDs: 4=Climbing Classes, 5=Yoga, 6=Fitness
     """
-    data = json.loads(_fetch(f"{WIDGETS_API}/activities", headers=_widgets_headers()))
+    data = await _request(f"{WIDGETS_API}/activities", headers=await _widgets_headers())
     return data.get("data", [])
 
 
-def _get_schedule(
+async def _get_schedule(
     location_id: int = AUSTIN_SPRINGDALE["id"],
     activity_ids: list[int] = None,
     date: str = None,
@@ -286,8 +310,9 @@ def _get_schedule(
     next_day = (d + timedelta(days=1)).isoformat()
     end_dt = f"{next_day}T04:59:59.999Z"
 
-    url = http.build_url(
+    return await _request(
         f"{WIDGETS_API}/cal",
+        headers=await _widgets_headers(),
         params={
             "startDT": start_dt,
             "endDT": end_dt,
@@ -297,14 +322,13 @@ def _get_schedule(
             "pageSize": 50,
         },
     )
-    return json.loads(_fetch(url, headers=_widgets_headers()))
 
 
 # ---------------------------------------------------------------------------
 # Step 2: Authenticate via AWS Cognito
 # ---------------------------------------------------------------------------
 
-def _login(email: str, password: str) -> dict:
+async def _login(email: str, password: str) -> dict:
     """
     Authenticate against AWS Cognito using USER_PASSWORD_AUTH flow.
     ClientId is auto-discovered from the app bundle via _discover_config().
@@ -317,37 +341,42 @@ def _login(email: str, password: str) -> dict:
     Cognito endpoint:
       POST https://cognito-idp.us-east-1.amazonaws.com/
       X-Amz-Target: AWSCognitoIdentityProviderService.InitiateAuth
+
+    Header override trick: Cognito rejects application/json — it wants
+    application/x-amz-json-1.1. The engine's per-request headers override
+    the body-implied Content-Type, so json=dict + headers={"Content-Type":
+    "application/x-amz-json-1.1"} works.
     """
-    cfg = _discover_config()
+    cfg = await _discover_config()
     headers = {
         "Content-Type": "application/x-amz-json-1.1",
         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
     }
-    payload = json.dumps({
+    body = {
         "AuthFlow": "USER_PASSWORD_AUTH",
         "ClientId": cfg["cognitoClientId"],
         "AuthParameters": {"USERNAME": email, "PASSWORD": password},
-    }).encode()
-    result = json.loads(_fetch(COGNITO_ENDPOINT, headers=headers, data=payload))
+    }
+    result = await _request(COGNITO_ENDPOINT, headers=headers, json_body=body)
     return result["AuthenticationResult"]
 
 
-def _refresh_tokens(refresh_token: str) -> dict:
+async def _refresh_tokens(refresh_token: str) -> dict:
     """
     Get a fresh AccessToken using a stored RefreshToken (no re-login needed).
     AccessToken TTL is 1hr; RefreshToken is long-lived.
     """
-    cfg = _discover_config()
+    cfg = await _discover_config()
     headers = {
         "Content-Type": "application/x-amz-json-1.1",
         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
     }
-    payload = json.dumps({
+    body = {
         "AuthFlow": "REFRESH_TOKEN_AUTH",
         "ClientId": cfg["cognitoClientId"],
         "AuthParameters": {"REFRESH_TOKEN": refresh_token},
-    }).encode()
-    result = json.loads(_fetch(COGNITO_ENDPOINT, headers=headers, data=payload))
+    }
+    result = await _request(COGNITO_ENDPOINT, headers=headers, json_body=body)
     return result["AuthenticationResult"]
 
 
@@ -371,7 +400,7 @@ def _portal_headers(id_token: str) -> dict:
     }
 
 
-def _get_my_bookings(id_token: str) -> list[dict]:
+async def _get_my_bookings(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/bookings (inferred)
     Returns the authenticated user's upcoming bookings.
@@ -379,10 +408,10 @@ def _get_my_bookings(id_token: str) -> list[dict]:
     TODO: confirm exact path via network capture after login.
     """
     url = f"{PORTAL_API}/customers/bookings"
-    return json.loads(_fetch(url, headers=_portal_headers(id_token)))
+    return await _request(url, headers=_portal_headers(id_token))
 
 
-def _book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> dict:
+async def _book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) -> dict:
     """
     Book a class (add the authenticated user to a booking instance).
 
@@ -401,11 +430,10 @@ def _book_class(id_token: str, booking_instance_id: int, num_guests: int = 0) ->
     Classes with entranceRequirement="MP" require an active membership or pass.
     """
     url = f"{PORTAL_API}/bookings/{booking_instance_id}/customers"
-    payload = json.dumps({"numGuests": num_guests}).encode()
-    return json.loads(_fetch(url, headers=_portal_headers(id_token), data=payload))
+    return await _request(url, headers=_portal_headers(id_token), json_body={"numGuests": num_guests})
 
 
-def _cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int) -> dict:
+async def _cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int) -> dict:
     """
     Cancel a booking reservation.
 
@@ -418,27 +446,27 @@ def _cancel_booking(id_token: str, booking_instance_id: int, reservation_id: int
       reservation_id:      The reservation id returned by _book_class()
     """
     url = f"{PORTAL_API}/bookings/{booking_instance_id}/reservations/{reservation_id}"
-    return json.loads(_fetch(url, headers=_portal_headers(id_token), method="DELETE"))
+    return await _request(url, headers=_portal_headers(id_token), method="DELETE")
 
 
-def _get_my_memberships(id_token: str) -> list[dict]:
+async def _get_my_memberships(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/memberships
     Returns the user's active memberships.
     From bundle: Qee=()=>Ie().then(e=>e.get("/customers/memberships"))
     """
     url = f"{PORTAL_API}/customers/memberships"
-    return json.loads(_fetch(url, headers=_portal_headers(id_token)))
+    return await _request(url, headers=_portal_headers(id_token))
 
 
-def _get_my_passes(id_token: str) -> list[dict]:
+async def _get_my_passes(id_token: str) -> list[dict]:
     """
     GET https://portal.api.prod.tilefive.com/customers/passes
     Returns the user's active class passes.
     From bundle: Jee=()=>Ie().then(e=>e.get("/customers/passes"))
     """
     url = f"{PORTAL_API}/customers/passes"
-    return json.loads(_fetch(url, headers=_portal_headers(id_token)))
+    return await _request(url, headers=_portal_headers(id_token))
 
 
 # ---------------------------------------------------------------------------
@@ -473,7 +501,7 @@ def _booking_to_entity(b: dict) -> dict:
     }
 
 
-def _get_id_token(credentials: str) -> str:
+async def _get_id_token(credentials: str) -> str:
     """Login with 'email:password' string and return the Cognito IdToken."""
     if not credentials or ":" not in credentials:
         raise ValueError(
@@ -481,7 +509,7 @@ def _get_id_token(credentials: str) -> str:
             "Add them in agentOS skill settings for austin-boulder-project."
         )
     email, password = credentials.split(":", 1)
-    auth = _login(email.strip(), password.strip())
+    auth = await _login(email.strip(), password.strip())
     return auth["IdToken"]
 
 
@@ -503,7 +531,7 @@ async def op_get_schedule(
         parsed_ids = [int(x) for x in activity_ids]
     else:
         parsed_ids = [4, 5, 6]
-    result = _get_schedule(
+    result = await _get_schedule(
         location_id=int(location_id),
         activity_ids=parsed_ids,
         date=date or None,
@@ -519,8 +547,8 @@ async def op_book_class(
 ) -> dict:
     """Book a class using stored credentials."""
     credentials = params.get("auth", {}).get("key", "")
-    id_token = _get_id_token(credentials)
-    result = _book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
+    id_token = await _get_id_token(credentials)
+    result = await _book_class(id_token, int(booking_instance_id), num_guests=int(num_guests))
     return {"ok": True, "message": "Booked successfully", "result": result}
 
 
@@ -532,8 +560,8 @@ async def op_cancel_booking(
 ) -> dict:
     """Cancel a class reservation."""
     credentials = params.get("auth", {}).get("key", "")
-    id_token = _get_id_token(credentials)
-    result = _cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
+    id_token = await _get_id_token(credentials)
+    result = await _cancel_booking(id_token, int(booking_instance_id), int(reservation_id))
     return {"ok": True, "message": "Cancelled successfully", "result": result}
 
 
@@ -541,13 +569,13 @@ async def op_cancel_booking(
 async def op_get_my_memberships(**params) -> list[dict]:
     """List active memberships for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
-    id_token = _get_id_token(credentials)
-    return _get_my_memberships(id_token)
+    id_token = await _get_id_token(credentials)
+    return await _get_my_memberships(id_token)
 
 
 @returns({"items": "array"})
 async def op_get_my_passes(**params) -> list[dict]:
     """List active class passes for the logged-in account."""
     credentials = params.get("auth", {}).get("key", "")
-    id_token = _get_id_token(credentials)
-    return _get_my_passes(id_token)
+    id_token = await _get_id_token(credentials)
+    return await _get_my_passes(id_token)
