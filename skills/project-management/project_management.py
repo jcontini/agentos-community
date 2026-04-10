@@ -103,13 +103,13 @@ YAML frontmatter MUST include these fields:
     - <bullet points>
 
 Evaluation criteria table format:
-| # | Criterion | Weight | What full marks looks like |
-Weights MUST sum to 100. One persona only.
+| # | Criterion | Priority | What "pass" looks like |
+Priority is one of: critical, important, nice-to-have.
+A single critical failure blocks implementation. Keep criteria focused — 3-6 total.
 
 Gate test format — each test is an `agentos call` command with expected output:
   1. **Test name**: `agentos call run '{{...}}'` → expected result
 
-Scoring thresholds: 95+ = implement, 70-94 = address blockers, <70 = rethink.
 Keep the RFP under 300 lines.
 """
 
@@ -165,11 +165,11 @@ ROLE_REVIEW = "You are an adversarial evaluator."
 
 BODY_REVIEW = """Your job is to find gaps, not confirm assumptions. Be harsh but fair.
 
-Score the proposal against EACH criterion from the RFP's evaluation criteria table.
+Evaluate the proposal against EACH criterion from the RFP's evaluation criteria table.
 For each criterion:
-- Score 0-100 (where 100 = "full marks" as described in the RFP)
+- Verdict: pass, partial, or fail
 - Justify with specific evidence (quote the proposal or cite missing content)
-- Note any blocking issues
+- If partial or fail on a CRITICAL criterion, it's a blocker
 
 To verify claims, READ THE ACTUAL SOURCE CODE. Don't trust the proposal's
 description of how things work — check the files it references. If the proposal
@@ -179,21 +179,23 @@ Write the review as a markdown document with this YAML frontmatter:
 ---
 title: "Evaluation — Round N"
 type: evaluation
-score: <weighted total, integer>
 verdict: implement | revise | rethink
 date: {date}
 ---
 
 Then include:
-1. Scoring table: | # | Criterion | Weight | Score | Justification |
-2. Weighted total: sum(score_i * weight_i) / 100
-3. Verdict: 95+ = implement, 70-94 = address blockers, <70 = rethink
-4. ## Blockers section: specific things that MUST change (omit if score >= 95)
+1. Criteria table: | # | Criterion | Priority | Verdict | Justification |
+   (Priority comes from the RFP: critical, important, nice-to-have)
+   (Verdict is: pass, partial, fail)
+2. Overall verdict, determined by these rules:
+   - Any critical criterion fails → **rethink**
+   - Any critical criterion is partial → **revise**
+   - All critical pass, but important criteria have failures → **revise**
+   - All critical and important pass → **implement**
+3. ## Blockers section: specific things that MUST change (omit if verdict is implement)
 
-Scoring must be calibrated:
-- 95+ means "ready to implement as-is, no significant gaps"
-- 70-94 means "good design but specific things need fixing"
-- <70 means "fundamental approach problems, needs rethinking"
+Do not compute scores, percentages, or weighted totals. Just evaluate each
+criterion honestly and let the verdicts speak for themselves.
 """
 
 ROLE_CLOSEOUT = "You are a closeout writer."
@@ -407,7 +409,7 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     return {"__result__": {"proposal_path": str(proposal_path), "agent_feedback": feedback}}
 
 
-@returns({"score": "integer", "verdict": "string", "review_path": "string"})
+@returns({"verdict": "string", "review_path": "string"})
 @timeout(1800)
 async def review(rfp: str, proposal: str, **params) -> dict:
     """Score a proposal adversarially against RFP criteria.
@@ -442,21 +444,20 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     content = result.get("content", "")
     document, feedback = _extract_feedback(content)
 
-    # Parse score and verdict from the frontmatter the reviewer wrote
+    # Parse verdict from frontmatter
     fm = _parse_frontmatter(document)
-    score = int(fm.get("score", 0))
     verdict = fm.get("verdict", "revise")
 
-    # Guard: no frontmatter or score 0 likely means reviewer failed
-    if score == 0 and "score:" not in document[:500]:
-        return {"__result__": {"score": -1, "verdict": "error", "review_path": "", "agent_feedback": feedback or "Reviewer did not produce a valid review with frontmatter."}}
+    # Guard: no frontmatter means reviewer failed
+    if not fm.get("verdict"):
+        return {"__result__": {"verdict": "error", "review_path": "", "agent_feedback": feedback or "Reviewer did not produce a valid review with frontmatter."}}
 
     review_path = project_dir / "2-review.md"
     review_path.write_text(document)
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"score": score, "verdict": verdict, "review_path": str(review_path), "agent_feedback": feedback}}
+    return {"__result__": {"verdict": verdict, "review_path": str(review_path), "agent_feedback": feedback}}
 
 
 @returns({"closeout_path": "string", "commits": "string"})
@@ -524,7 +525,7 @@ async def closeout(project: str, **params) -> dict:
 PHASES = ["rfp", "propose", "review", "closeout"]
 
 
-@returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "score": "integer", "rounds": "integer", "verdict": "string"})
+@returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "rounds": "integer", "verdict": "string"})
 @timeout(1800)
 async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start_from: str = "rfp", project: str = "", **params) -> dict:
     """Run the project lifecycle from any phase.
@@ -552,7 +553,6 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
 
     proposal_path = ""
     review_path = ""
-    score = 0
     verdict = ""
     round_num = 0
 
@@ -583,7 +583,6 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
             review_result = await review(
                 rfp=rfp_path, proposal=proposal_path, _round=start_round, **params
             )
-            score = review_result["__result__"]["score"]
             verdict = review_result["__result__"]["verdict"]
             review_path = review_result["__result__"]["review_path"]
             round_num = start_round
@@ -608,17 +607,15 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                 review_result = await review(
                     rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
                 )
-                score = review_result["__result__"]["score"]
                 verdict = review_result["__result__"]["verdict"]
                 review_path = review_result["__result__"]["review_path"]
 
-                # Retry once if reviewer returned empty (score -1)
-                if score == -1:
+                # Retry once if reviewer failed
+                if verdict == "error":
                     await progress.progress(step + 2, total_steps, f"Review failed, retrying (round {round_num})...")
                     review_result = await review(
                         rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
                     )
-                    score = review_result["__result__"]["score"]
                     verdict = review_result["__result__"]["verdict"]
                     review_path = review_result["__result__"]["review_path"]
 
@@ -627,7 +624,7 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                 if rfb:
                     (drafts_dir / f"v{round_num}-review-feedback.md").write_text(rfb)
 
-                if score >= 95:
+                if verdict == "implement":
                     break
 
                 # Move rejected to _drafts for next round
@@ -637,18 +634,17 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                         review_file.rename(drafts_dir / f"v{round_num}-review.md")
 
     # ── Closeout phase ──────────────────────────────────────────────────
-    if start_idx <= 3 and (start_idx == 3 or (verdict == "implement" and score >= 95)):
+    if start_idx <= 3 and (start_idx == 3 or verdict == "implement"):
         await progress.progress(1, 1, "Writing closeout...")
         closeout_result = await closeout(project=str(project_dir), **params)
 
-    await progress.progress(1, 1, f"Done — score {score}, verdict: {verdict}")
+    await progress.progress(1, 1, f"Done — verdict: {verdict}")
 
     return {
         "__result__": {
             "rfp_path": rfp_path,
             "proposal_path": proposal_path,
             "review_path": review_path,
-            "score": score,
             "rounds": round_num,
             "verdict": verdict,
         }
