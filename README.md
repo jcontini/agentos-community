@@ -45,6 +45,8 @@ git clone https://github.com/jcontini/agentos-community
 cd agentos-community
 # Install the SDK once — it ships the validator used by pre-commit
 pip install -e ../agentos-sdk/skills-sdk
+# Arm the pre-commit hook (runs validator + code review on every commit)
+git config core.hooksPath bin/git-hooks
 ```
 
 Useful commands:
