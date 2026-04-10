@@ -1,6 +1,5 @@
 """Project lifecycle skill: RFP, proposal, adversarial review, closeout."""
 
-import contextvars
 import json
 import os
 import re
@@ -9,11 +8,6 @@ from datetime import date
 from pathlib import Path
 
 from agentos import llm, progress, returns, shell, timeout
-
-# ── Context ─────────────────────────────────────────────────────────────────
-# Flow job_id and agent role into inner agent tool calls (e.g. give_feedback)
-_ctx_job_id: contextvars.ContextVar[str] = contextvars.ContextVar("_ctx_job_id", default="")
-_ctx_agent_role: contextvars.ContextVar[str] = contextvars.ContextVar("_ctx_agent_role", default="")
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 # Resolve repo root from skill file location: skill is in agentos-community/skills/,
@@ -51,7 +45,7 @@ NOW_FILE = REPO_ROOT / "now.md"
 # Built dynamically: shared preamble + role-specific content.
 
 
-def _build_system(*, role: str, submit_tool: str, body: str, today: str = "") -> str:
+def _build_system(*, role: str, role_name: str, submit_tool: str, body: str, today: str = "") -> str:
     """Build a system prompt with shared preamble + role-specific body."""
     if not today:
         today = str(date.today())
@@ -75,7 +69,7 @@ To submit your work:
   mcp__agentos__run({{ skill: "project-management", tool: "{submit_tool}", params: {{ ... }} }})
 
 When you're done with your main work, please call give_feedback with a brief note:
-  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "your feedback" }} }})
+  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "your feedback", role: "{role_name}" }} }})
 Even "all clear, no issues" is helpful. What was unclear? What could be better?
 
 """
@@ -376,15 +370,16 @@ def _append_feedback(content: str, job_id: str = "", role: str = "", skill: str 
 
 
 @returns({"saved": "boolean"})
-async def give_feedback(content: str, **params) -> dict:
+async def give_feedback(content: str, role: str = "", **params) -> dict:
     """Submit feedback to Agent Resources. Call as many times as you want.
 
     Args:
         content: Your feedback — anything unclear, frustrating, or improvable
+        role: Your role (e.g. propose, review) — provided in your instructions
     """
-    job_id = params.get("__job_id__", "") or _ctx_job_id.get()
-    role = params.get("_agent_role", "") or _ctx_agent_role.get()
-    _append_feedback(content=content, job_id=job_id, role=role)
+    job_id = params.get("__job_id__", "")
+    agent_role = role or params.get("_agent_role", "")
+    _append_feedback(content=content, job_id=job_id, role=agent_role)
     return {"__result__": {"saved": True, "message": "Thanks — feedback recorded. Feel free to share more anytime."}}
 
 
@@ -509,8 +504,6 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
         slug: Project slug for directory name (auto-generated if empty)
     """
     progress.set_job_id(params.get("__job_id__", ""))
-    _ctx_job_id.set(params.get("__job_id__", ""))
-    _ctx_agent_role.set("write_rfp")
 
     # If problem is a file path, read it
     problem_path = Path(problem)
@@ -530,7 +523,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
     # Agent writes the RFP content
     today = str(date.today())
     body = BODY_WRITE_RFP.format(priority=priority)
-    system = _build_system(role=ROLE_WRITE_RFP, submit_tool="submit_proposal", body=body, today=today)
+    system = _build_system(role=ROLE_WRITE_RFP, role_name="write_rfp", submit_tool="submit_proposal", body=body, today=today)
     result = await llm.agent(
         prompt=f"Write an RFP for this problem:\n\n{problem}",
         system=system,
@@ -563,8 +556,6 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         round: Revision round number (default 1, >1 reads prior review)
     """
     progress.set_job_id(params.get("__job_id__", ""))
-    _ctx_job_id.set(params.get("__job_id__", ""))
-    _ctx_agent_role.set("propose")
 
     rfp_path = Path(rfp)
     project_dir = rfp_path.parent
@@ -588,7 +579,7 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_PROPOSE, submit_tool="submit_proposal", body=BODY_PROPOSE, today=today)
+    system = _build_system(role=ROLE_PROPOSE, role_name="propose", submit_tool="submit_proposal", body=BODY_PROPOSE, today=today)
 
     result = await llm.agent(
         prompt="\n".join(prompt_parts),
@@ -647,8 +638,6 @@ async def review(rfp: str, proposal: str, **params) -> dict:
         proposal: Path to 1-proposal.md
     """
     progress.set_job_id(params.get("__job_id__", ""))
-    _ctx_job_id.set(params.get("__job_id__", ""))
-    _ctx_agent_role.set("review")
 
     rfp_content = Path(rfp).read_text()
     proposal_content = Path(proposal).read_text()
@@ -660,7 +649,7 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     today = str(date.today())
     body = BODY_REVIEW.format(date=today)
-    system = _build_system(role=ROLE_REVIEW, submit_tool="submit_review", body=body, today=today)
+    system = _build_system(role=ROLE_REVIEW, role_name="review", submit_tool="submit_review", body=body, today=today)
     result = await llm.agent(
         prompt=prompt,
         system=system,
@@ -671,8 +660,17 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     await progress.progress(2, 3, "Saving review...")
 
+    review_path = project_dir / "2-review.md"
+
+    # If submit_review was called by the agent via MCP, the file is already written.
+    # Check by comparing modification time to when we started the agent call.
+    # Otherwise, parse the agent's text output.
     content = result.get("content", "")
     document = _strip_fenced_blocks(content)
+
+    # Always write/overwrite from text output — submit_review may have written
+    # but text parsing is the authoritative path until we can read tool call results
+    review_path.write_text(document)
 
     # Extract verdict — find "overall verdict" line, then grab the keyword
     verdict = "revise"  # safe default
@@ -695,9 +693,6 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     # Python computes the quantitative score from the criteria table
     score = _compute_score(document)
 
-    review_path = project_dir / "2-review.md"
-    review_path.write_text(document)
-
     await progress.progress(3, 3, "Done")
 
     return {"__result__": {"verdict": verdict, "score": score, "review_path": str(review_path)}}
@@ -712,8 +707,6 @@ async def closeout(project: str, **params) -> dict:
         project: Path to the project directory (e.g. _projects/p1/my-project/)
     """
     progress.set_job_id(params.get("__job_id__", ""))
-    _ctx_job_id.set(params.get("__job_id__", ""))
-    _ctx_agent_role.set("closeout")
 
     project_dir = Path(project)
     rfp_content = (project_dir / "0-rfp.md").read_text()
@@ -741,7 +734,7 @@ async def closeout(project: str, **params) -> dict:
     await progress.progress(2, 4, "Writing closeout...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_CLOSEOUT, submit_tool="submit_proposal", body=BODY_CLOSEOUT, today=today)
+    system = _build_system(role=ROLE_CLOSEOUT, role_name="closeout", submit_tool="submit_proposal", body=BODY_CLOSEOUT, today=today)
     prompt = (
         f"## RFP\n\n{rfp_content}\n\n"
         f"## Proposal\n\n{proposal_content}\n\n"
