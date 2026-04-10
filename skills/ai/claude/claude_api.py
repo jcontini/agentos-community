@@ -4,12 +4,6 @@ from agentos.tools import llm
 API_BASE = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
 
-MODEL_ALIASES = {
-    "opus": "claude-opus-4-6",
-    "sonnet": "claude-sonnet-4-5",
-    "haiku": "claude-haiku-4-5-20251001",
-}
-
 
 def _headers(params):
     key = params.get("auth", {}).get("key", "")
@@ -53,24 +47,23 @@ async def list_models(**params) -> list:
     return [_map_model(m) for m in (resp["json"] or {}).get("data", [])]
 
 
-@provides(llm, models=["opus", "sonnet", "haiku", "claude-opus-4-6", "claude-sonnet-4-5", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"])
+@provides(llm)
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("api")
 @timeout(120)
 async def chat(*, model: str, messages: list, tools: list = None,
          max_tokens: int = 4096, temperature: float = 0,
          system: str = None, **params) -> dict:
-    """Send a chat completion request to Claude (Anthropic Messages API)
+    """Send a chat completion request to Claude (Claude API Messages).
 
         Args:
-            model: Model ID (e.g., claude-3-5-haiku-20241022, claude-4-sonnet-20250514)
+            model: Model ID — resolved via the graph (list_models). No hardcoded aliases.
             messages: Array of message objects with role and content
             tools: Optional array of tool definitions for function calling
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (0 = deterministic for agents)
             system: Optional system prompt
         """
-    model = MODEL_ALIASES.get(model, model)
     body = {
         "model": model,
         "messages": [_to_anthropic_msg(m) for m in messages],

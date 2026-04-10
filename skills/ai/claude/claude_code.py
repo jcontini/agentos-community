@@ -11,14 +11,46 @@ Routes through shell.run() so the engine logs and audits every invocation.
 
 import json
 
-from agentos import shell, returns, timeout, connection, provides
+from agentos import http, shell, returns, timeout, connection, provides
+from agentos.macos import keychain
 from agentos.tools import llm
 
-MODEL_ALIASES = {
-    "opus": "claude-opus-4-6",
-    "sonnet": "claude-sonnet-4-6",
-    "haiku": "claude-haiku-4-5-20251001",
-}
+# Claude Code stores its OAuth token in the macOS keychain under this service.
+# The token has `user:inference` scope and can call /v1/models directly —
+# same endpoint as the API connection, just using the subscription's OAuth
+# token instead of an API key. The response doesn't count against inference quota.
+KEYCHAIN_SERVICE = "Claude Code-credentials"
+API_BASE = "https://api.anthropic.com/v1"
+ANTHROPIC_VERSION = "2023-06-01"
+
+
+async def _read_oauth_token() -> str:
+    """Read the Claude Code OAuth access token from the macOS keychain.
+
+    Re-reads on every call — Claude Code rotates the token weekly and
+    refreshes it in the background, so caching would risk staleness.
+    """
+    raw = await keychain.read(KEYCHAIN_SERVICE)
+    if not raw:
+        raise RuntimeError(
+            f"No Claude Code credentials in keychain (service='{KEYCHAIN_SERVICE}'). "
+            "Install Claude Code and run `claude auth login`."
+        )
+    blob = json.loads(raw)
+    token = blob.get("claudeAiOauth", {}).get("accessToken")
+    if not token:
+        raise RuntimeError("Keychain entry has no claudeAiOauth.accessToken")
+    return token
+
+
+def _map_model(m: dict) -> dict:
+    return {
+        "id": m.get("id"),
+        "name": m.get("display_name"),
+        "published": m.get("created_at"),
+        "provider": "anthropic",
+        "modelType": "llm",
+    }
 
 # MCP config pointing at agentos mcp — spawns a separate process, no recursion.
 MCP_CONFIG = json.dumps({
@@ -69,31 +101,55 @@ def _format_messages(messages: list) -> str:
     return "\n\n".join(parts)
 
 
-@provides(llm, models=["opus", "sonnet", "haiku", "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
-          features=["tool_calling", "structured_output", "structured_output_with_tools"])
+@returns("model[]")
+@connection("cli")
+@timeout(15)
+async def list_models(**params) -> list:
+    """List Claude models available to the local Claude Code subscription.
+
+    Uses the OAuth access token from the macOS keychain (service
+    'Claude Code-credentials') to call api.anthropic.com/v1/models.
+    No API key required — this works on Pro/Max/Team subscriptions.
+
+    The /v1/models endpoint does not consume inference quota.
+    """
+    token = await _read_oauth_token()
+    headers = {"x-api-key": token, "anthropic-version": ANTHROPIC_VERSION}
+    resp = await http.get(
+        f"{API_BASE}/models",
+        params={"limit": "100"},
+        **http.headers(accept="json", extra=headers),
+    )
+    data = resp["json"] or {}
+    return [_map_model(m) for m in data.get("data", [])]
+
+
+@provides(llm, features=["tool_calling", "structured_output", "structured_output_with_tools"])
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
 @connection("cli")
 @timeout(1800)
-async def chat(*, model: str, messages: list, tools: list = None,
+async def agent(*, model: str, messages: list, tools: list = None,
          temperature: float = 0, system: str = None,
          output_schema: dict = None, **params) -> dict:
-    """LLM inference via Claude Code CLI — uses existing auth, no API key.
+    """Run Claude as an agent via the local Claude Code CLI — uses existing auth, no API key.
+
+    Unlike `chat` (single Messages API call), this runs a full agent loop:
+    Claude can call tools, read tool results, and iterate until done. The
+    returned content is the final answer after all intermediate tool use.
+
+    Model IDs come from the graph (list_models). No hardcoded aliases.
 
     When tools are provided, attaches agentos as an MCP server so Claude
-    handles tool calling natively (no XML-in-prompt hack). Claude runs its
-    own agent loop — calling tools, processing results, iterating until done.
-    The response contains the final answer after all tool calls complete.
-
-    When output_schema is provided, uses --json-schema for native validation.
-    Both can be combined — tools + structured output in the same call.
+    handles tool calling natively (no XML-in-prompt hack). When output_schema
+    is provided, uses --json-schema for native structured validation. Both
+    can be combined — tools + structured output in the same call.
     """
-    model_id = MODEL_ALIASES.get(model, model)
     prompt = _format_messages(messages)
 
     args = [
         "-p",
         "--output-format", "json",
-        "--model", model_id,
+        "--model", model,
         "--dangerously-skip-permissions",
     ]
 

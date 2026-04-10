@@ -13,3 +13,7 @@ __pycache__/
 
 # Build output
 target/
+
+# Private prototypes / scratch — anything prefixed with underscore is local-only
+_*/
+**/_*/

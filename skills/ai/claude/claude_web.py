@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-claude-api.py — claude.ai private API client
+claude_web.py — claude.ai private API client (web connection of ai/claude)
 
 Session cookies are injected by agentOS cookie matchmaking.
 All API calls use http.client() (NOT Playwright) — login is the only thing that
@@ -15,9 +15,7 @@ Required headers (bypass Cloudflare + match expected browser client):
 """
 
 import base64
-import json
 import re
-import sys
 
 from agentos import get_cookies, http, connection, provides, returns, timeout, web_read, parse_cookie
 
@@ -158,7 +156,7 @@ def _format_conversation(conv, org_uuid):
 # -- Operation entrypoints — called by the python: executor with auto-dispatch --
 
 @returns("conversation[]")
-async def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
+async def list_conversations(*, org=None, limit=50, offset=0, **params) -> list:
     """List claude.ai web chat conversations, most recently updated first. Requires a valid session (run login flow if needed).
 
         Args:
@@ -177,7 +175,7 @@ async def op_list_conversations(*, org=None, limit=50, offset=0, **params) -> li
 
 @returns("conversation")
 @provides(web_read, urls=["claude.ai/chat/*", "www.claude.ai/chat/*"])
-async def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
+async def get_conversation(*, id=None, url=None, org=None, **params) -> dict:
     """Get a full claude.ai web conversation with all messages. Returns the complete message history including both human and assistant turns.
 
         Args:
@@ -200,7 +198,7 @@ async def op_get_conversation(*, id=None, url=None, org=None, **params) -> dict:
 
 
 @returns("conversation[]")
-async def op_search_conversations(*, query="", org=None, limit=20, **params) -> list:
+async def search_conversations(*, query="", org=None, limit=20, **params) -> list:
     """Search claude.ai web conversations by title/name. Fetches up to 250 conversations and filters locally (no server-side search). For full content search across message text, use import_conversation first, then search({ query: "...", types: ["message"] }) against the graph FTS index.
 
         Args:
@@ -235,7 +233,7 @@ async def op_search_conversations(*, query="", org=None, limit=20, **params) -> 
 
 @returns("message[]")
 @timeout(60)
-async def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
+async def import_conversation(*, org=None, limit=5, offset=0, **params) -> list:
     """Import claude.ai conversations and all their messages into the graph. Each message becomes a message entity with full content FTS-indexed. After import, use search({ query: "...", types: ["message"] }) for content search. Safe to run repeatedly — deduplicates by message UUID. Use limit+offset to page through conversations in batches of 5-10.
 
         Args:
@@ -282,7 +280,7 @@ async def op_import_conversation(*, org=None, limit=5, offset=0, **params) -> li
 
 @returns({"uuid": "string", "name": "string", "capabilities": "array"})
 @timeout(15)
-async def op_list_orgs(**params) -> list:
+async def list_orgs(**params) -> list:
     """List all organizations the user has access to. Returns org UUIDs, names, and capabilities. Use this to discover which org has chat history (look for "chat" in capabilities)."""
     cookie_header = get_cookies(params)
     async with _client(cookie_header) as client:
@@ -340,43 +338,6 @@ def _identify_from_orgs(orgs: list) -> dict:
     return {"authenticated": False}
 
 
-# -- CLI entry point -----------------------------------------------------------
-
-def _main():
-    import argparse
-    parser = argparse.ArgumentParser(description="claude.ai API client")
-    parser.add_argument("--op", required=True,
-                        choices=["organizations", "conversations", "conversation", "search", "import"])
-    parser.add_argument("--org", help="Org UUID")
-    parser.add_argument("--id", help="Conversation UUID")
-    parser.add_argument("--query", help="Search query")
-    parser.add_argument("--limit", type=int, default=50)
-    parser.add_argument("--offset", type=int, default=0)
-    parser.add_argument("--cookies", required=True, help="Raw cookie header")
-    args = parser.parse_args()
-
-    mock_params = {
-        "auth": {"cookies": args.cookies},
-    }
-
-    if args.op == "organizations":
-        result = op_list_orgs(**mock_params)
-    elif args.op == "conversations":
-        result = op_list_conversations(org=args.org, limit=args.limit, offset=args.offset, **mock_params)
-    elif args.op == "conversation":
-        result = op_get_conversation(id=args.id, org=args.org, **mock_params)
-    elif args.op == "search":
-        result = op_search_conversations(query=args.query, org=args.org, limit=args.limit, **mock_params)
-    elif args.op == "import":
-        result = op_import_conversation(org=args.org, limit=args.limit, offset=args.offset, **mock_params)
-    else:
-        result = {"error": f"unknown op: {args.op}"}
-
-    print(json.dumps(result, indent=2))
-    return 0
-
-
-
 # -- Magic link extraction — pure string parsing, no browser needed ------------
 
 def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
@@ -406,7 +367,7 @@ def _extract_magic_link_from_raw_email(raw_b64: str) -> str | None:
 
 @returns({"magicLink": "string"})
 @timeout(10)
-async def op_extract_magic_link(raw_email: str, **params) -> dict:
+async def extract_magic_link(raw_email: str, **params) -> dict:
     """Extract the magic link URL from a raw base64url-encoded email body. Pass the raw RFC 2822 email body (e.g. from whichever integration exposes raw message bytes) and this will decode it and find the claude.ai magic link.
 
         Args:
@@ -418,5 +379,3 @@ async def op_extract_magic_link(raw_email: str, **params) -> dict:
     return {"error": "No magic link found in raw email content"}
 
 
-if __name__ == "__main__":
-    sys.exit(_main())
