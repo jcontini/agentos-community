@@ -4,7 +4,7 @@ import json
 import os
 import re
 import yaml
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from agentos import llm, progress, returns, shell, timeout
@@ -45,7 +45,7 @@ NOW_FILE = REPO_ROOT / "now.md"
 # Built dynamically: shared preamble + role-specific content.
 
 
-def _build_system(*, role: str, role_name: str, submit_tool: str, body: str, today: str = "") -> str:
+def _build_system(*, role: str, submit_tool: str, body: str, today: str = "") -> str:
     """Build a system prompt with shared preamble + role-specific body."""
     if not today:
         today = str(date.today())
@@ -69,7 +69,7 @@ To submit your work:
   mcp__agentos__run({{ skill: "project-management", tool: "{submit_tool}", params: {{ ... }} }})
 
 When you're done with your main work, please call give_feedback with a brief note:
-  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "your feedback", role: "{role_name}" }} }})
+  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "your feedback" }} }})
 Even "all clear, no issues" is helpful. What was unclear? What could be better?
 
 """
@@ -353,15 +353,18 @@ def _extract_research_from_transcript(session_id: str) -> str:
     return "\n\n".join(parts)
 
 
-def _append_feedback(content: str, job_id: str = "", role: str = "", skill: str = "project-management") -> dict:
+def _utcnow() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _append_feedback(content: str, job_id: str = "", skill: str = "project-management") -> dict:
     """Append one feedback entry to _feedback/feedback.jsonl."""
-    from datetime import datetime
     FEEDBACK_FILE.parent.mkdir(exist_ok=True)
     entry = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": _utcnow(),
         "job_id": job_id,
         "skill": skill,
-        "agent_role": role,
+        "agent_role": "",
         "content": content,
     }
     with open(FEEDBACK_FILE, "a") as f:
@@ -369,17 +372,40 @@ def _append_feedback(content: str, job_id: str = "", role: str = "", skill: str 
     return entry
 
 
+def _stamp_feedback(role: str, since: str):
+    """Post-process: stamp unstamped feedback entries written after `since` timestamp.
+
+    Called after llm.agent() returns — Python knows the role, the agent doesn't.
+    `since` is an ISO timestamp from before the agent call started.
+    """
+    if not FEEDBACK_FILE.exists():
+        return
+    lines = FEEDBACK_FILE.read_text().splitlines()
+    updated = False
+    new_lines = []
+    for line in lines:
+        try:
+            entry = json.loads(line)
+            if (entry.get("timestamp", "") >= since
+                    and not entry.get("agent_role")):
+                entry["agent_role"] = role
+                updated = True
+            new_lines.append(json.dumps(entry))
+        except json.JSONDecodeError:
+            new_lines.append(line)
+    if updated:
+        FEEDBACK_FILE.write_text("\n".join(new_lines) + "\n")
+
+
 @returns({"saved": "boolean"})
-async def give_feedback(content: str, role: str = "", **params) -> dict:
+async def give_feedback(content: str, **params) -> dict:
     """Submit feedback to Agent Resources. Call as many times as you want.
 
     Args:
         content: Your feedback — anything unclear, frustrating, or improvable
-        role: Your role (e.g. propose, review) — provided in your instructions
     """
     job_id = params.get("__job_id__", "")
-    agent_role = role or params.get("_agent_role", "")
-    _append_feedback(content=content, job_id=job_id, role=agent_role)
+    _append_feedback(content=content, job_id=job_id)
     return {"__result__": {"saved": True, "message": "Thanks — feedback recorded. Feel free to share more anytime."}}
 
 
@@ -523,7 +549,8 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
     # Agent writes the RFP content
     today = str(date.today())
     body = BODY_WRITE_RFP.format(priority=priority)
-    system = _build_system(role=ROLE_WRITE_RFP, role_name="write_rfp", submit_tool="submit_proposal", body=body, today=today)
+    system = _build_system(role=ROLE_WRITE_RFP, submit_tool="submit_proposal", body=body, today=today)
+    fb_since = _utcnow()
     result = await llm.agent(
         prompt=f"Write an RFP for this problem:\n\n{problem}",
         system=system,
@@ -531,6 +558,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
         tools=["exa.search", "exa.read_webpage"],
         timeout=1680,
     )
+    _stamp_feedback("write_rfp", fb_since)
 
     await progress.progress(2, 3, "Saving RFP...")
 
@@ -579,8 +607,9 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_PROPOSE, role_name="propose", submit_tool="submit_proposal", body=BODY_PROPOSE, today=today)
+    system = _build_system(role=ROLE_PROPOSE, submit_tool="submit_proposal", body=BODY_PROPOSE, today=today)
 
+    fb_since = _utcnow()
     result = await llm.agent(
         prompt="\n".join(prompt_parts),
         system=system,
@@ -588,6 +617,7 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         tools=["exa.search", "exa.read_webpage"],
         timeout=1680,
     )
+    _stamp_feedback("propose", fb_since)
 
     await progress.progress(2, 3, "Saving proposal...")
 
@@ -649,7 +679,8 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     today = str(date.today())
     body = BODY_REVIEW.format(date=today)
-    system = _build_system(role=ROLE_REVIEW, role_name="review", submit_tool="submit_review", body=body, today=today)
+    system = _build_system(role=ROLE_REVIEW, submit_tool="submit_review", body=body, today=today)
+    fb_since = _utcnow()
     result = await llm.agent(
         prompt=prompt,
         system=system,
@@ -657,6 +688,7 @@ async def review(rfp: str, proposal: str, **params) -> dict:
         tools=["exa.search", "exa.read_webpage"],
         timeout=1680,
     )
+    _stamp_feedback("review", fb_since)
 
     await progress.progress(2, 3, "Saving review...")
 
@@ -734,7 +766,7 @@ async def closeout(project: str, **params) -> dict:
     await progress.progress(2, 4, "Writing closeout...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_CLOSEOUT, role_name="closeout", submit_tool="submit_proposal", body=BODY_CLOSEOUT, today=today)
+    system = _build_system(role=ROLE_CLOSEOUT, submit_tool="submit_proposal", body=BODY_CLOSEOUT, today=today)
     prompt = (
         f"## RFP\n\n{rfp_content}\n\n"
         f"## Proposal\n\n{proposal_content}\n\n"
@@ -742,12 +774,14 @@ async def closeout(project: str, **params) -> dict:
         f"## Git Log\n\n```\n{git_log}\n```"
     )
 
+    fb_since = _utcnow()
     result = await llm.agent(
         prompt=prompt,
         system=system,
         model="sonnet",
         timeout=1680,
     )
+    _stamp_feedback("closeout", fb_since)
 
     await progress.progress(3, 4, "Saving closeout...")
 
