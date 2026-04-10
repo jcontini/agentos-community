@@ -1,7 +1,6 @@
 """Linear — project management for engineering teams.
 
-Replaces 16 GraphQL operations previously defined in skill.yaml.
-All operations POST to the Linear GraphQL API with API key auth.
+16 GraphQL operations POSTing to the Linear GraphQL API with API key auth.
 """
 
 import re

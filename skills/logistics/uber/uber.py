@@ -23,7 +23,7 @@ RIDES_EXTRA_HEADERS = {
 # ---------------------------------------------------------------------------
 # Eats API — RPC at www.ubereats.com/_p/api/
 # Completely separate from rides: different domain, different auth, different protocol.
-# Auth: .ubereats.com cookies (via "eats" connection in skill.yaml)
+# Auth: .ubereats.com cookies (via the "eats" connection declared in readme frontmatter)
 # Required header: x-csrf-token: x (literal string, same as rides)
 # ---------------------------------------------------------------------------
 
@@ -546,8 +546,7 @@ async def _eats_post(cookie_header: str, endpoint: str, body: dict | None = None
 # ---------------------------------------------------------------------------
 # Eats operations
 # ---------------------------------------------------------------------------
-# These use the "eats" connection (.ubereats.com cookies).
-# See skill.yaml for connection definition.
+# These use the "eats" connection (.ubereats.com cookies, declared in readme frontmatter).
 # See requirements.md for full API shape documentation.
 # ---------------------------------------------------------------------------
 

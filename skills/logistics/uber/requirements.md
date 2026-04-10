@@ -37,7 +37,7 @@ This is NOT GraphQL. It's an RPC-style API — each operation has its own URL pa
 
 ### Auth
 
-Cookie domain: `.ubereats.com` (separate connection from `.uber.com` rides — `eats` connection in skill.yaml)
+Cookie domain: `.ubereats.com` (separate connection from `.uber.com` rides — `eats` connection in readme frontmatter)
 
 **CRITICAL: Always use `http.headers(waf="cf", accept="json", extra={...})` for all requests.**
 The engine sets zero headers by default. Without browser-grade UA/sec-ch-* headers, some endpoints
@@ -1163,7 +1163,7 @@ Used by `search_products` operation. Returns items matching a search query withi
 ### Next steps
 
 1. ~~Call `getOrderEntityByUuidV1`~~ **Done** — only works for active orders, 404 for completed
-2. ~~Add Eats connection~~ **Done** — `.ubereats.com` in skill.yaml
+2. ~~Add Eats connection~~ **Done** — `.ubereats.com` declared in readme frontmatter
 3. **Build `list_deliveries`** — backed by `getPastOrdersV1`
 4. **Build `get_delivery`** — backed by `getReceiptByWorkflowUuidV1` (items via HTML) + `getPastOrdersV1` (metadata)
 5. **Capture Costco store page** — `browse capture` on a Costco store URL to discover `getStoreV1` and menu endpoints
