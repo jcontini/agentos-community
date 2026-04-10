@@ -149,4 +149,9 @@ async def chat(*, model: str, messages: list, tools: list = None,
         "stop_reason": stop,
         "usage": usage,
         "structured_output": structured,
+        # Metadata for callers — Python can use session_id to read transcript
+        "session_id": data.get("session_id"),
+        "total_cost_usd": data.get("total_cost_usd"),
+        "num_turns": data.get("num_turns"),
+        "duration_ms": data.get("duration_ms"),
     }}

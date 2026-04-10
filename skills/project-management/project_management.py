@@ -69,20 +69,6 @@ You have agentOS MCP tools available:
 - mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
 Use these to look up project context, discover skills, or search the knowledge graph.
 
-After the document, include TWO sections at the very end of your response:
-
-```research
-List every file you read, every web search you ran, every subagent you spawned,
-and what you learned from each. This is your research log — it helps the next
-round avoid redoing your work. Be specific: file paths, function names, URLs,
-key findings.
-```
-
-```feedback
-Your candid thoughts on this task: what was unclear, what was hard to find,
-what you wish the instructions said, concerns about the approach, anything
-you want the team to know. Be honest — this is your voice.
-```
 """
     return f"{role}\n\n{preamble}\n{body}"
 
@@ -244,26 +230,137 @@ No LOC counts, no time tracking, no "lessons learned". Minimal or it won't get w
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _extract_blocks(content: str) -> tuple[str, str, str]:
-    """Split agent response into (document, research, feedback).
-    Strips ```research and ```feedback blocks from the end."""
-    research = ""
-    feedback = ""
+def _strip_fenced_blocks(content: str) -> str:
+    """Strip any ```feedback or ```research blocks agents may emit."""
+    content = re.sub(r"```feedback\s*\n.*?```", "", content, flags=re.DOTALL)
+    content = re.sub(r"```research\s*\n.*?```", "", content, flags=re.DOTALL)
+    return content.rstrip() + "\n"
 
-    # Extract feedback block
-    fb_match = re.search(r"```feedback\s*\n(.*?)```", content, re.DOTALL)
-    if fb_match:
-        feedback = fb_match.group(1).strip()
-        content = content[:fb_match.start()].rstrip() + content[fb_match.end():]
 
-    # Extract research block
-    rs_match = re.search(r"```research\s*\n(.*?)```", content, re.DOTALL)
-    if rs_match:
-        research = rs_match.group(1).strip()
-        content = content[:rs_match.start()].rstrip() + content[rs_match.end():]
+def _compute_score(review_text: str) -> float:
+    """Compute a quantitative score from the review's criteria table.
 
-    document = content.rstrip() + "\n"
-    return document, research, feedback
+    Parses the | # | Criterion | Priority | Verdict | ... table.
+    LLM labels pass/partial/fail — Python does the math.
+    Returns 0.0–1.0 weighted score (critical=0.6, important=0.3, nice-to-have=0.1).
+    """
+    PRIORITY_WEIGHTS = {"critical": 0.6, "important": 0.3, "nice-to-have": 0.1}
+    VERDICT_SCORES = {"pass": 1.0, "partial": 0.5, "fail": 0.0}
+
+    weighted_sum = 0.0
+    weight_total = 0.0
+
+    for line in review_text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip().lower() for c in line.split("|") if c.strip()]
+        if len(cells) < 4:
+            continue
+        # Skip header/separator rows
+        if cells[0] in ("#", "---") or "criterion" in cells[1]:
+            continue
+
+        priority = cells[2].strip()
+        verdict = cells[3].strip()
+
+        w = PRIORITY_WEIGHTS.get(priority, 0.0)
+        v = VERDICT_SCORES.get(verdict, 0.0)
+        if w > 0:
+            weighted_sum += w * v
+            weight_total += w
+
+    if weight_total == 0:
+        return 0.0
+    return round(weighted_sum / weight_total, 2)
+
+
+def _extract_research_from_transcript(session_id: str) -> str:
+    """Extract research metadata from a Claude CLI transcript.
+
+    Reads the .jsonl transcript for the given session_id and extracts:
+    - Files read (Read tool calls)
+    - Web searches (WebSearch/WebFetch)
+    - Subagents spawned (Agent tool calls)
+    - Grep/Glob patterns used
+    """
+    if not session_id:
+        return ""
+
+    # Find the transcript file — could be in any project directory
+    claude_dir = Path.home() / ".claude" / "projects"
+    transcript = None
+    for project_dir in claude_dir.iterdir():
+        candidate = project_dir / f"{session_id}.jsonl"
+        if candidate.exists():
+            transcript = candidate
+            break
+        # Also check subagents/
+        sub_dir = project_dir / session_id / "subagents"
+        if sub_dir.exists():
+            # Main transcript is in the project dir
+            candidate = project_dir / f"{session_id}.jsonl"
+            if candidate.exists():
+                transcript = candidate
+                break
+
+    if not transcript:
+        return ""
+
+    files_read = []
+    searches = []
+    subagents = []
+    greps = []
+
+    with open(transcript) as f:
+        for line in f:
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if d.get("type") != "assistant":
+                continue
+
+            msg = d.get("message", {})
+            for block in msg.get("content", []):
+                if not isinstance(block, dict) or block.get("type") != "tool_use":
+                    continue
+                name = block.get("name", "")
+                inp = block.get("input", {})
+
+                if name == "Read":
+                    files_read.append(inp.get("file_path", ""))
+                elif name == "WebSearch":
+                    searches.append(inp.get("query", ""))
+                elif name == "WebFetch":
+                    searches.append(f"fetch: {inp.get('url', '')}")
+                elif name == "Agent":
+                    subagents.append(inp.get("description", inp.get("prompt", "")[:80]))
+                elif name == "Grep":
+                    greps.append(f"grep '{inp.get('pattern', '')}' in {inp.get('path', '.')}")
+                elif name == "Glob":
+                    greps.append(f"glob '{inp.get('pattern', '')}'")
+
+    parts = []
+    if files_read:
+        parts.append("### Files Read\n" + "\n".join(f"- `{f}`" for f in files_read))
+    if searches:
+        parts.append("### Web Research\n" + "\n".join(f"- {s}" for s in searches))
+    if greps:
+        parts.append("### Code Search\n" + "\n".join(f"- {g}" for g in greps))
+    if subagents:
+        parts.append("### Subagents\n" + "\n".join(f"- {s}" for s in subagents))
+
+    return "\n\n".join(parts)
+
+
+async def _solicit_feedback(role: str, context: str) -> str:
+    """Ask the agent for voluntary feedback — separate from the main deliverable."""
+    result = await llm.oneshot(
+        prompt=f"You just finished your work as a {role}. Agent Resources would like your feedback on the experience — anything that was unclear, frustrating, hard to find, or that you think could be improved. This is voluntary and won't affect your work. Be candid.\n\nContext: {context}",
+        model="haiku",
+    )
+    return result.get("content", "").strip()
 
 
 def _slugify(text: str) -> str:
@@ -355,7 +452,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
 
     await progress.progress(2, 3, "Saving RFP...")
 
-    document, _research, feedback = _extract_blocks(result.get("content", ""))
+    document = _strip_fenced_blocks(result.get("content", ""))
     rfp_path = project_dir / "0-rfp.md"
     rfp_path.write_text(document)
 
@@ -364,7 +461,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"rfp_path": str(rfp_path), "agent_feedback": feedback}}
+    return {"__result__": {"rfp_path": str(rfp_path)}}
 
 
 @returns({"proposal_path": "string"})
@@ -422,21 +519,39 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         if not prev_dest.exists():
             proposal_path.rename(prev_dest)
 
-    document, research, feedback = _extract_blocks(result.get("content", ""))
+    document = _strip_fenced_blocks(result.get("content", ""))
     proposal_path.write_text(document)
 
-    # Save research log so next round can build on it
+    drafts_dir = project_dir / "_drafts"
+    drafts_dir.mkdir(exist_ok=True)
+
+    # Extract research from transcript — Python does this, not the agent
+    session_id = result.get("session_id", "")
+    research = _extract_research_from_transcript(session_id)
     if research:
-        drafts_dir = project_dir / "_drafts"
-        drafts_dir.mkdir(exist_ok=True)
         (drafts_dir / f"v{round}-research.md").write_text(research)
+
+    # Save metadata — cost, turns, duration
+    meta = {
+        "round": round,
+        "session_id": session_id,
+        "cost_usd": result.get("total_cost_usd"),
+        "turns": result.get("num_turns"),
+        "duration_ms": result.get("duration_ms"),
+    }
+    (drafts_dir / f"v{round}-propose-meta.json").write_text(json.dumps(meta, indent=2))
+
+    # Solicit voluntary feedback — cheap separate call, totally optional
+    feedback = await _solicit_feedback("proposal writer", result.get("content", "")[:200])
+    if feedback:
+        (drafts_dir / f"v{round}-propose-feedback.md").write_text(feedback)
 
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"proposal_path": str(proposal_path), "agent_feedback": feedback}}
+    return {"__result__": {"proposal_path": str(proposal_path), "feedback": feedback}}
 
 
-@returns({"verdict": "string", "review_path": "string"})
+@returns({"verdict": "string", "score": "number", "review_path": "string"})
 @timeout(1800)
 async def review(rfp: str, proposal: str, **params) -> dict:
     """Score a proposal adversarially against RFP criteria.
@@ -469,7 +584,7 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     await progress.progress(2, 3, "Saving review...")
 
     content = result.get("content", "")
-    document, _research, feedback = _extract_blocks(content)
+    document = _strip_fenced_blocks(content)
 
     # Parse verdict from frontmatter
     fm = _parse_frontmatter(document)
@@ -477,14 +592,25 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     # Guard: no frontmatter means reviewer failed
     if not fm.get("verdict"):
-        return {"__result__": {"verdict": "error", "review_path": "", "agent_feedback": feedback or "Reviewer did not produce a valid review with frontmatter."}}
+        return {"__result__": {"verdict": "error", "review_path": "", "error": "Reviewer did not produce a valid review with frontmatter."}}
+
+    # Python computes the quantitative score from the criteria table
+    score = _compute_score(document)
 
     review_path = project_dir / "2-review.md"
     review_path.write_text(document)
 
+    # Solicit voluntary feedback
+    feedback = await _solicit_feedback("adversarial reviewer", content[:200])
+    drafts_dir = project_dir / "_drafts"
+    drafts_dir.mkdir(exist_ok=True)
+    if feedback:
+        round_num = params.get("_round", 1)
+        (drafts_dir / f"v{round_num}-review-feedback.md").write_text(feedback)
+
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"verdict": verdict, "review_path": str(review_path), "agent_feedback": feedback}}
+    return {"__result__": {"verdict": verdict, "score": score, "review_path": str(review_path)}}
 
 
 @returns({"closeout_path": "string", "commits": "string"})
@@ -540,19 +666,19 @@ async def closeout(project: str, **params) -> dict:
 
     await progress.progress(3, 4, "Saving closeout...")
 
-    document, _research, feedback = _extract_blocks(result.get("content", ""))
+    document = _strip_fenced_blocks(result.get("content", ""))
     closeout_path = project_dir / "3-closeout.md"
     closeout_path.write_text(document)
 
     await progress.progress(4, 4, "Done")
 
-    return {"__result__": {"closeout_path": str(closeout_path), "commits": git_log, "agent_feedback": feedback}}
+    return {"__result__": {"closeout_path": str(closeout_path), "commits": git_log}}
 
 
 PHASES = ["rfp", "propose", "review", "closeout"]
 
 
-@returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "rounds": "integer", "verdict": "string"})
+@returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "rounds": "integer", "verdict": "string", "score": "number"})
 @timeout(1800)
 async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start_from: str = "rfp", project: str = "", **params) -> dict:
     """Run the project lifecycle from any phase.
@@ -581,6 +707,7 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
     proposal_path = ""
     review_path = ""
     verdict = ""
+    score = 0.0
     round_num = 0
 
     # ── RFP phase ───────────────────────────────────────────────────────
@@ -623,19 +750,13 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                 propose_result = await propose(rfp=rfp_path, round=round_num, **params)
                 proposal_path = propose_result["__result__"]["proposal_path"]
 
-                # Save proposer feedback
-                drafts_dir = project_dir / "_drafts"
-                drafts_dir.mkdir(exist_ok=True)
-                pfb = propose_result["__result__"].get("agent_feedback", "")
-                if pfb:
-                    (drafts_dir / f"v{round_num}-propose-feedback.md").write_text(pfb)
-
                 await progress.progress(step + 2, total_steps, f"Reviewing (round {round_num})...")
                 review_result = await review(
                     rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
                 )
                 verdict = review_result["__result__"]["verdict"]
                 review_path = review_result["__result__"]["review_path"]
+                score = review_result["__result__"].get("score", 0)
 
                 # Retry once if reviewer failed
                 if verdict == "error":
@@ -645,11 +766,7 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                     )
                     verdict = review_result["__result__"]["verdict"]
                     review_path = review_result["__result__"]["review_path"]
-
-                # Save reviewer feedback
-                rfb = review_result["__result__"].get("agent_feedback", "")
-                if rfb:
-                    (drafts_dir / f"v{round_num}-review-feedback.md").write_text(rfb)
+                    score = review_result["__result__"].get("score", 0)
 
                 if verdict == "implement":
                     break
@@ -674,5 +791,6 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
             "review_path": review_path,
             "rounds": round_num,
             "verdict": verdict,
+            "score": score,
         }
     }

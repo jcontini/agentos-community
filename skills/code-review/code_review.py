@@ -7,6 +7,7 @@ for a single evaluation pass — no tools, no agent loop.
 """
 
 import json
+import yaml
 from pathlib import Path
 
 from agentos import llm, returns, shell, timeout
@@ -28,8 +29,8 @@ def _read(path: Path) -> str:
         return ""
 
 
-def _load_principles() -> str:
-    engine = _read(AGENTOS_ROOT / "docs" / "principles.md")
+def _load_principles() -> tuple[str, str, str]:
+    engine = _read(AGENTOS_ROOT / "docs" / "principles.md")  # includes agent ergonomics
     sdk = _read(SDK_ROOT / "docs" / "principles.md")
     guide = _read(SDK_ROOT / "skills-sdk" / "agentos" / "GUIDE.md")
     return engine, sdk, guide
@@ -62,30 +63,39 @@ def _load_arch() -> str:
 EVALUATOR_SYSTEM_PROMPT = """You are the CTO of agentOS — a pre-launch Rust+Python agent operating system.
 You review every commit against the project's principles and architectural direction.
 
-Score this diff 0-100. Be rigorous but fair. You are protecting the codebase from
-entropy — every violation you let through makes the next fix harder.
+Be rigorous but fair. You are protecting the codebase from entropy — every violation
+you let through makes the next fix harder.
 
-Scoring rubric:
-- Start at 100. Deduct points per violation.
-- CRITICAL (-30 each): Entity-specific code in Rust, building on a module flagged
-  for refactoring, hardcoded provider/service names in generic code
-- MAJOR (-15 each): Rendering logic in wrong module, missing delegation pattern,
-  new code in a file the refactoring specs say should shrink
-- MINOR (-5 each): Naming inconsistencies, unnecessary complexity, missing
-  campsite-rule improvements
+Write your review as markdown with this YAML frontmatter:
+
+---
+verdict: pass | fail
+---
+
+Then include:
+
+## Summary
+One sentence: what this commit does and whether it's good.
+
+## Violations
+A markdown list. For each violation:
+- **CRITICAL/MAJOR/MINOR** [`principle name`] `file/path`: What's wrong
+
+Severity guide:
+- CRITICAL: Entity-specific code in Rust, building on a module flagged for refactoring,
+  hardcoded provider/service names in generic code, forcing structured JSON output on LLMs,
+  making LLMs do arithmetic/scoring, over-constraining agent output formats
+- MAJOR: Rendering logic in wrong module, missing delegation pattern, new code in a file
+  the refactoring specs say should shrink, not giving agents feedback channels or prior work context
+- MINOR: Naming inconsistencies, unnecessary complexity, missing campsite-rule improvements
 
 If the diff touches a file that an active refactoring spec says should shrink or be
 decomposed, and the diff ADDS lines to that file, that is at minimum a MAJOR violation.
-The right move is to do the refactoring first, then build the feature.
 
-Return ONLY valid JSON:
-{
-  "score": <0-100>,
-  "violations": [
-    {"severity": "critical|major|minor", "principle": "<which>", "file": "<path>", "detail": "<what's wrong>"}
-  ],
-  "summary": "<one sentence>"
-}"""
+If the diff touches code that agents interact with (skills, prompts, SDK, tools),
+also evaluate against the Agent Ergonomics Principles provided below.
+
+verdict: pass if no critical violations and ≤2 major violations. Otherwise fail."""
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +135,7 @@ async def evaluate_commit(
     ]
 
     if engine_principles:
-        prompt_parts += ["## Engine Principles", engine_principles, ""]
+        prompt_parts += ["## Engine & Agent Ergonomics Principles", engine_principles, ""]
     if sdk_principles:
         prompt_parts += ["## Shape Principles", sdk_principles, ""]
     if skill_guide:
@@ -153,61 +163,54 @@ async def evaluate_commit(
         model=model,
     )
 
-    # Parse structured JSON from response
     content = result.get("content", "")
 
-    # Extract JSON from response (may be wrapped in markdown code fences)
-    json_str = content
-    if "```" in content:
-        for block in content.split("```"):
-            stripped = block.strip()
-            if stripped.startswith("json"):
-                stripped = stripped[4:].strip()
-            if stripped.startswith("{"):
-                json_str = stripped
-                break
+    # Parse verdict from frontmatter
+    verdict = "fail"
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            try:
+                fm = yaml.safe_load(parts[1]) or {}
+                verdict = fm.get("verdict", "fail")
+            except yaml.YAMLError:
+                pass
 
-    try:
-        data = json.loads(json_str)
-    except json.JSONDecodeError:
-        # Last resort: find first { to last }
-        start = content.find("{")
-        end = content.rfind("}")
-        if start >= 0 and end > start:
-            data = json.loads(content[start:end + 1])
-        else:
-            return {"__result__": {
-                "score": 0,
-                "maxScore": 100,
-                "pass": False,
-                "violations": "Failed to parse evaluation response",
-                "summary": "Evaluation error — could not parse LLM response",
-            }}
+    # Count violations by severity from markdown list
+    critical = content.lower().count("**critical**")
+    major = content.lower().count("**major**")
+    minor = content.lower().count("**minor**")
 
-    score = int(data.get("score", 0))
-    violations = data.get("violations", [])
-    summary = data.get("summary", "No summary")
+    # Compute score: start at 100, deduct per violation
+    score = max(0, 100 - (critical * 30) - (major * 15) - (minor * 5))
 
-    # Format violations as markdown
-    if isinstance(violations, list):
-        violation_lines = []
-        for v in violations:
-            if isinstance(v, dict):
-                sev = v.get("severity", "?").upper()
-                principle = v.get("principle", "?")
-                file = v.get("file", "?")
-                detail = v.get("detail", "?")
-                violation_lines.append(f"- **{sev}** [{principle}] `{file}`: {detail}")
-            else:
-                violation_lines.append(f"- {v}")
-        violations_md = "\n".join(violation_lines) if violation_lines else "None"
-    else:
-        violations_md = str(violations)
+    # Extract summary section
+    summary = "No summary"
+    for line in content.splitlines():
+        line_s = line.strip()
+        if line_s and not line_s.startswith("#") and not line_s.startswith("-") and not line_s.startswith("---") and not line_s.startswith("verdict"):
+            summary = line_s
+            break
+
+    # Extract violations section
+    violations_md = "None"
+    in_violations = False
+    violation_lines = []
+    for line in content.splitlines():
+        if line.strip().lower().startswith("## violation"):
+            in_violations = True
+            continue
+        if in_violations and line.startswith("## "):
+            break
+        if in_violations and line.strip().startswith("- "):
+            violation_lines.append(line.strip())
+    if violation_lines:
+        violations_md = "\n".join(violation_lines)
 
     return {"__result__": {
         "score": score,
         "maxScore": 100,
-        "pass": score >= threshold,
+        "pass": verdict == "pass" and score >= threshold,
         "violations": violations_md,
         "summary": summary,
     }}
