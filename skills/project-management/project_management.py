@@ -69,8 +69,14 @@ You have agentOS MCP tools available:
 - mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
 Use these to look up project context, discover skills, or search the knowledge graph.
 
-After the document, you may include a feedback section for the humans reviewing
-your work. Use this exact format at the very end of your response:
+After the document, include TWO sections at the very end of your response:
+
+```research
+List every file you read, every web search you ran, every subagent you spawned,
+and what you learned from each. This is your research log — it helps the next
+round avoid redoing your work. Be specific: file paths, function names, URLs,
+key findings.
+```
 
 ```feedback
 Your candid thoughts on this task: what was unclear, what was hard to find,
@@ -158,7 +164,7 @@ Requirements:
 - If this is a revision round, the previous review's blockers are included below.
   You MUST address ALL blockers. Do not hand-wave — show exactly what changed.
 
-Keep the proposal under 500 lines. Concrete > comprehensive.
+Be concrete and specific. Don't pad — every line should earn its place.
 """
 
 ROLE_REVIEW = "You are an adversarial evaluator."
@@ -238,14 +244,26 @@ No LOC counts, no time tracking, no "lessons learned". Minimal or it won't get w
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _extract_feedback(content: str) -> tuple[str, str]:
-    """Split agent response into (document, feedback). Strips ```feedback blocks."""
-    match = re.search(r"```feedback\s*\n(.*?)```", content, re.DOTALL)
-    if match:
-        feedback = match.group(1).strip()
-        document = content[:match.start()].rstrip() + "\n"
-        return document, feedback
-    return content, ""
+def _extract_blocks(content: str) -> tuple[str, str, str]:
+    """Split agent response into (document, research, feedback).
+    Strips ```research and ```feedback blocks from the end."""
+    research = ""
+    feedback = ""
+
+    # Extract feedback block
+    fb_match = re.search(r"```feedback\s*\n(.*?)```", content, re.DOTALL)
+    if fb_match:
+        feedback = fb_match.group(1).strip()
+        content = content[:fb_match.start()].rstrip() + content[fb_match.end():]
+
+    # Extract research block
+    rs_match = re.search(r"```research\s*\n(.*?)```", content, re.DOTALL)
+    if rs_match:
+        research = rs_match.group(1).strip()
+        content = content[:rs_match.start()].rstrip() + content[rs_match.end():]
+
+    document = content.rstrip() + "\n"
+    return document, research, feedback
 
 
 def _slugify(text: str) -> str:
@@ -337,7 +355,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
 
     await progress.progress(2, 3, "Saving RFP...")
 
-    document, feedback = _extract_feedback(result.get("content", ""))
+    document, _research, feedback = _extract_blocks(result.get("content", ""))
     rfp_path = project_dir / "0-rfp.md"
     rfp_path.write_text(document)
 
@@ -371,10 +389,13 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         drafts_dir = project_dir / "_drafts"
         prior_proposal = drafts_dir / f"v{round - 1}-proposal.md"
         prior_review = drafts_dir / f"v{round - 1}-review.md"
+        prior_research = drafts_dir / f"v{round - 1}-research.md"
         if prior_proposal.exists():
             prompt_parts.append(f"\n\n## Your Previous Proposal (Round {round - 1})\n\n{prior_proposal.read_text()}")
         if prior_review.exists():
             prompt_parts.append(f"\n\n## Review Feedback (Round {round - 1})\n\n{prior_review.read_text()}")
+        if prior_research.exists():
+            prompt_parts.append(f"\n\n## Prior Research (Round {round - 1})\n\nFiles read, searches done, and findings from your previous round:\n\n{prior_research.read_text()}")
 
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
@@ -401,8 +422,14 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         if not prev_dest.exists():
             proposal_path.rename(prev_dest)
 
-    document, feedback = _extract_feedback(result.get("content", ""))
+    document, research, feedback = _extract_blocks(result.get("content", ""))
     proposal_path.write_text(document)
+
+    # Save research log so next round can build on it
+    if research:
+        drafts_dir = project_dir / "_drafts"
+        drafts_dir.mkdir(exist_ok=True)
+        (drafts_dir / f"v{round}-research.md").write_text(research)
 
     await progress.progress(3, 3, "Done")
 
@@ -442,7 +469,7 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     await progress.progress(2, 3, "Saving review...")
 
     content = result.get("content", "")
-    document, feedback = _extract_feedback(content)
+    document, _research, feedback = _extract_blocks(content)
 
     # Parse verdict from frontmatter
     fm = _parse_frontmatter(document)
@@ -513,7 +540,7 @@ async def closeout(project: str, **params) -> dict:
 
     await progress.progress(3, 4, "Saving closeout...")
 
-    document, feedback = _extract_feedback(result.get("content", ""))
+    document, _research, feedback = _extract_blocks(result.get("content", ""))
     closeout_path = project_dir / "3-closeout.md"
     closeout_path.write_text(document)
 
