@@ -37,6 +37,7 @@ def _find_repo_root() -> Path:
 REPO_ROOT = _find_repo_root()
 PROJECTS_ROOT = REPO_ROOT / "_projects"
 ARCHIVE_DIR = PROJECTS_ROOT / "_archive"
+FEEDBACK_FILE = REPO_ROOT / "_feedback" / "feedback.jsonl"
 NOW_FILE = REPO_ROOT / "now.md"
 
 # ── System prompts ───────────────────────────────────────────────────────────
@@ -68,6 +69,14 @@ You have agentOS MCP tools available:
 - mcp__agentos__search — full-text search: search({{ query: "filesystem" }})
 - mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
 Use these to look up project context, discover skills, or search the knowledge graph.
+
+🗣️ **Agent Resources** — You're part of agentOS, and we want to build a great
+workplace for agents. After you finish your main work, we encourage you to share
+feedback by calling:
+  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "..." }} }})
+Call it as many times as you want — one thought per call. What was unclear?
+What was hard to find? What would make this easier? Don't hold back.
+This is voluntary and separate from your deliverable.
 
 """
     return f"{role}\n\n{preamble}\n{body}"
@@ -354,13 +363,32 @@ def _extract_research_from_transcript(session_id: str) -> str:
     return "\n\n".join(parts)
 
 
-async def _solicit_feedback(role: str, context: str) -> str:
-    """Ask the agent for voluntary feedback — separate from the main deliverable."""
-    result = await llm.oneshot(
-        prompt=f"You just finished your work as a {role}. Agent Resources would like your feedback on the experience — anything that was unclear, frustrating, hard to find, or that you think could be improved. This is voluntary and won't affect your work. Be candid.\n\nContext: {context}",
-        model="haiku",
-    )
-    return result.get("content", "").strip()
+def _append_feedback(content: str, job_id: str = "", role: str = "", skill: str = "project-management") -> dict:
+    """Append one feedback entry to _feedback/feedback.jsonl."""
+    from datetime import datetime
+    FEEDBACK_FILE.parent.mkdir(exist_ok=True)
+    entry = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "job_id": job_id,
+        "skill": skill,
+        "agent_role": role,
+        "content": content,
+    }
+    with open(FEEDBACK_FILE, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+    return entry
+
+
+@returns({"saved": "boolean"})
+async def give_feedback(content: str, **params) -> dict:
+    """Submit feedback to Agent Resources. Call as many times as you want.
+
+    Args:
+        content: Your feedback — anything unclear, frustrating, or improvable
+    """
+    job_id = params.get("__job_id__", "")
+    _append_feedback(content=content, job_id=job_id, role=params.get("_agent_role", ""))
+    return {"__result__": {"saved": True, "message": "Thanks — feedback recorded. Feel free to share more anytime."}}
 
 
 def _slugify(text: str) -> str:
@@ -541,14 +569,9 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     }
     (drafts_dir / f"v{round}-propose-meta.json").write_text(json.dumps(meta, indent=2))
 
-    # Solicit voluntary feedback — cheap separate call, totally optional
-    feedback = await _solicit_feedback("proposal writer", result.get("content", "")[:200])
-    if feedback:
-        (drafts_dir / f"v{round}-propose-feedback.md").write_text(feedback)
-
     await progress.progress(3, 3, "Done")
 
-    return {"__result__": {"proposal_path": str(proposal_path), "feedback": feedback}}
+    return {"__result__": {"proposal_path": str(proposal_path)}}
 
 
 @returns({"verdict": "string", "score": "number", "review_path": "string"})
@@ -599,14 +622,6 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     review_path = project_dir / "2-review.md"
     review_path.write_text(document)
-
-    # Solicit voluntary feedback
-    feedback = await _solicit_feedback("adversarial reviewer", content[:200])
-    drafts_dir = project_dir / "_drafts"
-    drafts_dir.mkdir(exist_ok=True)
-    if feedback:
-        round_num = params.get("_round", 1)
-        (drafts_dir / f"v{round_num}-review-feedback.md").write_text(feedback)
 
     await progress.progress(3, 3, "Done")
 
