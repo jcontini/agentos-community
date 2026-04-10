@@ -90,36 +90,41 @@ Models are **never hardcoded**. All operations accept a `model` parameter that i
 resolved through the graph (`list_models` on the relevant connection populates it).
 See `docs/specs/done/no-hardcoded-models.md` for rationale.
 
-## Operations
+## Usage
 
 ### `api` connection — Claude API inference
 
-| Operation | Description |
+| Tool | Description |
 |---|---|
 | `list_models` | Fetch the current model catalog from `api.anthropic.com/v1/models` |
 | `chat` | Send a single Messages API request. Supports tools, system prompts, temperature. Returns raw tool_use blocks for the caller to process. |
 
 ### `cli` connection — Claude Code
 
-**Inference** (uses the user's logged-in `claude` binary — no API key required):
+Uses the user's logged-in `claude` binary (no API key required) AND reads local
+on-disk state under `~/.claude/projects/`.
 
-| Operation | Description |
+| Tool | Description |
 |---|---|
-| `agent` | Run Claude as an agent via `claude -p`. Unlike `chat` (single request), runs a full agent loop with native tool-calling (via `--mcp-config`) and structured output (via `--json-schema`). Claude iterates until done; the skill returns the final answer. |
+| `agent` | Run Claude as an agent via `claude -p`. Full agent loop — tool use + structured output via `--mcp-config` / `--json-schema`. |
+| `list_models_cli` | List Claude models via the keychain OAuth token (no API key). Same endpoint as `list_models`, different auth. |
+| `list_projects` | List every project directory under `~/.claude/projects/` with conversation counts and last activity. |
+| `list_conversations_cli` | List local Claude Code conversations (one per JSONL transcript) as shape-native `conversation[]`. Optional `project` scope, optional `limit`. |
+| `read_conversation_cli` | Read a full conversation transcript — returns one `conversation` with a nested `message[]` relation (content, blocks, author, published, tool calls). |
 
 > **Note:** The `cli` connection uses `agent` rather than `chat` because it behaves
 > fundamentally differently from the API — it loops internally over tool calls.
 > Both still `@provides(llm)` so capability routing can pick either.
-
-**Local state reads** (read from `~/.claude/` — planned, pending the ontology work in `_prototype/`):
-
-> Planned: `list_sessions`, `get_session`, `list_subagents`, `list_prompts`, `list_tasks`,
-> `list_plans`, `list_edited_files`, `get_file_version`, `usage_summary`, `list_live_instances`,
-> `list_plugins`, `get_settings`, `install_mcp`. See `_prototype/ideas.md` for current status.
+>
+> The `_cli` suffix on `list_models_cli` / `list_conversations_cli` /
+> `read_conversation_cli` is because skill tool names share a flat namespace
+> across all `.py` files in the skill, and the same names are already taken by
+> the `api` and `web` connections (for the Anthropic API model list and
+> claude.ai web chats, respectively).
 
 ### `web` connection — claude.ai chat history
 
-| Operation | Description |
+| Tool | Description |
 |---|---|
 | `list_conversations` | Browse conversations, most recent first |
 | `get_conversation` | Full conversation with all messages |
