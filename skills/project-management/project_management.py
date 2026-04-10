@@ -179,14 +179,12 @@ Write the review however you want. Include:
 1. A criteria table: | # | Criterion | Priority | Verdict | Justification |
    (Priority comes from the RFP: critical, important, nice-to-have)
    (Verdict per criterion: pass, partial, or fail)
-2. Your overall verdict — say **implement**, **revise**, or **rethink** clearly.
-   Rules: any critical fail → rethink, any critical partial → revise,
-   all critical+important pass → implement.
-3. If not implement, a Blockers section with specific things that must change.
+2. If any criteria failed or were partial, a Blockers section with specific things that must change.
 
-Do not compute scores, percentages, or weighted totals.
+Do not compute scores, percentages, weighted totals, or overall verdicts.
+The system derives the verdict and score automatically from your criteria table.
 
-When done, call submit_review(content="your full review markdown", verdict="implement|revise|rethink").
+When done, call submit_review(content="your full review markdown").
 """
 
 ROLE_CLOSEOUT = "You are a closeout writer."
@@ -236,34 +234,37 @@ def _strip_fenced_blocks(content: str) -> str:
     return content.rstrip() + "\n"
 
 
-def _compute_score(review_text: str) -> float:
-    """Compute a quantitative score from the review's criteria table.
+def _parse_criteria_table(review_text: str) -> list[dict]:
+    """Parse the criteria table from review markdown.
 
-    Parses the | # | Criterion | Priority | Verdict | ... table.
-    LLM labels pass/partial/fail — Python does the math.
-    Returns 0.0–1.0 weighted score (critical=0.6, important=0.3, nice-to-have=0.1).
+    Returns list of {"priority": str, "verdict": str} dicts.
     """
-    PRIORITY_WEIGHTS = {"critical": 0.6, "important": 0.3, "nice-to-have": 0.1}
-    VERDICT_SCORES = {"pass": 1.0, "partial": 0.5, "fail": 0.0}
-
-    weighted_sum = 0.0
-    weight_total = 0.0
-
+    rows = []
     for line in review_text.splitlines():
         if not line.startswith("|"):
             continue
         cells = [c.strip().lower() for c in line.split("|") if c.strip()]
         if len(cells) < 4:
             continue
-        # Skip header/separator rows
         if cells[0] in ("#", "---") or "criterion" in cells[1]:
             continue
+        rows.append({"priority": cells[2].strip(), "verdict": cells[3].strip()})
+    return rows
 
-        priority = cells[2].strip()
-        verdict = cells[3].strip()
 
-        w = PRIORITY_WEIGHTS.get(priority, 0.0)
-        v = VERDICT_SCORES.get(verdict, 0.0)
+def _compute_score(review_text: str) -> float:
+    """Compute weighted 0-1 score from the criteria table.
+
+    critical=0.6, important=0.3, nice-to-have=0.1.
+    """
+    PRIORITY_WEIGHTS = {"critical": 0.6, "important": 0.3, "nice-to-have": 0.1}
+    VERDICT_SCORES = {"pass": 1.0, "partial": 0.5, "fail": 0.0}
+
+    weighted_sum = 0.0
+    weight_total = 0.0
+    for row in _parse_criteria_table(review_text):
+        w = PRIORITY_WEIGHTS.get(row["priority"], 0.0)
+        v = VERDICT_SCORES.get(row["verdict"], 0.0)
         if w > 0:
             weighted_sum += w * v
             weight_total += w
@@ -271,6 +272,32 @@ def _compute_score(review_text: str) -> float:
     if weight_total == 0:
         return 0.0
     return round(weighted_sum / weight_total, 2)
+
+
+def _compute_verdict(review_text: str) -> str:
+    """Derive verdict deterministically from criteria verdicts.
+
+    Rules (same as review agent instructions):
+    - Any critical fail → rethink
+    - Any critical partial → revise
+    - All critical+important pass → implement
+    - Otherwise → revise
+    """
+    rows = _parse_criteria_table(review_text)
+    if not rows:
+        return "revise"
+
+    for row in rows:
+        if row["priority"] == "critical" and row["verdict"] == "fail":
+            return "rethink"
+    for row in rows:
+        if row["priority"] == "critical" and row["verdict"] == "partial":
+            return "revise"
+    for row in rows:
+        if row["priority"] in ("critical", "important") and row["verdict"] != "pass":
+            return "revise"
+
+    return "implement"
 
 
 def _extract_research_from_transcript(session_id: str) -> str:
@@ -409,54 +436,42 @@ async def give_feedback(content: str, **params) -> dict:
     return {"__result__": {"saved": True, "message": "Thanks — feedback recorded. Feel free to share more anytime."}}
 
 
-@returns({"saved": "boolean", "path": "string"})
-async def submit_proposal(content: str, project: str, round: int = 1, **params) -> dict:
+@returns({"saved": "boolean"})
+async def submit_proposal(content: str, **params) -> dict:
     """Submit your proposal. Call this when you're done writing.
 
     Args:
         content: The full proposal in markdown
-        project: Project directory path (provided in your instructions)
-        round: Revision round number (provided in your instructions)
     """
-    project_dir = Path(project)
+    # Write to staging area — propose() picks it up and moves to the project dir
+    staging = REPO_ROOT / "_feedback" / "_staged_proposal.json"
+    staging.parent.mkdir(exist_ok=True)
+    staging.write_text(json.dumps({"content": content}))
 
-    proposal_path = project_dir / "1-proposal.md"
-
-    # Archive previous proposal on revision rounds
-    if round > 1 and proposal_path.exists():
-        drafts_dir = project_dir / "_drafts"
-        drafts_dir.mkdir(exist_ok=True)
-        prev_dest = drafts_dir / f"v{round - 1}-proposal.md"
-        if not prev_dest.exists():
-            proposal_path.rename(prev_dest)
-
-    proposal_path.write_text(content)
-    return {"__result__": {
-        "saved": True,
-        "path": str(proposal_path),
-        "message": "Proposal saved.",
-    }}
+    return {"__result__": {"saved": True, "message": "Proposal saved."}}
 
 
-@returns({"saved": "boolean", "path": "string", "score": "number", "verdict": "string"})
-async def submit_review(content: str, verdict: str, project: str, **params) -> dict:
+@returns({"saved": "boolean", "verdict": "string", "score": "number"})
+async def submit_review(content: str, **params) -> dict:
     """Submit your review. Call this when you're done evaluating.
 
     Args:
-        content: The full review in markdown
-        verdict: implement, revise, or rethink
-        project: Project directory path (provided in your instructions)
+        content: The full review in markdown (must include criteria table)
     """
-    project_dir = Path(project)
-
-    review_path = project_dir / "2-review.md"
-    review_path.write_text(content)
-
     score = _compute_score(content)
+    verdict = _compute_verdict(content)
+
+    # Stage for review() to pick up — just clean JSON, no embedded markdown
+    staging = REPO_ROOT / "_feedback" / "_staged_review.json"
+    staging.parent.mkdir(exist_ok=True)
+    staging.write_text(json.dumps({
+        "content": content,
+        "score": score,
+        "verdict": verdict,
+    }))
 
     return {"__result__": {
         "saved": True,
-        "path": str(review_path),
         "verdict": verdict,
         "score": score,
         "message": "Review saved.",
@@ -631,7 +646,14 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         if not prev_dest.exists():
             proposal_path.rename(prev_dest)
 
-    document = _strip_fenced_blocks(result.get("content", ""))
+    staged = REPO_ROOT / "_feedback" / "_staged_proposal.json"
+    if staged.exists():
+        data = json.loads(staged.read_text())
+        staged.unlink()
+        document = data["content"]
+    else:
+        document = _strip_fenced_blocks(result.get("content", ""))
+
     proposal_path.write_text(document)
 
     drafts_dir = project_dir / "_drafts"
@@ -693,37 +715,24 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     await progress.progress(2, 3, "Saving review...")
 
     review_path = project_dir / "2-review.md"
+    staged = REPO_ROOT / "_feedback" / "_staged_review.json"
 
-    # If submit_review was called by the agent via MCP, the file is already written.
-    # Check by comparing modification time to when we started the agent call.
-    # Otherwise, parse the agent's text output.
-    content = result.get("content", "")
-    document = _strip_fenced_blocks(content)
-
-    # Always write/overwrite from text output — submit_review may have written
-    # but text parsing is the authoritative path until we can read tool call results
-    review_path.write_text(document)
-
-    # Extract verdict — find "overall verdict" line, then grab the keyword
-    verdict = "revise"  # safe default
-    for line in document.splitlines():
-        line_lower = line.lower().strip()
-        if "overall" in line_lower and "verdict" in line_lower:
-            for v in ["implement", "rethink", "revise"]:
-                if v in line_lower:
-                    verdict = v
-                    break
-            break
+    if staged.exists():
+        # Agent called submit_review — clean JSON with content/score/verdict
+        data = json.loads(staged.read_text())
+        staged.unlink()
+        content = data["content"]
+        verdict = data["verdict"]
+        score = data["score"]
     else:
-        # Fallback: scan whole doc for bold verdict keywords
-        doc_lower = document.lower()
-        for v in ["rethink", "revise", "implement"]:
-            if f"**{v}**" in doc_lower:
-                verdict = v
-                break
+        # Fallback: agent wrote prose as text output
+        content = _strip_fenced_blocks(result.get("content", ""))
+        score = _compute_score(content)
+        verdict = _compute_verdict(content)
 
-    # Python computes the quantitative score from the criteria table
-    score = _compute_score(document)
+    # Python always assembles the final document with frontmatter
+    frontmatter = f"---\nverdict: {verdict}\nscore: {score}\ndate: {today}\n---\n\n"
+    review_path.write_text(frontmatter + content)
 
     await progress.progress(3, 3, "Done")
 
