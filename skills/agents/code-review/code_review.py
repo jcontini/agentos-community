@@ -22,18 +22,31 @@ AGENTOS_ROOT = Path.home() / "dev" / "agentos"
 SDK_ROOT = Path.home() / "dev" / "agentos-sdk"
 
 
-def _read(path: Path) -> str:
-    try:
-        return path.read_text()
-    except (FileNotFoundError, PermissionError):
-        return ""
-
-
 def _load_principles() -> tuple[str, str, str]:
-    engine = _read(AGENTOS_ROOT / "principles.md")  # includes agent ergonomics
-    sdk = _read(SDK_ROOT / "docs" / "principles.md")
-    guide = _read(SDK_ROOT / "docs" / "skills.md")
-    return engine, sdk, guide
+    """Load the three knowledge sources the reviewer depends on.
+
+    Fails loudly if any file is missing — these are the entire basis for
+    scoring, and silent fallback (the old behavior) let a stale GUIDE.md
+    path run unreviewed for an unknown window.
+    """
+    engine_path = AGENTOS_ROOT / "principles.md"
+    sdk_path = SDK_ROOT / "docs" / "principles.md"
+    guide_path = SDK_ROOT / "docs" / "skills.md"
+
+    missing = [
+        f"{name} ({p})"
+        for name, p in [
+            ("engine principles", engine_path),
+            ("sdk principles", sdk_path),
+            ("skills guide", guide_path),
+        ]
+        if not p.is_file()
+    ]
+    if missing:
+        raise FileNotFoundError(
+            "code-review: missing knowledge sources:\n  " + "\n  ".join(missing)
+        )
+    return engine_path.read_text(), sdk_path.read_text(), guide_path.read_text()
 
 
 def _load_refactoring_specs() -> str:
