@@ -1010,11 +1010,14 @@ async def run_search_books(*, query: str = "", limit: int = 10, **params) -> Any
     return _search_books(query=str(query), limit=int(limit))
 
 
-@returns("author")
+@returns("person")
 @provides(web_read, urls=["goodreads.com/author/show/*", "www.goodreads.com/author/show/*"])
 @connection("graphql")
 async def run_get_author(*, author_id: str = "", url: str = "", limit: int = 10, **params) -> dict[str, Any]:
     """Get a public Goodreads author profile and import bounded authored books
+
+        An author is just a person who authored a book — the returned record
+        is a person, with authored books attached via the `books` relation.
 
         Args:
             author_id: Author ID — optional if url is a goodreads.com/author/show/… link
