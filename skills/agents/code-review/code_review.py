@@ -32,7 +32,7 @@ def _read(path: Path) -> str:
 def _load_principles() -> tuple[str, str, str]:
     engine = _read(AGENTOS_ROOT / "principles.md")  # includes agent ergonomics
     sdk = _read(SDK_ROOT / "docs" / "principles.md")
-    guide = _read(SDK_ROOT / "skills-sdk" / "agentos" / "GUIDE.md")
+    guide = _read(SDK_ROOT / "docs" / "skills.md")
     return engine, sdk, guide
 
 

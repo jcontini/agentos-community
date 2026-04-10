@@ -62,7 +62,7 @@ When that lands, the local-state ops get implemented in `claude_code.py`:
 ## Cross-skill tasks
 
 - [ ] **Standardize snake_case for Python files** — add convention to
-      `agentos-sdk/skills-sdk/agentos/GUIDE.md`. All `.py` files in skills should be
+      `agentos-sdk/docs/skills.md`. All `.py` files in skills should be
       `snake_case.py` (not `kebab-case.py`). Current codebase is mixed.
 - [ ] **Move `web_read` provides** — `op_get_conversation` currently has
       `@provides(web_read, urls=["claude.ai/chat/*", "www.claude.ai/chat/*"])`.

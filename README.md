@@ -29,7 +29,7 @@ All developer documentation lives in the [agentOS SDK repo](https://github.com/j
 
 | What | Where |
 |------|-------|
-| **Skill development guide** | `agentos-sdk/skills-sdk/agentos/GUIDE.md` |
+| **Skill development guide** | `agentos-sdk/docs/skills.md` |
 | **Shapes, connections, auth** | `agentos-sdk/docs/` |
 | **Reverse engineering** | `agentos-sdk/docs/reverse-engineering/` |
 | **Quick reference** | `agentos.to/skills.md` |

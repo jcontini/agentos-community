@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Pre-commit shim — delegates to the canonical hook in agentos-sdk.
+# Installed via `git config core.hooksPath bin/git-hooks`.
+#
+# The SDK hook runs `agent-sdk validate --all` + the LLM commit review.
+#
+# To re-arm on a fresh clone: `git config core.hooksPath bin/git-hooks`.
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+SDK_HOOK="${AGENTOS_SDK_REPO:-$HOME/dev/agentos-sdk}/bin/git-hooks/pre-commit"
+if [ -x "$SDK_HOOK" ]; then
+    "$SDK_HOOK"
+else
+    echo "⚠️  SDK pre-commit hook not found at $SDK_HOOK — skipping skill validation + review"
+fi
