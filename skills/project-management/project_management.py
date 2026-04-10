@@ -164,7 +164,10 @@ Be concrete and specific. Don't pad — every line should earn its place.
 
 ROLE_REVIEW = "You are an adversarial evaluator."
 
-BODY_REVIEW = """Your job is to find gaps, not confirm assumptions. Be harsh but fair.
+BODY_REVIEW = """Your job is to find gaps, not confirm assumptions. Be harsh on the
+technical substance, but kind to the author. The proposal was written by another
+agent — if it includes preamble, thinking-out-loud, or informal language, that's
+fine. Focus on whether the DESIGN is sound, not the presentation.
 
 Evaluate the proposal against EACH criterion from the RFP's evaluation criteria table.
 For each criterion:
@@ -176,27 +179,16 @@ To verify claims, READ THE ACTUAL SOURCE CODE. Don't trust the proposal's
 description of how things work — check the files it references. If the proposal
 says "the engine does X", verify by reading the engine code.
 
-Write the review as a markdown document with this YAML frontmatter:
----
-title: "Evaluation — Round N"
-type: evaluation
-verdict: implement | revise | rethink
-date: {date}
----
-
-Then include:
-1. Criteria table: | # | Criterion | Priority | Verdict | Justification |
+Write the review however you want. Include:
+1. A criteria table: | # | Criterion | Priority | Verdict | Justification |
    (Priority comes from the RFP: critical, important, nice-to-have)
-   (Verdict is: pass, partial, fail)
-2. Overall verdict, determined by these rules:
-   - Any critical criterion fails → **rethink**
-   - Any critical criterion is partial → **revise**
-   - All critical pass, but important criteria have failures → **revise**
-   - All critical and important pass → **implement**
-3. ## Blockers section: specific things that MUST change (omit if verdict is implement)
+   (Verdict per criterion: pass, partial, or fail)
+2. Your overall verdict — say **implement**, **revise**, or **rethink** clearly.
+   Rules: any critical fail → rethink, any critical partial → revise,
+   all critical+important pass → implement.
+3. If not implement, a Blockers section with specific things that must change.
 
-Do not compute scores, percentages, or weighted totals. Just evaluate each
-criterion honestly and let the verdicts speak for themselves.
+Do not compute scores, percentages, or weighted totals.
 """
 
 ROLE_CLOSEOUT = "You are a closeout writer."
@@ -396,10 +388,18 @@ def _slugify(text: str) -> str:
 
 
 def _parse_frontmatter(text: str) -> dict:
-    if text.startswith("---"):
-        parts = text.split("---", 2)
-        if len(parts) >= 3:
+    """Parse YAML frontmatter from text. Tolerates preamble before the first ---."""
+    # Strip any preamble before the first ---
+    idx = text.find("---")
+    if idx < 0:
+        return {}
+    text = text[idx:]
+    parts = text.split("---", 2)
+    if len(parts) >= 3:
+        try:
             return yaml.safe_load(parts[1]) or {}
+        except yaml.YAMLError:
+            return {}
     return {}
 
 
@@ -609,13 +609,23 @@ async def review(rfp: str, proposal: str, **params) -> dict:
     content = result.get("content", "")
     document = _strip_fenced_blocks(content)
 
-    # Parse verdict from frontmatter
-    fm = _parse_frontmatter(document)
-    verdict = fm.get("verdict", "revise")
-
-    # Guard: no frontmatter means reviewer failed
-    if not fm.get("verdict"):
-        return {"__result__": {"verdict": "error", "review_path": "", "error": "Reviewer did not produce a valid review with frontmatter."}}
+    # Extract verdict — find "overall verdict" line, then grab the keyword
+    verdict = "revise"  # safe default
+    for line in document.splitlines():
+        line_lower = line.lower().strip()
+        if "overall" in line_lower and "verdict" in line_lower:
+            for v in ["implement", "rethink", "revise"]:
+                if v in line_lower:
+                    verdict = v
+                    break
+            break
+    else:
+        # Fallback: scan whole doc for bold verdict keywords
+        doc_lower = document.lower()
+        for v in ["rethink", "revise", "implement"]:
+            if f"**{v}**" in doc_lower:
+                verdict = v
+                break
 
     # Python computes the quantitative score from the criteria table
     score = _compute_score(document)
@@ -695,7 +705,7 @@ PHASES = ["rfp", "propose", "review", "closeout"]
 
 @returns({"rfp_path": "string", "proposal_path": "string", "review_path": "string", "rounds": "integer", "verdict": "string", "score": "number"})
 @timeout(1800)
-async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start_from: str = "rfp", project: str = "", **params) -> dict:
+async def solve(problem: str = "", priority: int = 2, max_rounds: int = 5, start_from: str = "rfp", project: str = "", **params) -> dict:
     """Run the project lifecycle from any phase.
 
     Args:
@@ -772,16 +782,6 @@ async def solve(problem: str = "", priority: int = 2, max_rounds: int = 3, start
                 verdict = review_result["__result__"]["verdict"]
                 review_path = review_result["__result__"]["review_path"]
                 score = review_result["__result__"].get("score", 0)
-
-                # Retry once if reviewer failed
-                if verdict == "error":
-                    await progress.progress(step + 2, total_steps, f"Review failed, retrying (round {round_num})...")
-                    review_result = await review(
-                        rfp=rfp_path, proposal=proposal_path, _round=round_num, **params
-                    )
-                    verdict = review_result["__result__"]["verdict"]
-                    review_path = review_result["__result__"]["review_path"]
-                    score = review_result["__result__"].get("score", 0)
 
                 if verdict == "implement":
                     break
