@@ -24,7 +24,6 @@ import sys
 import asyncio
 import time
 from typing import Any
-from urllib.parse import quote_plus
 
 from agentos import get_cookies, http, molt, connection, returns, timeout, parse_int, require_cookies
 from lxml import html as lhtml
@@ -182,7 +181,7 @@ async def search_suggestions(
     suggestions = [
         {
             "value": s["value"],
-            "searchUrl": f"https://www.amazon.{tld}/s?k={quote_plus(s['value'])}",
+            "searchUrl": http.build_url(f"https://www.amazon.{tld}/s", params={"k": s["value"]}),
             "strategy": s.get("strategyId", "organic"),
             "refTag": s.get("refTag"),
             "department": alias,

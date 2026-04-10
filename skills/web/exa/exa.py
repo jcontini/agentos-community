@@ -35,7 +35,6 @@ The dashboard UI masks it, but the API returns it in full.
 Key format: UUID (e.g. "5bcbb3da-e415-44f1-8e57-10e92177f378").
 """
 
-import urllib.parse
 from agentos import http, connection, provides, returns, timeout, web_read, web_search
 
 AUTH_BASE = "https://auth.exa.ai"
@@ -194,11 +193,13 @@ async def verify_login_code(*, email: str, code: str, **params) -> dict:
         # Construct the token NextAuth expects: hashedOtp:rawOtp
         # NextAuth hashes this with SHA256+secret and compares to the DB entry.
         token = f"{hashed_otp}:{raw_otp}"
-        callback_url = (
-            f"{AUTH_BASE}/api/auth/callback/email"
-            f"?email={urllib.parse.quote(email.lower())}"
-            f"&token={urllib.parse.quote(token)}"
-            f"&callbackUrl={urllib.parse.quote(CALLBACK_URL)}"
+        callback_url = http.build_url(
+            f"{AUTH_BASE}/api/auth/callback/email",
+            params={
+                "email": email.lower(),
+                "token": token,
+                "callbackUrl": CALLBACK_URL,
+            },
         )
 
         # Hit the NextAuth callback — this sets the session-token cookie

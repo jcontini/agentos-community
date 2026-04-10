@@ -1,3 +1,5 @@
+from agentos import http, connection, returns, timeout
+
 CDN = "https://img.logo.dev"
 
 
@@ -51,9 +53,8 @@ async def name_url(*, name: str, size: int = 128, format: str = "png",
             size: Size in pixels
             format: Image format
         """
-    from urllib.parse import quote
     token = params.get("auth", {}).get("key", "")
-    return {"url": _base_url(f"name:{quote(name)}", token, size, format)}
+    return {"url": _base_url(f"name:{http.encode(name)}", token, size, format)}
 
 
 @returns({"url": "string"})

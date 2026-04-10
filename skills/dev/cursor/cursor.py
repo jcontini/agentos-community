@@ -8,7 +8,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agentos import shell, sql, returns, timeout
+from agentos import http, shell, sql, returns, timeout
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -407,8 +407,7 @@ def _build_workspace_map():
                     data = json.load(f)
                 folder = data.get("folder", data.get("workspace", ""))
                 if folder.startswith("file:///"):
-                    from urllib.parse import unquote
-                    folder = unquote(folder[7:])
+                    folder = http.decode(folder[7:])
                 ws_map[d] = folder
             except (json.JSONDecodeError, IOError):
                 pass

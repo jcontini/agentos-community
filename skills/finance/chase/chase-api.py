@@ -35,7 +35,6 @@ Required headers: x-jpmc-csrf-token: NONE, x-jpmc-channel: id=C30
 
 import json
 import sys
-import urllib.parse
 
 from agentos import http, connection, returns, timeout, require_cookies
 
@@ -167,19 +166,23 @@ async def get_transactions(*, account_id, limit=30, **params) -> list | dict:
     cookie_header = require_cookies(params, "list_transactions")
     limit = int(limit)
 
-    query = urllib.parse.urlencode({
+    url = (
+        f"{BASE}/svc/rr/accounts/secure/gateway/deposit-account/transactions"
+        f"/inquiry-maintenance/etu-dda-transactions/v3/transactions"
+    )
+    query_params = {
         "digital-account-identifier": account_id,
         "channel-entry-point-identifier": "WEB",
         "requested-record-count": limit,
         "generic-enrichment-nudge-indicator": "true",
-    })
-    path = (
-        f"{BASE}/svc/rr/accounts/secure/gateway/deposit-account/transactions"
-        f"/inquiry-maintenance/etu-dda-transactions/v3/transactions?{query}"
-    )
+    }
 
     async with _client(cookie_header) as client:
-        resp = await client.get(path, headers={"network-channel-group-code": "DIGITAL"})
+        resp = await client.get(
+            url,
+            params=query_params,
+            headers={"network-channel-group-code": "DIGITAL"},
+        )
         if resp["status"] in (401, 403):
             raise RuntimeError(f"SESSION_EXPIRED: Chase returned HTTP {resp['status']}")
         if resp["status"] != 200:

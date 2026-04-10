@@ -8,7 +8,6 @@ Separate from public_graph.py which handles public GraphQL/Apollo data.
 
 import re
 from typing import Any
-from urllib.parse import quote_plus
 
 from agentos import get_cookies, http, molt, connection, provides, returns, timeout, email_lookup, parse_date, parse_int
 from lxml import html as lhtml
@@ -725,7 +724,7 @@ async def _search_people(
     params: dict | None = None,
 ) -> list[dict[str, Any]]:
     cookie_header = cookie_header or get_cookies(params)
-    url = f"{BASE}/search?q={quote_plus(query)}&search_type=people"
+    url = http.build_url(f"{BASE}/search", params={"q": query, "search_type": "people"})
     resp = await http.get(url, cookies=cookie_header, **_H)
     status, html_text = resp["status"], resp["body"]
     if status != 200:
@@ -779,9 +778,9 @@ async def _resolve_email(
         n_token = n_input.get("value", "") if n_input else ""
 
         # Step 2: submit the search (cookie jar carries Set-Cookie from step 1)
-        search_url = (
-            f"{BASE}/friend/find_friend?utf8=%E2%9C%93"
-            f"&n={n_token}&q={quote_plus(email)}"
+        search_url = http.build_url(
+            f"{BASE}/friend/find_friend",
+            params={"utf8": "\u2713", "n": n_token, "q": email},
         )
         status2, results_html = await _fetch(client, search_url)
         if status2 != 200:

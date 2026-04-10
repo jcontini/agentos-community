@@ -7,7 +7,6 @@ from the Mimestream OAuth provider (googleapis.com / calendar.events scope).
 import base64
 import re
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qs, urlparse
 
 from agentos import http, connection, provides, returns, timeout, web_read
 
@@ -316,9 +315,8 @@ def _extract_event_id_from_url(url):
     """
     if not url:
         return None
-    parsed = urlparse(url)
-    qs = parse_qs(parsed.query)
-    eid = qs.get("eid", [None])[0]
+    parsed = http.parse_url(url)
+    eid = parsed.query.get("eid")
     if eid:
         try:
             # eid is base64-encoded "eventId calendarId"

@@ -286,16 +286,17 @@ def _get_schedule(
     next_day = (d + timedelta(days=1)).isoformat()
     end_dt = f"{next_day}T04:59:59.999Z"
 
-    from urllib.parse import urlencode
-    qs = urlencode({
-        "startDT": start_dt,
-        "endDT": end_dt,
-        "locationId": location_id,
-        "activityId": ",".join(str(i) for i in activity_ids),
-        "page": 1,
-        "pageSize": 50,
-    })
-    url = f"{WIDGETS_API}/cal?{qs}"
+    url = http.build_url(
+        f"{WIDGETS_API}/cal",
+        params={
+            "startDT": start_dt,
+            "endDT": end_dt,
+            "locationId": location_id,
+            "activityId": ",".join(str(i) for i in activity_ids),
+            "page": 1,
+            "pageSize": 50,
+        },
+    )
     return json.loads(_fetch(url, headers=_widgets_headers()))
 
 
