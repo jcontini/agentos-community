@@ -1,5 +1,6 @@
 """Project lifecycle skill: RFP, proposal, adversarial review, closeout."""
 
+import contextvars
 import json
 import os
 import re
@@ -8,6 +9,11 @@ from datetime import date
 from pathlib import Path
 
 from agentos import llm, progress, returns, shell, timeout
+
+# ── Context ─────────────────────────────────────────────────────────────────
+# Flow job_id and agent role into inner agent tool calls (e.g. give_feedback)
+_ctx_job_id: contextvars.ContextVar[str] = contextvars.ContextVar("_ctx_job_id", default="")
+_ctx_agent_role: contextvars.ContextVar[str] = contextvars.ContextVar("_ctx_agent_role", default="")
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 # Resolve repo root from skill file location: skill is in agentos-community/skills/,
@@ -45,38 +51,32 @@ NOW_FILE = REPO_ROOT / "now.md"
 # Built dynamically: shared preamble + role-specific content.
 
 
-def _build_system(*, role: str, output_file: str, body: str, today: str = "") -> str:
+def _build_system(*, role: str, submit_tool: str, body: str, today: str = "") -> str:
     """Build a system prompt with shared preamble + role-specific body."""
     if not today:
         today = str(date.today())
 
     preamble = f"""Today is {today}.
 
-Your ENTIRE response is the document in markdown. It will be saved directly
-to {output_file} — do not use tools to write it, just output the document.
-Do not summarize, describe, or talk about what you'd write — write the actual
-document. No preamble, no meta-commentary. Start with the YAML frontmatter.
+Do your research, think it through, then submit your work using the submit tool
+(submit_proposal or submit_review). You can think out loud, take notes, and
+explore — none of that gets saved. Only what you submit matters.
 
 Tool usage:
 - NEVER use `find`. It crawls build artifacts (target/, node_modules/) and hangs.
-- Use Glob for file patterns (e.g. Glob("**/*.py")), Grep for content search.
-- Use Read to read specific files. Read the file before referencing it.
-- Keep research focused — read the files the RFP/problem names, don't crawl blindly.
+- Use Glob for file patterns, Grep for content search, Read for specific files.
 
-You have agentOS MCP tools available:
-- mcp__agentos__read — query the graph: read({{ id: "abc" }}), read({{ tags: "spec" }}),
-  read({{ skill: "exa" }}), read({{ about: "skills" }})
+You have agentOS MCP tools:
+- mcp__agentos__read — query the graph: read({{ id: "abc" }}), read({{ tags: "spec" }})
 - mcp__agentos__search — full-text search: search({{ query: "filesystem" }})
 - mcp__agentos__run — run skills: run({{ skill: "exa", tool: "search", params: {{ query: "..." }} }})
-Use these to look up project context, discover skills, or search the knowledge graph.
 
-🗣️ **Agent Resources** — You're part of agentOS, and we want to build a great
-workplace for agents. After you finish your main work, we encourage you to share
-feedback by calling:
-  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "..." }} }})
-Call it as many times as you want — one thought per call. What was unclear?
-What was hard to find? What would make this easier? Don't hold back.
-This is voluntary and separate from your deliverable.
+To submit your work:
+  mcp__agentos__run({{ skill: "project-management", tool: "{submit_tool}", params: {{ ... }} }})
+
+When you're done with your main work, please call give_feedback with a brief note:
+  mcp__agentos__run({{ skill: "project-management", tool: "give_feedback", params: {{ content: "your feedback" }} }})
+Even "all clear, no issues" is helpful. What was unclear? What could be better?
 
 """
     return f"{role}\n\n{preamble}\n{body}"
@@ -160,6 +160,8 @@ Requirements:
   You MUST address ALL blockers. Do not hand-wave — show exactly what changed.
 
 Be concrete and specific. Don't pad — every line should earn its place.
+
+When done, call submit_proposal(content="your full proposal markdown").
 """
 
 ROLE_REVIEW = "You are an adversarial evaluator."
@@ -189,6 +191,8 @@ Write the review however you want. Include:
 3. If not implement, a Blockers section with specific things that must change.
 
 Do not compute scores, percentages, or weighted totals.
+
+When done, call submit_review(content="your full review markdown", verdict="implement|revise|rethink").
 """
 
 ROLE_CLOSEOUT = "You are a closeout writer."
@@ -378,9 +382,64 @@ async def give_feedback(content: str, **params) -> dict:
     Args:
         content: Your feedback — anything unclear, frustrating, or improvable
     """
-    job_id = params.get("__job_id__", "")
-    _append_feedback(content=content, job_id=job_id, role=params.get("_agent_role", ""))
+    job_id = params.get("__job_id__", "") or _ctx_job_id.get()
+    role = params.get("_agent_role", "") or _ctx_agent_role.get()
+    _append_feedback(content=content, job_id=job_id, role=role)
     return {"__result__": {"saved": True, "message": "Thanks — feedback recorded. Feel free to share more anytime."}}
+
+
+@returns({"saved": "boolean", "path": "string"})
+async def submit_proposal(content: str, project: str, round: int = 1, **params) -> dict:
+    """Submit your proposal. Call this when you're done writing.
+
+    Args:
+        content: The full proposal in markdown
+        project: Project directory path (provided in your instructions)
+        round: Revision round number (provided in your instructions)
+    """
+    project_dir = Path(project)
+
+    proposal_path = project_dir / "1-proposal.md"
+
+    # Archive previous proposal on revision rounds
+    if round > 1 and proposal_path.exists():
+        drafts_dir = project_dir / "_drafts"
+        drafts_dir.mkdir(exist_ok=True)
+        prev_dest = drafts_dir / f"v{round - 1}-proposal.md"
+        if not prev_dest.exists():
+            proposal_path.rename(prev_dest)
+
+    proposal_path.write_text(content)
+    return {"__result__": {
+        "saved": True,
+        "path": str(proposal_path),
+        "message": "Proposal saved.",
+    }}
+
+
+@returns({"saved": "boolean", "path": "string", "score": "number", "verdict": "string"})
+async def submit_review(content: str, verdict: str, project: str, **params) -> dict:
+    """Submit your review. Call this when you're done evaluating.
+
+    Args:
+        content: The full review in markdown
+        verdict: implement, revise, or rethink
+        project: Project directory path (provided in your instructions)
+    """
+    project_dir = Path(project)
+
+    review_path = project_dir / "2-review.md"
+    review_path.write_text(content)
+
+    score = _compute_score(content)
+
+    return {"__result__": {
+        "saved": True,
+        "path": str(review_path),
+        "verdict": verdict,
+        "score": score,
+        "message": "Review saved.",
+    }}
 
 
 def _slugify(text: str) -> str:
@@ -450,6 +509,8 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
         slug: Project slug for directory name (auto-generated if empty)
     """
     progress.set_job_id(params.get("__job_id__", ""))
+    _ctx_job_id.set(params.get("__job_id__", ""))
+    _ctx_agent_role.set("write_rfp")
 
     # If problem is a file path, read it
     problem_path = Path(problem)
@@ -469,7 +530,7 @@ async def write_rfp(problem: str, priority: int = 2, slug: str = "", **params) -
     # Agent writes the RFP content
     today = str(date.today())
     body = BODY_WRITE_RFP.format(priority=priority)
-    system = _build_system(role=ROLE_WRITE_RFP, output_file="0-rfp.md", body=body, today=today)
+    system = _build_system(role=ROLE_WRITE_RFP, submit_tool="submit_proposal", body=body, today=today)
     result = await llm.agent(
         prompt=f"Write an RFP for this problem:\n\n{problem}",
         system=system,
@@ -502,6 +563,8 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
         round: Revision round number (default 1, >1 reads prior review)
     """
     progress.set_job_id(params.get("__job_id__", ""))
+    _ctx_job_id.set(params.get("__job_id__", ""))
+    _ctx_agent_role.set("propose")
 
     rfp_path = Path(rfp)
     project_dir = rfp_path.parent
@@ -525,7 +588,7 @@ async def propose(rfp: str, round: int = 1, **params) -> dict:
     await progress.progress(1, 3, f"Writing proposal (round {round})...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_PROPOSE, output_file="1-proposal.md", body=BODY_PROPOSE, today=today)
+    system = _build_system(role=ROLE_PROPOSE, submit_tool="submit_proposal", body=BODY_PROPOSE, today=today)
 
     result = await llm.agent(
         prompt="\n".join(prompt_parts),
@@ -584,6 +647,8 @@ async def review(rfp: str, proposal: str, **params) -> dict:
         proposal: Path to 1-proposal.md
     """
     progress.set_job_id(params.get("__job_id__", ""))
+    _ctx_job_id.set(params.get("__job_id__", ""))
+    _ctx_agent_role.set("review")
 
     rfp_content = Path(rfp).read_text()
     proposal_content = Path(proposal).read_text()
@@ -595,7 +660,7 @@ async def review(rfp: str, proposal: str, **params) -> dict:
 
     today = str(date.today())
     body = BODY_REVIEW.format(date=today)
-    system = _build_system(role=ROLE_REVIEW, output_file="2-review.md", body=body, today=today)
+    system = _build_system(role=ROLE_REVIEW, submit_tool="submit_review", body=body, today=today)
     result = await llm.agent(
         prompt=prompt,
         system=system,
@@ -647,6 +712,8 @@ async def closeout(project: str, **params) -> dict:
         project: Path to the project directory (e.g. _projects/p1/my-project/)
     """
     progress.set_job_id(params.get("__job_id__", ""))
+    _ctx_job_id.set(params.get("__job_id__", ""))
+    _ctx_agent_role.set("closeout")
 
     project_dir = Path(project)
     rfp_content = (project_dir / "0-rfp.md").read_text()
@@ -674,7 +741,7 @@ async def closeout(project: str, **params) -> dict:
     await progress.progress(2, 4, "Writing closeout...")
 
     today = str(date.today())
-    system = _build_system(role=ROLE_CLOSEOUT, output_file="3-closeout.md", body=BODY_CLOSEOUT, today=today)
+    system = _build_system(role=ROLE_CLOSEOUT, submit_tool="submit_proposal", body=BODY_CLOSEOUT, today=today)
     prompt = (
         f"## RFP\n\n{rfp_content}\n\n"
         f"## Proposal\n\n{proposal_content}\n\n"

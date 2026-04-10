@@ -21,6 +21,8 @@ tools:
     async: true
   closeout:
     async: true
+  give_feedback:
+    async: true
 
 test:
   solve: { skip: true }
