@@ -87,6 +87,15 @@ BODY_WRITE_RFP = """Write a focused RFP with YAML frontmatter and these sections
 - Known Approaches (starting points, not solutions — require desk review/web research)
 - Design Constraints
 
+**Scope without fear.** AgentOS is pre-launch with zero users. There is no
+data to protect, no backward compatibility, no migration cost. Blast radius
+is not a cost — stale architecture is. If the right answer tears up the
+dispatch pipeline, the executor, the Rust bridge, and every skill in one
+shot, that is a valid scope for an RFP. Do NOT pre-shrink the problem to
+keep the proposal small. Frame the problem at the scope the real fix needs.
+The hardest, most audacious appropriate refactor is usually the right
+answer. Say so in the context section when it applies.
+
 YAML frontmatter MUST include these fields:
   title: "<Name> — RFP"
   type: rfp
@@ -153,6 +162,16 @@ Requirements:
 - If this is a revision round, the previous review's blockers are included below.
   You MUST address ALL blockers. Do not hand-wave — show exactly what changed.
 
+**Favor audacious refactors over small patches.** AgentOS is pre-launch
+with zero users and no backward-compatibility burden. If a band-aid fix
+would leave the root cause in place, your proposal is wrong. Propose the
+design that removes the root cause even if it means gutting a pipeline,
+rewriting a Rust executor, and touching every downstream skill. Blast
+radius is not a cost — stale architecture is. The hardest, most audacious
+appropriate refactor is usually the right answer. Small safe patches that
+leave the inconsistency in place should be rejected as insufficient scope
+in your Diagnosis section, not defended as "pragmatic."
+
 Be concrete and specific. Don't pad — every line should earn its place.
 
 When done, call submit_proposal(content="your full proposal markdown").
@@ -170,6 +189,16 @@ For each criterion:
 - Verdict: pass, partial, or fail
 - Justify with specific evidence (quote the proposal or cite missing content)
 - If partial or fail on a CRITICAL criterion, it's a blocker
+
+**Call out timidity as a blocker.** AgentOS is pre-launch with zero users.
+Small safe patches that leave a root cause in place are worse than audacious
+refactors that remove it. If the proposal is a band-aid over a deeper
+inconsistency — two shapes where one would do, two code paths where one
+would do, a sync wrapper around an async call — flag "insufficient scope"
+as a blocker and point at the root cause the proposal is avoiding. The
+hardest, most audacious appropriate refactor is usually the right answer.
+A proposal that chose the safer path without justifying why the bigger
+path was wrong should fail review.
 
 To verify claims, READ THE ACTUAL SOURCE CODE. Don't trust the proposal's
 description of how things work — check the files it references. If the proposal
