@@ -446,7 +446,7 @@ async def screenshot_window(*, window_id, path=None, **params):
             path: Optional output path for the PNG file
         """
     target_window_id = int(window_id)
-    windows = list_windows().get("windows", [])
+    windows = (await list_windows()).get("windows", [])
     target = next((window for window in windows if window.get("window_id") == target_window_id), None)
     if not target:
         raise ValueError("Window not found")

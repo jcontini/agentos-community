@@ -234,7 +234,7 @@ async def op_chat(
     if thinking:
         body["think"] = True
 
-    resp = _http_post(f"{base}/api/chat", body, timeout=300)
+    resp = await _http_post(f"{base}/api/chat", body, timeout=300)
     msg = resp.get("message") or {}
     raw_tools = msg.get("tool_calls") or []
     done_reason = resp.get("done_reason", "stop")
@@ -323,7 +323,7 @@ async def op_generate(
     if system:
         body["system"] = system
 
-    resp = _http_post(f"{base}/api/generate", body, timeout=300)
+    resp = await _http_post(f"{base}/api/generate", body, timeout=300)
     return {
         "response": resp.get("response", ""),
         "usage": {

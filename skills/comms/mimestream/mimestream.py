@@ -349,14 +349,14 @@ async def credential_get(*, account, **params):
     client ID, then exchanges for a fresh access token.
     """
     # Step 1: Read binary plist hex from keychain
-    hex_data = keychain.read(
+    hex_data = await keychain.read(
         service=f"Mimestream: {account}",
         account="OAuth",
         binary=True,
     )
 
     # Step 2: Parse plist — extract fields by $objects index
-    fields = plist.parse(hex_data, extract={
+    fields = await plist.parse(hex_data, extract={
         "refreshToken": 32,
         "clientId": 13,
         "tokenUrl": 10,

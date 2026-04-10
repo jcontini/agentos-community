@@ -207,16 +207,16 @@ async def get_branch(path, name, **params):
 async def get_repository(path, **params):
     """Get repository info from the local git repo -- remote URL, platform, branch."""
     try:
-        remote = await _git("remote", "get-url", "origin", cwd=path).strip()
+        remote = (await _git("remote", "get-url", "origin", cwd=path)).strip()
     except RuntimeError:
         remote = ""
 
     try:
-        branch = await _git("branch", "--show-current", cwd=path).strip()
+        branch = (await _git("branch", "--show-current", cwd=path)).strip()
     except RuntimeError:
         branch = ""
 
-    toplevel = await _git("rev-parse", "--show-toplevel", cwd=path).strip()
+    toplevel = (await _git("rev-parse", "--show-toplevel", cwd=path)).strip()
     repo_name = toplevel.rsplit("/", 1)[-1]
 
     # Extract owner/repo from remote URL
@@ -284,31 +284,31 @@ async def get_tag(path, name, **params):
 @returns({"value": "string"})
 async def status(path, **params):
     """Show working tree status -- modified, staged, and untracked files."""
-    branch = await _git("branch", "--show-current", cwd=path).strip()
+    branch = (await _git("branch", "--show-current", cwd=path)).strip()
 
     try:
-        tracking = await _git("rev-parse", "--abbrev-ref", "@{u}", cwd=path).strip()
+        tracking = (await _git("rev-parse", "--abbrev-ref", "@{u}", cwd=path)).strip()
     except RuntimeError:
         tracking = ""
 
     ahead = behind = 0
     if tracking:
         try:
-            ahead = int(await _git("rev-list", "--count", f"{tracking}..HEAD", cwd=path).strip())
+            ahead = int((await _git("rev-list", "--count", f"{tracking}..HEAD", cwd=path)).strip())
         except (RuntimeError, ValueError):
             pass
         try:
-            behind = int(await _git("rev-list", "--count", f"HEAD..{tracking}", cwd=path).strip())
+            behind = int((await _git("rev-list", "--count", f"HEAD..{tracking}", cwd=path)).strip())
         except (RuntimeError, ValueError):
             pass
 
-    staged_raw = await _git("diff", "--cached", "--name-only", cwd=path).strip()
+    staged_raw = (await _git("diff", "--cached", "--name-only", cwd=path)).strip()
     staged = len(staged_raw.split("\n")) if staged_raw else 0
 
-    modified_raw = await _git("diff", "--name-only", cwd=path).strip()
+    modified_raw = (await _git("diff", "--name-only", cwd=path)).strip()
     modified = len(modified_raw.split("\n")) if modified_raw else 0
 
-    untracked_raw = await _git("ls-files", "--others", "--exclude-standard", cwd=path).strip()
+    untracked_raw = (await _git("ls-files", "--others", "--exclude-standard", cwd=path)).strip()
     untracked = len(untracked_raw.split("\n")) if untracked_raw else 0
 
     return {

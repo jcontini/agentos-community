@@ -29,12 +29,12 @@ from agentos import crypto, sql, returns, provides, timeout, cookie_auth
 from agentos.macos import keychain
 
 
-def _get_master_key() -> str:
+async def _get_master_key() -> str:
     """Read the Brave Safe Storage password from macOS Keychain.
 
     Returns the raw password string (not yet derived into an AES key).
     """
-    return keychain.read(service="Brave Safe Storage", account="Brave")
+    return await keychain.read(service="Brave Safe Storage", account="Brave")
 
 
 async def _derive_key(password: str) -> str:
@@ -92,7 +92,7 @@ async def _get_cookies(domain: str, names: list[str] | None = None,
     if not os.path.exists(cookies_db):
         raise FileNotFoundError(f"Brave Cookies database not found: {cookies_db}")
 
-    password = _get_master_key()
+    password = await _get_master_key()
     key_hex = await _derive_key(password)
 
     # Copy to temp to avoid lock conflicts with running Brave.
@@ -194,7 +194,7 @@ def _domain_matches(cookie_domain: str, request_host: str) -> bool:
 @returns({"domain": "string", "cookies": "array", "count": "integer", "source": "string"})
 @provides(cookie_auth, account_param="domain", creation_timestamps=True, description="Extract decrypted cookies from Brave Browser's local database")
 @timeout(15)
-async def op_cookie_get(
+async def cookie_get(
     domain: str,
     names: str = None,
     host: str = None,
@@ -207,7 +207,7 @@ async def op_cookie_get(
     """
     names_list = [n.strip() for n in names.split(",") if n.strip()] if names else None
     profile = profile or "Default"
-    cookies = _get_cookies(domain, names_list, host=host or None, profile=profile)
+    cookies = await _get_cookies(domain, names_list, host=host or None, profile=profile)
     return {
         "domain": domain,
         "cookies": cookies,

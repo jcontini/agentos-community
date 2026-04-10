@@ -6,6 +6,7 @@ Accepts optional CLI args: --account_id, --limit, --query
 No auth needed — local files only.
 """
 
+import asyncio
 import json
 import os
 import sys
@@ -110,7 +111,7 @@ async def fetch_transactions(account_id=None, limit=100, query=None, **_kwargs):
     return results
 
 
-def _main():
+async def _main():
     # Accept either a single JSON argument or named flags
     if len(sys.argv) == 2 and sys.argv[1].startswith("{"):
         params = json.loads(sys.argv[1])
@@ -127,7 +128,7 @@ def _main():
         limit = args.limit
         query = args.query or None
 
-    transactions = fetch_transactions(
+    transactions = await fetch_transactions(
         account_id=account_id,
         limit=limit,
         query=query,
@@ -136,4 +137,4 @@ def _main():
 
 
 if __name__ == "__main__":
-    _main()
+    asyncio.run(_main())

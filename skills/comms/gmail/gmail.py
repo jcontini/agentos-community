@@ -517,11 +517,11 @@ async def get_email(*, id=None, url=None, **params):
 @timeout(120)
 async def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **params):
     """List emails with full content — fetches stubs then hydrates each via get_email."""
-    stubs = list_email_stubs(query=query, limit=limit, label_ids=label_ids,
-                             page_token=page_token, **params)
+    stubs = await list_email_stubs(query=query, limit=limit, label_ids=label_ids,
+                                   page_token=page_token, **params)
     if not stubs:
         return []
-    return [get_email(id=s["id"], **params) for s in stubs]
+    return [await get_email(id=s["id"], **params) for s in stubs]
 
 
 @returns("email[]")
@@ -529,10 +529,10 @@ async def list_emails(*, query="", limit=20, label_ids=None, page_token=None, **
 @timeout(120)
 async def search_emails(*, query, limit=20, **params):
     """Search emails with full content using Gmail query syntax."""
-    stubs = list_email_stubs(query=query, limit=limit, **params)
+    stubs = await list_email_stubs(query=query, limit=limit, **params)
     if not stubs:
         return []
-    return [get_email(id=s["id"], **params) for s in stubs]
+    return [await get_email(id=s["id"], **params) for s in stubs]
 
 
 @returns("conversation[]")
@@ -665,7 +665,7 @@ async def list_drafts(*, query="", limit=20, page_token=None, **params):
     stubs = resp["json"].get("drafts", [])
     if not stubs:
         return []
-    return [get_draft(id=s["id"], **params) for s in stubs]
+    return [await get_draft(id=s["id"], **params) for s in stubs]
 
 
 @returns("email")
@@ -714,7 +714,7 @@ async def unsubscribe_email(*, id, **params):
     Fetches the email, checks for List-Unsubscribe + List-Unsubscribe-Post
     headers, and fires the POST. No browser or cookies needed.
     """
-    email = get_email(id=id, **params)
+    email = await get_email(id=id, **params)
     if not email:
         raise ValueError("Email not found")
 

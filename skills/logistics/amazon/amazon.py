@@ -1475,7 +1475,7 @@ async def whoami(**params) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _main() -> None:
+async def _main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(
             "Usage: amazon.py <command> [args...]\n"
@@ -1491,20 +1491,20 @@ def _main() -> None:
         query = sys.argv[2] if len(sys.argv) > 2 else "wireless headphones"
         dept = sys.argv[3] if len(sys.argv) > 3 else None
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
-        result = search_suggestions(query, department=dept, marketplace=mkt)
+        result = await search_suggestions(query, department=dept, marketplace=mkt)
         print(json.dumps(result, indent=2, ensure_ascii=False))
 
     elif cmd == "searchProducts":
         query = sys.argv[2] if len(sys.argv) > 2 else "usb c cable"
         dept = sys.argv[3] if len(sys.argv) > 3 else None
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
-        result = search_products(query, department=dept, marketplace=mkt)
+        result = await search_products(query, department=dept, marketplace=mkt)
         print(json.dumps(result, indent=2, ensure_ascii=False))
 
     elif cmd == "getProduct":
         asin_val = sys.argv[2] if len(sys.argv) > 2 else "B0BQPNMXQV"
         mkt = sys.argv[4] if len(sys.argv) > 4 else None
-        result = get_product(asin_val, marketplace=mkt)
+        result = await get_product(asin_val, marketplace=mkt)
         print(json.dumps(result, indent=2, ensure_ascii=False))
 
     else:
@@ -1512,4 +1512,4 @@ def _main() -> None:
 
 
 if __name__ == "__main__":
-    _main()
+    asyncio.run(_main())

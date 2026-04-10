@@ -34,7 +34,7 @@ def _map_webpage(row):
 
 @returns("webpage[]")
 @connection("history")
-async def op_list_webpages(*, limit=200, **kw):
+async def list_webpages(*, limit=200, **kw):
     """List recently visited pages from Brave browsing history."""
     db = HISTORY_DB
     rows = await sql.query("""
@@ -50,7 +50,7 @@ async def op_list_webpages(*, limit=200, **kw):
 
 @returns("webpage[]")
 @connection("history")
-async def op_search_webpages(*, query, limit=200, **kw):
+async def search_webpages(*, query, limit=200, **kw):
     """Search Brave browsing history by URL or title."""
     db = HISTORY_DB
     rows = await sql.query("""
@@ -71,7 +71,7 @@ async def op_search_webpages(*, query, limit=200, **kw):
 
 
 @returns({"name": "string", "path": "string"})
-async def op_list_accounts(**kw):
+async def list_accounts(**kw):
     """List Brave browser profiles with their display name and email."""
     profiles = []
     for prefs_path in sorted(glob.glob(os.path.join(BRAVE_BASE, "*/Preferences"))):
@@ -93,14 +93,14 @@ async def op_list_accounts(**kw):
 
 
 @returns({"key": "string"})
-async def op_get_cookie_key(**kw):
+async def get_cookie_key(**kw):
     """Derive the AES-128 decryption key for Brave cookies on macOS.
 
     Reads the password from macOS Keychain ("Brave Safe Storage" / "Brave"),
     then runs PBKDF2-HMAC-SHA1 with salt "saltysalt" and 1003 iterations.
     Returns the hex-encoded 16-byte key.
     """
-    password = keychain.read(service="Brave Safe Storage", account="Brave")
+    password = await keychain.read(service="Brave Safe Storage", account="Brave")
     hex_key = await crypto.pbkdf2(password=password, salt="saltysalt", iterations=1003, length=16)
     return {"key": hex_key}
 
@@ -112,7 +112,7 @@ async def op_get_cookie_key(**kw):
 
 @returns({"name": "string", "hostKey": "string", "path": "string", "encryptedValue": "string", "isSecure": "integer", "isHttponly": "integer", "expiresUtc": "integer"})
 @connection("cookies_db")
-async def op_list_cookies(*, domain, limit=1000, **kw):
+async def list_cookies(*, domain, limit=1000, **kw):
     """List cookies for a domain with hex-encoded encrypted values."""
     db = COOKIES_DB
     return await sql.query("""

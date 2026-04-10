@@ -509,7 +509,7 @@ async def update_event(*, id, calendar_id="primary", title=None, start=None, end
 async def search_events(*, calendar_id="primary", days=30, past=False,
                    query=None, limit=25, **params):
     """Search events — thin wrapper over list_events with search-oriented defaults."""
-    return list_events(
+    return await list_events(
         calendar_id=calendar_id, days=days, past=past,
         query=query, limit=limit, **params,
     )

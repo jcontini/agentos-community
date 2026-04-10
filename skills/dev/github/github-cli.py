@@ -141,7 +141,7 @@ async def create_task(*, repo, title, body="", **params):
             title: Issue title
             body: Issue body
         """
-    url = await _run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body]).strip()
+    url = (await _run_gh(["issue", "create", "--repo", repo, "--title", title, "--body", body])).strip()
     return {"url": url, "number": int(url.rstrip("/").split("/")[-1]), "title": title}
 
 
@@ -221,7 +221,7 @@ async def create_pull_request(*, repo, title, head, body="", base=None, **params
     ]
     if base:
         args.extend(["--base", base])
-    url = await _run_gh(args).strip()
+    url = (await _run_gh(args)).strip()
     return {"url": url}
 
 

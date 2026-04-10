@@ -48,9 +48,9 @@ def _load_refactoring_specs() -> str:
     return "\n\n".join(parts)
 
 
-def _load_arch() -> str:
+async def _load_arch() -> str:
     try:
-        result = shell.run(str(AGENTOS_ROOT / "dev.sh"), ["arch"], cwd=str(AGENTOS_ROOT))
+        result = await shell.run(str(AGENTOS_ROOT / "dev.sh"), ["arch"], cwd=str(AGENTOS_ROOT))
         return result.get("stdout", "")
     except Exception:
         return ""
@@ -140,7 +140,7 @@ async def evaluate_commit(
     """
     engine_principles, sdk_principles, skill_guide = _load_principles()
     refactoring_specs = _load_refactoring_specs()
-    arch = _load_arch()
+    arch = await _load_arch()
 
     prompt_parts = [
         "Evaluate this git diff against the principles and specs below.",
