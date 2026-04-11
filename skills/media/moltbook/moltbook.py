@@ -31,7 +31,7 @@ def _map_post(p: dict) -> dict:
         "postType": p.get("type"),
     }
     if author_name:
-        result["posted_by"] = {
+        result["postedBy"] = {
             "account": {
                 "id": author_name,
                 "platform": "moltbook",

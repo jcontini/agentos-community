@@ -40,21 +40,21 @@ def _map_email(row):
 
     # Optional fields (only on get_email, not list)
     if row.get("message_id"):
-        result["message_id"] = row["message_id"]
+        result["messageId"] = row["message_id"]
     if row.get("in_reply_to"):
-        result["in_reply_to"] = row["in_reply_to"]
+        result["inReplyTo"] = row["in_reply_to"]
     if row.get("body_text"):
         result["content"] = row["body_text"]
     if row.get("body_html"):
-        result["body_html"] = row["body_html"]
+        result["bodyHtml"] = row["body_html"]
     if row.get("size_estimate"):
-        result["size_estimate"] = row["size_estimate"]
+        result["sizeEstimate"] = row["size_estimate"]
     if row.get("to_raw"):
-        result["to_raw"] = row["to_raw"]
+        result["toRaw"] = row["to_raw"]
     if row.get("cc_raw"):
-        result["cc_raw"] = row["cc_raw"]
+        result["ccRaw"] = row["cc_raw"]
     if row.get("bcc_raw"):
-        result["bcc_raw"] = row["bcc_raw"]
+        result["bccRaw"] = row["bcc_raw"]
 
     # From as typed ref
     from_email = row.get("from_email")

@@ -127,11 +127,11 @@ def _map_message(row):
 
     # Starred
     if row.get("is_starred"):
-        result["is_starred"] = True
+        result["isStarred"] = True
 
     # Reply
     if row.get("reply_to_id"):
-        result["replies_to"] = {"id": str(row["reply_to_id"])}
+        result["repliesTo"] = {"id": str(row["reply_to_id"])}
 
     return result
 
