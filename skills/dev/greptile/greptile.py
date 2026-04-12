@@ -174,6 +174,21 @@ def _member_to_account(item: dict) -> dict:
     }
 
 
+def _item_to_invitation(item: dict, tenant_external_id: str) -> dict:
+    """Map a searchPeople invite row into an `invitation` shape dict."""
+    email = item.get("email") or ""
+    token = item.get("token") or ""
+    return {
+        "id": token or email,
+        "invitationType": "organization",
+        "email": email,
+        "role": (item.get("role") or "MEMBER").lower(),
+        "status": "pending",
+        "token": token,
+        "url": f"{DASHBOARD_BASE}/settings/organization/people",
+    }
+
+
 def _normalize_role(role: str | None) -> str:
     """Uppercase + validate a role string. Raises on unknown roles."""
     if not role:
@@ -283,10 +298,10 @@ async def check_session(*, auth: dict = None, **params) -> dict:
 async def list_members(*, tenant_external_id: str = None, query: str = "",
                        role: str = None, page: int = 0, page_size: int = 100,
                        auth: dict = None, **params) -> dict:
-    """List members + pending invites in the current Greptile organization.
+    """List active members of the current Greptile organization.
 
-    Calls `organization.searchPeople` and maps each item into an `account` shape.
-    Pending invites show up with `accountType:"invitation"` and `isActive:false`.
+    Calls `organization.searchPeople` and returns only real members (type=member)
+    as `account` shapes. Pending invites are excluded — use `list_invites` for those.
 
     Args:
         tenant_external_id: Override the org id (defaults to current session org).
@@ -308,8 +323,42 @@ async def list_members(*, tenant_external_id: str = None, query: str = "",
     resp = await _trpc_query("organization.searchPeople", args, cookie_header=cookies)
     data = _unwrap_trpc(resp, procedure="organization.searchPeople")
     items = data.get("items") or []
-    accounts = [_member_to_account(it) for it in items]
+    members = [it for it in items if (it.get("type") or "").lower() == "member"]
+    accounts = [_member_to_account(it) for it in members]
     return {"__result__": accounts}
+
+
+@returns("invitation[]")
+@connection("dashboard")
+@timeout(30)
+async def list_invites(*, tenant_external_id: str = None, query: str = "",
+                       page: int = 0, page_size: int = 100,
+                       auth: dict = None, **params) -> dict:
+    """List pending invitations in the current Greptile organization.
+
+    Calls `organization.searchPeople` and returns only invite rows as
+    `invitation` shapes. Active members are excluded — use `list_members`.
+
+    Args:
+        tenant_external_id: Override the org id (defaults to current session org).
+        query: Optional email search filter.
+        page: Zero-indexed page.
+        page_size: Rows per page (default 100).
+    """
+    cookies = (auth or {}).get("cookies", "")
+    tid = await _resolve_tenant_id(cookies, tenant_external_id)
+    args: dict = {
+        "tenantExternalId": tid,
+        "query": query or "",
+        "page": page,
+        "pageSize": page_size,
+    }
+    resp = await _trpc_query("organization.searchPeople", args, cookie_header=cookies)
+    data = _unwrap_trpc(resp, procedure="organization.searchPeople")
+    items = data.get("items") or []
+    invites = [it for it in items if (it.get("type") or "").lower() == "invite"
+               or bool(it.get("token"))]
+    return {"__result__": [_item_to_invitation(it, tid) for it in invites]}
 
 
 @returns({"inviteUrl": "string", "token": "string", "defaultRole": "string",
@@ -382,7 +431,7 @@ async def revoke_invite_link(*, tenant_external_id: str = None,
     }}
 
 
-@returns({"ok": "boolean", "email": "string", "role": "string"})
+@returns("invitation")
 @connection("dashboard")
 @timeout(30)
 async def send_invite(*, email: str, role: str = "MEMBER",
@@ -391,7 +440,7 @@ async def send_invite(*, email: str, role: str = "MEMBER",
     """Email an invite to join the Greptile org.
 
     Calls `invitation.create` — matches the "Invite by email" flow on the people
-    settings page.
+    settings page. Returns an `invitation` shape.
 
     Args:
         email: Address to invite.
@@ -401,17 +450,22 @@ async def send_invite(*, email: str, role: str = "MEMBER",
         raise ValueError("email is required")
     cookies = (auth or {}).get("cookies", "")
     tid = await _resolve_tenant_id(cookies, tenant_external_id)
+    clean_email = email.strip().lower()
+    norm_role = _normalize_role(role)
     args = {
         "tenantExternalId": tid,
-        "email": email.strip().lower(),
-        "role": _normalize_role(role),
+        "email": clean_email,
+        "role": norm_role,
     }
     resp = await _trpc_mutate("invitation.create", args, cookie_header=cookies)
     _unwrap_trpc(resp, procedure="invitation.create")
     return {"__result__": {
-        "ok": True,
-        "email": args["email"],
-        "role": args["role"],
+        "id": clean_email,
+        "invitationType": "organization",
+        "email": clean_email,
+        "role": norm_role.lower(),
+        "status": "pending",
+        "url": f"{DASHBOARD_BASE}/settings/organization/people",
     }}
 
 
