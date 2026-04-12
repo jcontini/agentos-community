@@ -111,7 +111,7 @@ def _format_messages(messages: list) -> str:
 
 
 @returns("model[]")
-@connection("cli")
+@connection("code")
 @timeout(15)
 async def list_models_cli(**params) -> list:
     """List Claude models available to the local Claude Code subscription.
@@ -139,7 +139,7 @@ async def list_models_cli(**params) -> list:
 
 @provides(llm, features=["tool_calling", "structured_output", "structured_output_with_tools"])
 @returns({"content": "string", "tool_calls": "array", "stop_reason": "string", "usage": "object"})
-@connection("cli")
+@connection("code")
 @timeout(1800)
 async def agent(*, model: str, messages: list, tools: list = None,
          temperature: float = 0, system: str = None,
@@ -627,7 +627,7 @@ def _parse_conversation_full(path: Path) -> dict:
 
 
 @returns({"projects": "array"})
-@connection("cli")
+@connection("code")
 @timeout(10)
 async def list_projects(**params) -> dict:
     """List every Claude Code project directory under ~/.claude/projects/.
@@ -668,7 +668,7 @@ def _mtime_iso(epoch: float) -> str:
 
 
 @returns("conversation[]")
-@connection("cli")
+@connection("code")
 @timeout(60)
 async def list_conversations_cli(*, project: str | None = None, limit: int = 0, **params) -> list:
     """List Claude Code conversations (local transcripts under ~/.claude/projects/).
@@ -723,7 +723,7 @@ async def list_conversations_cli(*, project: str | None = None, limit: int = 0, 
 
 
 @returns("conversation")
-@connection("cli")
+@connection("code")
 @timeout(60)
 async def read_conversation_cli(*, id: str, project: str | None = None, **params) -> dict:
     """Read a full Claude Code conversation transcript.

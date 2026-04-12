@@ -23,7 +23,7 @@ connections:
     label: API Key
     help_url: https://console.anthropic.com/settings/keys
 
-  cli:
+  code:
     description: Claude Code — local CLI, uses the user's existing auth (no API key)
     # No credentials: the `claude` binary manages its own auth state.
 
@@ -83,7 +83,7 @@ One skill for everything Claude. Four access modalities, one product.
 | Connection | File | What it does |
 |---|---|---|
 | `api` | `claude_api.py` | Inference via the Claude API (Messages endpoint) |
-| `cli` | `claude_code.py` | Inference via the local `claude` CLI, plus reads local Claude Code state |
+| `code` | `claude_code.py` | Inference via the local `claude` CLI, plus reads local Claude Code state |
 | `web` | `claude_web.py` | Browse/search/import claude.ai chat history |
 
 Models are **never hardcoded**. All operations accept a `model` parameter that is
@@ -99,7 +99,7 @@ See `docs/specs/done/no-hardcoded-models.md` for rationale.
 | `list_models` | Fetch the current model catalog from `api.anthropic.com/v1/models` |
 | `chat` | Send a single Messages API request. Supports tools, system prompts, temperature. Returns raw tool_use blocks for the caller to process. |
 
-### `cli` connection — Claude Code
+### `code` connection — Claude Code
 
 Uses the user's logged-in `claude` binary (no API key required) AND reads local
 on-disk state under `~/.claude/projects/`.
@@ -112,7 +112,7 @@ on-disk state under `~/.claude/projects/`.
 | `list_conversations_cli` | List local Claude Code conversations (one per JSONL transcript) as shape-native `conversation[]`. Optional `project` scope, optional `limit`. |
 | `read_conversation_cli` | Read a full conversation transcript — returns one `conversation` with a nested `message[]` relation (content, blocks, author, published, tool calls). |
 
-> **Note:** The `cli` connection uses `agent` rather than `chat` because it behaves
+> **Note:** The `code` connection uses `agent` rather than `chat` because it behaves
 > fundamentally differently from the API — it loops internally over tool calls.
 > Both still `@provides(llm)` so capability routing can pick either.
 >
@@ -140,7 +140,7 @@ on-disk state under `~/.claude/projects/`.
 1. Get an API key from https://console.anthropic.com/settings/keys
 2. Add credential in AgentOS Settings → Skills → Claude (API Key)
 
-### `cli` connection
+### `code` connection
 Install Claude Code and log in:
 ```bash
 curl -fsSL https://claude.ai/install.sh | bash    # or: brew install claude-code

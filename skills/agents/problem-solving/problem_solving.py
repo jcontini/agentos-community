@@ -197,7 +197,7 @@ When done, call submit_review(content="your full review markdown").
 
 ROLE_CLOSEOUT = "You are a closeout writer."
 
-BODY_CLOSEOUT = """Read the project's 0-pain.md, 1-proposal.md, 2-review.md, and git log.
+BODY_CLOSEOUT = """Read the project's pain.md, proposal.md, review.md, and git log.
 Write a closeout with YAML frontmatter and exactly five sections.
 
 YAML frontmatter:
@@ -208,12 +208,12 @@ YAML frontmatter:
   verdict: shipped | partial | abandoned
   commits: [<short-hashes>]
 
-After frontmatter: See also: [0-pain.md](0-pain.md) | [1-proposal.md](1-proposal.md) | [2-review.md](2-review.md)
+After frontmatter: See also: [pain.md](pain.md) | [proposal.md](proposal.md) | [review.md](review.md)
 
 Five sections only:
 
 ## Problem
-1-2 sentences restating the pain from 0-pain.md — a summary a new agent can read without opening the pain doc.
+1-2 sentences restating the pain from pain.md — a summary a new agent can read without opening the pain doc.
 
 ## What shipped
 3-5 sentences on what actually got built. What's real now, not a copy of the proposal.
@@ -440,7 +440,7 @@ async def submit_review(content: str, **params) -> dict:
 async def evaluate_problem(path: str, **params) -> dict:
     """Evaluate a pain doc. Stamps the result into its frontmatter.
 
-    The calling agent wrote 0-pain.md by interviewing the user directly. This
+    The calling agent wrote pain.md by interviewing the user directly. This
     tool reads it, runs an adversarial evaluator, and stamps the verdict
     (pass/fail + feedback + timestamp) into the file's frontmatter under
     `reviews:`. Returns `{pass, feedback}` — if pass is false, the calling
@@ -448,7 +448,7 @@ async def evaluate_problem(path: str, **params) -> dict:
     the file, and call this tool again.
 
     Args:
-        path: Absolute path to 0-pain.md
+        path: Absolute path to pain.md
     """
     progress.set_job_id(params.get("__job_id__", ""))
 
@@ -517,7 +517,7 @@ async def evaluate_problem(path: str, **params) -> dict:
 # ── solution (propose ↔ review loop) ─────────────────────────────────────────
 
 async def _propose(pain_path: Path, round_num: int, project_dir: Path, **params) -> str:
-    """Run one proposal round. Returns the path to 1-proposal.md."""
+    """Run one proposal round. Returns the path to proposal.md."""
     pain_content = pain_path.read_text()
     prompt_parts = [f"## Pain\n\n{pain_content}"]
 
@@ -544,7 +544,7 @@ async def _propose(pain_path: Path, round_num: int, project_dir: Path, **params)
     )
     _stamp_feedback("propose", fb_since)
 
-    proposal_path = project_dir / "1-proposal.md"
+    proposal_path = project_dir / "proposal.md"
 
     # Archive prior round's proposal to _drafts
     drafts_dir = project_dir / "_drafts"
@@ -586,7 +586,7 @@ async def _review(pain_path: Path, proposal_path: Path, project_dir: Path, **par
     )
     _stamp_feedback("review", fb_since)
 
-    review_path = project_dir / "2-review.md"
+    review_path = project_dir / "review.md"
     staged = REPO_ROOT / "_feedback" / "_staged_review.json"
     if staged.exists():
         data = json.loads(staged.read_text())
@@ -615,23 +615,23 @@ async def _review(pain_path: Path, proposal_path: Path, project_dir: Path, **par
 async def solution(project: str, max_rounds: int = 5, **params) -> dict:
     """Run the adversarial propose ↔ review loop against a pain doc.
 
-    Reads `<project>/0-pain.md` and loops until the reviewer returns
-    `implement` or max_rounds is exhausted. Writes `1-proposal.md` and
-    `2-review.md` in the project dir. Rejected rounds move to `_drafts/`.
+    Reads `<project>/pain.md` and loops until the reviewer returns
+    `implement` or max_rounds is exhausted. Writes `proposal.md` and
+    `review.md` in the project dir. Rejected rounds move to `_drafts/`.
 
     Does NOT do the implementation. Once this returns `implement`, the
     calling agent reads the proposal and review and builds the thing.
 
     Args:
-        project: Absolute path to the project directory (contains 0-pain.md)
+        project: Absolute path to the project directory (contains pain.md)
         max_rounds: Max propose↔review iterations (default 5)
     """
     progress.set_job_id(params.get("__job_id__", ""))
 
     project_dir = Path(project)
-    pain_path = project_dir / "0-pain.md"
+    pain_path = project_dir / "pain.md"
     if not pain_path.exists():
-        return {"__result__": {"error": f"0-pain.md not found in {project_dir}"}}
+        return {"__result__": {"error": f"pain.md not found in {project_dir}"}}
 
     # Determine starting round from existing _drafts
     start_round = 1
@@ -660,7 +660,7 @@ async def solution(project: str, max_rounds: int = 5, **params) -> dict:
 
         # Move rejected review to _drafts for next round
         if round_num < start_round + max_rounds - 1:
-            review_file = project_dir / "2-review.md"
+            review_file = project_dir / "review.md"
             if review_file.exists():
                 drafts_dir.mkdir(exist_ok=True)
                 review_file.rename(drafts_dir / f"v{round_num}-review.md")
@@ -689,9 +689,9 @@ async def closeout(project: str, **params) -> dict:
     progress.set_job_id(params.get("__job_id__", ""))
 
     project_dir = Path(project)
-    pain_content = (project_dir / "0-pain.md").read_text()
-    proposal_content = (project_dir / "1-proposal.md").read_text()
-    review_content = (project_dir / "2-review.md").read_text()
+    pain_content = (project_dir / "pain.md").read_text()
+    proposal_content = (project_dir / "proposal.md").read_text()
+    review_content = (project_dir / "review.md").read_text()
 
     review_fm, _ = _parse_frontmatter(review_content)
     since_date = review_fm.get("date", str(date.today()))
@@ -731,7 +731,7 @@ async def closeout(project: str, **params) -> dict:
     await progress.progress(3, 4, "Saving closeout...")
 
     document = _strip_fenced_blocks(result.get("content", ""))
-    closeout_path = project_dir / "3-closeout.md"
+    closeout_path = project_dir / "closeout.md"
     closeout_path.write_text(document)
 
     await progress.progress(4, 4, "Done")
